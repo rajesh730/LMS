@@ -5,6 +5,7 @@ A comprehensive Learning Management System built with Next.js, MongoDB, and Next
 ## 🎯 Features
 
 ### Admin Dashboard
+
 - School management and approval
 - Teacher and student management
 - Event creation and monitoring
@@ -13,6 +14,7 @@ A comprehensive Learning Management System built with Next.js, MongoDB, and Next
 - Event capacity monitoring
 
 ### Teacher Dashboard
+
 - Subject and chapter management
 - Create multiple choice questions (MCQs)
 - Share notes with class
@@ -21,6 +23,7 @@ A comprehensive Learning Management System built with Next.js, MongoDB, and Next
 - Monitor student participation
 
 ### Student Dashboard
+
 - View class content (chapters, questions, notes)
 - Participate in events
 - Track personal attendance
@@ -29,6 +32,7 @@ A comprehensive Learning Management System built with Next.js, MongoDB, and Next
 - Event eligibility checker
 
 ### Core Features
+
 - **Authentication**: NextAuth with email/password and session management
 - **Events System**: Create, manage, and track student participation
 - **Marks Management**: Track assessments and auto-calculate grades
@@ -55,17 +59,20 @@ A comprehensive Learning Management System built with Next.js, MongoDB, and Next
 ## 🚀 Getting Started
 
 ### 1. Clone the Repository
+
 ```bash
 git clone https://github.com/rajesh730/LMS.git
 cd LMS
 ```
 
 ### 2. Install Dependencies
+
 ```bash
 npm install
 ```
 
 ### 3. Environment Variables
+
 Create a `.env.local` file in the root directory:
 
 ```env
@@ -83,11 +90,13 @@ NODE_ENV=development
 ```
 
 **To generate NEXTAUTH_SECRET:**
+
 ```bash
 openssl rand -base64 32
 ```
 
 ### 4. Run Development Server
+
 ```bash
 npm run dev
 ```
@@ -117,12 +126,14 @@ LMS/
 ## 👥 User Roles & Access
 
 ### Admin
+
 - Approve/manage schools
 - Create and manage events
 - View system analytics
 - Manage all users
 
 ### Teacher
+
 - Create subjects and chapters
 - Add MCQs and notes
 - View student marks
@@ -130,6 +141,7 @@ LMS/
 - Track participation requests
 
 ### Student
+
 - View assigned classrooms and content
 - Participate in events
 - View marks and grades
@@ -139,16 +151,19 @@ LMS/
 ## 🔌 Key API Endpoints
 
 ### Authentication
+
 - `POST /api/auth/callback/credentials` - Login
 - `GET /api/auth/session` - Get current session
 - `POST /api/register` - Register new user
 
 ### Students
+
 - `GET /api/students` - List students
 - `GET /api/student/class-content` - Get student's class content
 - `GET /api/student/eligible-events` - Get eligible events
 
 ### Teachers
+
 - `GET /api/teacher/subjects` - List teacher's subjects
 - `GET /api/teacher/subjects/[id]/content` - Get subject content
 - `POST /api/teacher/chapters` - Create chapter
@@ -156,17 +171,20 @@ LMS/
 - `POST /api/teacher/notes` - Share note
 
 ### Events
+
 - `GET /api/events` - List all events
 - `POST /api/events` - Create event
 - `POST /api/events/[id]/participate` - Request participation
 - `GET /api/events/[id]/status` - Check participation status
 
 ### Marks
+
 - `GET /api/marks` - Get marks
 - `POST /api/marks` - Create mark record
 - `PUT /api/marks/[id]` - Update mark
 
 ### Attendance
+
 - `GET /api/attendance` - Get attendance records
 - `GET /api/attendance/monthly` - Monthly report
 
@@ -223,21 +241,26 @@ Helpful scripts in `/scripts` directory:
 ## 🐛 Troubleshooting
 
 ### MongoDB Connection Error
+
 ```
 Error: connect ECONNREFUSED
 ```
+
 - Ensure MongoDB is running: `mongod`
 - Check `MONGODB_URI` in `.env.local`
 - For Atlas, verify IP whitelist
 
 ### NextAuth Error
+
 ```
 Error: NEXTAUTH_SECRET not set
 ```
+
 - Generate secret: `openssl rand -base64 32`
 - Add to `.env.local`
 
 ### Build Errors
+
 ```bash
 # Clear Next.js cache
 rm -rf .next
@@ -262,6 +285,7 @@ npm run build
 ## 📞 Support
 
 For issues or questions:
+
 1. Check existing issues on GitHub
 2. Create a new issue with detailed description
 3. Contact the development team

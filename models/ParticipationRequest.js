@@ -19,7 +19,7 @@ const ParticipationRequestSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["PENDING", "APPROVED", "REJECTED"],
+      enum: ["PENDING", "APPROVED", "REJECTED", "WITHDRAWN", "ENROLLED"],
       default: "PENDING",
     },
     requestedAt: {
@@ -31,6 +31,18 @@ const ParticipationRequestSchema = new mongoose.Schema(
       default: null,
     },
     rejectedAt: {
+      type: Date,
+      default: null,
+    },
+    rejectableUntil: {
+      type: Date,
+      default: null,
+    },
+    enrollmentConfirmedAt: {
+      type: Date,
+      default: null,
+    },
+    studentNotifiedAt: {
       type: Date,
       default: null,
     },

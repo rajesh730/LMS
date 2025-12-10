@@ -1104,7 +1104,7 @@ ATTENDANCE
   ├─ status: [PRESENT, ABSENT, LATE, EXCUSED]
   ├─ school (ref User)
   └─ timestamps
-  
+
   Index: { student: 1, date: 1 } unique
          { teacher: 1, date: 1 } unique
 
