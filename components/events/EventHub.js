@@ -33,10 +33,11 @@ export default function EventHub() {
     try {
       setLoading(true);
       // Use different endpoint based on user role
-      const endpoint = session?.user?.role === "STUDENT" 
-        ? "/api/events/hub/available" 
-        : "/api/events";
-      
+      const endpoint =
+        session?.user?.role === "STUDENT"
+          ? "/api/events/hub/available"
+          : "/api/events";
+
       const res = await fetch(endpoint);
       if (res.ok) {
         const data = await res.json();
@@ -296,14 +297,16 @@ export default function EventHub() {
                       </div>
 
                       {!event.participationStatus && (
-                        <div 
+                        <div
                           onClick={(e) => {
                             e.stopPropagation();
                             setExpandedEventId(event._id);
                           }}
                           className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap cursor-pointer"
                         >
-                          Take Part
+                          {session?.user?.role === "STUDENT"
+                            ? "Join Event"
+                            : "Manage Participants"}
                         </div>
                       )}
                     </div>
