@@ -23,7 +23,7 @@ import {
   FaDownload,
 } from "react-icons/fa";
 import StudentManager from "@/components/dashboard/StudentManager";
-import UnifiedEventManager from "@/components/UnifiedEventManager";
+import EventHub from "@/components/events/EventHub";
 import DashboardOverview from "@/components/DashboardOverview";
 import TeacherAttendanceReport from "@/components/TeacherAttendanceReport";
 
@@ -1115,7 +1115,7 @@ export default function SchoolDashboard() {
           </div>
         )}
 
-        {activeTab === "events" && <UnifiedEventManager />}
+        {activeTab === "events" && <EventHub />}
 
         {activeTab === "academics" && (
           <div className="space-y-6">
