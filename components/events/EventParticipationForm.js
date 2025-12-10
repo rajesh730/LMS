@@ -46,10 +46,13 @@ export default function EventParticipationForm({ event, onSuccess }) {
       const res = await fetch("/api/classrooms");
       if (res.ok) {
         const data = await res.json();
-        setClasses(data);
+        setClasses(Array.isArray(data) ? data : []);
+      } else {
+        setClasses([]);
       }
     } catch (error) {
       console.error("Error loading classes:", error);
+      setClasses([]);
     }
   };
 
@@ -59,10 +62,13 @@ export default function EventParticipationForm({ event, onSuccess }) {
       const res = await fetch(`/api/events/${event._id}/manage`);
       if (res.ok) {
         const data = await res.json();
-        setInterestedStudents(data.requests || []);
+        setInterestedStudents(Array.isArray(data.requests) ? data.requests : []);
+      } else {
+        setInterestedStudents([]);
       }
     } catch (error) {
       console.error("Error loading interested students:", error);
+      setInterestedStudents([]);
     } finally {
       setLoadingInterested(false);
     }
@@ -74,10 +80,13 @@ export default function EventParticipationForm({ event, onSuccess }) {
       const res = await fetch("/api/students?page=1&limit=500");
       if (res.ok) {
         const data = await res.json();
-        setStudents(data.students || []);
+        setStudents(Array.isArray(data.students) ? data.students : []);
+      } else {
+        setStudents([]);
       }
     } catch (error) {
       console.error("Error loading students:", error);
+      setStudents([]);
     } finally {
       setLoading(false);
     }
@@ -272,7 +281,7 @@ export default function EventParticipationForm({ event, onSuccess }) {
               className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition"
             >
               <option value="all">All Classes</option>
-              {classes.map((cls) => (
+              {Array.isArray(classes) && classes.map((cls) => (
                 <option key={cls._id} value={cls.name}>
                   {cls.name}
                 </option>
@@ -317,7 +326,7 @@ export default function EventParticipationForm({ event, onSuccess }) {
 
                 {/* Students */}
                 <div className="divide-y divide-slate-700">
-                  {filteredStudents.map((student) => (
+                  {Array.isArray(filteredStudents) && filteredStudents.map((student) => (
                     <label
                       key={student._id}
                       className="flex items-center gap-3 p-4 hover:bg-slate-800/50 cursor-pointer transition-colors"
@@ -431,7 +440,7 @@ export default function EventParticipationForm({ event, onSuccess }) {
                   className="bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white"
                 >
                   <option value="all">All Classes</option>
-                  {classes.map((cls) => (
+                  {Array.isArray(classes) && classes.map((cls) => (
                     <option key={cls._id} value={cls.name}>
                       {cls.name}
                     </option>
@@ -469,7 +478,7 @@ export default function EventParticipationForm({ event, onSuccess }) {
                     </div>
                   ) : (
                     <div className="max-h-80 overflow-y-auto divide-y divide-slate-700">
-                      {filteredInterested.map((request) => (
+                      {Array.isArray(filteredInterested) && filteredInterested.map((request) => (
                         <div
                           key={request._id}
                           className="p-4 hover:bg-slate-800/50 transition-colors"
