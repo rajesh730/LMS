@@ -16,12 +16,9 @@ import User from "@/models/User";
 export async function GET(req) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session) {
-      return NextResponse.json(
-        { message: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
     await dbConnect();
@@ -94,9 +91,7 @@ export async function GET(req) {
       // Get school ID for filtering
       const user = await User.findById(session.user.id);
       const schoolFilter =
-        session.user.role === "SCHOOL_ADMIN"
-          ? { school: user._id }
-          : {}; // SUPER_ADMIN sees all
+        session.user.role === "SCHOOL_ADMIN" ? { school: user._id } : {}; // SUPER_ADMIN sees all
 
       const events = await Event.find({
         ...searchQuery,

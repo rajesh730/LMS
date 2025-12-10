@@ -1,6 +1,12 @@
 "use client";
 
-import { FaEdit, FaTimesCircle, FaFileExport, FaDownload, FaTrash } from "react-icons/fa";
+import {
+  FaEdit,
+  FaTimesCircle,
+  FaFileExport,
+  FaDownload,
+  FaTrash,
+} from "react-icons/fa";
 import { useState } from "react";
 
 export default function QuickActionsSection({ event }) {
@@ -80,7 +86,8 @@ export default function QuickActionsSection({ event }) {
               Delete Event?
             </h3>
             <p className="text-slate-600 mb-6">
-              This action cannot be undone. All participation requests will be deleted.
+              This action cannot be undone. All participation requests will be
+              deleted.
             </p>
             <div className="flex gap-3">
               <button

@@ -15,10 +15,7 @@ export async function GET(req) {
     const session = await getServerSession(authOptions);
 
     if (!session || session.user.role !== "STUDENT") {
-      return NextResponse.json(
-        { message: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
     await dbConnect();
@@ -43,8 +40,7 @@ export async function GET(req) {
       .populate({
         path: "event",
         match: { date: { $lt: now } }, // Only past events
-        select:
-          "title description date createdBy maxParticipants participants",
+        select: "title description date createdBy maxParticipants participants",
         populate: {
           path: "createdBy",
           select: "name email",

@@ -1,10 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import PendingRequestsTab from "./PendingRequestsTab";
-import ApprovedStudentsTab from "./ApprovedStudentsTab";
-import RejectedRequestsTab from "./RejectedRequestsTab";
+import UnifiedApprovalManager from "./UnifiedApprovalManager";
 import CapacityTab from "./CapacityTab";
+import { useState } from "react";
 
 export default function ManagementTabs({
   requests,
@@ -15,30 +13,25 @@ export default function ManagementTabs({
   setActiveTab,
   onDataChange,
 }) {
+  // Combine all requests into a single array
+  const allRequests = [
+    ...requests.PENDING,
+    ...requests.APPROVED,
+    ...requests.REJECTED,
+  ];
+
   const tabs = [
     {
-      id: "pending",
-      label: "PENDING",
-      count: requests.PENDING.length,
-      color: "bg-yellow-500",
-    },
-    {
-      id: "approved",
-      label: "APPROVED",
-      count: requests.APPROVED.length,
-      color: "bg-green-500",
-    },
-    {
-      id: "rejected",
-      label: "REJECTED",
-      count: requests.REJECTED.length,
-      color: "bg-red-500",
+      id: "manage",
+      label: "MANAGE REQUESTS",
+      count: allRequests.length,
+      color: "bg-blue-500",
     },
     {
       id: "capacity",
       label: "CAPACITY",
       count: null,
-      color: "bg-blue-500",
+      color: "bg-indigo-500",
     },
   ];
 
@@ -68,25 +61,13 @@ export default function ManagementTabs({
 
       {/* Tab Content */}
       <div className="p-6 md:p-8">
-        {activeTab === "pending" && (
-          <PendingRequestsTab
-            requests={requests.PENDING}
-            event={event}
-            onApprovalChange={onDataChange}
-          />
-        )}
-
-        {activeTab === "approved" && (
-          <ApprovedStudentsTab
-            requests={requests.APPROVED}
+        {activeTab === "manage" && (
+          <UnifiedApprovalManager
+            requests={allRequests}
             event={event}
             capacityInfo={capacityInfo}
             onDataChange={onDataChange}
           />
-        )}
-
-        {activeTab === "rejected" && (
-          <RejectedRequestsTab requests={requests.REJECTED} />
         )}
 
         {activeTab === "capacity" && (

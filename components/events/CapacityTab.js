@@ -23,13 +23,23 @@ export default function CapacityTab({
     <div className="space-y-6">
       {/* Overall Capacity Card */}
       {capacityInfo.total && (
-        <div className={`border-2 rounded-lg p-6 ${getStatusBg(capacityInfo.percentage)}`}>
+        <div
+          className={`border-2 rounded-lg p-6 ${getStatusBg(
+            capacityInfo.percentage
+          )}`}
+        >
           <div className="flex items-center gap-4 mb-4">
-            <div className={`text-4xl font-bold ${getStatusColor(capacityInfo.percentage)}`}>
+            <div
+              className={`text-4xl font-bold ${getStatusColor(
+                capacityInfo.percentage
+              )}`}
+            >
               {capacityInfo.percentage}%
             </div>
             <div>
-              <p className="text-sm font-medium text-slate-600">Total Capacity</p>
+              <p className="text-sm font-medium text-slate-600">
+                Total Capacity
+              </p>
               <p className="text-2xl font-bold text-slate-900">
                 {capacityInfo.filled} / {capacityInfo.total}
               </p>

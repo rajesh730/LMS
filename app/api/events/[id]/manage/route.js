@@ -16,10 +16,7 @@ export async function GET(req, { params }) {
     const session = await getServerSession(authOptions);
 
     if (!session) {
-      return NextResponse.json(
-        { message: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
     await dbConnect();
@@ -27,13 +24,13 @@ export async function GET(req, { params }) {
     const { id: eventId } = params;
 
     // Get event
-    const event = await Event.findById(eventId).populate("createdBy", "name email");
+    const event = await Event.findById(eventId).populate(
+      "createdBy",
+      "name email"
+    );
 
     if (!event) {
-      return NextResponse.json(
-        { message: "Event not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ message: "Event not found" }, { status: 404 });
     }
 
     // Check authorization
@@ -41,10 +38,7 @@ export async function GET(req, { params }) {
       event.createdBy._id.toString() !== session.user.id &&
       !["SCHOOL_ADMIN", "SUPER_ADMIN"].includes(session.user.role)
     ) {
-      return NextResponse.json(
-        { message: "Forbidden" },
-        { status: 403 }
-      );
+      return NextResponse.json({ message: "Forbidden" }, { status: 403 });
     }
 
     // Get all participation requests
@@ -80,7 +74,10 @@ export async function GET(req, { params }) {
     };
 
     if (capacityInfo.total) {
-      capacityInfo.available = Math.max(0, capacityInfo.total - capacityInfo.filled);
+      capacityInfo.available = Math.max(
+        0,
+        capacityInfo.total - capacityInfo.filled
+      );
       capacityInfo.percentage = Math.round(
         (capacityInfo.filled / capacityInfo.total) * 100
       );
@@ -92,7 +89,11 @@ export async function GET(req, { params }) {
       count: p.students ? p.students.length : 0,
       limit: event.maxParticipantsPerSchool || null,
       percentage: event.maxParticipantsPerSchool
-        ? Math.round(((p.students ? p.students.length : 0) / event.maxParticipantsPerSchool) * 100)
+        ? Math.round(
+            ((p.students ? p.students.length : 0) /
+              event.maxParticipantsPerSchool) *
+              100
+          )
         : null,
     }));
 

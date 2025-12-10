@@ -52,7 +52,9 @@ async function runTests() {
   await testAPI("/api/events/123/withdraw", "DELETE");
 
   console.log("\n✅ API endpoints are accessible!");
-  console.log("(All returned 401 which is expected - they require authentication)\n");
+  console.log(
+    "(All returned 401 which is expected - they require authentication)\n"
+  );
 }
 
 runTests();

@@ -183,7 +183,9 @@ export default function AddStudentModal({ event, onClose, onSuccess }) {
                         />
                       </td>
                       <td className="p-3 font-medium">{student.name}</td>
-                      <td className="p-3">{student.classroom?.name || "N/A"}</td>
+                      <td className="p-3">
+                        {student.classroom?.name || "N/A"}
+                      </td>
                       <td className="p-3">{student.grade}</td>
                     </tr>
                   ))}

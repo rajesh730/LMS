@@ -1,4 +1,5 @@
 # 🎯 COMPREHENSIVE EVENT MANAGEMENT SYSTEM DESIGN
+
 ## In-Depth Analysis & Systematic Architecture
 
 **Analysis Date:** December 10, 2025  
@@ -11,6 +12,7 @@
 ### What the Images Show:
 
 #### Image 1 (Top)
+
 - **Purpose:** Request filtering tabs
 - **Components:**
   - Status filter buttons: PENDING, APPROVED, REJECTED, All
@@ -19,6 +21,7 @@
   - Used for filtering participation requests
 
 #### Image 2 (Middle)
+
 - **Purpose:** Event listing & discovery
 - **Components:**
   - Tab system: "All Events" | "My Participated"
@@ -35,6 +38,7 @@
     - "Take Part" button (request participation)
 
 #### Image 3 (Bottom)
+
 - **Purpose:** Detailed event participation enrollment
 - **Components:**
   - Modal overlay with two-column layout
@@ -79,6 +83,7 @@ Level 3: Request Management (Image 1)
 ### 2. **Current Limitation in Your Images**
 
 **Problem:** Image 3 shows student selection for "joining" an event, but lacks:
+
 - Viewing approved students later
 - Managing approved participants
 - Changing student lists after approval
@@ -141,21 +146,22 @@ The goal: Everything an event creator needs in ONE place.
 ## 🏗️ DETAILED COMPONENT ARCHITECTURE
 
 ### **1. EVENT MANAGEMENT HOME PAGE**
+
 **Path:** `/admin/events/management`
 
 ```javascript
 // Three main tabs:
 <Tabs>
   <Tab name="My Events">
-    <EventListGrid />        // Cards view
-    <EventListTable />       // Optional: Table view toggle
+    <EventListGrid /> // Cards view
+    <EventListTable /> // Optional: Table view toggle
     <Pagination />
   </Tab>
-  
+
   <Tab name="Create Event">
     <EventCreationForm />
   </Tab>
-  
+
   <Tab name="Approval Center">
     <ApprovalCenterDashboard />
   </Tab>
@@ -165,13 +171,13 @@ The goal: Everything an event creator needs in ONE place.
 ---
 
 ### **2. EVENT DETAIL DASHBOARD**
+
 **Path:** `/admin/events/[id]/manage`
 
 This is the **CORE** component. Everything happens here.
 
 ```javascript
 <EventDetailDashboard>
-  
   {/* SECTION 1: Event Information */}
   <EventInfoHeader>
     <h1>{event.title}</h1>
@@ -183,7 +189,7 @@ This is the **CORE** component. Everything happens here.
       <StatCard label="Status" value={event.status} badge />
     </Grid>
   </EventInfoHeader>
-  
+
   {/* SECTION 2: Participation Status (with status filter tabs) */}
   <ParticipationStatusSection>
     <Tabs>
@@ -198,7 +204,7 @@ This is the **CORE** component. Everything happens here.
           <Button>Reject Selected</Button>
         </BulkActions>
       </Tab>
-      
+
       {/* Tab 2: Approved Students */}
       <Tab name="APPROVED (8)">
         <ApprovedStudentsSection>
@@ -211,7 +217,7 @@ This is the **CORE** component. Everything happens here.
           <Button variant="secondary">Export List</Button>
         </ApprovedStudentsSection>
       </Tab>
-      
+
       {/* Tab 3: Rejected Requests */}
       <Tab name="REJECTED (2)">
         <RejectedRequestsTable>
@@ -219,32 +225,38 @@ This is the **CORE** component. Everything happens here.
           {/* Actions: Re-consider (change to Approved) */}
         </RejectedRequestsTable>
       </Tab>
-      
+
       {/* Tab 4: Capacity Overview */}
       <Tab name="CAPACITY">
         <CapacityDashboard>
-          <CapacityBar 
+          <CapacityBar
             total={maxParticipants}
             filled={enrolledCount}
             pending={pendingCount}
           />
           <CapacityBreakdown>
             <Row label="Total Capacity" value={maxParticipants} />
-            <Row label="Enrolled Students" value={enrolledCount} color="green" />
-            <Row label="Pending Approvals" value={pendingCount} color="yellow" />
+            <Row
+              label="Enrolled Students"
+              value={enrolledCount}
+              color="green"
+            />
+            <Row
+              label="Pending Approvals"
+              value={pendingCount}
+              color="yellow"
+            />
             <Row label="Available Slots" value={availableSlots} color="blue" />
             <Row label="Per-School Limit" value={maxPerSchool} />
           </CapacityBreakdown>
           <PerSchoolBreakdown>
-            <Table>
-              {/* School Name | Students Enrolled | % of Limit */}
-            </Table>
+            <Table>{/* School Name | Students Enrolled | % of Limit */}</Table>
           </PerSchoolBreakdown>
         </CapacityDashboard>
       </Tab>
     </Tabs>
   </ParticipationStatusSection>
-  
+
   {/* SECTION 3: Quick Actions */}
   <QuickActionsSection>
     <ActionCard icon="edit">
@@ -263,24 +275,23 @@ This is the **CORE** component. Everything happens here.
       <Button>Delete Event</Button>
     </ActionCard>
   </QuickActionsSection>
-  
 </EventDetailDashboard>
 ```
 
 ---
 
 ### **3. ADD STUDENT MANUALLY MODAL**
+
 **When:** Clicking "Add Student Manually" in Approved section
 
 ```javascript
 <Modal title="Add Student to Event">
-  
   <SearchSection>
     <SearchInput placeholder="Search student by name..." />
     <FilterSelect label="Filter by School" options={schools} />
     <FilterSelect label="Filter by Grade" options={grades} />
   </SearchSection>
-  
+
   <AvailableStudentsTable>
     <Checkbox label="Select All" />
     <Table>
@@ -288,25 +299,24 @@ This is the **CORE** component. Everything happens here.
       {/* Only show students not already approved */}
     </Table>
   </AvailableStudentsTable>
-  
+
   <Footer>
     <Button variant="secondary">Cancel</Button>
     <Button variant="primary">Add Selected ({selectedCount})</Button>
   </Footer>
-  
 </Modal>
 ```
 
 ---
 
 ### **4. APPROVAL CENTER (Centralized)**
+
 **Path:** `/admin/events/management?tab=approval`
 
 For admins who need to manage requests across ALL events:
 
 ```javascript
 <ApprovalCenter>
-  
   <Header>
     <h2>Participation Request Approval Center</h2>
     <Stats>
@@ -315,14 +325,14 @@ For admins who need to manage requests across ALL events:
       <Stat label="This Week's Rejections" value="2" badge="info" />
     </Stats>
   </Header>
-  
+
   <Filters>
     <SearchInput placeholder="Search event or student..." />
     <Select label="Status" options={["PENDING", "APPROVED", "REJECTED"]} />
     <Select label="Event" options={allEvents} />
     <DateRange label="Date Range" />
   </Filters>
-  
+
   <RequestsTable>
     <Columns>
       <Column select checkbox />
@@ -334,12 +344,11 @@ For admins who need to manage requests across ALL events:
       <Column header="Actions" value={<ActionButtons />} />
     </Columns>
   </RequestsTable>
-  
+
   <BulkActions>
     <Button>Approve Selected ({selectedCount})</Button>
     <Button>Reject Selected ({selectedCount})</Button>
   </BulkActions>
-  
 </ApprovalCenter>
 ```
 
@@ -398,31 +407,31 @@ For admins who need to manage requests across ALL events:
 ```javascript
 {
   _id: ObjectId,
-  
+
   // Basic references
   student: StudentId,
   event: EventId,
   school: SchoolId,
-  
+
   // Status tracking
   status: "PENDING" | "APPROVED" | "REJECTED" | "WITHDRAWN" | "ENROLLED",
-  
+
   // Approval workflow
   requestedAt: Date,
   approvedAt: Date,
   approvedBy: UserId,
   rejectedAt: Date,
   rejectionReason: String,
-  
+
   // Contact info (from school representative)
   contactPerson: String,
   contactPhone: String,
   notes: String,
-  
+
   // Enrollment confirmation
   enrollmentConfirmedAt: Date,
   studentNotifiedAt: Date,
-  
+
   // Audit trail
   createdAt: Date,
   updatedAt: Date,
@@ -472,11 +481,13 @@ GET    /api/events/[id]/report                (Full report)
 ## 🎨 UI/UX DESIGN PRINCIPLES
 
 ### **1. Unified Dashboard**
+
 - Everything for one event in ONE place
 - No need to navigate between pages
 - Tabs organize by status/function
 
 ### **2. Clear Status Visualization**
+
 ```
 PENDING  →  Highlighted in yellow
 APPROVED →  Highlighted in green
@@ -485,21 +496,25 @@ CAPACITY →  Visualization with bar charts
 ```
 
 ### **3. Bulk Operations**
+
 - Checkboxes for multi-select
 - Bulk action buttons (Approve/Reject selected)
 - Count indicator
 
 ### **4. Search & Filter**
+
 - Every table is searchable
 - Multiple filter options
 - Reset filters option
 
 ### **5. Action Clarity**
+
 - Each action has clear outcome
 - Confirmation modals for destructive actions
 - Success/error notifications
 
 ### **6. Real-time Updates**
+
 - Capacity updates as approvals happen
 - Counts update immediately
 - No page refresh needed
@@ -508,31 +523,33 @@ CAPACITY →  Visualization with bar charts
 
 ## 📋 SUMMARY TABLE: What Goes Where
 
-| Feature | Location | Type |
-|---------|----------|------|
-| Create Event | Management > Create Tab | Form |
-| List My Events | Management > My Events Tab | Grid/List |
-| View Event Details | Event Detail Dashboard | Dashboard |
-| Approve Pending | Event > PENDING Tab | Bulk/Individual |
-| Reject Pending | Event > PENDING Tab | Bulk/Individual |
-| View Approved Students | Event > APPROVED Tab | Table |
-| Add Student Manually | Event > APPROVED Tab > Button | Modal |
-| Remove Student | Event > APPROVED Tab > Action | Inline |
-| View Capacity | Event > CAPACITY Tab | Chart/Breakdown |
-| Export Roster | Event > APPROVED Tab > Button | Action |
-| Bulk Approval All Events | Approval Center Tab | Bulk |
-| Edit Event | Event > Quick Actions | Action |
-| Close Event | Event > Quick Actions | Action |
-| Delete Event | Event > Quick Actions | Action |
+| Feature                  | Location                      | Type            |
+| ------------------------ | ----------------------------- | --------------- |
+| Create Event             | Management > Create Tab       | Form            |
+| List My Events           | Management > My Events Tab    | Grid/List       |
+| View Event Details       | Event Detail Dashboard        | Dashboard       |
+| Approve Pending          | Event > PENDING Tab           | Bulk/Individual |
+| Reject Pending           | Event > PENDING Tab           | Bulk/Individual |
+| View Approved Students   | Event > APPROVED Tab          | Table           |
+| Add Student Manually     | Event > APPROVED Tab > Button | Modal           |
+| Remove Student           | Event > APPROVED Tab > Action | Inline          |
+| View Capacity            | Event > CAPACITY Tab          | Chart/Breakdown |
+| Export Roster            | Event > APPROVED Tab > Button | Action          |
+| Bulk Approval All Events | Approval Center Tab           | Bulk            |
+| Edit Event               | Event > Quick Actions         | Action          |
+| Close Event              | Event > Quick Actions         | Action          |
+| Delete Event             | Event > Quick Actions         | Action          |
 
 ---
 
 ## 🚀 IMPLEMENTATION PRIORITY
 
 ### **Phase 1 (Done)**
+
 ✅ Backend APIs for request/approve/withdraw
 
 ### **Phase 2 (Next - 3 days)**
+
 1. Event Detail Dashboard (Main component)
 2. Status tabs (PENDING, APPROVED, REJECTED, CAPACITY)
 3. Pending requests table with approve/reject
@@ -540,12 +557,14 @@ CAPACITY →  Visualization with bar charts
 5. Capacity breakdown
 
 ### **Phase 3 (Days 5-6)**
+
 1. Add Student Manually modal
 2. Rejection reason form
 3. Quick actions (Edit, Close, Delete, Export)
 4. Approval Center dashboard
 
 ### **Phase 4 (Day 7)**
+
 1. Export/Report functionality
 2. Audit history
 3. Polish & testing
@@ -598,4 +617,3 @@ APIs to Create:
 ---
 
 **Ready to implement this systematic design!** 🚀
-

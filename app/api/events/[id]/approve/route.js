@@ -19,10 +19,7 @@ export async function PUT(req, { params }) {
       !session ||
       !["SCHOOL_ADMIN", "SUPER_ADMIN"].includes(session.user.role)
     ) {
-      return NextResponse.json(
-        { message: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
     await dbConnect();
@@ -49,10 +46,7 @@ export async function PUT(req, { params }) {
     const event = await Event.findById(eventId);
 
     if (!event) {
-      return NextResponse.json(
-        { message: "Event not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ message: "Event not found" }, { status: 404 });
     }
 
     // ===== Get requests =====
@@ -167,7 +161,9 @@ export async function PUT(req, { params }) {
 
     return NextResponse.json(
       {
-        message: `Processed ${results.approved.length + results.rejected.length} requests`,
+        message: `Processed ${
+          results.approved.length + results.rejected.length
+        } requests`,
         results,
       },
       { status: 200 }
@@ -194,10 +190,7 @@ export async function GET(req, { params }) {
       !session ||
       !["SCHOOL_ADMIN", "SUPER_ADMIN"].includes(session.user.role)
     ) {
-      return NextResponse.json(
-        { message: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
     await dbConnect();
@@ -208,10 +201,7 @@ export async function GET(req, { params }) {
     const event = await Event.findById(eventId).populate("createdBy", "name");
 
     if (!event) {
-      return NextResponse.json(
-        { message: "Event not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ message: "Event not found" }, { status: 404 });
     }
 
     // Get all pending requests
@@ -235,8 +225,13 @@ export async function GET(req, { params }) {
     };
 
     if (capacityInfo.total) {
-      capacityInfo.available = Math.max(0, capacityInfo.total - capacityInfo.filled);
-      capacityInfo.percentage = Math.round((capacityInfo.filled / capacityInfo.total) * 100);
+      capacityInfo.available = Math.max(
+        0,
+        capacityInfo.total - capacityInfo.filled
+      );
+      capacityInfo.percentage = Math.round(
+        (capacityInfo.filled / capacityInfo.total) * 100
+      );
     }
 
     return NextResponse.json(

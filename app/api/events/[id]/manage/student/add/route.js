@@ -19,10 +19,7 @@ export async function POST(req, { params }) {
       !session ||
       !["SCHOOL_ADMIN", "SUPER_ADMIN"].includes(session.user.role)
     ) {
-      return NextResponse.json(
-        { message: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
     await dbConnect();
@@ -42,10 +39,7 @@ export async function POST(req, { params }) {
     const event = await Event.findById(eventId);
 
     if (!event) {
-      return NextResponse.json(
-        { message: "Event not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ message: "Event not found" }, { status: 404 });
     }
 
     // Get students with school info

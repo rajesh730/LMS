@@ -16,10 +16,7 @@ export async function GET(req) {
     const session = await getServerSession(authOptions);
 
     if (!session || session.user.role !== "STUDENT") {
-      return NextResponse.json(
-        { message: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
     await dbConnect();
@@ -98,7 +95,9 @@ export async function GET(req) {
         canRequest: !request && !isDeadlinePassed && !isFull,
         capacityInfo: getCapacityInfo(event),
         daysUntilDeadline: event.registrationDeadline
-          ? Math.ceil((event.registrationDeadline - now) / (1000 * 60 * 60 * 24))
+          ? Math.ceil(
+              (event.registrationDeadline - now) / (1000 * 60 * 60 * 24)
+            )
           : null,
         eventStatus: getEventStatus(event),
       };

@@ -17,10 +17,7 @@ export async function DELETE(req, { params }) {
     const session = await getServerSession(authOptions);
 
     if (!session || session.user.role !== "STUDENT") {
-      return NextResponse.json(
-        { message: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
     await dbConnect();
@@ -55,10 +52,7 @@ export async function DELETE(req, { params }) {
     const event = await Event.findById(eventId);
 
     if (!event) {
-      return NextResponse.json(
-        { message: "Event not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ message: "Event not found" }, { status: 404 });
     }
 
     const now = new Date();

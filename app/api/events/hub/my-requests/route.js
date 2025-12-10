@@ -16,10 +16,7 @@ export async function GET(req) {
     const session = await getServerSession(authOptions);
 
     if (!session || session.user.role !== "STUDENT") {
-      return NextResponse.json(
-        { message: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
     await dbConnect();
@@ -40,7 +37,8 @@ export async function GET(req) {
     })
       .populate({
         path: "event",
-        select: "title description date registrationDeadline maxParticipants participants createdBy",
+        select:
+          "title description date registrationDeadline maxParticipants participants createdBy",
         populate: {
           path: "createdBy",
           select: "name email",

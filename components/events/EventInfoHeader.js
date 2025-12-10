@@ -65,7 +65,9 @@ export default function EventInfoHeader({ event, capacityInfo }) {
               {capacityInfo.total ? `/${capacityInfo.total}` : ""}
             </p>
             {capacityInfo.percentage && (
-              <p className="text-xs opacity-75 mt-1">{capacityInfo.percentage}% full</p>
+              <p className="text-xs opacity-75 mt-1">
+                {capacityInfo.percentage}% full
+              </p>
             )}
           </div>
 

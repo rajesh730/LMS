@@ -9,6 +9,7 @@
 ## 📋 HONEST PROJECT STATUS ANALYSIS
 
 ### ✅ What's Working Well
+
 - ✓ Authentication system (NextAuth)
 - ✓ Database models & MongoDB
 - ✓ API routes (exist but need polish)
@@ -19,20 +20,20 @@
 ### ❌ What's Broken/Incomplete
 
 #### **EVENTS (PRIORITY #1)**
+
 1. **Scattered Functionality**
    - Event creation in one place
    - Event browsing in another
    - Participation management elsewhere
    - No unified dashboard for all event operations
-   
 2. **Poor User Experience**
    - Students see ALL events (should see only eligible)
    - No clear capacity indicators
    - Participation status confusing
    - Can't easily see which events they requested
    - No clear "next steps" for student
-   
 3. **Admin Complexity**
+
    - Event approval scattered
    - Participation requests hard to manage
    - No real-time capacity view
@@ -48,14 +49,16 @@
    - No event cancellation notif to students
 
 #### **STUDENT DASHBOARD (PRIORITY #2)**
+
 1. Issues
    - Too minimal
    - Doesn't show complete picture
    - Events not integrated
    - Marks view missing
    - Attendance view missing
-   
+
 #### **TEACHER DASHBOARD (PRIORITY #3)**
+
 1. Issues
    - Subject manager is clunky
    - Adding chapters/questions tedious
@@ -63,6 +66,7 @@
    - No student performance view
 
 #### **FORMS & VALIDATION**
+
 1. Issues
    - No real-time validation
    - Poor error messages
@@ -71,6 +75,7 @@
    - Form reset not working properly
 
 #### **GENERAL UX ISSUES**
+
 1. No skeleton loaders while loading
 2. Inconsistent error messages
 3. No toast notifications (success/error)
@@ -83,7 +88,9 @@
 ## 🎯 STRATEGIC FIX PLAN (Smart Order)
 
 ### Phase 1: FIX EVENTS (Make it PERFECT) - Days 1-3
+
 ### Phase 2: Enhance Dashboards - Days 4-5
+
 ### Phase 3: Polish & Deploy - Days 6-7
 
 ---
@@ -171,6 +178,7 @@ EVENT CREATOR (Teacher/Admin):
 ### Day 1: Backend APIs (API Perfection)
 
 #### Task 1.1: Create/Fix Event APIs
+
 ```javascript
 // Endpoints to Create/Fix:
 
@@ -220,6 +228,7 @@ PUT /api/events/[id]/withdraw
 ```
 
 #### Task 1.2: Fix Participation Request Model
+
 ```javascript
 // Update ParticipationRequest schema:
 {
@@ -240,6 +249,7 @@ PUT /api/events/[id]/withdraw
 ```
 
 #### Task 1.3: Create Event Hub APIs
+
 ```javascript
 // NEW API endpoints:
 
@@ -270,6 +280,7 @@ POST /api/events/hub/bulk-approve
 ### Day 2: Frontend - Event Hub Component
 
 #### Task 2.1: Create `/events` Page
+
 **File:** `app/events/page.js` (NEW)
 
 ```javascript
@@ -283,9 +294,9 @@ import EventHubTeacher from "@/components/events/EventHubTeacher";
 
 export default function EventsPage() {
   const { data: session } = useSession();
-  
+
   if (!session) return <div>Loading...</div>;
-  
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800">
       {/* Header */}
@@ -309,6 +320,7 @@ export default function EventsPage() {
 ```
 
 #### Task 2.2: Create EventHubStudent Component
+
 **File:** `components/events/EventHubStudent.js` (NEW)
 
 ```javascript
@@ -376,7 +388,11 @@ export default function EventHubStudent() {
       {/* Tabs */}
       <Tabs
         tabs={[
-          { label: "Available Events", value: "available", count: availableEvents.length },
+          {
+            label: "Available Events",
+            value: "available",
+            count: availableEvents.length,
+          },
           { label: "My Requests", value: "requests", count: myRequests.length },
           { label: "Past Events", value: "past", count: pastEvents.length },
         ]}
@@ -426,11 +442,7 @@ export default function EventHubStudent() {
             />
           ) : (
             myRequests.map((req) => (
-              <RequestCard
-                key={req._id}
-                request={req}
-                onWithdraw={fetchData}
-              />
+              <RequestCard key={req._id} request={req} onWithdraw={fetchData} />
             ))
           )}
         </div>
@@ -469,6 +481,7 @@ export default function EventHubStudent() {
 #### Task 2.3: Create Reusable Components
 
 **File:** `components/events/EventCard.js` (NEW)
+
 ```javascript
 // Beautiful event card with:
 // - Title, date, time
@@ -481,6 +494,7 @@ export default function EventHubStudent() {
 ```
 
 **File:** `components/events/EventDetailsModal.js` (NEW)
+
 ```javascript
 // Full event details in modal:
 // - Complete description
@@ -492,6 +506,7 @@ export default function EventHubStudent() {
 ```
 
 **File:** `components/events/EventHubAdmin.js` (NEW)
+
 ```javascript
 // Three tabs for admin:
 // 1. Create Event - Form
@@ -504,6 +519,7 @@ export default function EventHubStudent() {
 ### Day 3: Polish & Testing
 
 #### Task 3.1: Validation & Error Handling
+
 - ✓ Real-time form validation
 - ✓ Clear, user-friendly error messages
 - ✓ Capacity validation
@@ -511,6 +527,7 @@ export default function EventHubStudent() {
 - ✓ Grade eligibility validation
 
 #### Task 3.2: UX Enhancements
+
 - ✓ Loading skeletons
 - ✓ Toast notifications (success/error)
 - ✓ Confirmation modals for destructive actions
@@ -519,6 +536,7 @@ export default function EventHubStudent() {
 - ✓ Smooth animations
 
 #### Task 3.3: Testing Flows
+
 - ✓ Student can request eligible event
 - ✓ Student cannot request ineligible event
 - ✓ Admin can approve/reject request
@@ -534,6 +552,7 @@ export default function EventHubStudent() {
 ### Day 4: Student Dashboard
 
 **Enhancements:**
+
 ```
 Student Dashboard Components:
 ├─ ProfileCard
@@ -566,6 +585,7 @@ Student Dashboard Components:
 ### Day 5: Teacher Dashboard
 
 **Enhancements:**
+
 ```
 Teacher Dashboard Components:
 ├─ QuickStats
@@ -595,6 +615,7 @@ Teacher Dashboard Components:
 ## ✨ PHASE 3: FINAL POLISH (Days 6-7)
 
 ### Day 6: Complete Testing & Bug Fixes
+
 - ✓ Full end-to-end testing
 - ✓ Cross-browser testing
 - ✓ Mobile responsiveness
@@ -602,6 +623,7 @@ Teacher Dashboard Components:
 - ✓ Security review
 
 ### Day 7: Documentation & Deployment
+
 - ✓ API documentation
 - ✓ User guide
 - ✓ Admin guide
@@ -615,34 +637,18 @@ Teacher Dashboard Components:
 ### NEW FILES TO CREATE (22 files)
 
 **Event System:**
+
 1. `app/events/page.js` - Events hub main page
 2. `app/api/events/hub/route.js` - Hub API
 3. `app/api/events/hub/available/route.js` - Available events
 4. `app/api/events/hub/my-requests/route.js` - Student requests
 5. `app/api/events/hub/past/route.js` - Past events
 
-**Components:**
-6. `components/events/EventCard.js` - Event card
-7. `components/events/EventDetailsModal.js` - Details modal
-8. `components/events/EventHubStudent.js` - Student hub
-9. `components/events/EventHubAdmin.js` - Admin hub
-10. `components/events/EventHubTeacher.js` - Teacher hub
-11. `components/events/RequestCard.js` - Request display
-12. `components/events/EventForm.js` - Create event form
-13. `components/events/ApprovalCenter.js` - Approve requests
+**Components:** 6. `components/events/EventCard.js` - Event card 7. `components/events/EventDetailsModal.js` - Details modal 8. `components/events/EventHubStudent.js` - Student hub 9. `components/events/EventHubAdmin.js` - Admin hub 10. `components/events/EventHubTeacher.js` - Teacher hub 11. `components/events/RequestCard.js` - Request display 12. `components/events/EventForm.js` - Create event form 13. `components/events/ApprovalCenter.js` - Approve requests
 
-**Dashboard Enhancements:**
-14. `components/StudentDashboard/QuickStats.js`
-15. `components/StudentDashboard/EventStatus.js`
-16. `components/StudentDashboard/RecentMarks.js`
-17. `components/TeacherDashboard/QuickStats.js`
-18. `components/TeacherDashboard/SubjectCards.js`
-19. `components/TeacherDashboard/MarksQuickEntry.js`
-20. `components/TeacherDashboard/EventCreations.js`
+**Dashboard Enhancements:** 14. `components/StudentDashboard/QuickStats.js` 15. `components/StudentDashboard/EventStatus.js` 16. `components/StudentDashboard/RecentMarks.js` 17. `components/TeacherDashboard/QuickStats.js` 18. `components/TeacherDashboard/SubjectCards.js` 19. `components/TeacherDashboard/MarksQuickEntry.js` 20. `components/TeacherDashboard/EventCreations.js`
 
-**Utilities:**
-21. `components/Tabs.js` - Tab component
-22. `lib/eventHelpers.js` - Event utility functions
+**Utilities:** 21. `components/Tabs.js` - Tab component 22. `lib/eventHelpers.js` - Event utility functions
 
 ### FILES TO MODIFY (8 files)
 
@@ -660,6 +666,7 @@ Teacher Dashboard Components:
 ## 🎯 SUCCESS METRICS
 
 ### Event System (Perfect)
+
 - ✅ Student requests eligibility checked server-side
 - ✅ Capacity never exceeded
 - ✅ Deadlines enforced
@@ -669,6 +676,7 @@ Teacher Dashboard Components:
 - ✅ All data consistent
 
 ### Dashboards (Complete)
+
 - ✅ Student sees full picture
 - ✅ Teacher has quick access to everything
 - ✅ Admin can manage efficiently
@@ -677,6 +685,7 @@ Teacher Dashboard Components:
 - ✅ Fast loading (<2s)
 
 ### UX/Polish (Professional)
+
 - ✅ No console errors
 - ✅ Smooth animations
 - ✅ Clear feedback for all actions
@@ -690,15 +699,18 @@ Teacher Dashboard Components:
 ## 🚀 IMPLEMENTATION CHECKLIST
 
 ### Phase 1: Events (Days 1-3)
+
 - [ ] Day 1: All APIs created/fixed
 - [ ] Day 2: All components created
 - [ ] Day 3: Polish & testing complete
 
 ### Phase 2: Dashboards (Days 4-5)
+
 - [ ] Day 4: Student dashboard enhanced
 - [ ] Day 5: Teacher dashboard enhanced
 
 ### Phase 3: Final (Days 6-7)
+
 - [ ] Day 6: Full testing & bug fixes
 - [ ] Day 7: Documentation & ready for deployment
 
@@ -720,6 +732,7 @@ Teacher Dashboard Components:
 ## 🎓 LEARNING POINTS FOR YOUR PARTNER
 
 This plan shows:
+
 1. How to identify broken features
 2. How to prioritize fixes (Events first)
 3. How to think user-centric
