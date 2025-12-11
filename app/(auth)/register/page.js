@@ -207,6 +207,45 @@ export default function RegisterPage() {
                   className="w-full bg-slate-700 text-white rounded p-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   required
                 />
+                {/* Password Requirements Guide */}
+                <div className="mt-2 text-xs space-y-1">
+                  <div
+                    className={`flex items-center gap-2 ${
+                      (formData.password || "").length >= 8
+                        ? "text-emerald-400"
+                        : "text-slate-400"
+                    }`}
+                  >
+                    <span className="text-lg">
+                      {(formData.password || "").length >= 8 ? "✓" : "○"}
+                    </span>
+                    At least 8 characters
+                  </div>
+                  <div
+                    className={`flex items-center gap-2 ${
+                      /[A-Za-z]/.test(formData.password)
+                        ? "text-emerald-400"
+                        : "text-slate-400"
+                    }`}
+                  >
+                    <span className="text-lg">
+                      {/[A-Za-z]/.test(formData.password) ? "✓" : "○"}
+                    </span>
+                    At least 1 letter (A-Z, a-z)
+                  </div>
+                  <div
+                    className={`flex items-center gap-2 ${
+                      /\d/.test(formData.password)
+                        ? "text-emerald-400"
+                        : "text-slate-400"
+                    }`}
+                  >
+                    <span className="text-lg">
+                      {/\d/.test(formData.password) ? "✓" : "○"}
+                    </span>
+                    At least 1 number (0-9)
+                  </div>
+                </div>
               </div>
             </div>
           </div>
