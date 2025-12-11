@@ -71,8 +71,6 @@ export default function SchoolDashboard() {
 
   const fetchData = async () => {
     try {
-      // Debug: log session info
-      console.log("Session:", session);
 
       const teachersRes = await fetch("/api/teachers", { cache: "no-store" });
       const classroomsRes = await fetch("/api/classrooms", {

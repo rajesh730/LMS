@@ -46,25 +46,18 @@ export default function EventParticipationForm({
 
   useEffect(() => {
     if (isEditing && session?.user?.role === "SCHOOL_ADMIN") {
-      console.log("Loading participation details for event:", event._id);
       loadMyParticipationDetails();
     }
   }, [isEditing, session, event._id]);
 
   const loadMyParticipationDetails = async () => {
     try {
-      console.log(
-        "Fetching participation from:",
-        `/api/events/${event._id}/participate`
-      );
       const res = await fetch(`/api/events/${event._id}/participate`);
       if (res.ok) {
         const json = await res.json();
-        console.log("Participation API Response:", json);
 
         // Handle API response wrapper
         const data = json.data || json;
-        console.log("Participation Data Payload:", data);
 
         if (data.requests && Array.isArray(data.requests)) {
           // We want to show ALL students that are part of the request, even if rejected,
@@ -504,16 +497,6 @@ export default function EventParticipationForm({
                       const isSelected = formData.selectedStudents.includes(
                         String(student._id)
                       );
-
-                      // Debug log for specific student
-                      if (student.name.includes("Student 1 of Class 10")) {
-                        console.log(`Render ${student.name}:`, {
-                          id: student._id,
-                          type: typeof student._id,
-                          inSelected: isSelected,
-                          selectedList: formData.selectedStudents,
-                        });
-                      }
 
                       return (
                         <div
