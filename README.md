@@ -219,17 +219,7 @@ node test_participation.js
 node test_teacher_attendance.js
 ```
 
-## 📝 Scripts
-
-Helpful scripts in `/scripts` directory:
-
-- `check_students.js` - Verify student data
-- `check_users.js` - Check user accounts
-- `check_attendance_db.js` - Debug attendance
-- `reset_password.js` - Reset user password
-- `approve_school.js` - Approve school for admin
-
-## 🔒 Security Features
+##  Security Features
 
 - Password hashing with bcryptjs
 - Session-based authentication (NextAuth)

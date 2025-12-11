@@ -2,9 +2,6 @@
 
 import {
   FaEdit,
-  FaTimesCircle,
-  FaFileExport,
-  FaDownload,
   FaTrash,
 } from "react-icons/fa";
 import { useState } from "react";
@@ -21,24 +18,6 @@ export default function QuickActionsSection({ event }) {
         // Navigate to edit page
         window.location.href = `/admin/events/${event.id}/edit`;
       },
-    },
-    {
-      icon: FaTimesCircle,
-      label: "Close Event",
-      color: "yellow",
-      onClick: () => alert("Close event feature - coming soon"),
-    },
-    {
-      icon: FaFileExport,
-      label: "Export Report",
-      color: "purple",
-      onClick: () => alert("Export report feature - coming soon"),
-    },
-    {
-      icon: FaDownload,
-      label: "Download Roster",
-      color: "green",
-      onClick: () => alert("Download roster feature - coming soon"),
     },
     {
       icon: FaTrash,
@@ -98,9 +77,8 @@ export default function QuickActionsSection({ event }) {
               </button>
               <button
                 onClick={() => {
-                  // Call delete API
-                  alert("Delete functionality - coming soon");
                   setShowDeleteConfirm(false);
+                  // TODO: Implement delete event functionality
                 }}
                 className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold"
               >

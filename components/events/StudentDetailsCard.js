@@ -8,7 +8,6 @@ import {
   FaCheck,
   FaTimes,
   FaTrash,
-  FaTimes as FaClose,
 } from "react-icons/fa";
 
 export default function StudentDetailsCard({
