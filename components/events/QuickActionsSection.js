@@ -1,9 +1,6 @@
 "use client";
 
-import {
-  FaEdit,
-  FaTrash,
-} from "react-icons/fa";
+import { FaEdit, FaTrash } from "react-icons/fa";
 import { useState } from "react";
 
 export default function QuickActionsSection({ event }) {

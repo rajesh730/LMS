@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, memo, useCallback } from "react";
 import {
   FaPhone,
   FaUser,
@@ -12,7 +12,7 @@ import {
 } from "react-icons/fa";
 import { useSession } from "next-auth/react";
 
-export default function EventParticipationForm({
+const EventParticipationForm = memo(function EventParticipationForm({
   event,
   onSuccess,
   isEditing = false,
@@ -598,4 +598,6 @@ export default function EventParticipationForm({
       </div>
     </form>
   );
-}
+});
+
+export default EventParticipationForm;

@@ -219,7 +219,7 @@ node test_participation.js
 node test_teacher_attendance.js
 ```
 
-##  Security Features
+## Security Features
 
 - Password hashing with bcryptjs
 - Session-based authentication (NextAuth)

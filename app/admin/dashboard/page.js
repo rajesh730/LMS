@@ -1,12 +1,18 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import DashboardLayout from "@/components/DashboardLayout";
 import SendEventForm from "./SendEventForm";
 import EventCard from "./EventCard";
-import EventParticipantsView from "./EventParticipantsView";
+
+// Lazy load the participants view component
+const EventParticipantsView = dynamic(() => import("./EventParticipantsView"), {
+  loading: () => <div className="p-4 text-slate-400">Loading participants...</div>,
+});
+
 import {
   FaSchool,
   FaLayerGroup,

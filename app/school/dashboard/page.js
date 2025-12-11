@@ -1,15 +1,30 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
+import dynamic from "next/dynamic";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import DashboardLayout from "@/components/DashboardLayout";
 import Sidebar from "@/components/Sidebar";
 import EventFeed from "./EventFeed";
 import CSVUploader from "@/components/CSVUploader";
-import AttendanceManager from "@/components/AttendanceManager";
 import CredentialsModal from "@/components/CredentialsModal";
 import PasswordField from "@/components/PasswordField";
+
+// Lazy load heavy components
+const AttendanceManager = dynamic(() => import("@/components/AttendanceManager"), {
+  loading: () => <div className="p-4 text-slate-400">Loading attendance...</div>,
+});
+const StudentManager = dynamic(() => import("@/components/dashboard/StudentManager"), {
+  loading: () => <div className="p-4 text-slate-400">Loading students...</div>,
+});
+const DashboardOverview = dynamic(() => import("@/components/DashboardOverview"), {
+  loading: () => <div className="p-4 text-slate-400">Loading overview...</div>,
+});
+const TeacherAttendanceReport = dynamic(() => import("@/components/TeacherAttendanceReport"), {
+  loading: () => <div className="p-4 text-slate-400">Loading report...</div>,
+});
+
 import {
   FaUserGraduate,
   FaChalkboardTeacher,
@@ -22,10 +37,7 @@ import {
   FaKey,
   FaDownload,
 } from "react-icons/fa";
-import StudentManager from "@/components/dashboard/StudentManager";
 import EventHub from "@/components/events/EventHub";
-import DashboardOverview from "@/components/DashboardOverview";
-import TeacherAttendanceReport from "@/components/TeacherAttendanceReport";
 
 export default function SchoolDashboard() {
   const { data: session, status } = useSession();
