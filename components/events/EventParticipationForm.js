@@ -12,7 +12,11 @@ import {
 } from "react-icons/fa";
 import { useSession } from "next-auth/react";
 
-export default function EventParticipationForm({ event, onSuccess }) {
+export default function EventParticipationForm({
+  event,
+  onSuccess,
+  isEditing = false,
+}) {
   const { data: session } = useSession();
   const [formData, setFormData] = useState({
     contactPerson: "",
@@ -38,15 +42,80 @@ export default function EventParticipationForm({ event, onSuccess }) {
   useEffect(() => {
     loadStudents();
     loadClasses();
-    loadInterestedStudents();
   }, []);
+
+  useEffect(() => {
+    if (isEditing && session?.user?.role === "SCHOOL_ADMIN") {
+      console.log("Loading participation details for event:", event._id);
+      loadMyParticipationDetails();
+    }
+  }, [isEditing, session, event._id]);
+
+  const loadMyParticipationDetails = async () => {
+    try {
+      console.log(
+        "Fetching participation from:",
+        `/api/events/${event._id}/participate`
+      );
+      const res = await fetch(`/api/events/${event._id}/participate`);
+      if (res.ok) {
+        const json = await res.json();
+        console.log("Participation API Response:", json);
+
+        // Handle API response wrapper
+        const data = json.data || json;
+        console.log("Participation Data Payload:", data);
+
+        if (data.requests && Array.isArray(data.requests)) {
+          // We want to show ALL students that are part of the request, even if rejected,
+          // so the admin can see who they tried to register.
+          // But typically "Update" means modifying the current active set.
+          // Let's include PENDING, APPROVED, and REJECTED so they can uncheck rejected ones if they want.
+          const relevantRequests = data.requests.filter((r) =>
+            ["PENDING", "APPROVED", "REJECTED"].includes(r.status)
+          );
+
+          const selectedIds = relevantRequests
+            .map((r) => {
+              if (!r.student) return null;
+              const sId =
+                typeof r.student === "object" ? r.student._id : r.student;
+              return String(sId);
+            })
+            .filter(Boolean);
+
+          console.log("Extracted selectedIds:", selectedIds);
+
+          setFormData((prev) => {
+            console.log("Setting form data with IDs:", selectedIds);
+            return {
+              ...prev,
+              selectedStudents: selectedIds,
+              contactPerson:
+                data.contactInfo?.contactPerson || prev.contactPerson,
+              phone: data.contactInfo?.contactPhone || prev.phone,
+              notes: data.contactInfo?.notes || prev.notes,
+            };
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error loading participation details:", error);
+    }
+  };
 
   const loadClasses = async () => {
     try {
       const res = await fetch("/api/classrooms");
       if (res.ok) {
         const data = await res.json();
-        setClasses(Array.isArray(data) ? data : []);
+        setClasses(
+          Array.isArray(data.classrooms)
+            ? data.classrooms
+            : Array.isArray(data)
+            ? data
+            : []
+        );
       } else {
         setClasses([]);
       }
@@ -62,9 +131,23 @@ export default function EventParticipationForm({ event, onSuccess }) {
       const res = await fetch(`/api/events/${event._id}/manage`);
       if (res.ok) {
         const data = await res.json();
-        setInterestedStudents(
-          Array.isArray(data.requests) ? data.requests : []
-        );
+
+        // The API returns requests organized by status { PENDING: [], APPROVED: [], ... }
+        // We need to flatten this into a single array for our logic
+        if (data.requests && !Array.isArray(data.requests)) {
+          const allRequests = [
+            ...(data.requests.PENDING || []),
+            ...(data.requests.APPROVED || []),
+            ...(data.requests.REJECTED || []),
+            ...(data.requests.WITHDRAWN || []),
+            ...(data.requests.ENROLLED || []),
+          ];
+          setInterestedStudents(allRequests);
+        } else {
+          setInterestedStudents(
+            Array.isArray(data.requests) ? data.requests : []
+          );
+        }
       } else {
         setInterestedStudents([]);
       }
@@ -98,21 +181,34 @@ export default function EventParticipationForm({ event, onSuccess }) {
     interestedStudents.map((r) => [r.student._id, r])
   );
 
-  const filteredStudents = students.filter((student) => {
-    const request = participationMap.get(student._id);
-    
-    const matchesSearch = student.name
-      .toLowerCase()
-      .includes(searchQuery.toLowerCase());
-    const matchesClass =
-      classFilter === "all" || student.className === classFilter;
-    
-    const matchesStatus = interestedFilter === "all" || 
-                         (interestedFilter === "UNREGISTERED" && !request) ||
-                         (request && request.status === interestedFilter);
+  const filteredStudents = students
+    .filter((student) => {
+      const request = participationMap.get(student._id);
 
-    return matchesSearch && matchesClass && matchesStatus;
-  });
+      const matchesSearch = student.name
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase());
+      const matchesClass =
+        classFilter === "all" || student.classroom?.name === classFilter;
+
+      const matchesStatus =
+        interestedFilter === "all" ||
+        (interestedFilter === "UNREGISTERED" && !request) ||
+        (interestedFilter === "REGISTERED" &&
+          request &&
+          ["PENDING", "APPROVED"].includes(request.status)) ||
+        (request && request.status === interestedFilter);
+
+      return matchesSearch && matchesClass && matchesStatus;
+    })
+    .sort((a, b) => {
+      // Sort selected students to the top
+      const aSelected = formData.selectedStudents.includes(String(a._id));
+      const bSelected = formData.selectedStudents.includes(String(b._id));
+      if (aSelected && !bSelected) return -1;
+      if (!aSelected && bSelected) return 1;
+      return 0;
+    });
 
   const handleStudentToggle = (studentId) => {
     setFormData((prev) => ({
@@ -154,8 +250,9 @@ export default function EventParticipationForm({ event, onSuccess }) {
 
     try {
       setSubmitting(true);
+      const method = isEditing ? "PUT" : "POST";
       const res = await fetch(`/api/events/${event._id}/participate`, {
-        method: "POST",
+        method: method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           contactPerson: formData.contactPerson,
@@ -166,7 +263,11 @@ export default function EventParticipationForm({ event, onSuccess }) {
       });
 
       if (res.ok) {
-        alert("Participation request submitted successfully!");
+        alert(
+          isEditing
+            ? "Participation updated successfully!"
+            : "Participation request submitted successfully!"
+        );
         onSuccess?.();
       } else {
         const data = await res.json();
@@ -185,6 +286,8 @@ export default function EventParticipationForm({ event, onSuccess }) {
       <h2 className="text-3xl font-bold text-white mb-8">
         {session?.user?.role === "STUDENT"
           ? "Join Event:"
+          : isEditing
+          ? "Update Participation:"
           : "Manage Event Participation:"}{" "}
         <span className="text-emerald-400">{event.title}</span>
       </h2>
@@ -263,69 +366,73 @@ export default function EventParticipationForm({ event, onSuccess }) {
             <FaUsers className="text-xl" /> Student Management
           </h3>
           <p className="text-slate-400 text-sm mb-6">
-            Manage participation for your students
+            Manage participation for your students.
+            {formData.selectedStudents.length > 0 && (
+              <span className="text-emerald-400 ml-2 font-bold">
+                ({formData.selectedStudents.length} selected)
+              </span>
+            )}
           </p>
 
           {/* Filters */}
           <div className="mb-6 space-y-3">
             {/* Status Filter Tabs */}
             <div className="flex flex-wrap gap-2">
-                {[
-                  { id: "all", label: "All" },
-                  { id: "UNREGISTERED", label: "Unregistered" },
-                  { id: "PENDING", label: "Pending" },
-                  { id: "APPROVED", label: "Approved" },
-                  { id: "REJECTED", label: "Rejected" },
-                ].map((filter) => (
-                  <button
-                    key={filter.id}
-                    type="button"
-                    onClick={() => setInterestedFilter(filter.id)}
-                    className={`px-3 py-1 text-sm rounded-lg font-medium transition-colors ${
-                      interestedFilter === filter.id
-                        ? "bg-emerald-600 text-white"
-                        : "bg-slate-800 text-slate-300 hover:bg-slate-700"
-                    }`}
-                  >
-                    {filter.label}
-                  </button>
-                ))}
+              {[
+                { id: "all", label: "All" },
+                { id: "UNREGISTERED", label: "Unregistered" },
+                { id: "REGISTERED", label: "Registered" },
+                { id: "REJECTED", label: "Rejected" },
+              ].map((filter) => (
+                <button
+                  key={filter.id}
+                  type="button"
+                  onClick={() => setInterestedFilter(filter.id)}
+                  className={`px-3 py-1 text-sm rounded-lg font-medium transition-colors ${
+                    interestedFilter === filter.id
+                      ? "bg-emerald-600 text-white"
+                      : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                  }`}
+                >
+                  {filter.label}
+                </button>
+              ))}
             </div>
 
             {/* Search & Class Filter */}
             <div className="flex gap-3">
-                <div className="flex-1 flex items-center gap-2 bg-slate-900 rounded-lg px-3 py-2 border border-slate-700">
-                  <FaSearch className="text-slate-500" />
-                  <input
-                    type="text"
-                    placeholder="Search student..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="flex-1 bg-transparent outline-none text-white placeholder-slate-500"
-                  />
-                  {searchQuery && (
-                    <button
-                      type="button"
-                      onClick={() => setSearchQuery("")}
-                      className="text-slate-500 hover:text-slate-300"
-                    >
-                      <FaTimes />
-                    </button>
-                  )}
-                </div>
-                <select
-                  value={classFilter}
-                  onChange={(e) => setClassFilter(e.target.value)}
-                  className="bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white"
-                >
-                  <option value="all">All Classes</option>
-                  {Array.isArray(classes) &&
-                    classes.map((cls) => (
-                      <option key={cls._id} value={cls.name}>
-                        {cls.name}
-                      </option>
-                    ))}
-                </select>
+              <div className="flex-1 flex items-center gap-2 bg-slate-900 rounded-lg px-3 py-2 border border-slate-700">
+                <FaSearch className="text-slate-500" />
+                <input
+                  type="text"
+                  placeholder="Search student..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="flex-1 bg-transparent outline-none text-white placeholder-slate-500"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery("")}
+                    className="text-slate-500 hover:text-slate-300"
+                  >
+                    <FaTimes />
+                  </button>
+                )}
+              </div>
+              <select
+                value={classFilter}
+                onChange={(e) => setClassFilter(e.target.value)}
+                className="bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white"
+              >
+                <option value="all">All Classes</option>
+                {Array.isArray(classes) &&
+                  classes.map((cls) => (
+                    <option key={cls._id} value={cls.name}>
+                      {cls.name}
+                    </option>
+                  ))}
+              </select>
             </div>
           </div>
 
@@ -346,25 +453,36 @@ export default function EventParticipationForm({ event, onSuccess }) {
                   <input
                     type="checkbox"
                     checked={
-                      filteredStudents.some(s => !participationMap.get(s._id)) &&
+                      filteredStudents.some(
+                        (s) => !participationMap.get(s._id)
+                      ) &&
                       filteredStudents
-                        .filter(s => !participationMap.get(s._id))
+                        .filter((s) => !participationMap.get(s._id))
                         .every((s) => formData.selectedStudents.includes(s._id))
                     }
                     onChange={(e) => {
-                        const unregistered = filteredStudents.filter(s => !participationMap.get(s._id));
-                        if (e.target.checked) {
-                            setFormData(prev => ({
-                                ...prev,
-                                selectedStudents: [...new Set([...prev.selectedStudents, ...unregistered.map(s => s._id)])]
-                            }));
-                        } else {
-                            const unregisteredIds = unregistered.map(s => s._id);
-                            setFormData(prev => ({
-                                ...prev,
-                                selectedStudents: prev.selectedStudents.filter(id => !unregisteredIds.includes(id))
-                            }));
-                        }
+                      const unregistered = filteredStudents.filter(
+                        (s) => !participationMap.get(s._id)
+                      );
+                      if (e.target.checked) {
+                        setFormData((prev) => ({
+                          ...prev,
+                          selectedStudents: [
+                            ...new Set([
+                              ...prev.selectedStudents,
+                              ...unregistered.map((s) => s._id),
+                            ]),
+                          ],
+                        }));
+                      } else {
+                        const unregisteredIds = unregistered.map((s) => s._id);
+                        setFormData((prev) => ({
+                          ...prev,
+                          selectedStudents: prev.selectedStudents.filter(
+                            (id) => !unregisteredIds.includes(id)
+                          ),
+                        }));
+                      }
                     }}
                     className="w-5 h-5 rounded cursor-pointer accent-emerald-500"
                   />
@@ -383,17 +501,33 @@ export default function EventParticipationForm({ event, onSuccess }) {
                   {Array.isArray(filteredStudents) &&
                     filteredStudents.map((student) => {
                       const request = participationMap.get(student._id);
-                      const isSelected = formData.selectedStudents.includes(student._id);
-                      
+                      const isSelected = formData.selectedStudents.includes(
+                        String(student._id)
+                      );
+
+                      // Debug log for specific student
+                      if (student.name.includes("Student 1 of Class 10")) {
+                        console.log(`Render ${student.name}:`, {
+                          id: student._id,
+                          type: typeof student._id,
+                          inSelected: isSelected,
+                          selectedList: formData.selectedStudents,
+                        });
+                      }
+
                       return (
-                      <div
-                        key={student._id}
-                        className={`flex items-center gap-3 p-4 transition-colors ${
-                            request ? 'bg-slate-800/30' : 'hover:bg-slate-800/50 cursor-pointer'
-                        }`}
-                        onClick={() => !request && handleStudentToggle(student._id)}
-                      >
-                        {!request ? (
+                        <div
+                          key={student._id}
+                          className={`flex items-center gap-3 p-4 transition-colors ${
+                            request
+                              ? "bg-slate-800/30"
+                              : "hover:bg-slate-800/50 cursor-pointer"
+                          }`}
+                          onClick={() =>
+                            !request && handleStudentToggle(student._id)
+                          }
+                        >
+                          {!request ? (
                             <input
                               type="checkbox"
                               checked={isSelected}
@@ -401,26 +535,32 @@ export default function EventParticipationForm({ event, onSuccess }) {
                               className="w-5 h-5 rounded cursor-pointer accent-emerald-500"
                               onClick={(e) => e.stopPropagation()}
                             />
-                        ) : (
+                          ) : (
                             <div className="w-5 h-5 flex items-center justify-center">
-                                {request.status === 'APPROVED' && <FaCheck className="text-green-500" />}
-                                {request.status === 'REJECTED' && <FaTimes className="text-red-500" />}
-                                {request.status === 'PENDING' && <div className="w-2 h-2 rounded-full bg-yellow-500" />}
+                              {request.status === "APPROVED" && (
+                                <FaCheck className="text-green-500" />
+                              )}
+                              {request.status === "REJECTED" && (
+                                <FaTimes className="text-red-500" />
+                              )}
+                              {request.status === "PENDING" && (
+                                <div className="w-2 h-2 rounded-full bg-yellow-500" />
+                              )}
                             </div>
-                        )}
-                        
-                        <div className="flex-1">
-                          <div className="text-white font-medium">
-                            {student.name}
-                          </div>
-                          <div className="text-slate-400 text-sm flex items-center gap-2">
-                            <FaSchool className="text-xs" />
-                            {student.className}
-                          </div>
-                        </div>
+                          )}
 
-                        {/* Status Badge */}
-                        {request && (
+                          <div className="flex-1">
+                            <div className="text-white font-medium">
+                              {student.name}
+                            </div>
+                            <div className="text-slate-400 text-sm flex items-center gap-2">
+                              <FaSchool className="text-xs" />
+                              {student.className}
+                            </div>
+                          </div>
+
+                          {/* Status Badge */}
+                          {request && (
                             <span
                               className={`px-3 py-1 rounded-full text-xs font-bold ${
                                 request.status === "PENDING"
@@ -432,9 +572,10 @@ export default function EventParticipationForm({ event, onSuccess }) {
                             >
                               {request.status}
                             </span>
-                        )}
-                      </div>
-                    )})}
+                          )}
+                        </div>
+                      );
+                    })}
                 </div>
               </div>
             )}
@@ -466,6 +607,8 @@ export default function EventParticipationForm({ event, onSuccess }) {
           <FaCheck />{" "}
           {session?.user?.role === "STUDENT"
             ? "Confirm Participation"
+            : isEditing
+            ? "Update Participants"
             : "Submit Students"}{" "}
           ({formData.selectedStudents.length})
         </button>

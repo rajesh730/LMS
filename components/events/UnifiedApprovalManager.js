@@ -17,7 +17,9 @@ export default function UnifiedApprovalManager({
   // Organize requests by status
   const requestsByStatus = {
     PENDING: requests.filter((r) => r.status === "PENDING"),
-    APPROVED: requests.filter((r) => r.status === "ENROLLED"),
+    APPROVED: requests.filter(
+      (r) => r.status === "APPROVED" || r.status === "ENROLLED"
+    ),
     REJECTED: requests.filter((r) => r.status === "REJECTED"),
   };
 

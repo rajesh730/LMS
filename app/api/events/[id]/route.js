@@ -4,7 +4,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import Event from "@/models/Event";
 
-export async function PUT(req, { params }) {
+export async function PUT(req, props) {
   try {
     const session = await getServerSession(authOptions);
     if (!session || session.user.role !== "SUPER_ADMIN") {

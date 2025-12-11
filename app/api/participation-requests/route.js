@@ -18,7 +18,10 @@ import {
 export async function GET(req) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== "SCHOOL_ADMIN") {
+    if (
+      !session ||
+      !["SCHOOL_ADMIN", "SUPER_ADMIN"].includes(session.user.role)
+    ) {
       return unauthorizedError();
     }
 
@@ -28,7 +31,13 @@ export async function GET(req) {
     const status = searchParams.get("status"); // PENDING, APPROVED, REJECTED
     const eventId = searchParams.get("event");
 
-    let query = { school: session.user.id };
+    let query = {};
+    // If School Admin, restrict to their school
+    if (session.user.role === "SCHOOL_ADMIN") {
+      query.school = session.user.id;
+    }
+    // If Super Admin, they can see all, or we could add a school filter param later
+
     if (status) query.status = status;
     if (eventId) query.event = eventId;
 
@@ -65,7 +74,10 @@ export async function GET(req) {
 export async function PATCH(req) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== "SCHOOL_ADMIN") {
+    if (
+      !session ||
+      !["SCHOOL_ADMIN", "SUPER_ADMIN"].includes(session.user.role)
+    ) {
       return unauthorizedError();
     }
 
@@ -91,8 +103,11 @@ export async function PATCH(req) {
       return notFoundError("Participation request");
     }
 
-    // Verify ownership
-    if (request.school.toString() !== session.user.id) {
+    // Verify ownership (only for School Admin)
+    if (
+      session.user.role === "SCHOOL_ADMIN" &&
+      request.school.toString() !== session.user.id
+    ) {
       return unauthorizedError();
     }
 

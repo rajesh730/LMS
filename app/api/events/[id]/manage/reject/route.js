@@ -22,7 +22,7 @@ export async function PUT(req, { params }) {
 
     await dbConnect();
 
-    const { id: eventId } = params;
+    const { id: eventId } = await params;
     const body = await req.json();
     const { requestIds, reason } = body;
 

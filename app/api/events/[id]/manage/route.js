@@ -55,6 +55,7 @@ export async function GET(req, { params }) {
       APPROVED: [],
       REJECTED: [],
       WITHDRAWN: [],
+      ENROLLED: [],
     };
 
     requests.forEach((req) => {

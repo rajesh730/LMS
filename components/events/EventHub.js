@@ -13,6 +13,8 @@ import {
   FaTimes,
   FaChevronDown,
   FaChevronUp,
+  FaTrash,
+  FaEdit,
 } from "react-icons/fa";
 import EventParticipationForm from "./EventParticipationForm";
 import { useSession } from "next-auth/react";
@@ -28,6 +30,32 @@ export default function EventHub() {
   useEffect(() => {
     fetchEvents();
   }, []);
+
+  const handleWithdraw = async (eventId) => {
+    if (
+      !confirm(
+        "Are you sure you want to withdraw from this event? This will remove all students."
+      )
+    )
+      return;
+
+    try {
+      const res = await fetch(`/api/events/${eventId}/participate`, {
+        method: "DELETE",
+      });
+
+      if (res.ok) {
+        alert("Successfully withdrawn from event");
+        fetchEvents();
+      } else {
+        const data = await res.json();
+        alert(data.error || "Failed to withdraw");
+      }
+    } catch (error) {
+      console.error("Error withdrawing:", error);
+      alert("An error occurred");
+    }
+  };
 
   const fetchEvents = async () => {
     try {
@@ -183,13 +211,15 @@ export default function EventHub() {
                 className="bg-slate-800/50 border border-slate-700 rounded-xl overflow-hidden transition-all hover:border-slate-600"
               >
                 {/* Event Card - Clickable Header */}
-                <button
+                <div
                   onClick={() =>
                     setExpandedEventId(
                       expandedEventId === event._id ? null : event._id
                     )
                   }
-                  className="w-full text-left p-6 hover:bg-slate-800/80 transition-colors"
+                  className="w-full text-left p-6 hover:bg-slate-800/80 transition-colors cursor-pointer"
+                  role="button"
+                  tabIndex={0}
                 >
                   <div className="flex items-start justify-between gap-4">
                     {/* Left: Event Info */}
@@ -296,7 +326,38 @@ export default function EventHub() {
                         )}
                       </div>
 
-                      {!event.participationStatus && (
+                      {event.participationStatus ? (
+                        <div className="flex gap-2">
+                          {session?.user?.role === "SCHOOL_ADMIN" && (
+                            <>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleWithdraw(event._id);
+                                }}
+                                className="bg-red-600/20 hover:bg-red-600/40 text-red-400 p-2 rounded-lg transition-colors"
+                                title="Withdraw Participation"
+                              >
+                                <FaTrash />
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setExpandedEventId(
+                                    expandedEventId === event._id
+                                      ? null
+                                      : event._id
+                                  );
+                                }}
+                                className="bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 p-2 rounded-lg transition-colors"
+                                title="Change Participants"
+                              >
+                                <FaEdit />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      ) : (
                         <div
                           onClick={(e) => {
                             e.stopPropagation();
@@ -306,18 +367,19 @@ export default function EventHub() {
                         >
                           {session?.user?.role === "STUDENT"
                             ? "Join Event"
-                            : "Manage Participants"}
+                            : "Register Participants"}
                         </div>
                       )}
                     </div>
                   </div>
-                </button>
+                </div>
 
                 {/* Expanded Section - Participation Form */}
                 {expandedEventId === event._id && (
                   <div className="border-t border-slate-700 bg-slate-900/50 p-6">
                     <EventParticipationForm
                       event={event}
+                      isEditing={!!event.participationStatus}
                       onSuccess={() => {
                         fetchEvents();
                         setExpandedEventId(null);

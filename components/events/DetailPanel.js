@@ -44,17 +44,25 @@ export default function DetailPanel({
 
     try {
       setLoading(true);
+      const requestIds = selectedStudents
+        .map((sid) => requests.find((r) => r.student._id === sid)?._id)
+        .filter(Boolean);
+
       const res = await fetch(`/api/events/${event._id}/approve`, {
-        method: "POST",
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ studentIds: selectedStudents }),
+        body: JSON.stringify({ 
+          requestIds, 
+          action: "approve" 
+        }),
       });
 
       if (res.ok) {
         onDataChange();
         onClearSelection();
       } else {
-        alert("Error approving students");
+        const data = await res.json();
+        alert(data.message || "Error approving students");
       }
     } catch (error) {
       console.error("Error:", error);
@@ -76,12 +84,13 @@ export default function DetailPanel({
         .map((sid) => requests.find((r) => r.student._id === sid)?._id)
         .filter(Boolean);
 
-      const res = await fetch(`/api/events/${event._id}/manage/reject`, {
+      const res = await fetch(`/api/events/${event._id}/approve`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           requestIds,
-          reason: rejectionReason || "Request rejected",
+          action: "reject",
+          rejectionReason: rejectionReason || "Request rejected",
         }),
       });
 
@@ -91,7 +100,8 @@ export default function DetailPanel({
         setShowRejectionForm(false);
         setRejectionReason("");
       } else {
-        alert("Error rejecting students");
+        const data = await res.json();
+        alert(data.message || "Error rejecting students");
       }
     } catch (error) {
       console.error("Error:", error);

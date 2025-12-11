@@ -5,6 +5,9 @@ import connectDB from "@/lib/db";
 import Event from "@/models/Event";
 import Group from "@/models/Group";
 import Student from "@/models/Student";
+import ParticipationRequest from "@/models/ParticipationRequest";
+
+export const dynamic = "force-dynamic";
 
 export async function POST(req) {
   try {
@@ -156,7 +159,7 @@ export async function GET(req) {
           .populate("targetGroup", "name")
           .populate(
             "participants.school",
-            "schoolName email principalName principalPhone"
+            "schoolName email principalName principalPhone schoolPhone"
           )
           .populate("participants.students", "name grade")
           .lean();
@@ -172,25 +175,148 @@ export async function GET(req) {
       throw queryError;
     }
 
-    // Add isParticipating flag and participantCount
-    const eventsWithParticipation = events.map((event) => {
-      const eventObj = { ...event };
-      eventObj.participantCount = event.participants?.length || 0;
+    // Add computed fields for frontend compatibility
+    const eventsWithParticipation = await Promise.all(
+      events.map(async (event) => {
+        const eventObj = { ...event };
 
-      if (session.user.role === "SCHOOL_ADMIN") {
-        // Find current user's participation
-        const myParticipation = event.participants?.find(
-          (p) => p.school?.toString() === session.user.id
+        // Map fields to frontend expectations
+        eventObj.deadline = event.registrationDeadline;
+        eventObj.capacity = event.maxParticipants;
+
+        // Calculate real-time counts from ParticipationRequest
+        // This ensures Super Admin sees all activity (Pending + Approved)
+        const allRequests = await ParticipationRequest.find({
+          event: event._id,
+        }).select("school status");
+
+        const uniqueSchools = new Set(
+          allRequests.map((r) => r.school.toString())
         );
-        eventObj.isParticipating = !!myParticipation;
-        // Include participation details for the detail modal
-        if (myParticipation) {
-          eventObj.myParticipation = myParticipation;
-        }
-      }
+        eventObj.schoolCount = uniqueSchools.size;
+        eventObj.studentCount = allRequests.length;
 
-      return eventObj;
-    });
+        // Keep legacy fields for compatibility if needed, but prefer new ones
+        eventObj.enrolled = eventObj.studentCount;
+        eventObj.participantCount = eventObj.schoolCount;
+
+        // For Super Admin: Construct detailed participants list from requests
+        if (session.user.role === "SUPER_ADMIN") {
+          const detailedRequests = await ParticipationRequest.find({
+            event: event._id,
+          })
+            .populate(
+              "school",
+              "schoolName email principalName principalPhone schoolPhone"
+            )
+            .populate("student", "name grade")
+            .lean();
+
+          // Group by school
+          const schoolMap = new Map();
+
+          // Initialize with existing participants (to keep notes/contact info)
+          if (event.participants) {
+            event.participants.forEach((p) => {
+              if (p.school) {
+                schoolMap.set(p.school._id.toString(), {
+                  ...p,
+                  students: [], // We will rebuild student list from requests to be accurate
+                });
+              }
+            });
+          }
+
+          // Merge/Add from requests
+          detailedRequests.forEach((req) => {
+            if (!req.school) return;
+            const schoolId = req.school._id.toString();
+
+            if (!schoolMap.has(schoolId)) {
+              schoolMap.set(schoolId, {
+                school: req.school,
+                contactPerson:
+                  req.contactPerson || req.school.principalName || "N/A",
+                contactPhone:
+                  req.contactPhone || req.school.principalPhone || "N/A",
+                joinedAt: req.requestedAt,
+                students: [],
+                notes: req.notes || "Pending Registration",
+                status: req.status, // Added status
+              });
+            } else {
+              // Update contact info if available in request
+              const entry = schoolMap.get(schoolId);
+              if (req.contactPerson) entry.contactPerson = req.contactPerson;
+              if (req.contactPhone) entry.contactPhone = req.contactPhone;
+              if (req.notes) entry.notes = req.notes;
+
+              // Ensure status is set if it was missing (from initial population)
+              if (!entry.status) entry.status = req.status;
+              // If any request is PENDING, mark the school as PENDING
+              else if (req.status === "PENDING") entry.status = "PENDING";
+            }
+
+            const schoolEntry = schoolMap.get(schoolId);
+            // Add student if not already there
+            if (
+              req.student &&
+              !schoolEntry.students.find(
+                (s) => s._id.toString() === req.student._id.toString()
+              )
+            ) {
+              // Attach requestId to student for easier approval
+              const studentWithReq = { ...req.student, requestId: req._id };
+              schoolEntry.students.push(studentWithReq);
+            }
+          });
+
+          eventObj.participants = Array.from(schoolMap.values());
+        }
+
+        if (session.user.role === "SCHOOL_ADMIN") {
+          // Check ParticipationRequest collection for status
+          // Priority: APPROVED > PENDING > REJECTED
+          const requests = await ParticipationRequest.find({
+            event: event._id,
+            school: session.user.id,
+          }).select("status contactPerson contactPhone notes student");
+
+          const statuses = requests.map((r) => r.status);
+
+          if (statuses.includes("APPROVED")) {
+            eventObj.participationStatus = "APPROVED";
+            eventObj.isParticipating = true;
+          } else if (statuses.includes("PENDING")) {
+            eventObj.participationStatus = "PENDING";
+            eventObj.isParticipating = true;
+          } else if (statuses.includes("REJECTED")) {
+            eventObj.participationStatus = "REJECTED";
+            eventObj.isParticipating = true; // Show in "My Participated" even if rejected
+          } else {
+            eventObj.participationStatus = null;
+            eventObj.isParticipating = false;
+          }
+
+          // Populate myParticipation for frontend editing
+          if (requests.length > 0) {
+            // Use the first request for contact info (assuming consistency)
+            // Find one with contact info if possible
+            const reqWithContact =
+              requests.find((r) => r.contactPerson) || requests[0];
+
+            eventObj.myParticipation = {
+              contactPerson: reqWithContact.contactPerson || "",
+              contactPhone: reqWithContact.contactPhone || "",
+              notes: reqWithContact.notes || "",
+              students: requests.map((r) => r.student),
+            };
+          }
+        }
+
+        return eventObj;
+      })
+    );
 
     return NextResponse.json(
       { events: eventsWithParticipation },

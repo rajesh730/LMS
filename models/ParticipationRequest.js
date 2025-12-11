@@ -22,6 +22,10 @@ const ParticipationRequestSchema = new mongoose.Schema(
       enum: ["PENDING", "APPROVED", "REJECTED", "WITHDRAWN", "ENROLLED"],
       default: "PENDING",
     },
+    // Contact details for this specific request/group
+    contactPerson: String,
+    contactPhone: String,
+    notes: String,
     requestedAt: {
       type: Date,
       default: Date.now,

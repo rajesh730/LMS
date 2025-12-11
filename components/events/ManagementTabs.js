@@ -18,6 +18,7 @@ export default function ManagementTabs({
     ...requests.PENDING,
     ...requests.APPROVED,
     ...requests.REJECTED,
+    ...(requests.ENROLLED || []),
   ];
 
   const tabs = [

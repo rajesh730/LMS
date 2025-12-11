@@ -39,7 +39,7 @@ export default function EventFeed() {
 
   const fetchEvents = async () => {
     try {
-      const res = await fetch("/api/events");
+      const res = await fetch("/api/events", { cache: "no-store" });
       if (res.ok) {
         const data = await res.json();
         setEvents(data.events);
@@ -87,7 +87,7 @@ export default function EventFeed() {
   const handleEditParticipation = (event) => {
     setSelectedEvent(event);
     setIsEditing(true);
-    const myPart = event.myParticipation;
+    const myPart = event.myParticipation || {};
     setParticipationForm({
       contactPerson: myPart.contactPerson || "",
       contactPhone: myPart.contactPhone || "",
@@ -218,133 +218,155 @@ export default function EventFeed() {
         </div>
       ) : (
         <div className="space-y-4">
-          {filteredEvents.map((event) => (
-            <div
-              key={event._id}
-              className={`p-4 rounded-xl border transition hover:border-slate-500 ${
-                event.isParticipating
-                  ? "bg-emerald-900/20 border-emerald-700/50"
-                  : "bg-slate-800/50 border-slate-700"
-              }`}
-            >
-              <div className="flex justify-between items-start">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 flex-wrap mb-2">
-                    <h4 className="text-lg font-semibold text-white">
-                      {event.title}
-                    </h4>
-                    {event.isParticipating && (
-                      <span className="text-xs bg-emerald-600 text-white px-2 py-0.5 rounded-full flex items-center gap-1">
-                        <FaCheckCircle /> Participating
-                      </span>
-                    )}
-                    {isFull(event) && !event.isParticipating && (
-                      <span className="text-xs bg-red-600 text-white px-2 py-0.5 rounded-full">
-                        Full
-                      </span>
-                    )}
-                    {isDeadlinePassed(event.registrationDeadline) &&
-                      !event.isParticipating && (
-                        <span className="text-xs bg-slate-600 text-slate-300 px-2 py-0.5 rounded-full">
-                          Closed
+          {filteredEvents.map((event) => {
+            let cardStyle = "bg-slate-800/50 border-slate-700";
+            if (event.isParticipating) {
+              if (event.participationStatus === "APPROVED")
+                cardStyle = "bg-emerald-900/20 border-emerald-700/50";
+              else if (event.participationStatus === "PENDING")
+                cardStyle = "bg-yellow-900/20 border-yellow-700/50";
+              else if (event.participationStatus === "REJECTED")
+                cardStyle = "bg-red-900/20 border-red-700/50";
+            }
+
+            return (
+              <div
+                key={event._id}
+                className={`p-4 rounded-xl border transition hover:border-slate-500 ${cardStyle}`}
+              >
+                <div className="flex justify-between items-start">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 flex-wrap mb-2">
+                      <h4 className="text-lg font-semibold text-white">
+                        {event.title}
+                      </h4>
+                      {event.isParticipating && (
+                        <>
+                          {event.participationStatus === "APPROVED" && (
+                            <span className="text-xs bg-emerald-600 text-white px-2 py-0.5 rounded-full flex items-center gap-1">
+                              <FaCheckCircle /> Approved
+                            </span>
+                          )}
+                          {event.participationStatus === "PENDING" && (
+                            <span className="text-xs bg-yellow-600 text-white px-2 py-0.5 rounded-full flex items-center gap-1">
+                              <FaClock /> Pending
+                            </span>
+                          )}
+                          {event.participationStatus === "REJECTED" && (
+                            <span className="text-xs bg-red-600 text-white px-2 py-0.5 rounded-full flex items-center gap-1">
+                              <FaTimesCircle /> Rejected
+                            </span>
+                          )}
+                        </>
+                      )}
+                      {isFull(event) && !event.isParticipating && (
+                        <span className="text-xs bg-red-600 text-white px-2 py-0.5 rounded-full">
+                          Full
                         </span>
                       )}
-                  </div>
+                      {isDeadlinePassed(event.registrationDeadline) &&
+                        !event.isParticipating && (
+                          <span className="text-xs bg-slate-600 text-slate-300 px-2 py-0.5 rounded-full">
+                            Closed
+                          </span>
+                        )}
+                    </div>
 
-                  <div className="flex flex-wrap gap-4 text-sm text-slate-400">
-                    <span className="flex items-center gap-1">
-                      <FaCalendarAlt className="text-emerald-400" />
-                      {new Date(event.date).toLocaleDateString()}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <FaUsers className="text-blue-400" />
-                      {event.participantCount || 0}{" "}
-                      {event.maxParticipants
-                        ? `/ ${event.maxParticipants}`
-                        : ""}{" "}
-                      schools
-                    </span>
-                    {event.registrationDeadline && (
-                      <span
-                        className={`flex items-center gap-1 ${
-                          isDeadlinePassed(event.registrationDeadline)
-                            ? "text-red-400"
-                            : "text-yellow-400"
-                        }`}
-                      >
-                        <FaClock />
-                        Deadline:{" "}
-                        {new Date(
-                          event.registrationDeadline
-                        ).toLocaleDateString()}
+                    <div className="flex flex-wrap gap-4 text-sm text-slate-400">
+                      <span className="flex items-center gap-1">
+                        <FaCalendarAlt className="text-emerald-400" />
+                        {new Date(event.date).toLocaleDateString()}
                       </span>
-                    )}
-                    {event.maxParticipantsPerSchool && (
-                      <span className="flex items-center gap-1 text-slate-400">
-                        <FaUser className="text-slate-500" />
-                        Max {event.maxParticipantsPerSchool}/School
+                      <span className="flex items-center gap-1">
+                        <FaUsers className="text-blue-400" />
+                        {event.participantCount || 0}{" "}
+                        {event.maxParticipants
+                          ? `/ ${event.maxParticipants}`
+                          : ""}{" "}
+                        schools
                       </span>
-                    )}
-                    {event.eligibleGrades &&
-                      event.eligibleGrades.length > 0 && (
+                      {event.registrationDeadline && (
+                        <span
+                          className={`flex items-center gap-1 ${
+                            isDeadlinePassed(event.registrationDeadline)
+                              ? "text-red-400"
+                              : "text-yellow-400"
+                          }`}
+                        >
+                          <FaClock />
+                          Deadline:{" "}
+                          {new Date(
+                            event.registrationDeadline
+                          ).toLocaleDateString()}
+                        </span>
+                      )}
+                      {event.maxParticipantsPerSchool && (
                         <span className="flex items-center gap-1 text-slate-400">
-                          <FaUserGraduate className="text-slate-500" />
-                          {event.eligibleGrades.length > 3
-                            ? `${event.eligibleGrades.length} Grades`
-                            : event.eligibleGrades.join(", ")}
+                          <FaUser className="text-slate-500" />
+                          Max {event.maxParticipantsPerSchool}/School
                         </span>
                       )}
+                      {event.eligibleGrades &&
+                        event.eligibleGrades.length > 0 && (
+                          <span className="flex items-center gap-1 text-slate-400">
+                            <FaUserGraduate className="text-slate-500" />
+                            {event.eligibleGrades.length > 3
+                              ? `${event.eligibleGrades.length} Grades`
+                              : event.eligibleGrades.join(", ")}
+                          </span>
+                        )}
+                    </div>
+
+                    <p className="text-slate-400 text-sm mt-2 line-clamp-2">
+                      {event.description}
+                    </p>
                   </div>
 
-                  <p className="text-slate-400 text-sm mt-2 line-clamp-2">
-                    {event.description}
-                  </p>
-                </div>
-
-                <div className="flex flex-col gap-2 ml-4">
-                  <button
-                    onClick={() => handleViewDetails(event)}
-                    className="text-xs bg-slate-700 hover:bg-slate-600 text-white px-3 py-1.5 rounded flex items-center gap-1 transition"
-                  >
-                    <FaEye /> Details
-                  </button>
-                  {session?.user?.role === "SCHOOL_ADMIN" &&
-                    (event.isParticipating ? (
-                      <>
+                  <div className="flex flex-col gap-2 ml-4">
+                    <button
+                      onClick={() => handleViewDetails(event)}
+                      className="text-xs bg-slate-700 hover:bg-slate-600 text-white px-3 py-1.5 rounded flex items-center gap-1 transition"
+                    >
+                      <FaEye /> Details
+                    </button>
+                    {session?.user?.role === "SCHOOL_ADMIN" &&
+                      (event.isParticipating ? (
+                        <>
+                          <button
+                            onClick={() => handleEditParticipation(event)}
+                            className="text-xs bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white px-3 py-1.5 rounded flex items-center gap-1 transition"
+                          >
+                            <FaEdit /> Manage Team
+                          </button>
+                          <button
+                            onClick={() => handleLeaveEvent(event._id)}
+                            className="text-xs bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white px-3 py-1.5 rounded flex items-center gap-1 transition"
+                          >
+                            <FaTrash /> Leave
+                          </button>
+                        </>
+                      ) : (
                         <button
-                          onClick={() => handleEditParticipation(event)}
-                          className="text-xs bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white px-3 py-1.5 rounded flex items-center gap-1 transition"
+                          onClick={() => handleTakePart(event)}
+                          disabled={
+                            isDeadlinePassed(event.registrationDeadline) ||
+                            isFull(event)
+                          }
+                          className={`text-xs px-3 py-1.5 rounded flex items-center gap-1 transition ${
+                            isDeadlinePassed(event.registrationDeadline) ||
+                            isFull(event)
+                              ? "bg-slate-700 text-slate-500 cursor-not-allowed"
+                              : "bg-emerald-600 hover:bg-emerald-500 text-white"
+                          }`}
                         >
-                          <FaEdit /> Manage Team
+                          Take Part
                         </button>
-                        <button
-                          onClick={() => handleLeaveEvent(event._id)}
-                          className="text-xs bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white px-3 py-1.5 rounded flex items-center gap-1 transition"
-                        >
-                          <FaTrash /> Leave
-                        </button>
-                      </>
-                    ) : (
-                      <button
-                        onClick={() => handleTakePart(event)}
-                        disabled={
-                          isDeadlinePassed(event.registrationDeadline) ||
-                          isFull(event)
-                        }
-                        className={`text-xs px-3 py-1.5 rounded flex items-center gap-1 transition ${
-                          isDeadlinePassed(event.registrationDeadline) ||
-                          isFull(event)
-                            ? "bg-slate-700 text-slate-500 cursor-not-allowed"
-                            : "bg-emerald-600 hover:bg-emerald-500 text-white"
-                        }`}
-                      >
-                        Take Part
-                      </button>
-                    ))}
+                      ))}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

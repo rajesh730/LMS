@@ -24,20 +24,24 @@ export async function PUT(req, { params }) {
 
     await dbConnect();
 
-    const { id: eventId } = params;
+    const { id: eventId } = await params;
     const body = await req.json();
-    const { requestIds, action, rejectionReason } = body;
+    let { requestIds } = body;
+    const { action, rejectionReason, schoolId } = body;
 
-    if (!Array.isArray(requestIds) || requestIds.length === 0) {
+    if ((!Array.isArray(requestIds) || requestIds.length === 0) && !schoolId) {
       return NextResponse.json(
-        { message: "requestIds must be a non-empty array" },
+        {
+          message:
+            "requestIds must be a non-empty array or schoolId must be provided",
+        },
         { status: 400 }
       );
     }
 
-    if (!["approve", "reject"].includes(action)) {
+    if (!["approve", "reject", "pending"].includes(action)) {
       return NextResponse.json(
-        { message: "action must be 'approve' or 'reject'" },
+        { message: "action must be 'approve', 'reject', or 'pending'" },
         { status: 400 }
       );
     }
@@ -49,16 +53,65 @@ export async function PUT(req, { params }) {
       return NextResponse.json({ message: "Event not found" }, { status: 404 });
     }
 
+    // Handle case where we want to reject a school but have no request IDs (e.g. manual entry)
+    if (
+      (!requestIds || requestIds.length === 0) &&
+      schoolId &&
+      action === "reject"
+    ) {
+      const schoolIdStr = schoolId.toString();
+      // Remove school from participants
+      event.participants = event.participants.filter(
+        (p) => p.school.toString() !== schoolIdStr
+      );
+      await event.save();
+
+      // Also try to find any requests for this school and reject them
+      await ParticipationRequest.updateMany(
+        { event: eventId, school: schoolId },
+        {
+          status: "REJECTED",
+          rejectedAt: new Date(),
+          rejectionReason: rejectionReason || "Admin rejection",
+        }
+      );
+
+      return NextResponse.json({ message: "School removed from event" });
+    }
+
+    // Handle case where we want to approve a school but have no request IDs (fallback)
+    if (
+      (!requestIds || requestIds.length === 0) &&
+      schoolId &&
+      action === "approve"
+    ) {
+      // Find all pending/rejected requests for this school to approve them
+      const pendingRequests = await ParticipationRequest.find({
+        event: eventId,
+        school: schoolId,
+        status: { $in: ["PENDING", "REJECTED"] },
+      });
+
+      if (pendingRequests.length === 0) {
+        return NextResponse.json(
+          { message: "No pending requests found for this school" },
+          { status: 404 }
+        );
+      }
+      requestIds = pendingRequests.map((r) => r._id);
+    }
+
     // ===== Get requests =====
+    // Allow finding requests in any status (PENDING, APPROVED, REJECTED) to allow changing status
     const requests = await ParticipationRequest.find({
       _id: { $in: requestIds },
       event: eventId,
-      status: "PENDING",
-    }).populate("student", "grade school _id");
+    }).populate("student", "grade _id"); // Don't need school from student, we have it on request
 
     if (requests.length === 0) {
+      console.log("No requests found for IDs:", requestIds);
       return NextResponse.json(
-        { message: "No pending requests found" },
+        { message: "No requests found" },
         { status: 404 }
       );
     }
@@ -73,6 +126,23 @@ export async function PUT(req, { params }) {
     // ===== Process each request =====
     for (const request of requests) {
       try {
+        // Use request.school instead of request.student.school for reliability
+        const schoolIdStr = request.school.toString();
+        const studentIdStr = request.student._id.toString();
+
+        // Helper to remove student from event participants
+        const removeStudentFromEvent = () => {
+          const schoolParticipant = event.participants.find(
+            (p) => p.school.toString() === schoolIdStr
+          );
+          if (schoolParticipant && schoolParticipant.students) {
+            schoolParticipant.students = schoolParticipant.students.filter(
+              (sId) => sId.toString() !== studentIdStr
+            );
+            // If school has no students left, we could remove the school entry, but keeping it is fine
+          }
+        };
+
         if (action === "approve") {
           // Check capacity before approving
           if (event.maxParticipants) {
@@ -93,7 +163,7 @@ export async function PUT(req, { params }) {
           // Check per-school capacity
           if (event.maxParticipantsPerSchool) {
             const schoolParticipant = event.participants.find(
-              (p) => p.school.toString() === request.student.school.toString()
+              (p) => p.school.toString() === schoolIdStr
             );
 
             const schoolCount = schoolParticipant
@@ -115,19 +185,26 @@ export async function PUT(req, { params }) {
           request.approvedBy = session.user.id;
           request.enrollmentConfirmedAt = now;
           request.studentNotifiedAt = now;
+          request.rejectedAt = null;
+          request.rejectionReason = null;
 
           // Add to event participants
           const schoolParticipant = event.participants.find(
-            (p) => p.school.toString() === request.student.school.toString()
+            (p) => p.school.toString() === schoolIdStr
           );
 
           if (schoolParticipant) {
-            if (!schoolParticipant.students.includes(request.student._id)) {
+            // Use string comparison for ObjectIds to be safe
+            const studentExists = schoolParticipant.students.some(
+              (sId) => sId.toString() === request.student._id.toString()
+            );
+
+            if (!studentExists) {
               schoolParticipant.students.push(request.student._id);
             }
           } else {
             event.participants.push({
-              school: request.student.school,
+              school: request.school,
               students: [request.student._id],
               joinedAt: now,
             });
@@ -136,17 +213,38 @@ export async function PUT(req, { params }) {
           await request.save();
           results.approved.push(request._id);
         } else if (action === "reject") {
+          // Remove from event participants if they were previously approved
+          removeStudentFromEvent();
+
           // Update request
           request.status = "REJECTED";
           request.rejectedAt = now;
           request.approvedBy = session.user.id;
           request.rejectionReason = rejectionReason || "Admin rejection";
           request.studentNotifiedAt = now;
+          request.approvedAt = null;
+          request.enrollmentConfirmedAt = null;
 
           await request.save();
           results.rejected.push(request._id);
+        } else if (action === "pending") {
+          // Remove from event participants if they were previously approved
+          removeStudentFromEvent();
+
+          // Update request
+          request.status = "PENDING";
+          request.approvedAt = null;
+          request.rejectedAt = null;
+          request.rejectionReason = null;
+          request.enrollmentConfirmedAt = null;
+          request.approvedBy = null;
+
+          await request.save();
+          // We can track pending resets in 'approved' or a new array, but let's put in approved for now as "success"
+          results.approved.push(request._id);
         }
       } catch (error) {
+        console.error("Error processing request:", request._id, error);
         results.failed.push({
           requestId: request._id,
           reason: error.message,
@@ -154,8 +252,13 @@ export async function PUT(req, { params }) {
       }
     }
 
-    // Save event changes
-    if (results.approved.length > 0) {
+    // Save event changes (always save if we processed anything, as removals might have happened)
+    if (results.approved.length > 0 || results.rejected.length > 0) {
+      // Cleanup empty participants (schools with 0 students)
+      event.participants = event.participants.filter(
+        (p) => p.students && p.students.length > 0
+      );
+
       await event.save();
     }
 
