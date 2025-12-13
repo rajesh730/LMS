@@ -34,19 +34,10 @@ export default function TeacherAttendanceManager({ teacherClassrooms = [] }) {
   useEffect(() => {
     const fetchTeacherClassrooms = async () => {
       try {
-        const res = await fetch("/api/classrooms");
-        if (res.ok) {
-          const data = await res.json();
-          // Filter classrooms where teacher is class teacher
-          const classrooms = Array.isArray(data) ? data : data.classrooms || [];
-          setClassrooms(classrooms);
-          if (classrooms.length > 0) {
-            setSelectedClassroom(classrooms[0]._id);
-          }
-        }
+        setMessage("Classroom management feature has been removed. Please use your school's primary attendance system.");
       } catch (error) {
         console.error("Error fetching classrooms:", error);
-        setMessage("Failed to load classrooms");
+        setMessage("Classroom management feature is not available");
       }
     };
     fetchTeacherClassrooms();

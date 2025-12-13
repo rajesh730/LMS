@@ -4,7 +4,6 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import Student from "@/models/Student";
 import User from "@/models/User";
-import Classroom from "@/models/Classroom";
 import bcrypt from "bcryptjs";
 import { generateStudentPassword } from "@/lib/passwordGenerator";
 
@@ -23,80 +22,54 @@ export async function POST(req) {
 
     if (Array.isArray(body)) {
       // Bulk Import
-      // 1. Extract unique classroom names
-      const classroomNames = [
-        ...new Set(body.map((s) => s.classroom).filter(Boolean)),
-      ];
+      const studentsToCreate = [];
+      const createdCredentials = [];
 
-      // 2. Find existing classrooms for this school
-      const existingClassrooms = await Classroom.find({
-        school: session.user.id,
-        name: { $in: classroomNames },
-      });
+      for (const s of body) {
+        // Name Parsing
+        const nameParts = s.name.trim().split(/\s+/);
+        let firstName = nameParts[0];
+        let middleName = "";
+        let lastName = "";
 
-      // 3. Create a map of Name -> ID
-      const classroomMap = {};
-      existingClassrooms.forEach((c) => {
-        classroomMap[c.name] = c._id;
-      });
-
-      // 4. Prepare students with correct IDs
-      const studentsToCreate = body.map((s) => {
-        let classroomId = undefined;
-        // If it's already a valid ObjectId (from frontend resolution), use it
-        if (s.classroom && s.classroom.match(/^[0-9a-fA-F]{24}$/)) {
-          classroomId = s.classroom;
-        }
-        // Otherwise try to map from name
-        else if (s.classroom && classroomMap[s.classroom]) {
-          classroomId = classroomMap[s.classroom];
+        if (nameParts.length === 1) {
+            lastName = ""; 
+        } else if (nameParts.length === 2) {
+            lastName = nameParts[1];
+        } else {
+            lastName = nameParts[nameParts.length - 1];
+            middleName = nameParts.slice(1, -1).join(" ");
         }
 
-        return {
+        // Sanitize first name for credentials
+        const cleanFirstName = firstName.replace(/[^a-zA-Z0-9]/g, "") || "Student";
+        
+        // Password: FirstName@123
+        const password = `${cleanFirstName}@123`;
+        const hashedPassword = await bcrypt.hash(password, 10);
+        
+        // Username: firstname + rollnumber
+        const username = `${cleanFirstName.toLowerCase()}${s.rollNumber}`;
+
+        studentsToCreate.push({
           ...s,
+          firstName,
+          middleName,
+          lastName,
           school: session.user.id,
-          classroom: classroomId,
-        };
-      });
+          classroom: s.classroom || undefined,
+          username,
+          password: hashedPassword,
+          visiblePassword: password,
+        });
+        createdCredentials.push({ username, password });
+      }
 
       try {
         // ordered: false ensures that if one fails (e.g. duplicate email), others continue
         const createdStudents = await Student.insertMany(studentsToCreate, {
           ordered: false,
         });
-
-        // Create User accounts for these students with generated passwords
-        const failedUsers = [];
-        const createdCredentials = [];
-
-        for (const student of createdStudents) {
-          try {
-            const firstName = student.name.split(" ")[0];
-            const password = generateStudentPassword(
-              firstName,
-              student.rollNumber,
-              student.grade
-            );
-            const hashedPassword = await bcrypt.hash(password, 10);
-
-            const existingUser = await User.findOne({ email: student.email });
-            if (!existingUser) {
-              await User.create({
-                email: student.email,
-                password: hashedPassword,
-                role: "STUDENT",
-                schoolName: session.user.name,
-                name: student.name,
-                classroomId: student.classroom,
-                status: "APPROVED",
-              });
-            }
-            createdCredentials.push({ email: student.email, password });
-          } catch (err) {
-            console.error("Failed to create user for student:", student.email);
-            failedUsers.push(student.email);
-          }
-        }
 
         return NextResponse.json(
           {
@@ -109,27 +82,6 @@ export async function POST(req) {
       } catch (bulkError) {
         // If some succeeded, return success with count
         if (bulkError.insertedDocs) {
-          // Create User account for successful ones
-          const hashedPassword = await bcrypt.hash("student123", 10);
-          for (const student of bulkError.insertedDocs) {
-            try {
-              const existingUser = await User.findOne({ email: student.email });
-              if (!existingUser) {
-                await User.create({
-                  email: student.email,
-                  password: hashedPassword,
-                  role: "STUDENT",
-                  schoolName: session.user.name,
-                  name: student.name,
-                  classroomId: student.classroom,
-                  status: "APPROVED",
-                });
-              }
-            } catch (err) {
-              console.error("Failed user creation", err);
-            }
-          }
-
           return NextResponse.json(
             {
               message: `Imported ${bulkError.insertedDocs.length} students. Some failed due to duplicates.`,
@@ -142,7 +94,7 @@ export async function POST(req) {
       }
     } else {
       // Single Creation
-      const { name, email, grade, parentEmail, classroom, rollNumber } = body;
+      const { name, email, grade, parentEmail, classroom, rollNumber, ...otherData } = body;
 
       if (!name || !email || !grade || !parentEmail || !rollNumber) {
         return NextResponse.json(
@@ -151,45 +103,53 @@ export async function POST(req) {
         );
       }
 
-      // Generate Password using utility
-      const firstName = name.split(" ")[0];
-      const generatedPassword = generateStudentPassword(
-        firstName,
-        rollNumber,
-        grade
-      );
+      // Name Parsing
+      const nameParts = name.trim().split(/\s+/);
+      let firstName = nameParts[0];
+      let middleName = "";
+      let lastName = "";
+
+      if (nameParts.length === 1) {
+          lastName = ""; 
+      } else if (nameParts.length === 2) {
+          lastName = nameParts[1];
+      } else {
+          lastName = nameParts[nameParts.length - 1];
+          middleName = nameParts.slice(1, -1).join(" ");
+      }
+
+      // Sanitize first name for credentials
+      const cleanFirstName = firstName.replace(/[^a-zA-Z0-9]/g, "") || "Student";
+      
+      // Password: FirstName@123
+      const generatedPassword = `${cleanFirstName}@123`;
+      const hashedPassword = await bcrypt.hash(generatedPassword, 10);
+      
+      // Username: firstname + rollnumber
+      const username = `${cleanFirstName.toLowerCase()}${rollNumber}`;
 
       const newStudent = await Student.create({
         name,
+        firstName,
+        middleName,
+        lastName,
         email,
         grade,
         parentEmail,
         rollNumber,
+        username,
+        password: hashedPassword,
         visiblePassword: generatedPassword,
         classroom: classroom || null,
         school: session.user.id,
+        ...otherData
       });
-
-      // Create User Account
-      const existingUser = await User.findOne({ email });
-      if (!existingUser) {
-        const hashedPassword = await bcrypt.hash(generatedPassword, 10);
-        await User.create({
-          email,
-          password: hashedPassword,
-          role: "STUDENT",
-          schoolName: session.user.name,
-          name: name,
-          classroomId: classroom || null,
-          status: "APPROVED",
-        });
-      }
 
       return NextResponse.json(
         {
           message: "Student created",
           student: newStudent,
-          credentials: { email, password: generatedPassword },
+          credentials: { username, password: generatedPassword },
         },
         { status: 201 }
       );
@@ -245,7 +205,7 @@ export async function GET(req) {
     const totalPages = Math.ceil(totalStudents / limit);
 
     const students = await Student.find(query)
-      .populate("classroom", "name")
+      // .populate("classroom", "name") // Classroom is now a string, not a reference
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);

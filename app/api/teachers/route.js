@@ -3,7 +3,6 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import Teacher from "@/models/Teacher";
-import Classroom from "@/models/Classroom";
 import User from "@/models/User";
 import bcrypt from "bcryptjs";
 import { generateStrongPassword } from "@/lib/passwordGenerator";
@@ -21,12 +20,8 @@ export async function POST(req) {
 
     if (Array.isArray(body)) {
       // Bulk Import
-      const classrooms = await Classroom.find({ school: session.user.id });
-      const classroomMap = {}; // Name -> ID
-      classrooms.forEach((c) => (classroomMap[c.name] = c._id));
-
+      // Classroom feature has been removed, so we'll import teachers without class assignments
       const teachersToCreate = [];
-      const assignmentsToProcess = []; // [{ teacherIndex, assignments: [] }]
 
       body.forEach((t, index) => {
         const teacherData = {
@@ -38,61 +33,12 @@ export async function POST(req) {
           school: session.user.id,
         };
         teachersToCreate.push(teacherData);
-
-        // Parse Assignments from CSV
-        // Format: "Class Teacher: 10-A; Subject Teacher: Math (10-A)"
-        if (t.assignments) {
-          const assignments = [];
-          const parts = t.assignments.split(";");
-          parts.forEach((part) => {
-            const trimmed = part.trim();
-            if (trimmed.toLowerCase().startsWith("class teacher:")) {
-              const className = trimmed.split(":")[1].trim();
-              if (classroomMap[className]) {
-                assignments.push({
-                  classId: classroomMap[className],
-                  role: "CLASS_TEACHER",
-                });
-              }
-            } else if (trimmed.toLowerCase().startsWith("subject teacher:")) {
-              // "Subject Teacher: Math (10-A)"
-              const details = trimmed.split(":")[1].trim(); // "Math (10-A)"
-              const match = details.match(/(.*)\s\((.*)\)/);
-              if (match) {
-                const subject = match[1].trim();
-                const className = match[2].trim();
-                if (classroomMap[className]) {
-                  assignments.push({
-                    classId: classroomMap[className],
-                    role: "SUBJECT_TEACHER",
-                    subject,
-                  });
-                }
-              }
-            }
-          });
-          if (assignments.length > 0) {
-            assignmentsToProcess.push({ teacherIndex: index, assignments });
-          }
-        }
       });
 
       try {
         const createdTeachers = await Teacher.insertMany(teachersToCreate, {
           ordered: true,
         }); // Ordered true to map by index
-
-        // Process Assignments
-        for (const item of assignmentsToProcess) {
-          const teacher = createdTeachers[item.teacherIndex];
-          if (teacher) {
-            await syncAssignments(
-              teacher._id,
-              item.assignments,
-              session.user.id
-            );
-          }
-        }
 
         return NextResponse.json(
           {
@@ -110,7 +56,7 @@ export async function POST(req) {
       }
     } else {
       // Single Creation
-      let { name, email, phone, subject, roles, assignments, password } = body;
+      let { name, email, phone, subject, roles, assignments, password, employmentType } = body;
 
       if (!name || !email) {
         return NextResponse.json(
@@ -130,6 +76,7 @@ export async function POST(req) {
         phone,
         subject: subject || "General",
         roles: roles || ["SUBJECT_TEACHER"],
+        employmentType: employmentType || "FULL_TIME",
         visiblePassword: password,
         school: session.user.id,
       });
@@ -148,7 +95,8 @@ export async function POST(req) {
       }
 
       if (assignments && Array.isArray(assignments)) {
-        await syncAssignments(newTeacher._id, assignments, session.user.id);
+        // Note: Classroom assignments are no longer supported
+        // Assignments parameter is accepted but not processed
       }
 
       return NextResponse.json(
@@ -196,7 +144,8 @@ export async function PUT(req, { params }) {
     }
 
     if (assignments && Array.isArray(assignments)) {
-      await syncAssignments(updatedTeacher._id, assignments, session.user.id);
+      // Note: Classroom assignments are no longer supported
+      // Assignments parameter is accepted but not processed
     }
 
     return NextResponse.json(
@@ -230,17 +179,8 @@ export async function DELETE(req, { params }) {
       );
     }
 
-    // Remove from all classrooms
-    await Classroom.updateMany(
-      { school: session.user.id },
-      {
-        $pull: { subjectTeachers: { teacher: id } },
-      }
-    );
-    await Classroom.updateMany(
-      { school: session.user.id, classTeacher: id },
-      { $unset: { classTeacher: "" } }
-    );
+    // Remove from all classrooms - DEPRECATED (classrooms feature removed)
+    // await Classroom.updateMany(...);
 
     await Teacher.findByIdAndDelete(id);
 
@@ -259,34 +199,8 @@ export async function DELETE(req, { params }) {
   }
 }
 
-async function syncAssignments(teacherId, assignments, schoolId) {
-  // 1. Clear existing assignments for this teacher in this school
-  // Remove as Class Teacher
-  await Classroom.updateMany(
-    { school: schoolId, classTeacher: teacherId },
-    { $unset: { classTeacher: "" } }
-  );
-  // Remove as Subject Teacher
-  await Classroom.updateMany(
-    { school: schoolId },
-    { $pull: { subjectTeachers: { teacher: teacherId } } }
-  );
-
-  // 2. Add new assignments
-  for (const assignment of assignments) {
-    if (assignment.role === "CLASS_TEACHER") {
-      await Classroom.findByIdAndUpdate(assignment.classId, {
-        classTeacher: teacherId,
-      });
-    } else if (assignment.role === "SUBJECT_TEACHER") {
-      await Classroom.findByIdAndUpdate(assignment.classId, {
-        $push: {
-          subjectTeachers: { teacher: teacherId, subject: assignment.subject },
-        },
-      });
-    }
-  }
-}
+// DEPRECATED: syncAssignments function removed (classrooms feature removed)
+// async function syncAssignments(teacherId, assignments, schoolId) { ... }
 
 export async function GET(req) {
   try {
@@ -302,38 +216,16 @@ export async function GET(req) {
       createdAt: -1,
     });
 
-    // Fetch classrooms to aggregate roles
-    const classrooms = await Classroom.find({ school: session.user.id })
-      .populate("classTeacher", "_id")
-      .populate("subjectTeachers.teacher", "_id");
-
     // Map roles to teachers
     const teachersWithRoles = teachers.map((teacher) => {
       const t = teacher.toObject();
 
-      // Find class teacher roles
-      const classTeacherOf = classrooms
-        .filter(
-          (c) =>
-            c.classTeacher && c.classTeacher._id.toString() === t._id.toString()
-        )
-        .map((c) => c.name);
-
-      // Find subject teacher roles
-      const subjectTeacherOf = [];
-      classrooms.forEach((c) => {
-        c.subjectTeachers.forEach((st) => {
-          if (st.teacher && st.teacher._id.toString() === t._id.toString()) {
-            subjectTeacherOf.push(`${st.subject} (${c.name})`);
-          }
-        });
-      });
-
+      // Since classrooms feature is removed, return empty detailedRoles
       return {
         ...t,
         detailedRoles: {
-          classTeacherOf,
-          subjectTeacherOf,
+          classTeacherOf: [],
+          subjectTeacherOf: [],
         },
       };
     });

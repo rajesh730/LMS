@@ -27,28 +27,12 @@ export default function SendEventForm({
 
   const schoolGrades = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"];
   const highSchoolGrades = ["11", "12"];
-  // Bachelor grades with year and semester info (e.g., "B1-S1" = Bachelor 1st Year, 1st Semester)
-  const bachelorGrades = [
-    "B1-S1",
-    "B1-S2", // Bachelor 1st Year, Semester 1 & 2
-    "B2-S1",
-    "B2-S2", // Bachelor 2nd Year, Semester 1 & 2
-    "B3-S1",
-    "B3-S2", // Bachelor 3rd Year, Semester 1 & 2
-    "B4-S1",
-    "B4-S2", // Bachelor 4th Year, Semester 1 & 2
-  ];
+  const bachelorGrades = ["Bachelor"];
 
   // Helper function to display friendly grade labels
   const getGradeLabel = (grade) => {
-    if (grade.startsWith("B")) {
-      const match = grade.match(/B(\d)-S(\d)/);
-      if (match) {
-        const [, year, semester] = match;
-        const yearNames = { 1: "1st", 2: "2nd", 3: "3rd", 4: "4th" };
-        const semNames = { 1: "1st", 2: "2nd" };
-        return `Bachelor ${yearNames[year]} Year, ${semNames[semester]} Sem`;
-      }
+    if (grade === "Bachelor") {
+      return "Bachelor Level";
     }
     return `Grade ${grade}`;
   };
@@ -249,14 +233,14 @@ export default function SendEventForm({
 
         <div>
           <label className="block text-slate-300 mb-2 text-sm">
-            Target Audience (Select Eligible Classes/Years)
+            Target Audience (Select Eligible Grades/Years)
           </label>
 
           {/* School Level (1-10) */}
           <div className="mb-3">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs text-slate-500 uppercase font-bold tracking-wider">
-                School Level (Class 1-10)
+                School Level (Grade 1-10)
               </span>
               <button
                 type="button"
@@ -292,7 +276,7 @@ export default function SendEventForm({
           <div className="mb-3">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs text-slate-500 uppercase font-bold tracking-wider">
-                High School (Class 11-12)
+                High School (Grade 11-12)
               </span>
               <button
                 type="button"

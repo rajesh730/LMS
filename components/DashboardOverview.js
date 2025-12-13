@@ -11,6 +11,7 @@ import {
 import StatisticsCard, { StatisticsGrid } from "@/components/StatisticsCard";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import EmptyState from "@/components/EmptyState";
+import EducationConfigCard from "@/components/EducationConfigCard";
 
 /**
  * DashboardOverview Component
@@ -81,6 +82,11 @@ export default function DashboardOverview() {
 
   return (
     <div className="space-y-8">
+      {/* Education Configuration */}
+      <div>
+        <EducationConfigCard />
+      </div>
+
       {/* Main Statistics */}
       <div>
         <h2 className="text-2xl font-bold text-white mb-6">Overview</h2>

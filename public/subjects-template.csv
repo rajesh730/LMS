@@ -1,0 +1,11 @@
+Name,Code,Type,Academic Type,Description
+Mathematics,MATH,GLOBAL,CORE,Core mathematics subject
+English,ENG,GLOBAL,CORE,English language and literature
+Science,SCI,GLOBAL,CORE,General science
+History,HIST,GLOBAL,CORE,History and world cultures
+Geography,GEO,GLOBAL,CORE,Geography and earth science
+Physical Education,PE,GLOBAL,ELECTIVE,Sports and fitness
+Art,ART,GLOBAL,ELECTIVE,Visual arts and design
+Music,MUS,GLOBAL,ELECTIVE,Music and performing arts
+Computer Science,CS,GLOBAL,CORE,Computer science and programming
+Economics,ECON,GLOBAL,ELECTIVE,Economics and business studies

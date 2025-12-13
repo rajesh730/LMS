@@ -13,6 +13,29 @@ const TeacherSchema = new mongoose.Schema({
     phone: {
         type: String,
     },
+    qualification: {
+        type: String,
+    },
+    gender: {
+        type: String,
+        enum: ["MALE", "FEMALE", "OTHER"],
+    },
+    address: {
+        type: String,
+    },
+    dateOfJoining: {
+        type: Date,
+    },
+    designation: {
+        type: String,
+    },
+    experience: {
+        type: Number,
+    },
+    bloodGroup: {
+        type: String,
+        enum: ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-", ""],
+    },
     visiblePassword: {
         type: String, // Stored for admin visibility as requested
     },
@@ -23,6 +46,11 @@ const TeacherSchema = new mongoose.Schema({
     roles: {
         type: [String],
         default: ['SUBJECT_TEACHER'],
+    },
+    employmentType: {
+        type: String,
+        enum: ["FULL_TIME", "PART_TIME", "CONTRACT"],
+        default: "FULL_TIME",
     },
     school: {
         type: mongoose.Schema.Types.ObjectId,

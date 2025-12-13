@@ -10,7 +10,9 @@ import EventCard from "./EventCard";
 
 // Lazy load the participants view component
 const EventParticipantsView = dynamic(() => import("./EventParticipantsView"), {
-  loading: () => <div className="p-4 text-slate-400">Loading participants...</div>,
+  loading: () => (
+    <div className="p-4 text-slate-400">Loading participants...</div>
+  ),
 });
 
 import {

@@ -3,7 +3,6 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import Student from "@/models/Student";
 import Teacher from "@/models/Teacher";
-import Classroom from "@/models/Classroom";
 import Event from "@/models/Event";
 import Attendance from "@/models/Attendance";
 import { successResponse, errorResponse } from "@/lib/apiResponse";
@@ -27,16 +26,13 @@ export async function GET(req) {
     await connectDB();
 
     // Fetch all data in parallel
-    const [students, teachers, classrooms, events, attendance] =
+    const [students, teachers, events, attendance] =
       await Promise.all([
         Student.countDocuments({
           school: session.user.schoolId,
           isDeleted: { $ne: true },
         }),
         Teacher.countDocuments({
-          school: session.user.schoolId,
-        }),
-        Classroom.countDocuments({
           school: session.user.schoolId,
         }),
         Event.countDocuments({
@@ -63,8 +59,8 @@ export async function GET(req) {
       },
     ]);
 
-    // Get students by classroom
-    const studentsByClassroom = await Student.aggregate([
+    // Get students by grade (classroom feature removed)
+    const studentsByGrade = await Student.aggregate([
       {
         $match: {
           school: session.user.schoolId,
@@ -73,21 +69,13 @@ export async function GET(req) {
       },
       {
         $group: {
-          _id: "$classroom",
+          _id: "$grade",
           count: { $sum: 1 },
         },
       },
       {
-        $lookup: {
-          from: "classrooms",
-          localField: "_id",
-          foreignField: "_id",
-          as: "classroomInfo",
-        },
-      },
-      {
         $project: {
-          classroomName: { $arrayElemAt: ["$classroomInfo.name", 0] },
+          gradeName: "$_id",
           count: 1,
         },
       },
@@ -138,13 +126,12 @@ export async function GET(req) {
       overview: {
         totalStudents: students,
         totalTeachers: teachers,
-        totalClassrooms: classrooms,
         totalEvents: events,
       },
       students: {
         total: students,
         byStatus: statusBreakdown,
-        byClassroom: studentsByClassroom,
+        byGrade: studentsByGrade,
       },
       attendance: {
         total: attendance,

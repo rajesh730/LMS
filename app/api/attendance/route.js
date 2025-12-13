@@ -5,7 +5,6 @@ import connectDB from '@/lib/db';
 import Attendance from '@/models/Attendance';
 import Student from '@/models/Student';
 import Teacher from '@/models/Teacher';
-import Classroom from '@/models/Classroom';
 
 export async function POST(req) {
     try {
@@ -104,28 +103,6 @@ export async function GET(req) {
             query.teacher = { $exists: true };
         } else {
             query.student = { $exists: true };
-            if (classroomId) {
-                // Find the classroom details
-                const selectedClassroom = await Classroom.findById(classroomId);
-
-                // Find students EITHER by classroom ObjectId OR by grade matching classroom name
-                const studentsInClass = await Student.find({
-                    school: session.user.id,
-                    $or: [
-                        { classroom: classroomId },
-                        { grade: selectedClassroom?.name }
-                    ]
-                }).select('_id');
-
-                const studentIds = studentsInClass.map(s => s._id);
-                console.log('📚 Classroom filter:', {
-                    classroomId,
-                    classroomName: selectedClassroom?.name,
-                    studentCount: studentsInClass.length,
-                    sampleStudentIds: studentIds.slice(0, 3)
-                });
-                query.student = { $in: studentIds };
-            }
         }
 
         const attendance = await Attendance.find(query)

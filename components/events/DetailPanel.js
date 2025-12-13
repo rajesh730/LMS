@@ -408,7 +408,7 @@ export default function DetailPanel({
           </div>
         </div>
       </div>
-    </div>
+
       {selectedStudent && (
         <StudentDetailsCard
           request={selectedStudent}

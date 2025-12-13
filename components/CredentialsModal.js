@@ -4,7 +4,7 @@ import { FaCopy, FaEye, FaEyeSlash, FaTimes, FaDownload } from "react-icons/fa";
 import { useState } from "react";
 
 export default function CredentialsModal({ isOpen, credentials, onClose }) {
-  const [passwordVisible, setPasswordVisible] = useState(false);
+  const [passwordVisible, setPasswordVisible] = useState(true);
   const [copied, setCopied] = useState(null);
 
   if (!isOpen || !credentials) return null;
@@ -16,11 +16,11 @@ export default function CredentialsModal({ isOpen, credentials, onClose }) {
   };
 
   const downloadPDF = () => {
-    const content = `Account Credentials\nEmail: ${
-      credentials.email
-    }\nPassword: ${credentials.password}\nLogin URL: ${
-      typeof window !== "undefined" ? window.location.origin : ""
-    }/login\n\nIMPORTANT: Share securely and change password on first login.`;
+    let content = `Account Credentials\n`;
+    if (credentials.username) content += `Username: ${credentials.username}\n`;
+    if (credentials.email) content += `Email: ${credentials.email}\n`;
+    content += `Password: ${credentials.password}\n\nIMPORTANT: Share securely and change password on first login.`;
+    
     const element = document.createElement("a");
     element.setAttribute(
       "href",
@@ -47,27 +47,53 @@ export default function CredentialsModal({ isOpen, credentials, onClose }) {
         </div>
 
         <div className="space-y-4">
-          {/* Email */}
-          <div>
-            <label className="block text-slate-400 text-sm mb-2">Email</label>
-            <div className="flex items-center gap-2 bg-slate-800 p-3 rounded border border-slate-700">
-              <input
-                type="text"
-                value={credentials.email}
-                readOnly
-                className="flex-1 bg-transparent text-white outline-none"
-              />
-              <button
-                onClick={() => copyToClipboard(credentials.email, "email")}
-                className="text-slate-400 hover:text-blue-400 transition"
-              >
-                <FaCopy />
-              </button>
+          {/* Username */}
+          {credentials.username && (
+            <div>
+                <label className="block text-slate-400 text-sm mb-2">Username</label>
+                <div className="flex items-center gap-2 bg-slate-800 p-3 rounded border border-slate-700">
+                <input
+                    type="text"
+                    value={credentials.username}
+                    readOnly
+                    className="flex-1 bg-transparent text-white outline-none"
+                />
+                <button
+                    onClick={() => copyToClipboard(credentials.username, "username")}
+                    className="text-slate-400 hover:text-blue-400 transition"
+                >
+                    <FaCopy />
+                </button>
+                </div>
+                {copied === "username" && (
+                <p className="text-green-400 text-xs mt-1">Copied!</p>
+                )}
             </div>
-            {copied === "email" && (
-              <p className="text-green-400 text-xs mt-1">Copied!</p>
-            )}
-          </div>
+          )}
+
+          {/* Email */}
+          {credentials.email && (
+            <div>
+                <label className="block text-slate-400 text-sm mb-2">Email</label>
+                <div className="flex items-center gap-2 bg-slate-800 p-3 rounded border border-slate-700">
+                <input
+                    type="text"
+                    value={credentials.email}
+                    readOnly
+                    className="flex-1 bg-transparent text-white outline-none"
+                />
+                <button
+                    onClick={() => copyToClipboard(credentials.email, "email")}
+                    className="text-slate-400 hover:text-blue-400 transition"
+                >
+                    <FaCopy />
+                </button>
+                </div>
+                {copied === "email" && (
+                <p className="text-green-400 text-xs mt-1">Copied!</p>
+                )}
+            </div>
+          )}
 
           {/* Password */}
           <div>
@@ -97,41 +123,6 @@ export default function CredentialsModal({ isOpen, credentials, onClose }) {
               </button>
             </div>
             {copied === "password" && (
-              <p className="text-green-400 text-xs mt-1">Copied!</p>
-            )}
-          </div>
-
-          {/* Login URL */}
-          <div>
-            <label className="block text-slate-400 text-sm mb-2">
-              Login URL
-            </label>
-            <div className="flex items-center gap-2 bg-slate-800 p-3 rounded border border-slate-700">
-              <input
-                type="text"
-                value={`${
-                  typeof window !== "undefined" ? window.location.origin : ""
-                }/login`}
-                readOnly
-                className="flex-1 bg-transparent text-white outline-none text-sm"
-              />
-              <button
-                onClick={() =>
-                  copyToClipboard(
-                    `${
-                      typeof window !== "undefined"
-                        ? window.location.origin
-                        : ""
-                    }/login`,
-                    "url"
-                  )
-                }
-                className="text-slate-400 hover:text-blue-400 transition"
-              >
-                <FaCopy />
-              </button>
-            </div>
-            {copied === "url" && (
               <p className="text-green-400 text-xs mt-1">Copied!</p>
             )}
           </div>

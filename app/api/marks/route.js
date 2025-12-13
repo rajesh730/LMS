@@ -5,7 +5,6 @@ import connectDB from "@/lib/db";
 import Marks from "@/models/Marks";
 import Student from "@/models/Student";
 import Subject from "@/models/Subject";
-import Classroom from "@/models/Classroom";
 import {
   successResponse,
   errorResponse,
@@ -40,7 +39,6 @@ export async function POST(req) {
     if (
       !studentId ||
       !subjectId ||
-      !classroomId ||
       !assessmentType ||
       !assessmentName ||
       totalMarks === undefined ||
@@ -50,7 +48,6 @@ export async function POST(req) {
         required: [
           "studentId",
           "subjectId",
-          "classroomId",
           "assessmentType",
           "assessmentName",
           "totalMarks",
@@ -65,15 +62,15 @@ export async function POST(req) {
       );
     }
 
-    // Verify student exists and belongs to classroom
+    // Verify student exists
     const student = await Student.findById(studentId);
-    if (!student || student.classroom.toString() !== classroomId) {
+    if (!student) {
       return notFoundError("Student");
     }
 
-    // Verify subject exists and is for the classroom
+    // Verify subject exists
     const subject = await Subject.findById(subjectId);
-    if (!subject || subject.classroom.toString() !== classroomId) {
+    if (!subject) {
       return notFoundError("Subject");
     }
 
@@ -82,14 +79,12 @@ export async function POST(req) {
       {
         student: studentId,
         subject: subjectId,
-        classroom: classroomId,
         assessmentType,
         assessmentName,
       },
       {
         student: studentId,
         subject: subjectId,
-        classroom: classroomId,
         teacher: session.user.id,
         school: session.user.schoolId || session.user.id,
         assessmentType,
@@ -120,14 +115,12 @@ export async function GET(req) {
 
     const { searchParams } = new URL(req.url);
     const studentId = searchParams.get("student");
-    const classroomId = searchParams.get("classroom");
     const subjectId = searchParams.get("subject");
     const assessmentType = searchParams.get("assessmentType");
 
     let query = { school: session.user.schoolId || session.user.id };
 
     if (studentId) query.student = studentId;
-    if (classroomId) query.classroom = classroomId;
     if (subjectId) query.subject = subjectId;
     if (assessmentType) query.assessmentType = assessmentType;
 
@@ -139,7 +132,6 @@ export async function GET(req) {
     const marks = await Marks.find(query)
       .populate("student", "name email rollNumber grade")
       .populate("subject", "name code")
-      .populate("classroom", "name")
       .sort({ date: -1 });
 
     return successResponse(200, "Marks fetched successfully", marks);

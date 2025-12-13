@@ -11,6 +11,9 @@ import {
   FaSignOutAlt,
   FaUniversity,
   FaChalkboardTeacher,
+  FaHeadset,
+  FaUserPlus,
+  FaBook,
 } from "react-icons/fa";
 
 export default function Sidebar({ role }) {
@@ -18,18 +21,31 @@ export default function Sidebar({ role }) {
 
   const adminLinks = [
     { name: "Dashboard", href: "/admin/dashboard", icon: FaChartPie },
-    { name: "Events", href: "/admin/events", icon: FaCalendarAlt }, // Future route
-    { name: "Settings", href: "/admin/settings", icon: FaCog }, // Future route
+    { name: "Events", href: "/admin/events", icon: FaCalendarAlt },
+    { name: "Global Subjects", href: "/admin/subjects", icon: FaBook },
+    { name: "Support Tickets", href: "/admin/support", icon: FaHeadset },
+    { name: "Settings", href: "/admin/settings", icon: FaCog },
   ];
 
   const schoolLinks = [
+    { name: "Subjects", href: "/school/subjects", icon: FaBook },
     { name: "Dashboard", href: "/school/dashboard", icon: FaChartPie },
     {
-      name: "Classrooms",
-      href: "/school/classrooms",
+      name: "Support",
+      href: "/school/support",
+      icon: FaHeadset,
+    },
+    {
+      name: "Register Student",
+      href: "/school/register-student",
+      icon: FaUserPlus,
+    },
+    {
+      name: "Register Teacher",
+      href: "/school/register-teacher",
       icon: FaChalkboardTeacher,
     },
-    { name: "Settings", href: "/school/settings", icon: FaCog }, // Future route
+    { name: "Settings", href: "/school/settings", icon: FaCog },
   ];
 
   const teacherLinks = [

@@ -4,7 +4,6 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import dbConnect from "@/lib/db";
 import Student from "@/models/Student";
 import ParticipationRequest from "@/models/ParticipationRequest";
-import Classroom from "@/models/Classroom";
 
 /**
  * GET /api/students/available
@@ -44,18 +43,14 @@ export async function GET(req) {
       _id: { $nin: enrolledStudentIds },
       status: "ACTIVE",
     })
-      .populate("classroom", "name")
       .select("name email grade classroom")
       .sort({ name: 1 })
       .lean();
 
-    // Get unique classrooms for filter
-    const classrooms = await Classroom.find()
-      .select("name")
-      .sort({ name: 1 })
-      .lean();
-
-    const classes = classrooms.map((c) => c.name);
+    // Extract unique classrooms from students
+    const uniqueClasses = [
+      ...new Set(students.map((s) => s.classroom).filter(Boolean)),
+    ];
 
     return NextResponse.json(
       {
@@ -66,7 +61,7 @@ export async function GET(req) {
           grade: s.grade,
           classroom: s.classroom,
         })),
-        classes,
+        classes: uniqueClasses,
       },
       { status: 200 }
     );

@@ -242,7 +242,7 @@ export default function EventParticipantsView({ event, onBack, onRefresh }) {
                 <th className="p-4 font-medium">School Details</th>
                 <th className="p-4 font-medium">Contact Info</th>
                 <th className="p-4 font-medium">Students</th>
-                <th className="p-4 font-medium">Class</th>
+                <th className="p-4 font-medium">Grade</th>
                 <th className="p-4 font-medium">Status</th>
                 <th className="p-4 font-medium text-right">Actions</th>
               </tr>

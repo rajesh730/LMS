@@ -1,37 +1,18 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Enable SWC minification for faster builds
-  swcMinify: true,
-  
-  // Optimize production builds
+  // Enable compression for faster response times
   compress: true,
-  
+
   // Enable React strict mode for development
   reactStrictMode: true,
-  
+
   // Image optimization
   images: {
-    unoptimized: false,
-    formats: ['image/avif', 'image/webp'],
-  },
-  
-  // Optimized font loading
-  fonts: {
-    fontFamilies: [
-      {
-        name: 'system-ui',
-        fonts: [
-          { weight: '400', style: 'normal' },
-        ],
-      },
-    ],
+    formats: ["image/avif", "image/webp"],
   },
 
   // Production optimizations
-  ...(process.env.NODE_ENV === 'production' && {
-    compress: true,
-    generateEtags: true,
-  }),
+  poweredByHeader: false, // Remove X-Powered-By header for security
 };
 
 export default nextConfig;

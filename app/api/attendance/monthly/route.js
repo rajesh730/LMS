@@ -3,7 +3,6 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import Attendance from '@/models/Attendance';
 import Student from '@/models/Student';
-import Classroom from '@/models/Classroom';
 import connectDB from '@/lib/db';
 
 export async function GET(req) {
@@ -17,24 +16,16 @@ export async function GET(req) {
         const { searchParams } = new URL(req.url);
         const month = parseInt(searchParams.get('month'));
         const year = parseInt(searchParams.get('year'));
-        const classroomId = searchParams.get('classroomId');
 
-        if (!month || !year || !classroomId) {
+        if (!month || !year) {
             return NextResponse.json({ error: 'Missing parameters' }, { status: 400 });
         }
 
-        console.log('📅 Fetching monthly attendance:', { month, year, classroomId });
+        console.log('📅 Fetching monthly attendance:', { month, year });
 
-        // Find classroom to get its name
-        const selectedClassroom = await Classroom.findById(classroomId);
-
-        // Find students EITHER by classroom ObjectId OR by grade matching classroom name
+        // Fetch all students for the school
         const students = await Student.find({
-            school: session.user.id,
-            $or: [
-                { classroom: classroomId },
-                { grade: selectedClassroom?.name }
-            ]
+            school: session.user.id
         }).select('_id name grade').sort({ name: 1 });
 
         const studentIds = students.map(s => s._id);
