@@ -1,11 +1,10 @@
-Name,Code,Type,Academic Type,Description
-Mathematics,MATH,GLOBAL,CORE,Core mathematics subject
-English,ENG,GLOBAL,CORE,English language and literature
-Science,SCI,GLOBAL,CORE,General science
-History,HIST,GLOBAL,CORE,History and world cultures
-Geography,GEO,GLOBAL,CORE,Geography and earth science
-Physical Education,PE,GLOBAL,ELECTIVE,Sports and fitness
-Art,ART,GLOBAL,ELECTIVE,Visual arts and design
-Music,MUS,GLOBAL,ELECTIVE,Music and performing arts
-Computer Science,CS,GLOBAL,CORE,Computer science and programming
-Economics,ECON,GLOBAL,ELECTIVE,Economics and business studies
+Name,Code,Type,Academic Type,Education Levels,Applicable Faculties,Description
+Mathematics,MATH,GLOBAL,CORE,School;HigherSecondary;Bachelor,,Core mathematics for all education levels
+Physics,PHY,GLOBAL,CORE,HigherSecondary;Bachelor,Science;Engineering,Physics for higher secondary and bachelor
+Chemistry,CHEM,GLOBAL,CORE,HigherSecondary,Science,Chemistry for higher secondary science stream
+English,ENG,GLOBAL,CORE,School;HigherSecondary;Bachelor,,English language for all education levels
+History,HIST,GLOBAL,ELECTIVE,School;HigherSecondary,Humanities,History for humanities stream
+Geography,GEO,GLOBAL,ELECTIVE,School;HigherSecondary,Humanities;Science,Geography subject for multiple faculties
+Economics,ECO,GLOBAL,ELECTIVE,HigherSecondary;Bachelor,Commerce;Humanities,Economics for commerce and humanities
+Accounting,ACC,GLOBAL,CORE,HigherSecondary;Bachelor,Commerce,Accounting for commerce stream
+Business Studies,BUS,GLOBAL,ELECTIVE,HigherSecondary;Bachelor,Commerce,Business studies for commerce and bachelor

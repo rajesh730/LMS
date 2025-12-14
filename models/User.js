@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+const { Schema } = mongoose;
 
 const UserSchema = new mongoose.Schema(
   {
@@ -61,8 +62,8 @@ const UserSchema = new mongoose.Schema(
       bachelor: { type: Boolean, default: false },
     },
     schoolConfig: {
-      maxGrade: { type: Number, min: 1, max: 10, default: 10 },
-      faculties: [String], // Array of faculty names
+      type: Schema.Types.Mixed,
+      // Don't use defaults for Mixed type - let the API send the full object
     },
   },
   { timestamps: true }

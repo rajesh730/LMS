@@ -5,6 +5,7 @@ import { applyRateLimit } from "@/lib/rateLimit";
 import User from "@/models/User";
 import Grade from "@/models/Grade";
 import SchoolConfig from "@/models/SchoolConfig";
+import Faculty from "@/models/Faculty";
 
 export async function POST(req) {
   try {
@@ -21,6 +22,16 @@ export async function POST(req) {
       educationLevels,
       schoolConfig,
     } = await req.json();
+
+    console.log("=== REGISTRATION API RECEIVED ===");
+    console.log("Email:", email);
+    console.log("Password:", password ? "***" : "MISSING");
+    console.log("School Name:", schoolName);
+    console.log("Principal Name:", principalName);
+    console.log("School Location:", schoolLocation);
+    console.log("Education Levels:", educationLevels);
+    console.log("School Config:", schoolConfig);
+    console.log("================================");
 
     // Rate limit by IP to reduce abuse of registration endpoint
     const ip =
@@ -44,6 +55,12 @@ export async function POST(req) {
       !principalName ||
       !schoolLocation
     ) {
+      console.error("VALIDATION FAILED - Missing required fields:");
+      console.error("  email:", !!email, email);
+      console.error("  password:", !!password);
+      console.error("  schoolName:", !!schoolName, schoolName);
+      console.error("  principalName:", !!principalName, principalName);
+      console.error("  schoolLocation:", !!schoolLocation, schoolLocation);
       return NextResponse.json(
         { message: "Required fields are missing" },
         { status: 400 }
@@ -73,30 +90,51 @@ export async function POST(req) {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create the user/school first
-    const newUser = await User.create({
+    console.log("Creating user with data:", {
       email,
-      password: hashedPassword,
       schoolName,
-      role: "SCHOOL_ADMIN",
-      status: "PENDING",
       principalName,
-      principalPhone,
       schoolLocation,
-      schoolPhone,
-      website,
-      establishedYear,
       educationLevels,
       schoolConfig,
     });
 
+    // Create the user/school first
+    let newUser;
+    try {
+      console.log("BEFORE CREATE - schoolConfig being sent:", JSON.stringify(schoolConfig, null, 2));
+      
+      newUser = await User.create({
+        email,
+        password: hashedPassword,
+        schoolName,
+        role: "SCHOOL_ADMIN",
+        status: "PENDING",
+        principalName,
+        principalPhone,
+        schoolLocation,
+        schoolPhone,
+        website,
+        establishedYear,
+        educationLevels,
+        schoolConfig,
+      });
+      
+      console.log("✓ User created successfully:", newUser._id);
+      console.log("AFTER CREATE - saved schoolConfig:", JSON.stringify(newUser.schoolConfig, null, 2));
+      console.log("Full saved document:", JSON.stringify(newUser.toObject(), null, 2));
+    } catch (userError) {
+      console.error("❌ User creation failed:", userError.message);
+      throw userError;
+    }
+
     // Create grades automatically based on education levels
     const gradesToCreate = [];
 
-    // School Level Grades (1 to maxGrade)
-    if (educationLevels?.school && schoolConfig?.schoolLevel?.maxGrade) {
-      const minGrade = schoolConfig?.schoolLevel?.minGrade || 1;
-      const maxGrade = schoolConfig?.schoolLevel?.maxGrade || 10;
+    // School Level Grades (minGrade to maxGrade)
+    if (educationLevels?.school && schoolConfig?.schoolLevel) {
+      const minGrade = schoolConfig.schoolLevel.minGrade || 1;
+      const maxGrade = schoolConfig.schoolLevel.maxGrade || 10;
       for (let i = minGrade; i <= maxGrade; i++) {
         gradesToCreate.push({
           name: `Grade ${i}`,
@@ -104,7 +142,7 @@ export async function POST(req) {
           description: `Grade ${i} - School Level`,
           capacity: 40,
           school: newUser._id,
-          subjects: schoolConfig?.schoolLevel?.subjects || [],
+          subjects: [],
           teachers: [],
           students: [],
           isActive: true,
@@ -120,7 +158,7 @@ export async function POST(req) {
         description: "Grade 11 - Higher Secondary",
         capacity: 35,
         school: newUser._id,
-        subjects: schoolConfig?.highSchool?.faculties || [],
+        subjects: [],
         teachers: [],
         students: [],
         isActive: true,
@@ -132,7 +170,7 @@ export async function POST(req) {
         description: "Grade 12 - Higher Secondary",
         capacity: 35,
         school: newUser._id,
-        subjects: schoolConfig?.highSchool?.faculties || [],
+        subjects: [],
         teachers: [],
         students: [],
         isActive: true,
@@ -141,22 +179,53 @@ export async function POST(req) {
 
     // Bachelor Level
     if (educationLevels?.bachelor) {
-      gradesToCreate.push({
-        name: "Bachelor",
-        level: "BACHELOR",
-        description: "Bachelor Degree Programs",
-        capacity: 50,
-        school: newUser._id,
-        subjects: schoolConfig?.bachelor?.faculties || [],
-        teachers: [],
-        students: [],
-        isActive: true,
-      });
+      const startYear = schoolConfig?.bachelor?.startingYear || 1;
+      const endYear = schoolConfig?.bachelor?.endingYear || 4;
+      const totalYears = endYear - startYear + 1;
+      
+      if (schoolConfig?.bachelor?.hasSemesters) {
+        // Create semesters (2 per year)
+        const totalSemesters = totalYears * 2;
+        for (let i = 1; i <= totalSemesters; i++) {
+          gradesToCreate.push({
+            name: `Semester ${i}`,
+            level: "BACHELOR",
+            description: `Semester ${i} - Bachelor Level`,
+            capacity: 50,
+            school: newUser._id,
+            subjects: [],
+            teachers: [],
+            students: [],
+            isActive: true,
+          });
+        }
+      } else {
+        // Create year-based structure
+        for (let i = startYear; i <= endYear; i++) {
+          gradesToCreate.push({
+            name: `Year ${i}`,
+            level: "BACHELOR",
+            description: `Year ${i} - Bachelor Level`,
+            capacity: 50,
+            school: newUser._id,
+            subjects: [],
+            teachers: [],
+            students: [],
+            isActive: true,
+          });
+        }
+      }
     }
 
     // Create all grades at once
     if (gradesToCreate.length > 0) {
-      await Grade.insertMany(gradesToCreate);
+      try {
+        const createdGrades = await Grade.insertMany(gradesToCreate);
+        console.log(`✓ Created ${createdGrades.length} grades for school ${newUser._id}`);
+      } catch (gradeError) {
+        console.error("❌ Grade creation failed:", gradeError.message);
+        throw gradeError;
+      }
     }
 
     // Create school configuration with faculties
@@ -176,6 +245,76 @@ export async function POST(req) {
       { upsert: true, new: true }
     );
 
+    // AUTO-CREATE FACULTIES from schoolConfig
+    const facultiesToCreate = [];
+
+    // Parse high school faculties
+    if (educationLevels?.highSchool && schoolConfig?.highSchool?.faculties) {
+      const faculties = schoolConfig.highSchool.faculties
+        .split(',')
+        .map(f => f.trim())
+        .filter(f => f.length > 0);
+
+      console.log(`Processing ${faculties.length} high school faculties:`, faculties);
+
+      faculties.forEach(faculty => {
+        facultiesToCreate.push({
+          name: faculty,
+          normalizedName: faculty.toLowerCase().trim().replace(/\s+/g, ' '),
+          school: newUser._id,
+          educationLevels: ['HigherSecondary'],
+          status: 'ACTIVE',
+          createdBy: newUser._id,
+        });
+      });
+    }
+
+    // Parse bachelor faculties
+    if (educationLevels?.bachelor && schoolConfig?.bachelor?.faculties) {
+      const faculties = schoolConfig.bachelor.faculties
+        .split(',')
+        .map(f => f.trim())
+        .filter(f => f.length > 0);
+
+      console.log(`Processing ${faculties.length} bachelor faculties:`, faculties);
+
+      faculties.forEach(faculty => {
+        facultiesToCreate.push({
+          name: faculty,
+          normalizedName: faculty.toLowerCase().trim().replace(/\s+/g, ' '),
+          school: newUser._id,
+          educationLevels: ['Bachelor'],
+          status: 'ACTIVE',
+          createdBy: newUser._id,
+        });
+      });
+    }
+
+    // Create faculties (avoiding duplicates)
+    if (facultiesToCreate.length > 0) {
+      console.log(`Creating ${facultiesToCreate.length} total faculties...`);
+      try {
+        const createdFaculties = await Faculty.insertMany(facultiesToCreate, { ordered: false });
+        console.log(`✓ Successfully created ${createdFaculties.length} faculties for school ${newUser._id}`);
+      } catch (error) {
+        // Ignore duplicate key errors (some faculties might already exist)
+        if (error.code !== 11000) {
+          console.error('❌ Faculty creation error:', error.message);
+          throw error;
+        } else {
+          console.log('⚠ Some faculties already existed, skipped duplicates');
+        }
+      }
+    } else {
+      console.log('ℹ No faculties configured for this school');
+    }
+
+    console.log("=== REGISTRATION SUCCESSFUL ===");
+    console.log("User created:", newUser.email);
+    console.log("Grades created:", gradesToCreate.length);
+    console.log("Faculties created:", facultiesToCreate.length);
+    console.log("================================");
+
     return NextResponse.json(
       {
         message: "School registered successfully with automatic grade setup",
@@ -185,9 +324,16 @@ export async function POST(req) {
       { status: 201 }
     );
   } catch (error) {
-    console.error("Registration error:", error);
+    console.error("=== REGISTRATION ERROR ===");
+    console.error("Error name:", error.name);
+    console.error("Error message:", error.message);
+    console.error("Error stack:", error.stack);
+    if (error.errors) {
+      console.error("Validation errors:", error.errors);
+    }
+    console.error("================================");
     return NextResponse.json(
-      { message: "Internal Server Error" },
+      { message: error.message || "Internal Server Error" },
       { status: 500 }
     );
   }

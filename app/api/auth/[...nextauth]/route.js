@@ -23,7 +23,31 @@ export const authOptions = {
       async authorize(credentials) {
         await connectDB();
 
-        // 1. Try User collection (Admins, Teachers)
+        // 1. Try Teacher collection FIRST (Clean Architecture)
+        const teacher = await Teacher.findOne({ email: credentials.email });
+
+        if (teacher) {
+          const isValid = await bcrypt.compare(
+            credentials.password,
+            teacher.password
+          );
+
+          if (!isValid) {
+            throw new Error("Invalid password");
+          }
+
+          // Return teacher user object
+          return {
+            id: teacher._id.toString(),
+            email: teacher.email,
+            role: "TEACHER",
+            name: teacher.name,
+            status: "APPROVED", // Teachers are always approved when created
+            schoolId: teacher.school?.toString(),
+          };
+        }
+
+        // 2. Try User collection (Admins, School Admins, Legacy support)
         const user = await User.findOne({ email: credentials.email });
 
         if (user) {
@@ -63,22 +87,6 @@ export const authOptions = {
             };
           }
 
-          if (user.role === "TEACHER") {
-            // Map teacher to their school for event/subject filtering
-            const teacherDoc = await Teacher.findOne({
-              email: user.email,
-            }).select("school");
-            schoolId = teacherDoc?.school?.toString() || null;
-            return {
-              id: user._id.toString(),
-              email: user.email,
-              role: user.role,
-              name: user.name,
-              status: user.status,
-              schoolId,
-            };
-          }
-
           // SCHOOL_ADMIN and SUPER_ADMIN
           schoolId = user._id.toString();
           return {
@@ -91,7 +99,7 @@ export const authOptions = {
           };
         }
 
-        // 2. Try Student collection (Students)
+        // 3. Try Student collection (Students)
         // Check by username OR email (in case they use email)
         const student = await Student.findOne({
           $or: [{ username: credentials.email }, { email: credentials.email }],

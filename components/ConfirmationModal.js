@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { FaExclamationTriangle, FaTimes } from "react-icons/fa";
 
 /**
@@ -26,6 +27,20 @@ export default function ConfirmationModal({
   onCancel,
   isLoading = false,
 }) {
+  useEffect(() => {
+    const handleEsc = (e) => {
+      if (e.key === "Escape" && !isLoading) onCancel?.();
+    };
+    if (isOpen) {
+      document.addEventListener("keydown", handleEsc);
+      document.body.style.overflow = "hidden";
+    }
+    return () => {
+      document.removeEventListener("keydown", handleEsc);
+      document.body.style.overflow = "unset";
+    };
+  }, [isOpen, onCancel, isLoading]);
+
   if (!isOpen) return null;
 
   const buttonClasses = {

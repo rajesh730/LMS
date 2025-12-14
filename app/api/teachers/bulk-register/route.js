@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import connectDB from "@/lib/db";
 import Teacher from "@/models/Teacher";
-import User from "@/models/User";
 import bcrypt from "bcryptjs";
 
 export async function POST(req) {
@@ -28,31 +27,21 @@ export async function POST(req) {
           throw new Error("Missing required fields (Name, Email, Subject)");
         }
 
-        // Check if User exists
-        const existingUser = await User.findOne({ email: teacherData.email });
-        if (existingUser) {
-          throw new Error(`User with email ${teacherData.email} already exists`);
+        // Check if Teacher already exists
+        const existingTeacher = await Teacher.findOne({ email: teacherData.email });
+        if (existingTeacher) {
+          throw new Error(`Teacher with email ${teacherData.email} already exists`);
         }
 
         // Hash Password
-        // Use provided password or generate one if missing (though frontend generates it)
         const plainPassword = teacherData.password || "Teacher@123"; 
         const hashedPassword = await bcrypt.hash(plainPassword, 10);
 
-        // 1. Create User
-        await User.create({
-          name: teacherData.name,
-          email: teacherData.email,
-          password: hashedPassword,
-          role: "TEACHER",
-          schoolName: "N/A",
-          status: "APPROVED",
-        });
-
-        // 2. Create Teacher
+        // Create Teacher (ONLY in teachers collection, NOT in users collection)
         const newTeacher = await Teacher.create({
           name: teacherData.name,
           email: teacherData.email,
+          password: hashedPassword,
           phone: teacherData.phone,
           subject: teacherData.subject,
           qualification: teacherData.qualification,

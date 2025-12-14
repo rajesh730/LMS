@@ -1,11 +1,25 @@
 "use client";
 
 import { FaCopy, FaEye, FaEyeSlash, FaTimes, FaDownload } from "react-icons/fa";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function CredentialsModal({ isOpen, credentials, onClose }) {
   const [passwordVisible, setPasswordVisible] = useState(true);
   const [copied, setCopied] = useState(null);
+
+  useEffect(() => {
+    const handleEsc = (e) => {
+      if (e.key === "Escape") onClose?.();
+    };
+    if (isOpen) {
+      document.addEventListener("keydown", handleEsc);
+      document.body.style.overflow = "hidden";
+    }
+    return () => {
+      document.removeEventListener("keydown", handleEsc);
+      document.body.style.overflow = "unset";
+    };
+  }, [isOpen, onClose]);
 
   if (!isOpen || !credentials) return null;
 

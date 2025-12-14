@@ -21,15 +21,14 @@ export async function GET(req) {
 
     await connectDB();
 
-    let query = { status: "ACTIVE" };
+    let query = {};
 
     if (session.user.role === "SUPER_ADMIN") {
-      // SUPER_ADMIN sees all subjects
+      // SUPER_ADMIN sees all subjects (active and inactive)
       // No additional filter
     } else if (session.user.role === "SCHOOL_ADMIN") {
-      // SCHOOL_ADMIN sees: global subjects + own custom subjects
+      // SCHOOL_ADMIN sees: global subjects + own custom subjects (active and inactive)
       query = {
-        ...query,
         $or: [
           { subjectType: "GLOBAL" },
           { school: session.user.id },

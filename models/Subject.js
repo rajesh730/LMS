@@ -21,7 +21,6 @@ const SubjectSchema = new mongoose.Schema(
         code: {
             type: String,
             required: [true, 'Please provide a subject code'],
-            uppercase: true,
             trim: true,
         },
         description: {
@@ -58,6 +57,26 @@ const SubjectSchema = new mongoose.Schema(
             type: String,
             enum: ['ACTIVE', 'INACTIVE'],
             default: 'ACTIVE',
+        },
+
+        // Faculty/Stream Applicability (for smart filtering)
+        // Optional: helps filter subjects by faculty when assigning to grades
+        // Example: ["Science", "Engineering"] for Physics
+        // Leave empty for subjects applicable to all faculties
+        applicableFaculties: {
+            type: [String],
+            default: [],
+        },
+
+        // Education Level Applicability (for smart filtering)
+        // Specifies which education levels this subject applies to
+        // Values: "School" (1-10), "HigherSecondary" (11-12), "Bachelor" (13+)
+        // Example: ["School", "HigherSecondary"] for Mathematics
+        // Leave empty for subjects applicable to all education levels
+        educationLevel: {
+            type: [String],
+            enum: ['School', 'HigherSecondary', 'Bachelor'],
+            default: [],
         },
 
         // Metadata
@@ -97,5 +116,11 @@ SubjectSchema.index({ school: 1, status: 1 });
 
 // Index for queries by subject type
 SubjectSchema.index({ subjectType: 1, status: 1 });
+
+// Index for queries by faculty (for filtering)
+SubjectSchema.index({ applicableFaculties: 1 });
+
+// Index for queries by education level (for filtering)
+SubjectSchema.index({ educationLevel: 1 });
 
 export default mongoose.models.Subject || mongoose.model('Subject', SubjectSchema);

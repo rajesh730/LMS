@@ -157,3 +157,57 @@ export async function PATCH(req, { params }) {
     return errorResponse(500, error.message || "Failed to update subject");
   }
 }
+
+/**
+ * DELETE /api/subjects/[id]
+ * Permanently delete a subject
+ * Only allowed if subject is not used in any GradeSubject
+ */
+export async function DELETE(req, { params }) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session || !["SUPER_ADMIN", "SCHOOL_ADMIN"].includes(session.user.role)) {
+      return errorResponse(403, "Forbidden - Admin access required");
+    }
+
+    const { id } = await params;
+
+    await connectDB();
+
+    const subject = await Subject.findById(id);
+
+    if (!subject) {
+      return errorResponse(404, "Subject not found");
+    }
+
+    // Permission check
+    if (session.user.role === "SCHOOL_ADMIN") {
+      if (
+        subject.subjectType === "GLOBAL" ||
+        subject.school?.toString() !== session.user.id
+      ) {
+        return errorResponse(403, "You cannot delete this subject");
+      }
+    }
+
+    // Check if subject is used in GradeSubject
+    const GradeSubject = require("@/models/GradeSubject").default || require("@/models/GradeSubject");
+    const gradeSub = await GradeSubject.findOne({ subject: id });
+
+    if (gradeSub) {
+      return errorResponse(
+        409,
+        "Cannot delete subject - it is being used in grade assignments. Please remove all grade assignments first."
+      );
+    }
+
+    // Perform permanent delete
+    await Subject.findByIdAndDelete(id);
+
+    return successResponse(200, "Subject deleted permanently");
+  } catch (error) {
+    console.error("Error deleting subject:", error);
+    return errorResponse(500, error.message || "Failed to delete subject");
+  }
+}

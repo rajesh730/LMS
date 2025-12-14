@@ -74,20 +74,30 @@ export default function AdminDashboard() {
       return;
 
     try {
+      console.log(`Updating school ${schoolId} to status: ${newStatus}`);
       const res = await fetch(`/api/schools/${schoolId}/status`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),
       });
+      console.log("Response status:", res.status);
+      const data = await res.json();
+      console.log("Response data:", data);
+      
       if (res.ok) {
+        console.log("✓ Status updated successfully");
         setSchools(
           schools.map((s) =>
             s._id === schoolId ? { ...s, status: newStatus } : s
           )
         );
+      } else {
+        console.error("❌ Status update failed:", data.message);
+        alert(`Error: ${data.message || "Failed to update status"}`);
       }
     } catch (error) {
-      console.error("Error updating status", error);
+      console.error("❌ Error updating status", error);
+      alert(`Error: ${error.message}`);
     }
   };
 

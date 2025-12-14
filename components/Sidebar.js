@@ -22,13 +22,11 @@ export default function Sidebar({ role }) {
   const adminLinks = [
     { name: "Dashboard", href: "/admin/dashboard", icon: FaChartPie },
     { name: "Events", href: "/admin/events", icon: FaCalendarAlt },
-    { name: "Global Subjects", href: "/admin/subjects", icon: FaBook },
     { name: "Support Tickets", href: "/admin/support", icon: FaHeadset },
     { name: "Settings", href: "/admin/settings", icon: FaCog },
   ];
 
   const schoolLinks = [
-    { name: "Subjects", href: "/school/subjects", icon: FaBook },
     { name: "Dashboard", href: "/school/dashboard", icon: FaChartPie },
     {
       name: "Support",
@@ -87,18 +85,16 @@ export default function Sidebar({ role }) {
             <Link
               key={link.href}
               href={link.href}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group ${
-                isActive
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group ${isActive
                   ? "bg-blue-600/10 text-blue-400 shadow-sm border border-blue-500/20"
                   : "text-slate-400 hover:bg-slate-800 hover:text-slate-200"
-              }`}
+                }`}
             >
               <Icon
-                className={`text-lg ${
-                  isActive
+                className={`text-lg ${isActive
                     ? "text-blue-400"
                     : "text-slate-500 group-hover:text-slate-300"
-                }`}
+                  }`}
               />
               <span className="font-medium">{link.name}</span>
             </Link>

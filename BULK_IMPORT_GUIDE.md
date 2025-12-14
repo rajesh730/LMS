@@ -15,30 +15,44 @@ The Subject Management System now supports:
 Create a CSV file with the following columns:
 
 ```
-Name,Code,Type,Academic Type,Description
+Name,Code,Type,Academic Type,Education Levels,Applicable Faculties,Description
 ```
 
 **Column Definitions:**
 
 | Column | Required | Values | Example |
-|--------|----------|--------|---------|
-| **Name** | Yes | Subject name | Mathematics, English, Science |
-| **Code** | Yes | Subject code (uppercase) | MATH, ENG, SCI |
+|--------|----------|--------|----------|
+| **Name** | Yes | Subject name | Mathematics, Physics, Economics |
+| **Code** | Yes | Alphanumeric code | MATH, CS-101, PHY-ADV |
 | **Type** | Yes | GLOBAL or SCHOOL_CUSTOM | GLOBAL |
 | **Academic Type** | Yes | CORE, ELECTIVE, EXTRA_CURRICULAR | CORE |
-| **Description** | No | Subject description | Core mathematics subject |
+| **Education Levels** | No | School, HigherSecondary, Bachelor (semicolon-separated, leave blank for all) | School;HigherSecondary |
+| **Applicable Faculties** | No | Semicolon-separated faculty names (leave blank for all) | Science;Engineering |
+| **Description** | No | Optional description | Core mathematics |
 
 ### Step 2: Example CSV Format
 
 ```csv
-Name,Code,Type,Academic Type,Description
-Mathematics,MATH,GLOBAL,CORE,Core mathematics subject
-English,ENG,GLOBAL,CORE,English language and literature
-Science,SCI,GLOBAL,CORE,General science
-Computer Science,CS,GLOBAL,CORE,Computer science and programming
-Physical Education,PE,GLOBAL,ELECTIVE,Sports and fitness
-Art,ART,GLOBAL,ELECTIVE,Visual arts and design
+Name,Code,Type,Academic Type,Education Levels,Applicable Faculties,Description
+Mathematics,MATH,GLOBAL,CORE,School;HigherSecondary;Bachelor,,Core mathematics for all levels
+Physics,PHY,GLOBAL,CORE,HigherSecondary;Bachelor,Science;Engineering,Physics for higher secondary and bachelor
+Chemistry,CHEM,GLOBAL,CORE,HigherSecondary,Science,Chemistry for higher secondary science only
+Economics,ECO,GLOBAL,ELECTIVE,HigherSecondary;Bachelor,Commerce;Humanities,Economics for commerce and humanities
+English,ENG,GLOBAL,CORE,School;HigherSecondary;Bachelor,,English for all education levels
 ```
+
+**Notes on Education Levels:**
+- **School**: Grades 1-10 level subjects
+- **HigherSecondary**: Grades 11-12 level subjects
+- **Bachelor**: Grade 13+ university level subjects
+- **Leave blank** to make subject available to ALL education levels
+- **Single level**: `School`
+- **Multiple levels**: Separate with semicolon: `School;HigherSecondary`
+
+**Notes on Applicable Faculties:**
+- **Leave blank** to make subject available to ALL faculties
+- **Single faculty**: `Science`
+- **Multiple faculties**: Separate with semicolon: `Science;Engineering`
 
 ### Step 3: Upload the File
 
@@ -113,8 +127,8 @@ The CSV file contains:
 ❌ **Rejected:**
 - Duplicate codes in same scope
 - Invalid Type (must be GLOBAL or SCHOOL_CUSTOM)
-- Invalid Academic Type
-- Missing Name or Code
+- Invalid Subject Category
+- Missing Subject Name or Code
 - SCHOOL_ADMIN trying to create GLOBAL subjects
 
 ### Type Restrictions
@@ -131,17 +145,17 @@ The CSV file contains:
 Download template: `/subjects-template.csv`
 
 ```csv
-Name,Code,Type,Academic Type,Description
-Mathematics,MATH,GLOBAL,CORE,Core mathematics subject
-English,ENG,GLOBAL,CORE,English language and literature
-Science,SCI,GLOBAL,CORE,General science
-History,HIST,GLOBAL,CORE,History and world cultures
-Geography,GEO,GLOBAL,CORE,Geography and earth science
-Physical Education,PE,GLOBAL,ELECTIVE,Sports and fitness
-Art,ART,GLOBAL,ELECTIVE,Visual arts and design
-Music,MUS,GLOBAL,ELECTIVE,Music and performing arts
-Computer Science,CS,GLOBAL,CORE,Computer science and programming
-Economics,ECON,GLOBAL,ELECTIVE,Economics and business studies
+Subject Name,Subject Code,Type,Subject Category
+Mathematics,MATH,GLOBAL,CORE
+English,ENG,GLOBAL,CORE
+Science,SCI,GLOBAL,CORE
+History,HIST-101,GLOBAL,CORE
+Geography,GEO,GLOBAL,CORE
+Physical Education,PE,GLOBAL,ELECTIVE
+Art,ART-BASIC,GLOBAL,ELECTIVE
+Music,MUS-1,GLOBAL,ELECTIVE
+Computer Science,CS-101,GLOBAL,CORE
+Economics,ECON-ADV,GLOBAL,ELECTIVE
 ```
 
 ---
@@ -191,17 +205,16 @@ Body:
 ### ✅ Do's
 
 - ✅ Use the download feature to get current subjects as base
-- ✅ Keep codes UPPERCASE and unique per scope
+- ✅ Keep codes unique and meaningful (e.g., MATH, CS-101, ENG-ADV-1)
 - ✅ Use GLOBAL type only for platform-wide subjects
-- ✅ Include descriptions for better documentation
 - ✅ Test with a few subjects first before bulk import
 - ✅ Review errors carefully before retrying
 
 ### ❌ Don'ts
 
 - ❌ Don't use duplicate codes in same scope
-- ❌ Don't use special characters in codes
-- ❌ Don't mix GLOBAL and SCHOOL_CUSTOM in single import without proper roles
+- ❌ Don't use special characters except hyphens and numbers
+- ❌ Don't mix GLOBAL and SCHOOL_CUSTOM without proper roles
 - ❌ Don't modify the export format (headers must match)
 - ❌ Don't try to import 1000+ subjects at once (do in batches)
 
@@ -219,8 +232,8 @@ Body:
 - Use SCHOOL_CUSTOM type instead
 - Or login as SUPER_ADMIN
 
-### "Invalid Academic Type"
-- Academic Type must be exactly: CORE, ELECTIVE, or EXTRA_CURRICULAR
+### "Invalid Subject Category"
+- Subject Category must be exactly: CORE, ELECTIVE, or EXTRA_CURRICULAR
 - Check spelling and case
 
 ### "Invalid Type"
@@ -239,10 +252,10 @@ Body:
 
 1. Create `platform-subjects.csv`:
 ```csv
-Name,Code,Type,Academic Type,Description
-Mathematics,MATH,GLOBAL,CORE,Core math
-English,ENG,GLOBAL,CORE,Core english
-Science,SCI,GLOBAL,CORE,Core science
+Subject Name,Subject Code,Type,Subject Category
+Mathematics,MATH,GLOBAL,CORE
+English,ENG,GLOBAL,CORE
+Science,SCI-101,GLOBAL,CORE
 ```
 
 2. Go to `/admin/subjects`
@@ -255,8 +268,7 @@ Science,SCI,GLOBAL,CORE,Core science
 1. Download existing subjects from `/school/subjects`
 2. Add new rows with `SCHOOL_CUSTOM` type:
 ```csv
-Name,Code,Type,Academic Type,Description
-Advanced Math,MATH-ADV,SCHOOL_CUSTOM,ELECTIVE,Advanced mathematics
+Advanced Math,MATH-ADV-2,SCHOOL_CUSTOM,ELECTIVE
 ```
 
 3. Click "Import"

@@ -23,12 +23,21 @@ const GradeSubjectSchema = new mongoose.Schema(
         grade: {
             type: String,
             required: [true, 'Please provide a grade'],
-            // e.g., "Grade 9", "Class X", "Grade 10"
+            // e.g., "Grade 9", "Class X", "Grade 10", "Grade 11"
         },
         school: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'User',
             required: [true, 'Please provide a school'],
+        },
+
+        // Faculty/Stream (Optional - for colleges with multiple streams)
+        faculty: {
+            type: String,
+            trim: true,
+            // e.g., "Science", "Commerce", "Humanities", "Arts", null for schools
+            // College: Grade 11 Science, Grade 11 Commerce
+            // School: null (applies to all students in that grade)
         },
 
         // Assignment Properties
@@ -131,10 +140,13 @@ const GradeSubjectSchema = new mongoose.Schema(
     { timestamps: true }
 );
 
-// Compound unique index: one subject can be activated only once per grade per school
-GradeSubjectSchema.index({ subject: 1, grade: 1, school: 1 }, { unique: true });
+// Compound unique index: one subject can be activated only once per grade per school per faculty
+// For schools: faculty = null, so same subject only once per grade
+// For colleges: faculty = "Science" | "Commerce", so same subject can be in multiple faculties
+GradeSubjectSchema.index({ subject: 1, grade: 1, school: 1, faculty: 1 }, { unique: true });
 
 // Index for efficient queries
+GradeSubjectSchema.index({ school: 1, grade: 1, faculty: 1, status: 1 });
 GradeSubjectSchema.index({ school: 1, grade: 1, status: 1 });
 GradeSubjectSchema.index({ subject: 1, status: 1 });
 GradeSubjectSchema.index({ assignedTeacher: 1 });

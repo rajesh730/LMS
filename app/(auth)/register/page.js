@@ -30,6 +30,16 @@ const STEPS = [
   { id: "theme", title: "Theme", icon: FaPalette },
 ];
 
+// Utility function to normalize faculty names (trim spaces)
+const normalizeFaculties = (facultiesString) => {
+  if (!facultiesString || typeof facultiesString !== 'string') return '';
+  return facultiesString
+    .split(',')
+    .map(f => f.trim())
+    .filter(f => f.length > 0)
+    .join(', ');
+};
+
 export default function RegisterPage() {
   const [currentStep, setCurrentStep] = useState(0);
   const [completedSteps, setCompletedSteps] = useState([]);
@@ -74,11 +84,19 @@ export default function RegisterPage() {
       bachelor: false,
     },
     schoolConfig: {
-      minGrade: 1,
-      maxGrade: 10,
-      faculties: [],
-      highSchoolFaculty: "",
-      bachelorFaculties: "",
+      schoolLevel: {
+        minGrade: 1,
+        maxGrade: 10,
+      },
+      highSchool: {
+        faculties: "",
+      },
+      bachelor: {
+        startingYear: 1,
+        endingYear: 4,
+        hasSemesters: false,
+        faculties: "",
+      },
     },
 
     // Theme
@@ -179,7 +197,7 @@ export default function RegisterPage() {
         // Check if high school is selected but no faculty is provided
         if (
           formData.educationLevels.highSchool &&
-          !formData.schoolConfig.highSchoolFaculty?.trim()
+          !formData.schoolConfig.highSchool.faculties?.trim()
         ) {
           errors.highSchoolFaculty =
             "Please specify the faculties/streams for high school";
@@ -188,7 +206,7 @@ export default function RegisterPage() {
         // Check if bachelor is selected but no faculties are provided
         if (
           formData.educationLevels.bachelor &&
-          !formData.schoolConfig.bachelorFaculties?.trim()
+          !formData.schoolConfig.bachelor.faculties?.trim()
         ) {
           errors.bachelorFaculties =
             "Please specify the faculties/programs for bachelor level";
@@ -227,11 +245,46 @@ export default function RegisterPage() {
   };
 
   const handleEducationLevelChange = (level) => {
+    const newEducationLevels = {
+      ...formData.educationLevels,
+      [level]: !formData.educationLevels[level],
+    };
+
+    // Build schoolConfig dynamically based on selected education levels
+    const newSchoolConfig = {};
+
+    // If SCHOOL is selected, add schoolLevel with grades 1-10
+    if (newEducationLevels.school) {
+      newSchoolConfig.schoolLevel = {
+        minGrade: 1,
+        maxGrade: 10,
+      };
+    } 
+    // If ONLY HIGH SCHOOL is selected (no school), set grades 11-12
+    else if (newEducationLevels.highSchool && !newEducationLevels.school) {
+      newSchoolConfig.schoolLevel = {
+        minGrade: 11,
+        maxGrade: 12,
+      };
+    }
+    // If ONLY BACHELOR is selected, no schoolLevel
+    else if (newEducationLevels.bachelor && !newEducationLevels.school && !newEducationLevels.highSchool) {
+      // No schoolLevel for bachelor only
+    }
+
+    // Add highSchool config if selected
+    if (newEducationLevels.highSchool) {
+      newSchoolConfig.highSchool = formData.schoolConfig.highSchool;
+    }
+
+    // Add bachelor config if selected
+    if (newEducationLevels.bachelor) {
+      newSchoolConfig.bachelor = formData.schoolConfig.bachelor;
+    }
+
     updateFormData({
-      educationLevels: {
-        ...formData.educationLevels,
-        [level]: !formData.educationLevels[level],
-      },
+      educationLevels: newEducationLevels,
+      schoolConfig: newSchoolConfig,
     });
   };
 
@@ -260,13 +313,48 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
+      // Build schoolConfig dynamically (same logic as handleEducationLevelChange)
+      const cleanedSchoolConfig = {};
+
+      // If SCHOOL is selected, add schoolLevel with grades 1-10
+      if (formData.educationLevels.school) {
+        cleanedSchoolConfig.schoolLevel = formData.schoolConfig.schoolLevel;
+      } 
+      // If ONLY HIGH SCHOOL is selected (no school), set grades 11-12
+      else if (formData.educationLevels.highSchool && !formData.educationLevels.school) {
+        cleanedSchoolConfig.schoolLevel = {
+          minGrade: 11,
+          maxGrade: 12,
+        };
+      }
+      // If ONLY BACHELOR is selected, no schoolLevel
+
+      // Add highSchool config if selected
+      if (formData.educationLevels.highSchool) {
+        cleanedSchoolConfig.highSchool = {
+          ...formData.schoolConfig.highSchool,
+          faculties: normalizeFaculties(formData.schoolConfig.highSchool.faculties),
+        };
+      }
+
+      // Add bachelor config if selected
+      if (formData.educationLevels.bachelor) {
+        cleanedSchoolConfig.bachelor = {
+          ...formData.schoolConfig.bachelor,
+          faculties: normalizeFaculties(formData.schoolConfig.bachelor.faculties),
+        };
+      }
+
       // Prepare final form data
       const submitData = {
         ...formData,
         email: formData.schoolEmail, // Use school email for login
         establishedYear: parseInt(formData.establishedYear), // Convert to number
         schoolLocation: `${formData.municipality}, Ward ${formData.ward}, ${formData.district}, ${formData.province}`,
+        schoolConfig: cleanedSchoolConfig, // Use cleaned config
       };
+
+      console.log("Submitting registration data:", JSON.stringify(submitData, null, 2));
 
       const res = await fetch("/api/register", {
         method: "POST",
@@ -274,14 +362,16 @@ export default function RegisterPage() {
         body: JSON.stringify(submitData),
       });
 
+      const data = await res.json();
+      console.log("Registration response:", data, "Status:", res.status);
+
       if (res.ok) {
         alert("School registered successfully! Please wait for approval.");
         router.push("/login");
       } else {
-        const data = await res.json();
         setStepErrors({
           ...stepErrors,
-          [currentStep]: { submit: data.error || "Registration failed" },
+          [currentStep]: { submit: data.message || "Registration failed" },
         });
       }
     } catch (error) {
@@ -876,16 +966,19 @@ export default function RegisterPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-white mb-2">
-                  Lowest Class <span className="text-red-400">*</span>
+                  Lower Grade <span className="text-red-400">*</span>
                 </label>
                 <select
                   className="w-full border border-slate-600 bg-slate-700 text-white rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  value={formData.schoolConfig.minGrade || 1}
+                  value={formData.schoolConfig.schoolLevel?.minGrade || 1}
                   onChange={(e) =>
                     updateFormData({
                       schoolConfig: {
                         ...formData.schoolConfig,
-                        minGrade: parseInt(e.target.value),
+                        schoolLevel: {
+                          ...formData.schoolConfig.schoolLevel,
+                          minGrade: parseInt(e.target.value),
+                        },
                       },
                     })
                   }
@@ -895,16 +988,19 @@ export default function RegisterPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-white mb-2">
-                  Highest Class <span className="text-red-400">*</span>
+                  Upper Grade <span className="text-red-400">*</span>
                 </label>
                 <select
                   className="w-full border border-slate-600 bg-slate-700 text-white rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  value={formData.schoolConfig.maxGrade}
+                  value={formData.schoolConfig.schoolLevel?.maxGrade || 10}
                   onChange={(e) =>
                     updateFormData({
                       schoolConfig: {
                         ...formData.schoolConfig,
-                        maxGrade: parseInt(e.target.value),
+                        schoolLevel: {
+                          ...formData.schoolConfig.schoolLevel,
+                          maxGrade: parseInt(e.target.value),
+                        },
                       },
                     })
                   }
@@ -919,8 +1015,8 @@ export default function RegisterPage() {
             </div>
             <p className="text-sm text-blue-200 mt-2">
               Your school will offer classes from{" "}
-              {formData.schoolConfig.minGrade || 1} to{" "}
-              {formData.schoolConfig.maxGrade}
+              {formData.schoolConfig.schoolLevel?.minGrade || 1} to{" "}
+              {formData.schoolConfig.schoolLevel?.maxGrade || 10}
             </p>
           </div>
         )}
@@ -931,8 +1027,22 @@ export default function RegisterPage() {
               High School Configuration
             </h4>
             <p className="text-sm text-emerald-200 mb-4">
-              High School automatically includes Grade 11 and Grade 12
+              High School automatically includes Grade 11 and Grade 12. Total: 2 Classes
             </p>
+            <div className="grid grid-cols-3 gap-4 mb-6">
+              <div className="bg-emerald-900/30 rounded p-4">
+                <span className="text-sm font-medium text-emerald-200">Lowest Grade</span>
+                <p className="text-2xl font-bold text-emerald-300 mt-1">Grade 11</p>
+              </div>
+              <div className="bg-emerald-900/30 rounded p-4">
+                <span className="text-sm font-medium text-emerald-200">Highest Grade</span>
+                <p className="text-2xl font-bold text-emerald-300 mt-1">Grade 12</p>
+              </div>
+              <div className="bg-emerald-900/30 rounded p-4">
+                <span className="text-sm font-medium text-emerald-200">Total Classes</span>
+                <p className="text-2xl font-bold text-emerald-300 mt-1">2</p>
+              </div>
+            </div>
 
             <div>
               <label className="block text-sm font-medium text-white mb-2">
@@ -943,12 +1053,15 @@ export default function RegisterPage() {
                   type="text"
                   placeholder="e.g., Science, Management, Humanities, Computer Science"
                   className="w-full border border-slate-600 bg-slate-700 text-white placeholder-slate-400 rounded-lg p-3 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                  value={formData.schoolConfig.highSchoolFaculty || ""}
+                  value={formData.schoolConfig.highSchool?.faculties || ""}
                   onChange={(e) =>
                     updateFormData({
                       schoolConfig: {
                         ...formData.schoolConfig,
-                        highSchoolFaculty: e.target.value,
+                        highSchool: {
+                          ...formData.schoolConfig.highSchool,
+                          faculties: normalizeFaculties(e.target.value),
+                        },
                       },
                     })
                   }
@@ -968,8 +1081,93 @@ export default function RegisterPage() {
               Bachelor Level Configuration
             </h4>
             <p className="text-sm text-purple-200 mb-4">
-              Configure degree programs and faculties
+              Configure degree programs, duration, and faculties
             </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              <div>
+                <label className="block text-sm font-medium text-white mb-2">
+                  Lower Grade (Starting Year) <span className="text-red-400">*</span>
+                </label>
+                <select
+                  className="w-full border border-slate-600 bg-slate-700 text-white rounded-lg p-3 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  value={formData.schoolConfig.bachelor?.startingYear || 1}
+                  onChange={(e) =>
+                    updateFormData({
+                      schoolConfig: {
+                        ...formData.schoolConfig,
+                        bachelor: {
+                          ...formData.schoolConfig.bachelor,
+                          startingYear: parseInt(e.target.value),
+                        },
+                      },
+                    })
+                  }
+                >
+                  <option value={1}>1st Year</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-white mb-2">
+                  Upper Grade (Ending Year) <span className="text-red-400">*</span>
+                </label>
+                <select
+                  className="w-full border border-slate-600 bg-slate-700 text-white rounded-lg p-3 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  value={formData.schoolConfig.bachelor?.endingYear || 4}
+                  onChange={(e) =>
+                    updateFormData({
+                      schoolConfig: {
+                        ...formData.schoolConfig,
+                        bachelor: {
+                          ...formData.schoolConfig.bachelor,
+                          endingYear: parseInt(e.target.value),
+                        },
+                      },
+                    })
+                  }
+                >
+                  <option value={2}>2nd Year</option>
+                  <option value={3}>3rd Year</option>
+                  <option value={4}>4th Year</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="bg-purple-900/30 rounded p-4 mb-6">
+              <div className="flex items-center space-x-3">
+                <input
+                  type="checkbox"
+                  id="hasSemesters"
+                  className="w-4 h-4 text-purple-600 bg-slate-700 border-slate-600 rounded focus:ring-purple-500 focus:ring-2"
+                  checked={formData.schoolConfig.bachelor?.hasSemesters || false}
+                  onChange={(e) =>
+                    updateFormData({
+                      schoolConfig: {
+                        ...formData.schoolConfig,
+                        bachelor: {
+                          ...formData.schoolConfig.bachelor,
+                          hasSemesters: e.target.checked,
+                        },
+                      },
+                    })
+                  }
+                />
+                <label htmlFor="hasSemesters" className="text-white font-medium">
+                  Include Semester Division
+                </label>
+              </div>
+              {formData.schoolConfig.bachelor?.hasSemesters && (
+                <div className="text-sm text-purple-300 mt-3 space-y-1">
+                  <p>
+                    Duration: <strong>{(formData.schoolConfig.bachelor?.endingYear || 4) - (formData.schoolConfig.bachelor?.startingYear || 1) + 1} Years</strong>
+                  </p>
+                  <p>
+                    Total Semesters: <strong>{((formData.schoolConfig.bachelor?.endingYear || 4) - (formData.schoolConfig.bachelor?.startingYear || 1) + 1) * 2} Semesters</strong>
+                  </p>
+                </div>
+              )}
+            </div>
 
             <div>
               <label className="block text-sm font-medium text-white mb-2">
@@ -980,12 +1178,15 @@ export default function RegisterPage() {
                   type="text"
                   placeholder="e.g., BCA, BIT, BSc Computer Science, BBA, MBA, Engineering, etc."
                   className="w-full border border-slate-600 bg-slate-700 text-white placeholder-slate-400 rounded-lg p-3 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                  value={formData.schoolConfig.bachelorFaculties || ""}
+                  value={formData.schoolConfig.bachelor?.faculties || ""}
                   onChange={(e) =>
                     updateFormData({
                       schoolConfig: {
                         ...formData.schoolConfig,
-                        bachelorFaculties: e.target.value,
+                        bachelor: {
+                          ...formData.schoolConfig.bachelor,
+                          faculties: normalizeFaculties(e.target.value),
+                        },
                       },
                     })
                   }

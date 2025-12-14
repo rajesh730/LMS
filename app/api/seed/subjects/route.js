@@ -1,9 +1,8 @@
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "../auth/[...nextauth]/route";
+import { authOptions } from "../../auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import Subject from "@/models/Subject";
 import Grade from "@/models/Grade";
-import School from "@/models/School";
 import { NextResponse } from "next/server";
 
 export async function POST(req) {
