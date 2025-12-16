@@ -3,8 +3,9 @@
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import DashboardLayout from "@/components/DashboardLayout";
+import AdminTopNav from "@/components/AdminTopNav";
 import SendEventForm from "./SendEventForm";
 import EventCard from "./EventCard";
 
@@ -31,12 +32,14 @@ import {
 export default function AdminDashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState("approvals");
+  const searchParams = useSearchParams();
+  const activeTab = searchParams.get('tab') || 'approvals';
   const [schools, setSchools] = useState([]);
   const [groups, setGroups] = useState([]);
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [viewingEvent, setViewingEvent] = useState(null);
+  const [eventFilter, setEventFilter] = useState("active"); // active, completed, archived
 
   // Group Form State
   const [groupName, setGroupName] = useState("");
@@ -163,24 +166,40 @@ export default function AdminDashboard() {
   const [editingEvent, setEditingEvent] = useState(null);
 
   // Event CRUD
-  const deleteEvent = async (id) => {
+  const deleteEvent = async (id, permanent = false) => {
     setLastError(null);
-    console.log("Deleting event with ID:", id);
-    // if (!confirm('Are you sure you want to delete this event?')) return;
+    console.log("Deleting event with ID:", id, "Permanent:", permanent);
+    if (
+      !confirm(
+        permanent
+          ? "Are you sure you want to PERMANENTLY delete this event? This cannot be undone."
+          : "Are you sure you want to archive this event?"
+      )
+    )
+      return;
 
     setDeletingId(id);
     try {
-      // Use POST endpoint to avoid DELETE method issues
-      const res = await fetch(`/api/events/${id}/delete`, { method: "POST" });
+      const res = await fetch(`/api/events/${id}?permanent=${permanent}`, {
+        method: "DELETE",
+      });
       if (res.ok) {
-        setEvents(events.filter((e) => e._id !== id));
-        // alert('Event deleted successfully');
+        if (permanent) {
+          setEvents(events.filter((e) => e._id !== id));
+        } else {
+          // If soft delete (archive), update local state to reflect archived status
+          setEvents(
+            events.map((e) =>
+              e._id === id ? { ...e, lifecycleStatus: "ARCHIVED" } : e
+            )
+          );
+        }
       } else {
         const data = await res.json();
         console.error("Failed to delete event:", data);
         const msg = `Failed: ${data.message} (${res.status})`;
         setLastError(msg);
-        alert(msg); // Force alert for user visibility
+        alert(msg);
       }
     } catch (error) {
       console.error("Error deleting event", error);
@@ -188,6 +207,25 @@ export default function AdminDashboard() {
       alert(`Network/Client Error: ${error.message}`);
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  const updateEventStatus = async (id, status) => {
+    try {
+      const res = await fetch(`/api/events/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lifecycleStatus: status }),
+      });
+      if (res.ok) {
+        setEvents(
+          events.map((e) => (e._id === id ? { ...e, lifecycleStatus: status } : e))
+        );
+      } else {
+        alert("Failed to update event status");
+      }
+    } catch (error) {
+      console.error("Error updating status:", error);
     }
   };
 
@@ -234,53 +272,7 @@ export default function AdminDashboard() {
       </header>
 
       {/* Tabs */}
-      <div className="flex gap-4 mb-8 border-b border-slate-800 pb-1 overflow-x-auto">
-        <button
-          onClick={() => setActiveTab("approvals")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-t-lg transition whitespace-nowrap ${
-            activeTab === "approvals"
-              ? "bg-blue-600 text-white"
-              : "text-slate-400 hover:text-white"
-          }`}
-        >
-          <FaCheckCircle /> Approvals
-          {pendingSchools.length > 0 && (
-            <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
-              {pendingSchools.length}
-            </span>
-          )}
-        </button>
-        <button
-          onClick={() => setActiveTab("schools")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-t-lg transition whitespace-nowrap ${
-            activeTab === "schools"
-              ? "bg-blue-600 text-white"
-              : "text-slate-400 hover:text-white"
-          }`}
-        >
-          <FaSchool /> Schools
-        </button>
-        <button
-          onClick={() => setActiveTab("groups")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-t-lg transition whitespace-nowrap ${
-            activeTab === "groups"
-              ? "bg-blue-600 text-white"
-              : "text-slate-400 hover:text-white"
-          }`}
-        >
-          <FaLayerGroup /> Groups
-        </button>
-        <button
-          onClick={() => setActiveTab("events")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-t-lg transition whitespace-nowrap ${
-            activeTab === "events"
-              ? "bg-blue-600 text-white"
-              : "text-slate-400 hover:text-white"
-          }`}
-        >
-          <FaCalendarAlt /> Events
-        </button>
-      </div>
+      <AdminTopNav pendingCount={pendingSchools.length} />
 
       {/* Content */}
       {activeTab === "approvals" && (
@@ -642,24 +634,59 @@ export default function AdminDashboard() {
                   <h2 className="text-xl font-semibold text-white">
                     Existing Events
                   </h2>
+                  <div className="flex bg-slate-800 p-1 rounded-lg">
+                    {["active", "completed", "archived"].map((filter) => (
+                      <button
+                        key={filter}
+                        onClick={() => setEventFilter(filter)}
+                        className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                          eventFilter === filter
+                            ? "bg-blue-600 text-white"
+                            : "text-slate-400 hover:text-white"
+                        }`}
+                      >
+                        {filter.charAt(0).toUpperCase() + filter.slice(1)}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
-                {events.length === 0 ? (
-                  <p className="text-slate-500 italic">No events found.</p>
+                {events.filter((e) => {
+                  const status = e.lifecycleStatus || "ACTIVE";
+                  if (eventFilter === "active") return status === "ACTIVE";
+                  if (eventFilter === "completed") return status === "COMPLETED";
+                  if (eventFilter === "archived") return status === "ARCHIVED";
+                  return true;
+                }).length === 0 ? (
+                  <p className="text-slate-500 italic">
+                    No {eventFilter} events found.
+                  </p>
                 ) : (
                   <div className="space-y-4">
-                    {events.map((event) => (
-                      <EventCard
-                        key={event._id}
-                        event={event}
-                        onDelete={deleteEvent}
-                        isDeleting={deletingId === event._id}
-                        onEdit={(e) => {
-                          setEditingEvent(e);
-                        }}
-                        onViewParticipants={(e) => setViewingEvent(e)}
-                      />
-                    ))}
+                    {events
+                      .filter((e) => {
+                        const status = e.lifecycleStatus || "ACTIVE";
+                        if (eventFilter === "active")
+                          return status === "ACTIVE";
+                        if (eventFilter === "completed")
+                          return status === "COMPLETED";
+                        if (eventFilter === "archived")
+                          return status === "ARCHIVED";
+                        return true;
+                      })
+                      .map((event) => (
+                        <EventCard
+                          key={event._id}
+                          event={event}
+                          onDelete={deleteEvent}
+                          onUpdateStatus={updateEventStatus}
+                          isDeleting={deletingId === event._id}
+                          onEdit={(e) => {
+                            setEditingEvent(e);
+                          }}
+                          onViewParticipants={(e) => setViewingEvent(e)}
+                        />
+                      ))}
                   </div>
                 )}
               </div>

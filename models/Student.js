@@ -102,6 +102,13 @@ const StudentSchema = new mongoose.Schema(
       sparse: true,
     },
     
+    // Faculty/Stream (e.g., Science, Commerce)
+    faculty: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Faculty",
+      default: null,
+    },
+
     // Legacy field - kept for backward compatibility
     visiblePassword: {
       type: String, // Stored for admin visibility as requested

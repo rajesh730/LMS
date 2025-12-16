@@ -34,6 +34,11 @@ const EventSchema = new mongoose.Schema(
       enum: ["PENDING", "APPROVED", "REJECTED"],
       default: "PENDING",
     },
+    lifecycleStatus: {
+      type: String,
+      enum: ["ACTIVE", "COMPLETED", "ARCHIVED"],
+      default: "ACTIVE",
+    },
     // New fields for participation
     registrationDeadline: {
       type: Date,

@@ -29,10 +29,14 @@ export default function AttendanceManager({ teachers, grades }) {
   // Initialize default grade from localStorage or props
   useEffect(() => {
     const savedGrade = localStorage.getItem("attendanceGrade");
-    if (savedGrade && grades.find((c) => c._id === savedGrade)) {
+    // Handle both string grades and object grades (legacy)
+    const gradeExists = grades.some(g => (g._id || g) === savedGrade);
+    
+    if (savedGrade && gradeExists) {
       setAttendanceGrade(savedGrade);
     } else if (grades.length > 0 && !attendanceGrade) {
-      setAttendanceGrade(grades[0]._id);
+      const firstGrade = grades[0];
+      setAttendanceGrade(firstGrade._id || firstGrade);
     }
   }, [grades]);
 
@@ -193,15 +197,8 @@ export default function AttendanceManager({ teachers, grades }) {
     const targetList =
       attendanceType === "student"
         ? students.filter((s) => {
-            const sGradeId = s.grade && (s.grade._id || s.grade);
-            const selectedGradeObj = grades.find(
-              (c) => c._id === attendanceGrade
-            );
-            return (
-              !attendanceGrade ||
-              String(sGradeId) === String(attendanceGrade) ||
-              (selectedGradeObj && s.grade === selectedGradeObj.name)
-            );
+            const sGrade = s.grade && (s.grade._id || s.grade);
+            return !attendanceGrade || String(sGrade) === String(attendanceGrade);
           })
         : teachers;
 
@@ -213,15 +210,8 @@ export default function AttendanceManager({ teachers, grades }) {
     const targetList =
       attendanceType === "student"
         ? students.filter((s) => {
-            const sGradeId = s.grade && (s.grade._id || s.grade);
-            const selectedGradeObj = grades.find(
-              (c) => c._id === attendanceGrade
-            );
-            return (
-              !attendanceGrade ||
-              String(sGradeId) === String(attendanceGrade) ||
-              (selectedGradeObj && s.grade === selectedGradeObj.name)
-            );
+            const sGrade = s.grade && (s.grade._id || s.grade);
+            return !attendanceGrade || String(sGrade) === String(attendanceGrade);
           })
         : teachers;
 
@@ -406,11 +396,15 @@ export default function AttendanceManager({ teachers, grades }) {
                 onChange={(e) => setAttendanceGrade(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-800 text-white p-3 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none transition"
               >
-                {grades.map((c) => (
-                  <option key={c._id} value={c._id}>
-                    {c.name}
-                  </option>
-                ))}
+                {grades.map((g) => {
+                  const value = g._id || g;
+                  const label = g.name || g;
+                  return (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  );
+                })}
               </select>
             </div>
           )}

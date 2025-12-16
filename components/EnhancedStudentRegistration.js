@@ -1,15 +1,21 @@
 import React, { useState, useEffect } from "react";
-import { Download } from "lucide-react";
+import { Download, List, Edit, Trash2, Search, RefreshCw } from "lucide-react";
 import CSVUploader from "./CSVUploader";
 
 const EnhancedStudentRegistration = ({ schoolId, onSuccess }) => {
-  const [activeTab, setActiveTab] = useState("single"); // 'single' or 'bulk'
+  const [activeTab, setActiveTab] = useState("single"); // 'single', 'bulk', 'list'
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [bulkResult, setBulkResult] = useState(null);
   const [grades, setGrades] = useState([]);
+  const [faculties, setFaculties] = useState([]);
   
+  // List View State
+  const [students, setStudents] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [editingId, setEditingId] = useState(null);
+
   // Form State
   const [formData, setFormData] = useState({
     // Part 1: Student Details
@@ -19,6 +25,7 @@ const EnhancedStudentRegistration = ({ schoolId, onSuccess }) => {
     gender: "",
     rollNumber: "",
     grade: "",
+    faculty: "", // Added Faculty
     address: "",
     bloodGroup: "",
 
@@ -56,12 +63,64 @@ const EnhancedStudentRegistration = ({ schoolId, onSuccess }) => {
         } else {
             console.warn("No grades found in data:", data);
         }
+
+        // Fetch Faculties
+        const facultyRes = await fetch(`/api/schools/${schoolId}/faculties`);
+        if (facultyRes.ok) {
+          const facultyData = await facultyRes.json();
+          setFaculties(facultyData.data || []);
+        }
+
       } catch (err) {
         console.error("Failed to fetch grades:", err);
       }
     };
     fetchGrades();
   }, [schoolId]);
+
+  const fetchStudents = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/students?limit=100&search=${searchTerm}`);
+      const data = await response.json();
+      if (response.ok) {
+        setStudents(data.students || []);
+      } else {
+        setError(data.message || "Failed to fetch students");
+      }
+    } catch (err) {
+      setError("Error fetching students");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'list') {
+      fetchStudents();
+    }
+  }, [activeTab, searchTerm]);
+
+  const handleEdit = (student) => {
+    setEditingId(student._id);
+    setFormData({
+      fullName: student.name,
+      phone: student.phone || "",
+      dateOfBirth: student.dob ? new Date(student.dob).toISOString().split('T')[0] : "",
+      gender: student.gender || "",
+      rollNumber: student.rollNumber || "",
+      grade: student.grade || "",
+      faculty: student.faculty || "", // Assuming faculty is stored
+      address: student.address || "",
+      bloodGroup: student.bloodGroup || "",
+      guardianRelationship: "FATHER", // Default or fetch if available
+      parentName: student.parentName || "",
+      parentContactNumber: student.parentPhone || "",
+      parentEmail: student.parentEmail || "",
+      parentAlternativeContact: student.emergencyContact || "",
+    });
+    setActiveTab('single');
+  };
 
   const handleSubmit = async () => {
     setError("");
@@ -102,6 +161,7 @@ const EnhancedStudentRegistration = ({ schoolId, onSuccess }) => {
         gender: formData.gender || "OTHER",
         rollNumber: formData.rollNumber,
         grade: formData.grade,
+        faculty: formData.faculty || null, // Added Faculty
         address: formData.address,
         bloodGroup: formData.bloodGroup,
         
@@ -116,11 +176,27 @@ const EnhancedStudentRegistration = ({ schoolId, onSuccess }) => {
         email: formData.parentEmail,
       };
 
-      const response = await fetch("/api/students/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      let response;
+      if (editingId) {
+        const updatePayload = {
+            ...payload,
+            dob: payload.dateOfBirth,
+            parentPhone: payload.parentContactNumber,
+            emergencyContact: payload.parentAlternativeContact
+        };
+        
+        response = await fetch(`/api/students/${editingId}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(updatePayload),
+        });
+      } else {
+        response = await fetch("/api/students/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+        });
+      }
 
       const data = await response.json();
 
@@ -128,18 +204,42 @@ const EnhancedStudentRegistration = ({ schoolId, onSuccess }) => {
         throw new Error(data.message || "Registration failed");
       }
 
-      setSuccess(`Student registered successfully! Credentials: Username: ${username}, Password: ${password}`);
-      
-      // Reset form after delay
-      setTimeout(() => {
-        setFormData({
-          fullName: "",
-          phone: "",
-          dateOfBirth: "",
-          gender: "",
-          rollNumber: "",
-          grade: "",
-          address: "",
+      if (editingId) {
+        setSuccess("Student updated successfully!");
+        setTimeout(() => {
+            setActiveTab('list');
+            setEditingId(null);
+            setFormData({
+                fullName: "",
+                phone: "",
+                dateOfBirth: "",
+                gender: "",
+                rollNumber: "",
+                grade: "",
+                faculty: "",
+                address: "",
+                bloodGroup: "",
+                guardianRelationship: "FATHER",
+                parentName: "",
+                parentContactNumber: "",
+                parentEmail: "",
+                parentAlternativeContact: "",
+            });
+        }, 1500);
+      } else {
+        setSuccess(`Student registered successfully! Credentials: Username: ${username}, Password: ${password}`);
+        
+        // Reset form after delay
+        setTimeout(() => {
+            setFormData({
+            fullName: "",
+            phone: "",
+            dateOfBirth: "",
+            gender: "",
+            rollNumber: "",
+            grade: "",
+            faculty: "",
+            address: "",
           bloodGroup: "",
           guardianRelationship: "FATHER",
           parentName: "",
@@ -150,7 +250,7 @@ const EnhancedStudentRegistration = ({ schoolId, onSuccess }) => {
         setSuccess("");
         if (onSuccess) onSuccess();
       }, 10000); // Longer delay to let them read credentials
-
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -275,16 +375,41 @@ const EnhancedStudentRegistration = ({ schoolId, onSuccess }) => {
         <h2 className="text-2xl font-bold text-white">Add New Student</h2>
         <div className="flex gap-2 bg-slate-800 p-1 rounded-lg">
             <button 
-                onClick={() => setActiveTab("single")}
+                onClick={() => {
+                    setActiveTab("single");
+                    setEditingId(null);
+                    setFormData({
+                        fullName: "",
+                        phone: "",
+                        dateOfBirth: "",
+                        gender: "",
+                        rollNumber: "",
+                        grade: "",
+                        faculty: "",
+                        address: "",
+                        bloodGroup: "",
+                        guardianRelationship: "FATHER",
+                        parentName: "",
+                        parentContactNumber: "",
+                        parentEmail: "",
+                        parentAlternativeContact: "",
+                    });
+                }}
                 className={`px-4 py-2 rounded-md text-sm font-medium transition ${activeTab === 'single' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}`}
             >
-                Single Entry
+                {editingId ? 'Edit Student' : 'Single Entry'}
             </button>
             <button 
                 onClick={() => setActiveTab("bulk")}
                 className={`px-4 py-2 rounded-md text-sm font-medium transition ${activeTab === 'bulk' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}`}
             >
                 Bulk Upload
+            </button>
+            <button 
+                onClick={() => setActiveTab("list")}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition ${activeTab === 'list' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}`}
+            >
+                View All
             </button>
         </div>
       </div>
@@ -338,6 +463,71 @@ const EnhancedStudentRegistration = ({ schoolId, onSuccess }) => {
                     </div>
                 </div>
             )}
+        </div>
+      )}
+
+      {activeTab === "list" && (
+        <div className="space-y-4">
+          <div className="flex gap-4 mb-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+              <input
+                type="text"
+                placeholder="Search students..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+            </div>
+            <button 
+              onClick={fetchStudents}
+              className="p-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-400 hover:text-white"
+              title="Refresh"
+            >
+              <RefreshCw className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="overflow-x-auto rounded-lg border border-slate-700">
+            <table className="w-full text-sm text-left text-slate-300">
+              <thead className="text-xs text-slate-400 uppercase bg-slate-800/50">
+                <tr>
+                  <th className="px-4 py-3">Name</th>
+                  <th className="px-4 py-3">Roll No</th>
+                  <th className="px-4 py-3">Grade</th>
+                  <th className="px-4 py-3">Phone</th>
+                  <th className="px-4 py-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {students.length === 0 ? (
+                  <tr>
+                    <td colSpan="5" className="px-4 py-8 text-center text-slate-500">
+                      No students found
+                    </td>
+                  </tr>
+                ) : (
+                  students.map((student) => (
+                    <tr key={student._id} className="border-b border-slate-700 hover:bg-slate-800/30">
+                      <td className="px-4 py-3 font-medium text-white">{student.name}</td>
+                      <td className="px-4 py-3">{student.rollNumber}</td>
+                      <td className="px-4 py-3">{student.grade}</td>
+                      <td className="px-4 py-3">{student.phone || '-'}</td>
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          onClick={() => handleEdit(student)}
+                          className="text-blue-400 hover:text-blue-300 p-1"
+                          title="Edit"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
@@ -417,6 +607,23 @@ const EnhancedStudentRegistration = ({ schoolId, onSuccess }) => {
                   ))}
                 </select>
               </div>
+
+              {/* Faculty Dropdown */}
+              {faculties.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">Faculty/Stream</label>
+                  <select
+                    value={formData.faculty}
+                    onChange={(e) => setFormData({...formData, faculty: e.target.value})}
+                    className="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                  >
+                    <option value="">Select Faculty (Optional)</option>
+                    {faculties.map((f) => (
+                      <option key={f._id} value={f._id}>{f.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-1">Blood Group (Optional)</label>

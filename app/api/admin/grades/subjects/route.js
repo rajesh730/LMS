@@ -1,4 +1,4 @@
-import { connectDB } from "@/lib/db";
+import connectDB from "@/lib/db";
 import Subject from "@/models/Subject";
 import GradeSubject from "@/models/GradeSubject";
 import { getServerSession } from "next-auth";

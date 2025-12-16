@@ -206,6 +206,16 @@ export async function POST(req, { params }) {
             continue;
           }
 
+          // Check Grade Eligibility
+          if (event.eligibleGrades && event.eligibleGrades.length > 0) {
+            if (!event.eligibleGrades.includes(student.grade)) {
+              errors.push(
+                `Student ${student.name} (Grade ${student.grade}) is not eligible for this event.`
+              );
+              continue;
+            }
+          }
+
           // Check if request already exists
           const existingRequest = await ParticipationRequest.findOne({
             student: studentId,

@@ -22,6 +22,7 @@ export async function PUT(req, props) {
       maxParticipants,
       maxParticipantsPerSchool,
       eligibleGrades,
+      lifecycleStatus,
     } = await req.json();
 
     await connectDB();
@@ -36,6 +37,7 @@ export async function PUT(req, props) {
         maxParticipants: maxParticipants || null,
         maxParticipantsPerSchool: maxParticipantsPerSchool || null,
         eligibleGrades: eligibleGrades || [],
+        lifecycleStatus: lifecycleStatus || undefined, // Only update if provided
       },
       { new: true }
     );
@@ -67,13 +69,34 @@ export async function DELETE(req, props) {
     // Next.js 15: props.params is a Promise
     const params = await props.params;
     const id = params.id;
+    
+    // Check for permanent delete flag
+    const { searchParams } = new URL(req.url);
+    const isPermanent = searchParams.get("permanent") === "true";
 
-    console.log(`[DELETE EVENT] Request received for ID: ${id}`);
-    console.log(`[DELETE EVENT] Raw Params:`, params);
-    console.log(`[DELETE EVENT] User Role: ${session?.user?.role}`);
+    console.log(`[DELETE EVENT] Request received for ID: ${id}, Permanent: ${isPermanent}`);
 
     await connectDB();
 
+    if (!isPermanent) {
+      // SOFT DELETE (Archive)
+      const archivedEvent = await Event.findByIdAndUpdate(
+        id,
+        { lifecycleStatus: "ARCHIVED" },
+        { new: true }
+      );
+
+      if (!archivedEvent) {
+        return NextResponse.json({ message: "Event not found" }, { status: 404 });
+      }
+
+      return NextResponse.json(
+        { message: "Event archived successfully" },
+        { status: 200 }
+      );
+    }
+
+    // PERMANENT DELETE
     let deletedEvent;
     try {
       console.log("[DELETE EVENT] Attempting findByIdAndDelete...");
@@ -105,7 +128,7 @@ export async function DELETE(req, props) {
     }
 
     return NextResponse.json(
-      { message: "Event and related requests deleted" },
+      { message: "Event and related requests permanently deleted" },
       { status: 200 }
     );
   } catch (error) {

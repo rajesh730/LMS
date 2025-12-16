@@ -21,7 +21,17 @@ export async function GET(req) {
 
     await connectDB();
 
-    const query = { school: session.user.id, status: "ACTIVE" };
+    let query = { status: "ACTIVE" };
+
+    // Check if requesting global faculties
+    const url = new URL(req.url);
+    const type = url.searchParams.get("type");
+
+    if (type === "global" && session.user.role === "SUPER_ADMIN") {
+      query.school = null;
+    } else {
+      query.school = session.user.id;
+    }
 
     const faculties = await Faculty.find(query)
       .sort({ name: 1 })
@@ -63,11 +73,14 @@ export async function POST(req) {
 
     await connectDB();
 
+    const isGlobal = session.user.role === 'SUPER_ADMIN';
+    const schoolId = isGlobal ? null : session.user.id;
+
     // Check for duplicate (case-insensitive)
     const normalizedName = name.toLowerCase().trim().replace(/\s+/g, ' ');
     const exists = await Faculty.findOne({
       normalizedName,
-      school: session.user.id,
+      school: schoolId,
       mergedInto: null
     });
 
@@ -81,7 +94,7 @@ export async function POST(req) {
     const faculty = new Faculty({
       name: name.trim(),
       normalizedName,
-      school: session.user.id,
+      school: schoolId,
       educationLevels: educationLevels || [],
       createdBy: session.user.id,
     });

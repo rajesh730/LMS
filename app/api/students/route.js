@@ -181,6 +181,7 @@ export async function GET(req) {
 
     const { searchParams } = new URL(req.url);
     const classroomId = searchParams.get("classroom");
+    const grade = searchParams.get("grade");
     const search = searchParams.get("search") || "";
     const page = parseInt(searchParams.get("page")) || 1;
     const limit = parseInt(searchParams.get("limit")) || 10;
@@ -192,6 +193,10 @@ export async function GET(req) {
 
     if (classroomId) {
       query.classroom = classroomId;
+    }
+
+    if (grade) {
+      query.grade = grade;
     }
 
     if (search) {

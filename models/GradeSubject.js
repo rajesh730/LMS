@@ -33,10 +33,10 @@ const GradeSubjectSchema = new mongoose.Schema(
 
         // Faculty/Stream (Optional - for colleges with multiple streams)
         faculty: {
-            type: String,
-            trim: true,
-            // e.g., "Science", "Commerce", "Humanities", "Arts", null for schools
-            // College: Grade 11 Science, Grade 11 Commerce
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Faculty',
+            default: null,
+            // e.g., Science, Commerce, Humanities
             // School: null (applies to all students in that grade)
         },
 

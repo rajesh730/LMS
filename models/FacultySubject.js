@@ -25,6 +25,14 @@ const FacultySubjectSchema = new mongoose.Schema({
     enum: ['ACTIVE', 'INACTIVE'],
     default: 'ACTIVE',
   },
+  year: {
+    type: Number,
+    default: 1
+  },
+  semester: {
+    type: Number,
+    default: 1
+  },
   addedBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',

@@ -26,11 +26,11 @@ const EventParticipationForm = memo(function EventParticipationForm({
   });
 
   const [students, setStudents] = useState([]);
-  const [classFilter, setClassFilter] = useState("all");
+  const [gradeFilter, setGradeFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [classes, setClasses] = useState([]);
+  const [grades, setGrades] = useState([]);
 
   // New states for interested students
   const [interestedStudents, setInterestedStudents] = useState([]);
@@ -41,7 +41,7 @@ const EventParticipationForm = memo(function EventParticipationForm({
 
   useEffect(() => {
     loadStudents();
-    loadClasses();
+    loadGrades();
   }, []);
 
   useEffect(() => {
@@ -97,24 +97,28 @@ const EventParticipationForm = memo(function EventParticipationForm({
     }
   };
 
-  const loadClasses = async () => {
+  const loadGrades = async () => {
     try {
-      const res = await fetch("/api/classrooms");
+      const res = await fetch("/api/schools/grades");
       if (res.ok) {
-        const data = await res.json();
-        setClasses(
-          Array.isArray(data.classrooms)
-            ? data.classrooms
-            : Array.isArray(data)
-            ? data
-            : []
-        );
+        const json = await res.json();
+        let fetchedGrades = json.data?.grades || [];
+
+        // Filter grades if event has restrictions
+        if (event.eligibleGrades && event.eligibleGrades.length > 0) {
+          fetchedGrades = fetchedGrades.filter((g) => {
+            const gradeVal = g._id || g;
+            return event.eligibleGrades.includes(String(gradeVal));
+          });
+        }
+
+        setGrades(fetchedGrades);
       } else {
-        setClasses([]);
+        setGrades([]);
       }
     } catch (error) {
-      console.error("Error loading classes:", error);
-      setClasses([]);
+      console.error("Error loading grades:", error);
+      setGrades([]);
     }
   };
 
@@ -181,8 +185,21 @@ const EventParticipationForm = memo(function EventParticipationForm({
       const matchesSearch = student.name
         .toLowerCase()
         .includes(searchQuery.toLowerCase());
-      const matchesClass =
-        classFilter === "all" || student.classroom?.name === classFilter;
+
+      const sGrade =
+        student.grade &&
+        (student.grade.name || student.grade._id || student.grade);
+
+      // Check eligibility
+      const isEligible =
+        !event.eligibleGrades ||
+        event.eligibleGrades.length === 0 ||
+        event.eligibleGrades.includes(String(sGrade));
+
+      if (!isEligible) return false;
+
+      const matchesGrade =
+        gradeFilter === "all" || String(sGrade) === String(gradeFilter);
 
       const matchesStatus =
         interestedFilter === "all" ||
@@ -192,7 +209,7 @@ const EventParticipationForm = memo(function EventParticipationForm({
           ["PENDING", "APPROVED"].includes(request.status)) ||
         (request && request.status === interestedFilter);
 
-      return matchesSearch && matchesClass && matchesStatus;
+      return matchesSearch && matchesGrade && matchesStatus;
     })
     .sort((a, b) => {
       // Sort selected students to the top
@@ -414,17 +431,21 @@ const EventParticipationForm = memo(function EventParticipationForm({
                 )}
               </div>
               <select
-                value={classFilter}
-                onChange={(e) => setClassFilter(e.target.value)}
+                value={gradeFilter}
+                onChange={(e) => setGradeFilter(e.target.value)}
                 className="bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white"
               >
-                <option value="all">All Classes</option>
-                {Array.isArray(classes) &&
-                  classes.map((cls) => (
-                    <option key={cls._id} value={cls.name}>
-                      {cls.name}
-                    </option>
-                  ))}
+                <option value="all">All Grades</option>
+                {Array.isArray(grades) &&
+                  grades.map((grade) => {
+                    const val = grade._id || grade;
+                    const label = grade.name || grade;
+                    return (
+                      <option key={val} value={val}>
+                        {label}
+                      </option>
+                    );
+                  })}
               </select>
             </div>
           </div>

@@ -1,161 +1,95 @@
-import connectDB from "@/lib/db";
-import Subject from "@/models/Subject";
-import FacultySubject from "@/models/FacultySubject";
-import { successResponse, errorResponse } from "@/lib/apiResponse";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { NextResponse } from 'next/server';
+import { getToken } from 'next-auth/jwt';
+import Subject from '@/models/Subject';
+import connectDB from '@/lib/db';
 
-/**
- * GET /api/admin/subjects
- * Get all subjects (global + custom) for school admin
- * 
- * Response: List of subjects with details
- */
 export async function GET(req) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session || session.user.role !== "SCHOOL_ADMIN") {
-      return errorResponse(403, "Forbidden - School Admin access required");
+    await connectDB();
+    const token = await getToken({ req });
+    
+    if (!token || token.role !== 'SUPER_ADMIN') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    await connectDB();
+    const { searchParams } = new URL(req.url);
+    const status = searchParams.get('status') || 'ACTIVE';
+    
+    console.log(`Fetching subjects with status: ${status}`);
 
-    // Get global + own custom subjects
-    const subjects = await Subject.find({
-      $or: [
-        { subjectType: "GLOBAL" },
-        { school: session.user.id },
-      ],
-      status: "ACTIVE",
-    }).select("name code description subjectType school status color icon");
+    // Fetch all subjects (Global + School Custom)
+    // We populate the school field to identify custom subjects
+    const subjects = await Subject.find({ 
+      status: status
+    })
+    .populate('school', 'schoolName')
+    .sort({ subjectType: 1, name: 1 }); // Sort by Type (Global first) then Name
+    
+    console.log(`Found ${subjects.length} subjects`);
 
-    return successResponse(200, "Subjects fetched successfully", {
-      subjects,
-      total: subjects.length,
+    return NextResponse.json({
+      success: true,
+      data: subjects
     });
+
   } catch (error) {
-    console.error("Error fetching subjects:", error);
-    return errorResponse(500, error.message || "Failed to fetch subjects");
+    console.error('Fetch Global Subjects Error:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
-/**
- * POST /api/admin/subjects
- * Create a new subject (match-or-create logic)
- * 
- * Request:
- * {
- *   name: "Math",
- *   code: "MATH101",
- *   description: "...",
- *   faculty: "Science" (which faculty to map)
- * }
- * 
- * Logic:
- * 1. Search for existing GLOBAL subject by name
- * 2. If found → Link to it
- * 3. If not found → Create SCHOOL_CUSTOM subject
- * 4. Map to faculty
- */
 export async function POST(req) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session || session.user.role !== "SCHOOL_ADMIN") {
-      return errorResponse(403, "Forbidden - School Admin access required");
-    }
-
-    const { name, code, description, faculty } = await req.json();
-
-    // Validation
-    if (!name || !code || !faculty) {
-      return errorResponse(400, "Name, code, and faculty are required");
-    }
-
     await connectDB();
-
-    // Get school's faculties to validate
-    const User = (await import("@/models/User")).default;
-    const school = await User.findById(session.user.id);
+    const token = await getToken({ req });
     
-    if (!school) {
-      return errorResponse(404, "School not found");
+    if (!token || token.role !== 'SUPER_ADMIN') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check if faculty exists in school config
-    const faculties = Object.keys(school.schoolConfig || {}).filter(
-      key => key.endsWith("Faculties") && 
-      school.schoolConfig[key]?.faculties
-    );
+    const body = await req.json();
+    const { name, code, description, academicType, educationLevel, grades, applicableFaculties, year, semester } = body;
 
-    // Validate faculty exists in school
-    let facultyFound = false;
-    for (const key of faculties) {
-      const facultyList = school.schoolConfig[key].faculties?.split(',')
-        .map(f => f.trim());
-      if (facultyList?.includes(faculty)) {
-        facultyFound = true;
-        break;
-      }
+    if (!name || !code) {
+      return NextResponse.json({ error: 'Name and Code are required' }, { status: 400 });
     }
 
-    if (!facultyFound) {
-      return errorResponse(400, "Faculty not found in school configuration");
-    }
-
-    // Normalize name for matching
-    const normalizedName = name.toLowerCase().trim();
-
-    // Try to find existing GLOBAL subject
-    let subject = await Subject.findOne({
-      name: { $regex: `^${name}$`, $options: 'i' },
-      subjectType: "GLOBAL",
-      status: "ACTIVE",
+    // Check duplicate
+    const existing = await Subject.findOne({ 
+      code, 
+      subjectType: 'GLOBAL',
+      status: 'ACTIVE'
     });
 
-    // If not found, create SCHOOL_CUSTOM subject
-    if (!subject) {
-      subject = await Subject.create({
-        name,
-        code: code.toUpperCase(),
-        description,
-        subjectType: "SCHOOL_CUSTOM",
-        school: session.user.id,
-        status: "ACTIVE",
-        createdBy: session.user.id,
-      });
-      console.log(`✓ Created custom subject: ${name}`);
-    } else {
-      console.log(`✓ Found existing global subject: ${name}`);
+    if (existing) {
+      return NextResponse.json({ error: 'Global subject with this code already exists' }, { status: 400 });
     }
 
-    // Check if already mapped
-    const existingMapping = await FacultySubject.findOne({
-      school: session.user.id,
-      faculty,
-      subject: subject._id,
+    const subject = await Subject.create({
+      name,
+      code,
+      description,
+      academicType,
+      educationLevel: Array.isArray(educationLevel) ? educationLevel : [educationLevel],
+      grades: grades || [],
+      applicableFaculties: applicableFaculties || [],
+      year: year || null,
+      semester: semester || null,
+      subjectType: 'GLOBAL',
+      school: null,
+      createdBy: token.sub,
+      status: 'ACTIVE'
     });
 
-    if (existingMapping) {
-      return errorResponse(409, "Subject already mapped to this faculty");
-    }
-
-    // Create faculty-subject mapping
-    const mapping = await FacultySubject.create({
-      school: session.user.id,
-      faculty,
-      subject: subject._id,
-      addedBy: session.user.id,
+    return NextResponse.json({
+      success: true,
+      data: subject,
+      message: 'Global subject created successfully'
     });
 
-    return successResponse(201, "Subject created/linked and mapped successfully", {
-      subject,
-      mapping,
-      isNew: subject.school === session.user.id,
-    });
   } catch (error) {
-    console.error("Error creating subject:", error);
-    return errorResponse(500, error.message || "Failed to create subject");
+    console.error('Create Global Subject Error:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+

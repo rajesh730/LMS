@@ -3,7 +3,7 @@
 import { useState, useEffect, lazy, Suspense } from "react";
 import dynamic from "next/dynamic";
 import { useSession, signOut } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import DashboardLayout from "@/components/DashboardLayout";
 import Sidebar from "@/components/Sidebar";
 import EventFeed from "./EventFeed";
@@ -58,6 +58,46 @@ const AcademicSection = dynamic(
     ),
   }
 );
+const CurriculumManager = dynamic(
+  () => import("@/components/CurriculumManager"),
+  {
+    loading: () => (
+      <div className="p-4 text-slate-400">Loading curriculum...</div>
+    ),
+  }
+);
+const SupportTicketManager = dynamic(
+  () => import("@/components/support/SupportTicketManager"),
+  {
+    loading: () => (
+      <div className="p-4 text-slate-400">Loading support...</div>
+    ),
+  }
+);
+const EnhancedStudentRegistration = dynamic(
+  () => import("@/components/EnhancedStudentRegistration"),
+  {
+    loading: () => (
+      <div className="p-4 text-slate-400">Loading student registration...</div>
+    ),
+  }
+);
+const EnhancedTeacherRegistration = dynamic(
+  () => import("@/components/EnhancedTeacherRegistration"),
+  {
+    loading: () => (
+      <div className="p-4 text-slate-400">Loading teacher registration...</div>
+    ),
+  }
+);
+const SchoolSettingsManager = dynamic(
+  () => import("@/components/SchoolSettingsManager"),
+  {
+    loading: () => (
+      <div className="p-4 text-slate-400">Loading settings...</div>
+    ),
+  }
+);
 
 import {
   FaUserGraduate,
@@ -78,8 +118,18 @@ import NoticeManager from "@/components/NoticeManager";
 export default function SchoolDashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState("dashboard");
+  const searchParams = useSearchParams();
+  const [activeTab, setActiveTab] = useState("overview");
   const [attendanceSubTab, setAttendanceSubTab] = useState("students"); // 'students' or 'teachers'
+  const [academicSubTab, setAcademicSubTab] = useState("overview");
+
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (tab) {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
+
   const [teachers, setTeachers] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -320,7 +370,10 @@ export default function SchoolDashboard() {
           ].map((tab) => (
             <button
               key={tab}
-              onClick={() => setActiveTab(tab)}
+              onClick={() => {
+                setActiveTab(tab);
+                router.push(`/school/dashboard?tab=${tab}`);
+              }}
               className={`px-4 py-2 text-sm font-medium transition relative whitespace-nowrap ${
                 activeTab === tab
                   ? "text-emerald-400"
@@ -357,7 +410,46 @@ export default function SchoolDashboard() {
 
         {activeTab === "teachers" && <TeacherManager />}
 
-        {activeTab === "academic" && <AcademicSection />}
+        {activeTab === "academic" && (
+          <div className="space-y-6">
+            <div className="flex gap-4 border-b border-slate-700 pb-2">
+              <button
+                onClick={() => setAcademicSubTab("overview")}
+                className={`px-4 py-2 text-sm font-medium transition ${
+                  academicSubTab === "overview"
+                    ? "text-emerald-400 border-b-2 border-emerald-400"
+                    : "text-slate-400 hover:text-white"
+                }`}
+              >
+                Overview
+              </button>
+              <button
+                onClick={() => setAcademicSubTab("curriculum")}
+                className={`px-4 py-2 text-sm font-medium transition ${
+                  academicSubTab === "curriculum"
+                    ? "text-emerald-400 border-b-2 border-emerald-400"
+                    : "text-slate-400 hover:text-white"
+                }`}
+              >
+                Curriculum Manager
+              </button>
+            </div>
+
+            {academicSubTab === "overview" && <AcademicSection />}
+            {academicSubTab === "curriculum" && <CurriculumManager />}
+          </div>
+        )}
+
+        {activeTab === "curriculum" && <CurriculumManager />}
+        {activeTab === "support" && <SupportTicketManager />}
+        {activeTab === "register-student" && <EnhancedStudentRegistration />}
+        {activeTab === "register-teacher" && (
+          <EnhancedTeacherRegistration 
+            schoolId={session?.user?.id} 
+            onSuccess={() => router.refresh()} 
+          />
+        )}
+        {activeTab === "settings" && <SchoolSettingsManager />}
 
         {activeTab === "attendance" && (
           <div className="space-y-6">
@@ -386,7 +478,10 @@ export default function SchoolDashboard() {
             </div>
 
             {attendanceSubTab === "students" && (
-              <AttendanceManager teachers={teachers} grades={[]} />
+              <AttendanceManager
+                teachers={teachers}
+                grades={schoolConfig.grades || []}
+              />
             )}
 
             {attendanceSubTab === "teachers" && <TeacherAttendanceReport />}

@@ -37,11 +37,12 @@ const FacultySchema = new mongoose.Schema(
     },
 
     // School Reference (each school has its own faculties)
+    // Optional for Global Faculties
     school: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: [true, 'School reference is required'],
-      // Faculty belongs to specific school
+      default: null,
+      // required: [true, 'School reference is required'], // Made optional
     },
 
     // Which education levels this faculty applies to

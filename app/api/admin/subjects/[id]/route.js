@@ -1,9 +1,9 @@
 import connectDB from "@/lib/db";
 import Subject from "@/models/Subject";
 import FacultySubject from "@/models/FacultySubject";
+import GradeSubject from "@/models/GradeSubject";
 import { successResponse, errorResponse } from "@/lib/apiResponse";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { getToken } from 'next-auth/jwt';
 
 /**
  * GET /api/admin/subjects/[id]
@@ -11,34 +11,27 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
  */
 export async function GET(req, { params }) {
   try {
-    const session = await getServerSession(authOptions);
+    const token = await getToken({ req });
+    if (!token) return errorResponse(401, "Unauthorized");
 
-    if (!session || session.user.role !== "SCHOOL_ADMIN") {
-      return errorResponse(403, "Forbidden - School Admin access required");
-    }
-
-    const { id } = params;
-
+    const { id } = await params;
     await connectDB();
 
-    // Get subject
     const subject = await Subject.findById(id);
+    if (!subject) return errorResponse(404, "Subject not found");
 
-    if (!subject) {
-      return errorResponse(404, "Subject not found");
-    }
-
-    // Check authorization (global or own custom)
-    if (
-      subject.subjectType === "SCHOOL_CUSTOM" &&
-      subject.school.toString() !== session.user.id
-    ) {
-      return errorResponse(403, "You don't have permission to view this subject");
+    // Authorization Check
+    if (token.role === "SCHOOL_ADMIN") {
+        if (subject.subjectType === "SCHOOL_CUSTOM" && subject.school.toString() !== token.id) {
+            return errorResponse(403, "You don't have permission to view this subject");
+        }
+    } else if (token.role !== "SUPER_ADMIN") {
+        return errorResponse(403, "Forbidden");
     }
 
     // Get faculty mappings
     const mappings = await FacultySubject.find({
-      school: session.user.id,
+      school: token.id,
       subject: id,
       status: "ACTIVE",
     });
@@ -56,45 +49,55 @@ export async function GET(req, { params }) {
 
 /**
  * PUT /api/admin/subjects/[id]
- * Edit subject details (only custom subjects)
+ * Edit subject details or Restore
  */
 export async function PUT(req, { params }) {
   try {
-    const session = await getServerSession(authOptions);
+    const token = await getToken({ req });
+    if (!token) return errorResponse(401, "Unauthorized");
 
-    if (!session || session.user.role !== "SCHOOL_ADMIN") {
-      return errorResponse(403, "Forbidden - School Admin access required");
-    }
-
-    const { id } = params;
-    const { name, description, code } = await req.json();
+    const { id } = await params;
+    const { name, description, code, status, academicType, educationLevel, grades, applicableFaculties, year, semester } = await req.json();
 
     await connectDB();
 
     const subject = await Subject.findById(id);
+    if (!subject) return errorResponse(404, "Subject not found");
 
-    if (!subject) {
-      return errorResponse(404, "Subject not found");
+    // SUPER ADMIN LOGIC
+    if (token.role === "SUPER_ADMIN") {
+        if (status) subject.status = status;
+        if (name) subject.name = name;
+        if (code) subject.code = code;
+        if (description !== undefined) subject.description = description;
+        if (academicType) subject.academicType = academicType;
+        if (educationLevel) subject.educationLevel = educationLevel;
+        if (grades) subject.grades = grades;
+        if (applicableFaculties) subject.applicableFaculties = applicableFaculties;
+        if (year !== undefined) subject.year = year;
+        if (semester !== undefined) subject.semester = semester;
+        
+        await subject.save();
+        return successResponse(200, "Subject updated successfully", { subject });
     }
 
-    // Can only edit custom subjects, not global
-    if (subject.subjectType === "GLOBAL") {
-      return errorResponse(403, "Cannot edit global subjects");
+    // SCHOOL ADMIN LOGIC
+    if (token.role === "SCHOOL_ADMIN") {
+        if (subject.subjectType === "GLOBAL") {
+            return errorResponse(403, "Cannot edit global subjects");
+        }
+        if (subject.school.toString() !== token.id) {
+            return errorResponse(403, "You don't have permission to edit this subject");
+        }
+        if (name) subject.name = name;
+        if (code) subject.code = code.toUpperCase();
+        if (description !== undefined) subject.description = description;
+
+        await subject.save();
+        return successResponse(200, "Subject updated successfully", { subject });
     }
 
-    // Check authorization
-    if (subject.school.toString() !== session.user.id) {
-      return errorResponse(403, "You don't have permission to edit this subject");
-    }
-
-    // Update allowed fields
-    if (name) subject.name = name;
-    if (code) subject.code = code.toUpperCase();
-    if (description !== undefined) subject.description = description;
-
-    await subject.save();
-
-    return successResponse(200, "Subject updated successfully", { subject });
+    return errorResponse(403, "Forbidden");
   } catch (error) {
     console.error("Error updating subject:", error);
     return errorResponse(500, error.message || "Failed to update subject");
@@ -103,43 +106,54 @@ export async function PUT(req, { params }) {
 
 /**
  * DELETE /api/admin/subjects/[id]
- * Delete subject and its mappings (only custom subjects)
+ * Soft delete (Archive) or Hard delete
  */
 export async function DELETE(req, { params }) {
   try {
-    const session = await getServerSession(authOptions);
+    const token = await getToken({ req });
+    if (!token) return errorResponse(401, "Unauthorized");
 
-    if (!session || session.user.role !== "SCHOOL_ADMIN") {
-      return errorResponse(403, "Forbidden - School Admin access required");
-    }
-
-    const { id } = params;
+    const { id } = await params;
+    const { searchParams } = new URL(req.url);
+    const permanent = searchParams.get('permanent') === 'true';
 
     await connectDB();
 
     const subject = await Subject.findById(id);
+    if (!subject) return errorResponse(404, "Subject not found");
 
-    if (!subject) {
-      return errorResponse(404, "Subject not found");
+    // SUPER ADMIN LOGIC
+    if (token.role === "SUPER_ADMIN") {
+        if (permanent) {
+            // Hard Delete
+            await FacultySubject.deleteMany({ subject: id });
+            await GradeSubject.deleteMany({ subject: id });
+            await Subject.findByIdAndDelete(id);
+            return successResponse(200, "Subject permanently deleted");
+        } else {
+            // Soft Delete
+            subject.status = 'INACTIVE';
+            await subject.save();
+            return successResponse(200, "Subject archived");
+        }
     }
 
-    // Can only delete custom subjects, not global
-    if (subject.subjectType === "GLOBAL") {
-      return errorResponse(403, "Cannot delete global subjects");
+    // SCHOOL ADMIN LOGIC
+    if (token.role === "SCHOOL_ADMIN") {
+        if (subject.subjectType === "GLOBAL") {
+            return errorResponse(403, "Cannot delete global subjects");
+        }
+        if (subject.school.toString() !== token.id) {
+            return errorResponse(403, "You don't have permission to delete this subject");
+        }
+        
+        // School admins can only soft delete their own subjects
+        subject.status = 'INACTIVE';
+        await subject.save();
+        return successResponse(200, "Subject deleted successfully");
     }
 
-    // Check authorization
-    if (subject.school.toString() !== session.user.id) {
-      return errorResponse(403, "You don't have permission to delete this subject");
-    }
-
-    // Delete all mappings first
-    await FacultySubject.deleteMany({ subject: id });
-
-    // Delete subject
-    await Subject.findByIdAndDelete(id);
-
-    return successResponse(200, "Subject and mappings deleted successfully", { id });
+    return errorResponse(403, "Forbidden");
   } catch (error) {
     console.error("Error deleting subject:", error);
     return errorResponse(500, error.message || "Failed to delete subject");

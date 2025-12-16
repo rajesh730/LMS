@@ -17,6 +17,7 @@ import {
   FaCheck,
   FaTimes,
   FaUndo,
+  FaArchive,
 } from "react-icons/fa";
 
 export default function EventCard({
@@ -26,6 +27,7 @@ export default function EventCard({
   onEdit,
   filterContext,
   onViewParticipants,
+  onUpdateStatus,
 }) {
   // Filter participants based on context
   const displayedParticipants = event.participants?.filter((p) => {
@@ -313,31 +315,71 @@ export default function EventCard({
         <p className="text-slate-400 text-sm">{event.description}</p>
 
         {/* Actions */}
-        <div className="flex gap-2 mt-4">
-          <button
-            onClick={() => onEdit && onEdit(event)}
-            className="bg-blue-600 hover:bg-blue-500 text-white p-3 rounded-lg flex items-center justify-center transition shadow-lg hover:shadow-blue-500/20"
-            title="Edit Event"
-          >
-            <FaEdit size={18} />
-          </button>
+        <div className="flex flex-wrap gap-2 mt-4">
+          {/* Edit - Only if not archived */}
+          {event.lifecycleStatus !== "ARCHIVED" && (
+            <button
+              onClick={() => onEdit && onEdit(event)}
+              className="bg-blue-600 hover:bg-blue-500 text-white p-3 rounded-lg flex items-center justify-center transition shadow-lg hover:shadow-blue-500/20"
+              title="Edit Event"
+            >
+              <FaEdit size={18} />
+            </button>
+          )}
 
-          <button
-            onClick={() => onDelete(event._id)}
-            disabled={isDeleting}
-            className={`p-3 rounded-lg flex items-center justify-center transition shadow-lg ${
-              isDeleting
-                ? "bg-red-500/50 text-white/50 cursor-not-allowed"
-                : "bg-red-600 hover:bg-red-500 text-white hover:shadow-red-500/20"
-            }`}
-            title="Delete Event"
-          >
-            {isDeleting ? (
-              <FaSpinner className="animate-spin" size={18} />
-            ) : (
-              <FaTrash size={18} />
-            )}
-          </button>
+          {/* Mark Complete - Only if ACTIVE */}
+          {(event.lifecycleStatus === "ACTIVE" || !event.lifecycleStatus) && (
+            <button
+              onClick={() => onUpdateStatus && onUpdateStatus(event._id, "COMPLETED")}
+              className="bg-emerald-600 hover:bg-emerald-500 text-white p-3 rounded-lg flex items-center justify-center transition shadow-lg hover:shadow-emerald-500/20"
+              title="Mark as Complete"
+            >
+              <FaCheck size={18} />
+            </button>
+          )}
+
+          {/* Archive (Soft Delete) - If not already archived */}
+          {event.lifecycleStatus !== "ARCHIVED" && (
+            <button
+              onClick={() => onDelete(event._id, false)} // false = soft delete
+              disabled={isDeleting}
+              className="bg-orange-600 hover:bg-orange-500 text-white p-3 rounded-lg flex items-center justify-center transition shadow-lg hover:shadow-orange-500/20"
+              title="Archive Event"
+            >
+              <FaArchive size={18} />
+            </button>
+          )}
+
+          {/* Restore - If ARCHIVED */}
+          {event.lifecycleStatus === "ARCHIVED" && (
+            <button
+              onClick={() => onUpdateStatus && onUpdateStatus(event._id, "ACTIVE")}
+              className="bg-blue-600 hover:bg-blue-500 text-white p-3 rounded-lg flex items-center justify-center transition shadow-lg hover:shadow-blue-500/20"
+              title="Restore to Active"
+            >
+              <FaUndo size={18} />
+            </button>
+          )}
+
+          {/* Permanent Delete - Only if ARCHIVED */}
+          {event.lifecycleStatus === "ARCHIVED" && (
+            <button
+              onClick={() => onDelete(event._id, true)} // true = permanent
+              disabled={isDeleting}
+              className={`p-3 rounded-lg flex items-center justify-center transition shadow-lg ${
+                isDeleting
+                  ? "bg-red-500/50 text-white/50 cursor-not-allowed"
+                  : "bg-red-600 hover:bg-red-500 text-white hover:shadow-red-500/20"
+              }`}
+              title="Delete Permanently"
+            >
+              {isDeleting ? (
+                <FaSpinner className="animate-spin" size={18} />
+              ) : (
+                <FaTrash size={18} />
+              )}
+            </button>
+          )}
 
           {event.participants?.length > 0 && (
             <button

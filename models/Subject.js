@@ -61,22 +61,36 @@ const SubjectSchema = new mongoose.Schema(
 
         // Faculty/Stream Applicability (for smart filtering)
         // Optional: helps filter subjects by faculty when assigning to grades
-        // Example: ["Science", "Engineering"] for Physics
-        // Leave empty for subjects applicable to all faculties
-        applicableFaculties: {
-            type: [String],
-            default: [],
-        },
+        // References the Faculty model for data integrity
+        applicableFaculties: [{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Faculty',
+        }],
 
         // Education Level Applicability (for smart filtering)
         // Specifies which education levels this subject applies to
         // Values: "School" (1-10), "HigherSecondary" (11-12), "Bachelor" (13+)
-        // Example: ["School", "HigherSecondary"] for Mathematics
-        // Leave empty for subjects applicable to all education levels
         educationLevel: {
             type: [String],
             enum: ['School', 'HigherSecondary', 'Bachelor'],
             default: [],
+        },
+
+        // Specific Grades (e.g., "1", "2", "10", "11", "12")
+        // Allows more granular filtering than educationLevel
+        grades: {
+            type: [String],
+            default: [],
+        },
+
+        // For Bachelor/Higher Ed: Recommended Year and Semester
+        year: {
+            type: Number,
+            default: null,
+        },
+        semester: {
+            type: Number,
+            default: null,
         },
 
         // Metadata

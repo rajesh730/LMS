@@ -1,5 +1,3 @@
-// Log all unhandled errors and promise rejections
-import './global-error-logger.js';
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Enable compression for faster response times

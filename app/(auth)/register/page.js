@@ -983,7 +983,7 @@ export default function RegisterPage() {
                     })
                   }
                 >
-                  <option value={1}>Class 1</option>
+                  <option value={1}>Grade 1</option>
                 </select>
               </div>
               <div>
@@ -1007,7 +1007,7 @@ export default function RegisterPage() {
                 >
                   {[5, 6, 7, 8, 9, 10].map((grade) => (
                     <option key={grade} value={grade}>
-                      Class {grade}
+                      Grade {grade}
                     </option>
                   ))}
                 </select>

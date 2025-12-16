@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { signOut } from "next-auth/react";
 import {
   FaChartPie,
@@ -18,10 +18,12 @@ import {
 
 export default function Sidebar({ role }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const currentTab = searchParams?.get("tab");
 
   const adminLinks = [
     { name: "Dashboard", href: "/admin/dashboard", icon: FaChartPie },
-    { name: "Events", href: "/admin/events", icon: FaCalendarAlt },
+    { name: "Curriculum", href: "/admin/curriculum", icon: FaBook },
     { name: "Support Tickets", href: "/admin/support", icon: FaHeadset },
     { name: "Settings", href: "/admin/settings", icon: FaCog },
   ];
@@ -30,20 +32,25 @@ export default function Sidebar({ role }) {
     { name: "Dashboard", href: "/school/dashboard", icon: FaChartPie },
     {
       name: "Support",
-      href: "/school/support",
+      href: "/school/dashboard?tab=support",
       icon: FaHeadset,
     },
     {
       name: "Register Student",
-      href: "/school/register-student",
+      href: "/school/dashboard?tab=register-student",
       icon: FaUserPlus,
     },
     {
       name: "Register Teacher",
-      href: "/school/register-teacher",
+      href: "/school/dashboard?tab=register-teacher",
       icon: FaChalkboardTeacher,
     },
-    { name: "Settings", href: "/school/settings", icon: FaCog },
+    {
+      name: "Curriculum",
+      href: "/school/dashboard?tab=curriculum",
+      icon: FaBook,
+    },
+    { name: "Settings", href: "/school/dashboard?tab=settings", icon: FaCog },
   ];
 
   const teacherLinks = [
@@ -80,7 +87,7 @@ export default function Sidebar({ role }) {
       <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
         {links.map((link) => {
           const Icon = link.icon;
-          const isActive = pathname === link.href;
+          const isActive = link.href === (pathname + (currentTab ? `?tab=${currentTab}` : ""));
           return (
             <Link
               key={link.href}
