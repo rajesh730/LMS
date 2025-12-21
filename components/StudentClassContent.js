@@ -24,7 +24,7 @@ export default function StudentClassContent() {
       } catch (err) {
         console.error("class content error", err);
         setError(
-          "Class content is not available yet. Make sure you are logged in as a student with an assigned classroom."
+          "Grade content is not available yet. Make sure you are logged in as a student with an assigned grade."
         );
       } finally {
         setLoading(false);

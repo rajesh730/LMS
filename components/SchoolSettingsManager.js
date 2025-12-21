@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { FiSave, FiAlertCircle, FiCheckCircle } from "react-icons/fi";
+import { FiSave, FiAlertCircle, FiCheckCircle, FiSettings, FiCalendar } from "react-icons/fi";
+import AcademicYearManager from "@/components/settings/AcademicYearManager";
 
 export default function SchoolSettingsManager() {
   const { data: session, status } = useSession();
+  const [activeTab, setActiveTab] = useState("general");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
@@ -21,7 +23,7 @@ export default function SchoolSettingsManager() {
     principalName: "",
     totalStudents: 0,
     totalTeachers: 0,
-    totalClassrooms: 0,
+    totalGrades: 0,
   });
 
   useEffect(() => {
@@ -50,7 +52,7 @@ export default function SchoolSettingsManager() {
           principalName: apiConfig.principalName || "",
           totalStudents: apiConfig.totalStudents || 0,
           totalTeachers: apiConfig.totalTeachers || 0,
-          totalClassrooms: apiConfig.totalClassrooms || 0,
+          totalGrades: apiConfig.grades?.length || 0,
         });
       }
     } catch (err) {
@@ -113,6 +115,32 @@ export default function SchoolSettingsManager() {
         </p>
       </div>
 
+      {/* Tabs */}
+      <div className="flex gap-4 border-b border-slate-800">
+        <button
+            onClick={() => setActiveTab("general")}
+            className={`pb-3 px-2 flex items-center gap-2 font-medium transition-colors relative ${
+                activeTab === "general" ? "text-blue-400" : "text-slate-400 hover:text-slate-200"
+            }`}
+        >
+            <FiSettings /> General Info
+            {activeTab === "general" && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-400 rounded-t-full"></div>}
+        </button>
+        <button
+            onClick={() => setActiveTab("academic")}
+            className={`pb-3 px-2 flex items-center gap-2 font-medium transition-colors relative ${
+                activeTab === "academic" ? "text-blue-400" : "text-slate-400 hover:text-slate-200"
+            }`}
+        >
+            <FiCalendar /> Academic Sessions
+            {activeTab === "academic" && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-400 rounded-t-full"></div>}
+        </button>
+      </div>
+
+      {activeTab === "academic" ? (
+        <AcademicYearManager />
+      ) : (
+        <>
       {message.text && (
         <div
           className={`p-4 rounded-lg flex items-center gap-2 ${
@@ -303,12 +331,12 @@ export default function SchoolSettingsManager() {
 
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
-                Total Classrooms
+                Total Grades
               </label>
               <input
                 type="number"
-                name="totalClassrooms"
-                value={config.totalClassrooms}
+                name="totalGrades"
+                value={config.totalGrades}
                 onChange={handleChange}
                 className="w-full bg-gray-800 border border-gray-600 rounded px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
                 placeholder="0"
@@ -330,6 +358,8 @@ export default function SchoolSettingsManager() {
           {saving ? "Saving..." : "Save Changes"}
         </button>
       </div>
+      </>
+      )}
     </div>
   );
 }

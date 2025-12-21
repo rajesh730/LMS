@@ -9,7 +9,6 @@ const EnhancedStudentRegistration = ({ schoolId, onSuccess }) => {
   const [success, setSuccess] = useState("");
   const [bulkResult, setBulkResult] = useState(null);
   const [grades, setGrades] = useState([]);
-  const [faculties, setFaculties] = useState([]);
   
   // List View State
   const [students, setStudents] = useState([]);
@@ -25,7 +24,6 @@ const EnhancedStudentRegistration = ({ schoolId, onSuccess }) => {
     gender: "",
     rollNumber: "",
     grade: "",
-    faculty: "", // Added Faculty
     address: "",
     bloodGroup: "",
 
@@ -62,13 +60,6 @@ const EnhancedStudentRegistration = ({ schoolId, onSuccess }) => {
           setGrades(data.data.grades);
         } else {
             console.warn("No grades found in data:", data);
-        }
-
-        // Fetch Faculties
-        const facultyRes = await fetch(`/api/schools/${schoolId}/faculties`);
-        if (facultyRes.ok) {
-          const facultyData = await facultyRes.json();
-          setFaculties(facultyData.data || []);
         }
 
       } catch (err) {
@@ -110,7 +101,6 @@ const EnhancedStudentRegistration = ({ schoolId, onSuccess }) => {
       gender: student.gender || "",
       rollNumber: student.rollNumber || "",
       grade: student.grade || "",
-      faculty: student.faculty || "", // Assuming faculty is stored
       address: student.address || "",
       bloodGroup: student.bloodGroup || "",
       guardianRelationship: "FATHER", // Default or fetch if available
@@ -161,7 +151,6 @@ const EnhancedStudentRegistration = ({ schoolId, onSuccess }) => {
         gender: formData.gender || "OTHER",
         rollNumber: formData.rollNumber,
         grade: formData.grade,
-        faculty: formData.faculty || null, // Added Faculty
         address: formData.address,
         bloodGroup: formData.bloodGroup,
         
@@ -216,7 +205,6 @@ const EnhancedStudentRegistration = ({ schoolId, onSuccess }) => {
                 gender: "",
                 rollNumber: "",
                 grade: "",
-                faculty: "",
                 address: "",
                 bloodGroup: "",
                 guardianRelationship: "FATHER",
@@ -238,7 +226,6 @@ const EnhancedStudentRegistration = ({ schoolId, onSuccess }) => {
             gender: "",
             rollNumber: "",
             grade: "",
-            faculty: "",
             address: "",
           bloodGroup: "",
           guardianRelationship: "FATHER",
@@ -385,7 +372,6 @@ const EnhancedStudentRegistration = ({ schoolId, onSuccess }) => {
                         gender: "",
                         rollNumber: "",
                         grade: "",
-                        faculty: "",
                         address: "",
                         bloodGroup: "",
                         guardianRelationship: "FATHER",
@@ -595,7 +581,7 @@ const EnhancedStudentRegistration = ({ schoolId, onSuccess }) => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">Grade/Class *</label>
+                <label className="block text-sm font-medium text-slate-300 mb-1">Grade *</label>
                 <select
                   value={formData.grade}
                   onChange={(e) => setFormData({...formData, grade: e.target.value})}
@@ -607,23 +593,6 @@ const EnhancedStudentRegistration = ({ schoolId, onSuccess }) => {
                   ))}
                 </select>
               </div>
-
-              {/* Faculty Dropdown */}
-              {faculties.length > 0 && (
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-1">Faculty/Stream</label>
-                  <select
-                    value={formData.faculty}
-                    onChange={(e) => setFormData({...formData, faculty: e.target.value})}
-                    className="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500 outline-none"
-                  >
-                    <option value="">Select Faculty (Optional)</option>
-                    {faculties.map((f) => (
-                      <option key={f._id} value={f._id}>{f.name}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
 
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-1">Blood Group (Optional)</label>

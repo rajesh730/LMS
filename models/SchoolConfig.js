@@ -9,15 +9,19 @@ const SchoolConfigSchema = new mongoose.Schema({
     },
     teacherRoles: {
         type: [String],
-        default: ['Principal', 'Vice Principal', 'Coordinator', 'Class Teacher', 'Subject Teacher', 'Sports Teacher', 'Music Teacher', 'Lab Assistant'],
+        default: ['Principal', 'Vice Principal', 'Coordinator', 'Subject Teacher', 'Sports Teacher', 'Music Teacher', 'Lab Assistant'],
     },
     grades: {
         type: [String],
-        default: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'],
+        default: ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10'],
     },
     subjects: {
         type: [String],
         default: ['Mathematics', 'Science', 'English', 'Social Studies', 'Computer Science'],
+    },
+    currentAcademicYear: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'AcademicYear',
     },
 }, { timestamps: true });
 

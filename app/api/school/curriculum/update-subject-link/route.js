@@ -3,7 +3,6 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import connectDB from '@/lib/db';
 import GradeSubject from '@/models/GradeSubject';
-import FacultySubject from '@/models/FacultySubject';
 import Subject from '@/models/Subject';
 
 export async function PUT(req) {
@@ -11,7 +10,7 @@ export async function PUT(req) {
     const session = await getServerSession(authOptions);
     if (!session) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
 
-    const { subjectId, gradeId, facultyId, creditHours, year, semester, isCustom, name, code, status } = await req.json();
+    const { subjectId, gradeId, creditHours, isCustom, name, code, status, assignedTeacher } = await req.json();
     const schoolId = session.user.id;
 
     await connectDB();
@@ -19,18 +18,12 @@ export async function PUT(req) {
     // 1. Update Link
     const updateData = {};
     if (creditHours !== undefined) updateData.creditHours = creditHours;
-    if (year !== undefined) updateData.year = year;
-    if (semester !== undefined) updateData.semester = semester;
     if (status !== undefined) updateData.status = status;
+    if (assignedTeacher !== undefined) updateData.assignedTeacher = assignedTeacher;
 
     if (gradeId) {
         await GradeSubject.findOneAndUpdate(
             { school: schoolId, grade: gradeId, subject: subjectId },
-            updateData
-        );
-    } else if (facultyId) {
-        await FacultySubject.findOneAndUpdate(
-            { school: schoolId, faculty: facultyId, subject: subjectId },
             updateData
         );
     }
@@ -73,7 +66,6 @@ export async function DELETE(req) {
     const { searchParams } = new URL(req.url);
     const subjectId = searchParams.get('subjectId');
     const gradeId = searchParams.get('gradeId');
-    const facultyId = searchParams.get('facultyId');
     const permanent = searchParams.get('permanent') === 'true';
     const schoolId = session.user.id;
 
@@ -85,15 +77,6 @@ export async function DELETE(req) {
         } else {
             await GradeSubject.findOneAndUpdate(
                 { school: schoolId, grade: gradeId, subject: subjectId },
-                { status: 'INACTIVE' }
-            );
-        }
-    } else if (facultyId) {
-        if (permanent) {
-            await FacultySubject.findOneAndDelete({ school: schoolId, faculty: facultyId, subject: subjectId });
-        } else {
-            await FacultySubject.findOneAndUpdate(
-                { school: schoolId, faculty: facultyId, subject: subjectId },
                 { status: 'INACTIVE' }
             );
         }

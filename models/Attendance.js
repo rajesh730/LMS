@@ -24,6 +24,10 @@ const AttendanceSchema = new mongoose.Schema(
             ref: 'User',
             required: true,
         },
+        academicYear: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'AcademicYear',
+        },
     },
     { timestamps: true }
 );

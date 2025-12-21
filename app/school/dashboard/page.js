@@ -49,6 +49,21 @@ const TeacherAttendanceReport = dynamic(
   {
     loading: () => <div className="p-4 text-slate-400">Loading report...</div>,
   }
+);const ExamManager = dynamic(
+  () => import("@/components/dashboard/ExamManager"),
+  {
+    loading: () => (
+      <div className="p-4 text-slate-400">Loading exams...</div>
+    ),
+  }
+);
+const GradingScaleManager = dynamic(
+  () => import("@/components/dashboard/GradingScaleManager"),
+  {
+    loading: () => (
+      <div className="p-4 text-slate-400">Loading grading scales...</div>
+    ),
+  }
 );
 const AcademicSection = dynamic(
   () => import("./AcademicSection"),
@@ -111,6 +126,8 @@ import {
   FaKey,
   FaDownload,
   FaHeadset,
+  FaExclamationTriangle,
+  FaClock,
 } from "react-icons/fa";
 import EventHub from "@/components/events/EventHub";
 import NoticeManager from "@/components/NoticeManager";
@@ -121,7 +138,7 @@ export default function SchoolDashboard() {
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState("overview");
   const [attendanceSubTab, setAttendanceSubTab] = useState("students"); // 'students' or 'teachers'
-  const [academicSubTab, setAcademicSubTab] = useState("overview");
+  const [selectedGradeForStudents, setSelectedGradeForStudents] = useState(null);
 
   useEffect(() => {
     const tab = searchParams.get("tab");
@@ -153,10 +170,22 @@ export default function SchoolDashboard() {
 
   const [schoolConfig, setSchoolConfig] = useState({ teacherRoles: [] });
 
+  // Check for active academic year or pending status
+  const isPending = session?.user?.status === "PENDING";
+  const hasActiveYear = schoolConfig?.currentAcademicYear;
+  const isRestricted = isPending || (!loading && !hasActiveYear);
+
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
     if (status === "authenticated") fetchData();
   }, [status, router]);
+
+  // Force redirect to settings if no active year (but not if pending)
+  useEffect(() => {
+    if (!isPending && isRestricted && activeTab !== 'settings') {
+        router.replace('/school/dashboard?tab=settings');
+    }
+  }, [isRestricted, activeTab, router, isPending]);
 
   const fetchData = async () => {
     try {
@@ -327,7 +356,7 @@ export default function SchoolDashboard() {
 
   return (
     <div className="flex min-h-screen bg-slate-950 text-slate-200 font-sans">
-      <Sidebar role={session?.user?.role} />
+      <Sidebar role={session?.user?.role} isRestricted={isRestricted} isPending={isPending} />
 
       <main className="flex-1 p-8 ml-64 overflow-y-auto h-screen">
         <header className="flex justify-between items-center mb-8">
@@ -357,41 +386,73 @@ export default function SchoolDashboard() {
           </div>
         </header>
 
-        {/* Navigation Tabs */}
+        {isPending && (
+            <div className="bg-orange-500/10 border border-orange-500/30 p-6 mb-6 rounded-xl flex items-center gap-4 text-orange-200">
+                <div className="p-3 bg-orange-500/20 rounded-full">
+                    <FaClock className="text-orange-500 text-2xl" />
+                </div>
+                <div>
+                    <h3 className="text-lg font-bold text-white">Account Pending Approval</h3>
+                    <p className="text-orange-200/80 mt-1">
+                        Your school account is currently under review by the Super Admin. 
+                        You will receive full access once your account is approved.
+                    </p>
+                </div>
+            </div>
+        )}
+
+        {!isPending && isRestricted && (
+            <div className="bg-yellow-500/10 border border-yellow-500/30 p-4 mb-6 rounded-xl flex items-center gap-3 text-yellow-200 animate-pulse">
+                <FaExclamationTriangle className="text-yellow-500 text-xl" />
+                <div>
+                    <h3 className="font-bold">Action Required</h3>
+                    <p className="text-sm text-yellow-200/80">Please activate an Academic Year in the Settings below to unlock the full dashboard.</p>
+                </div>
+            </div>
+        )}
+
+        {/* Navigation Tabs - Hide if Pending */}
+        {!isPending && (
         <div className="flex gap-4 mb-8 border-b border-slate-800 pb-1 overflow-x-auto">
           {[
             "overview",
             "students",
             "teachers",
             "academic",
+            "exams",
+            "grading",
             "attendance",
             "notices",
             "events",
+            "settings"
           ].map((tab) => (
             <button
               key={tab}
-              onClick={() => {
-                setActiveTab(tab);
-                router.push(`/school/dashboard?tab=${tab}`);
-              }}
-              className={`px-4 py-2 text-sm font-medium transition relative whitespace-nowrap ${
+              onClick={() => setActiveTab(tab)}
+              disabled={isRestricted && tab !== 'settings'}
+              className={`pb-3 px-2 text-sm font-medium transition-colors relative whitespace-nowrap ${
                 activeTab === tab
-                  ? "text-emerald-400"
-                  : "text-slate-400 hover:text-white"
-              }`}
+                  ? "text-blue-400 border-b-2 border-blue-400"
+                  : "text-slate-400 hover:text-slate-200"
+              } ${isRestricted && tab !== 'settings' ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               {tab === "events"
                 ? "Event Management"
                 : tab === "notices"
                 ? "Notice Board"
                 : tab.charAt(0).toUpperCase() + tab.slice(1)}
-              {activeTab === tab && (
-                <span className="absolute bottom-[-5px] left-0 w-full h-0.5 bg-emerald-500 rounded-t-full"></span>
-              )}
             </button>
           ))}
         </div>
+        )}
 
+        {/* Content Area - Hide if Pending */}
+        {isPending ? (
+            <div className="text-center py-20">
+                <p className="text-slate-500">Please wait for administrator approval.</p>
+            </div>
+        ) : (
+            <>
         {activeTab === "overview" && (
           <>
             <DashboardOverview />
@@ -406,43 +467,33 @@ export default function SchoolDashboard() {
           </>
         )}
 
-        {activeTab === "students" && <StudentManager />}
+        {activeTab === "students" && <StudentManager initialGrade={selectedGradeForStudents} />}
 
         {activeTab === "teachers" && <TeacherManager />}
 
         {activeTab === "academic" && (
           <div className="space-y-6">
-            <div className="flex gap-4 border-b border-slate-700 pb-2">
-              <button
-                onClick={() => setAcademicSubTab("overview")}
-                className={`px-4 py-2 text-sm font-medium transition ${
-                  academicSubTab === "overview"
-                    ? "text-emerald-400 border-b-2 border-emerald-400"
-                    : "text-slate-400 hover:text-white"
-                }`}
-              >
-                Overview
-              </button>
-              <button
-                onClick={() => setAcademicSubTab("curriculum")}
-                className={`px-4 py-2 text-sm font-medium transition ${
-                  academicSubTab === "curriculum"
-                    ? "text-emerald-400 border-b-2 border-emerald-400"
-                    : "text-slate-400 hover:text-white"
-                }`}
-              >
-                Curriculum Manager
-              </button>
-            </div>
-
-            {academicSubTab === "overview" && <AcademicSection />}
-            {academicSubTab === "curriculum" && <CurriculumManager />}
+            <AcademicSection
+              onManageGrade={(grade) => {
+                setSelectedGradeForStudents(grade);
+                setActiveTab("students");
+              }}
+            />
           </div>
         )}
 
+        {activeTab === "exams" && <ExamManager />}
+
+        {activeTab === "grading" && <GradingScaleManager />}
+
         {activeTab === "curriculum" && <CurriculumManager />}
         {activeTab === "support" && <SupportTicketManager />}
-        {activeTab === "register-student" && <EnhancedStudentRegistration />}
+        {activeTab === "register-student" && (
+          <EnhancedStudentRegistration 
+            schoolId={session?.user?.id} 
+            onSuccess={() => router.refresh()} 
+          />
+        )}
         {activeTab === "register-teacher" && (
           <EnhancedTeacherRegistration 
             schoolId={session?.user?.id} 
@@ -491,6 +542,8 @@ export default function SchoolDashboard() {
         {activeTab === "events" && <EventHub />}
 
         {activeTab === "notices" && <NoticeManager />}
+            </>
+        )}
 
         {editingTeacher && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">

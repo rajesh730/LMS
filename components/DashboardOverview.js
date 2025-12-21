@@ -16,7 +16,7 @@ import EducationConfigCard from "@/components/EducationConfigCard";
 /**
  * DashboardOverview Component
  * Shows key metrics and statistics for school admin
- * Displays: Students, Teachers, Classrooms, Events, Attendance
+ * Displays: Students, Teachers, Events, Attendance
  */
 export default function DashboardOverview() {
   const [stats, setStats] = useState(null);
@@ -106,8 +106,8 @@ export default function DashboardOverview() {
           />
           <StatisticsCard
             icon={FaLayerGroup}
-            label="Classrooms"
-            value={stats.overview?.totalClassrooms || 0}
+            label="Active Grades"
+            value={stats.students?.byGrade?.length || 0}
             color="purple"
           />
           <StatisticsCard
@@ -136,23 +136,23 @@ export default function DashboardOverview() {
         </div>
       </div>
 
-      {/* Students by Classroom */}
-      {stats.students?.byClassroom && stats.students.byClassroom.length > 0 && (
+      {/* Students by Grade */}
+      {stats.students?.byGrade && stats.students.byGrade.length > 0 && (
         <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800">
           <h3 className="text-xl font-bold text-white mb-4">
-            Students by Classroom
+            Students by Grade
           </h3>
           <div className="space-y-2">
-            {stats.students.byClassroom.map((classroom) => (
+            {stats.students.byGrade.map((grade) => (
               <div
-                key={classroom._id}
+                key={grade._id}
                 className="flex items-center justify-between bg-slate-800/50 p-4 rounded-lg border border-slate-700"
               >
                 <span className="text-slate-300">
-                  {classroom.classroomName || "Unassigned"}
+                  {grade.gradeName || "Unassigned"}
                 </span>
                 <span className="bg-blue-600/20 text-blue-400 px-3 py-1 rounded-full text-sm font-semibold">
-                  {classroom.count} students
+                  {grade.count} students
                 </span>
               </div>
             ))}
@@ -204,10 +204,6 @@ export default function DashboardOverview() {
                 ? "student"
                 : "students"}
             </strong>
-          </li>
-          <li>
-            • {stats.overview?.totalClassrooms || 0} classroom
-            {(stats.overview?.totalClassrooms || 0) !== 1 ? "s" : ""} active
           </li>
           <li>
             • {stats.overview?.totalEvents || 0} school event

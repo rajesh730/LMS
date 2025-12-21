@@ -23,21 +23,32 @@ const GradeSubjectSchema = new mongoose.Schema(
         grade: {
             type: String,
             required: [true, 'Please provide a grade'],
-            // e.g., "Grade 9", "Class X", "Grade 10", "Grade 11"
+            // e.g., "Grade 9", "Grade 10"
+            set: function(name) {
+                if (!name) return name;
+                const lower = name.toLowerCase().trim();
+                
+                const wordMap = {
+                    'one': 1, 'first': 1, 'two': 2, 'second': 2, 'three': 3, 'third': 3,
+                    'four': 4, 'fourth': 4, 'five': 5, 'fifth': 5, 'six': 6, 'sixth': 6,
+                    'seven': 7, 'seventh': 7, 'eight': 8, 'eighth': 8, 'nine': 9, 'ninth': 9,
+                    'ten': 10, 'tenth': 10, 'eleven': 11, 'twelve': 12
+                };
+                
+                for (const [word, num] of Object.entries(wordMap)) {
+                    if (lower.includes(word)) return `Grade ${num}`;
+                }
+
+                const match = name.match(/\d+/);
+                if (match) return `Grade ${parseInt(match[0], 10)}`;
+                
+                return name;
+            }
         },
         school: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'User',
             required: [true, 'Please provide a school'],
-        },
-
-        // Faculty/Stream (Optional - for colleges with multiple streams)
-        faculty: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'Faculty',
-            default: null,
-            // e.g., Science, Commerce, Humanities
-            // School: null (applies to all students in that grade)
         },
 
         // Assignment Properties
@@ -140,13 +151,10 @@ const GradeSubjectSchema = new mongoose.Schema(
     { timestamps: true }
 );
 
-// Compound unique index: one subject can be activated only once per grade per school per faculty
-// For schools: faculty = null, so same subject only once per grade
-// For colleges: faculty = "Science" | "Commerce", so same subject can be in multiple faculties
-GradeSubjectSchema.index({ subject: 1, grade: 1, school: 1, faculty: 1 }, { unique: true });
+// Compound unique index: one subject can be activated only once per grade per school
+GradeSubjectSchema.index({ subject: 1, grade: 1, school: 1 }, { unique: true });
 
 // Index for efficient queries
-GradeSubjectSchema.index({ school: 1, grade: 1, faculty: 1, status: 1 });
 GradeSubjectSchema.index({ school: 1, grade: 1, status: 1 });
 GradeSubjectSchema.index({ subject: 1, status: 1 });
 GradeSubjectSchema.index({ assignedTeacher: 1 });

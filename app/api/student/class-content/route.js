@@ -8,6 +8,7 @@ import TeacherNote from "@/models/TeacherNote";
 import Subject from "@/models/Subject";
 import Chapter from "@/models/Chapter";
 import Question from "@/models/Question";
+import Grade from "@/models/Grade";
 
 export async function GET() {
   try {
@@ -18,9 +19,7 @@ export async function GET() {
 
     await connectDB();
 
-    const student = await Student.findById(session.user.id)
-      .select("grade classroom")
-      .populate("classroom", "name");
+    const student = await Student.findById(session.user.id).select("grade");
     if (!student) {
       return NextResponse.json({
         success: true,
@@ -29,41 +28,47 @@ export async function GET() {
       });
     }
 
-    const grade = student.grade;
-    const classroomId = student.classroom?._id || student.classroom;
+    const gradeName = student.grade;
 
-    // If no classroom assigned yet, return empty content instead of 404
-    if (!classroomId) {
+    // If no grade assigned yet, return empty content
+    if (!gradeName) {
       return NextResponse.json({
         success: true,
         data: { events: [], notes: [], games: [] },
-        message: "No classroom assigned",
+        message: "No grade assigned",
       });
     }
+
+    // Find Grade ID for models that reference Grade by ObjectId
+    const gradeDoc = await Grade.findOne({ name: gradeName });
+    const gradeId = gradeDoc?._id;
 
     // Events: approved and either no grade restriction or includes student's grade
     const events = await Event.find({
       status: "APPROVED",
       $or: [
         { eligibleGrades: { $size: 0 } },
-        { eligibleGrades: { $in: [grade] } },
+        { eligibleGrades: { $in: [gradeName] } },
       ],
     })
       .sort({ date: 1 })
       .limit(10)
       .lean();
 
-    // Notes: by classroom
-    const notes = await TeacherNote.find({
-      classroom: classroomId,
-      isPublished: true,
-    })
-      .sort({ createdAt: -1 })
-      .limit(10)
-      .lean();
+    // Notes: by grade (requires Grade ID)
+    let notes = [];
+    if (gradeId) {
+      notes = await TeacherNote.find({
+        grade: gradeId,
+        isPublished: true,
+      })
+        .sort({ createdAt: -1 })
+        .limit(10)
+        .lean();
+    }
 
-    // Games (MCQ): questions from subjects in this classroom
-    const subjectIds = await Subject.find({ classroom: classroomId }).distinct(
+    // Games (MCQ): questions from subjects in this grade
+    const subjectIds = await Subject.find({ grades: gradeName }).distinct(
       "_id"
     );
     const chapterIds = await Chapter.find({

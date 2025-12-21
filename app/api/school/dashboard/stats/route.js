@@ -10,7 +10,7 @@ import { successResponse, errorResponse } from "@/lib/apiResponse";
 /**
  * GET /api/school/dashboard/stats
  * Get dashboard statistics for school admin
- * Returns: students, teachers, classrooms, events, attendance data
+ * Returns: students, teachers, events, attendance data
  */
 export async function GET(req) {
   try {
@@ -59,7 +59,7 @@ export async function GET(req) {
       },
     ]);
 
-    // Get students by grade (classroom feature removed)
+    // Get students by grade
     const studentsByGrade = await Student.aggregate([
       {
         $match: {

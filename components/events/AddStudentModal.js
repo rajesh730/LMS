@@ -7,10 +7,8 @@ export default function AddStudentModal({ event, onClose, onSuccess }) {
   const [students, setStudents] = useState([]);
   const [selectedStudents, setSelectedStudents] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [classFilter, setClassFilter] = useState("all");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [classes, setClasses] = useState([]);
 
   useEffect(() => {
     fetchStudents();
@@ -24,7 +22,6 @@ export default function AddStudentModal({ event, onClose, onSuccess }) {
       if (res.ok) {
         const data = await res.json();
         setStudents(data.students || []);
-        setClasses(data.classes || []);
       }
     } catch (error) {
       console.error("Error fetching students:", error);
@@ -39,9 +36,7 @@ export default function AddStudentModal({ event, onClose, onSuccess }) {
     const matchesSearch = student.name
       .toLowerCase()
       .includes(searchQuery.toLowerCase());
-    const matchesClass =
-      classFilter === "all" || student.classroom?.name === classFilter;
-    return matchesSearch && matchesClass;
+    return matchesSearch;
   });
 
   const toggleStudent = (studentId) => {
@@ -111,18 +106,6 @@ export default function AddStudentModal({ event, onClose, onSuccess }) {
                 className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
             </div>
-            <select
-              value={classFilter}
-              onChange={(e) => setClassFilter(e.target.value)}
-              className="px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            >
-              <option value="all">All Classes</option>
-              {classes.map((cls) => (
-                <option key={cls} value={cls}>
-                  {cls}
-                </option>
-              ))}
-            </select>
           </div>
 
           {/* Selection Count */}
@@ -161,9 +144,6 @@ export default function AddStudentModal({ event, onClose, onSuccess }) {
                       Name
                     </th>
                     <th className="p-3 text-left font-semibold text-slate-700">
-                      Class
-                    </th>
-                    <th className="p-3 text-left font-semibold text-slate-700">
                       Grade
                     </th>
                   </tr>
@@ -183,9 +163,6 @@ export default function AddStudentModal({ event, onClose, onSuccess }) {
                         />
                       </td>
                       <td className="p-3 font-medium">{student.name}</td>
-                      <td className="p-3">
-                        {student.classroom?.name || "N/A"}
-                      </td>
                       <td className="p-3">{student.grade}</td>
                     </tr>
                   ))}

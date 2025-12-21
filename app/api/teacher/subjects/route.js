@@ -4,6 +4,7 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import connectDB from '@/lib/db';
 import Subject from '@/models/Subject';
 import Teacher from '@/models/Teacher';
+import Grade from '@/models/Grade';
 
 export async function GET(req) {
     try {
@@ -28,9 +29,25 @@ export async function GET(req) {
             return NextResponse.json({ message: 'Teacher profile not found' }, { status: 404 });
         }
 
-        // Note: Classroom feature has been removed, so subjects are no longer tied to classrooms
-        // Fetch subjects directly by teacher
-        const subjects = await Subject.find({ teacher: teacherId });
+        // Fetch subjects from Grade assignments
+        const grades = await Grade.find({
+            "teachers.teacher": teacherId
+        }).populate("teachers.subjects");
+
+        const subjectMap = new Map();
+        
+        grades.forEach(grade => {
+            const teacherAssignment = grade.teachers.find(t => t.teacher.toString() === teacherId.toString());
+            if (teacherAssignment && teacherAssignment.subjects) {
+                teacherAssignment.subjects.forEach(subject => {
+                    if (subject && !subjectMap.has(subject._id.toString())) {
+                        subjectMap.set(subject._id.toString(), subject);
+                    }
+                });
+            }
+        });
+
+        const subjects = Array.from(subjectMap.values());
 
         return NextResponse.json({ subjects: subjects }, { status: 200 });
 

@@ -24,10 +24,6 @@ const UserSchema = new mongoose.Schema(
     name: {
       type: String, // Generic name for Students/Teachers
     },
-    classroomId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Classroom", // Link for students
-    },
     isDefaultAdmin: {
       type: Boolean,
       default: false,
@@ -58,8 +54,6 @@ const UserSchema = new mongoose.Schema(
     // Education configuration for schools
     educationLevels: {
       school: { type: Boolean, default: false },
-      highSchool: { type: Boolean, default: false },
-      bachelor: { type: Boolean, default: false },
     },
     schoolConfig: {
       type: Schema.Types.Mixed,

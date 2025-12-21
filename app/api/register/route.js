@@ -5,7 +5,6 @@ import { applyRateLimit } from "@/lib/rateLimit";
 import User from "@/models/User";
 import Grade from "@/models/Grade";
 import SchoolConfig from "@/models/SchoolConfig";
-import Faculty from "@/models/Faculty";
 
 export async function POST(req) {
   try {
@@ -149,75 +148,6 @@ export async function POST(req) {
         });
       }
     }
-
-    // High School Grades (11-12)
-    if (educationLevels?.highSchool) {
-      gradesToCreate.push({
-        name: "Grade 11",
-        level: "HIGH_SCHOOL",
-        description: "Grade 11 - Higher Secondary",
-        capacity: 35,
-        school: newUser._id,
-        subjects: [],
-        teachers: [],
-        students: [],
-        isActive: true,
-      });
-
-      gradesToCreate.push({
-        name: "Grade 12",
-        level: "HIGH_SCHOOL",
-        description: "Grade 12 - Higher Secondary",
-        capacity: 35,
-        school: newUser._id,
-        subjects: [],
-        teachers: [],
-        students: [],
-        isActive: true,
-      });
-    }
-
-    // Bachelor Level
-    if (educationLevels?.bachelor) {
-      const startYear = schoolConfig?.bachelor?.startingYear || 1;
-      const endYear = schoolConfig?.bachelor?.endingYear || 4;
-      const totalYears = endYear - startYear + 1;
-      
-      if (schoolConfig?.bachelor?.hasSemesters) {
-        // Create semesters (2 per year)
-        const totalSemesters = totalYears * 2;
-        for (let i = 1; i <= totalSemesters; i++) {
-          gradesToCreate.push({
-            name: `Semester ${i}`,
-            level: "BACHELOR",
-            description: `Semester ${i} - Bachelor Level`,
-            capacity: 50,
-            school: newUser._id,
-            subjects: [],
-            teachers: [],
-            students: [],
-            isActive: true,
-          });
-        }
-      } else {
-        // Create year-based structure
-        for (let i = startYear; i <= endYear; i++) {
-          gradesToCreate.push({
-            name: `Year ${i}`,
-            level: "BACHELOR",
-            description: `Year ${i} - Bachelor Level`,
-            capacity: 50,
-            school: newUser._id,
-            subjects: [],
-            teachers: [],
-            students: [],
-            isActive: true,
-          });
-        }
-      }
-    }
-
-    // Create all grades at once
     if (gradesToCreate.length > 0) {
       try {
         const createdGrades = await Grade.insertMany(gradesToCreate);
@@ -234,7 +164,6 @@ export async function POST(req) {
       {
         school: newUser._id,
         teacherRoles: [
-          "Class Teacher",
           "Subject Teacher",
           "Sports Teacher",
           "Librarian",
@@ -245,74 +174,9 @@ export async function POST(req) {
       { upsert: true, new: true }
     );
 
-    // AUTO-CREATE FACULTIES from schoolConfig
-    const facultiesToCreate = [];
-
-    // Parse high school faculties
-    if (educationLevels?.highSchool && schoolConfig?.highSchool?.faculties) {
-      const faculties = schoolConfig.highSchool.faculties
-        .split(',')
-        .map(f => f.trim())
-        .filter(f => f.length > 0);
-
-      console.log(`Processing ${faculties.length} high school faculties:`, faculties);
-
-      faculties.forEach(faculty => {
-        facultiesToCreate.push({
-          name: faculty,
-          normalizedName: faculty.toLowerCase().trim().replace(/\s+/g, ' '),
-          school: newUser._id,
-          educationLevels: ['HigherSecondary'],
-          status: 'ACTIVE',
-          createdBy: newUser._id,
-        });
-      });
-    }
-
-    // Parse bachelor faculties
-    if (educationLevels?.bachelor && schoolConfig?.bachelor?.faculties) {
-      const faculties = schoolConfig.bachelor.faculties
-        .split(',')
-        .map(f => f.trim())
-        .filter(f => f.length > 0);
-
-      console.log(`Processing ${faculties.length} bachelor faculties:`, faculties);
-
-      faculties.forEach(faculty => {
-        facultiesToCreate.push({
-          name: faculty,
-          normalizedName: faculty.toLowerCase().trim().replace(/\s+/g, ' '),
-          school: newUser._id,
-          educationLevels: ['Bachelor'],
-          status: 'ACTIVE',
-          createdBy: newUser._id,
-        });
-      });
-    }
-
-    // Create faculties (avoiding duplicates)
-    if (facultiesToCreate.length > 0) {
-      console.log(`Creating ${facultiesToCreate.length} total faculties...`);
-      try {
-        const createdFaculties = await Faculty.insertMany(facultiesToCreate, { ordered: false });
-        console.log(`✓ Successfully created ${createdFaculties.length} faculties for school ${newUser._id}`);
-      } catch (error) {
-        // Ignore duplicate key errors (some faculties might already exist)
-        if (error.code !== 11000) {
-          console.error('❌ Faculty creation error:', error.message);
-          throw error;
-        } else {
-          console.log('⚠ Some faculties already existed, skipped duplicates');
-        }
-      }
-    } else {
-      console.log('ℹ No faculties configured for this school');
-    }
-
     console.log("=== REGISTRATION SUCCESSFUL ===");
     console.log("User created:", newUser.email);
     console.log("Grades created:", gradesToCreate.length);
-    console.log("Faculties created:", facultiesToCreate.length);
     console.log("================================");
 
     return NextResponse.json(

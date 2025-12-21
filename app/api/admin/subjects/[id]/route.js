@@ -1,13 +1,12 @@
 import connectDB from "@/lib/db";
 import Subject from "@/models/Subject";
-import FacultySubject from "@/models/FacultySubject";
 import GradeSubject from "@/models/GradeSubject";
 import { successResponse, errorResponse } from "@/lib/apiResponse";
 import { getToken } from 'next-auth/jwt';
 
 /**
  * GET /api/admin/subjects/[id]
- * Get single subject with its faculty mappings
+ * Get single subject
  */
 export async function GET(req, { params }) {
   try {
@@ -29,17 +28,8 @@ export async function GET(req, { params }) {
         return errorResponse(403, "Forbidden");
     }
 
-    // Get faculty mappings
-    const mappings = await FacultySubject.find({
-      school: token.id,
-      subject: id,
-      status: "ACTIVE",
-    });
-
     return successResponse(200, "Subject fetched successfully", {
       subject,
-      faculties: mappings.map(m => m.faculty),
-      mappingCount: mappings.length,
     });
   } catch (error) {
     console.error("Error fetching subject:", error);
@@ -57,7 +47,7 @@ export async function PUT(req, { params }) {
     if (!token) return errorResponse(401, "Unauthorized");
 
     const { id } = await params;
-    const { name, description, code, status, academicType, educationLevel, grades, applicableFaculties, year, semester } = await req.json();
+    const { name, description, code, status, academicType, educationLevel, grades } = await req.json();
 
     await connectDB();
 
@@ -72,10 +62,29 @@ export async function PUT(req, { params }) {
         if (description !== undefined) subject.description = description;
         if (academicType) subject.academicType = academicType;
         if (educationLevel) subject.educationLevel = educationLevel;
-        if (grades) subject.grades = grades;
-        if (applicableFaculties) subject.applicableFaculties = applicableFaculties;
-        if (year !== undefined) subject.year = year;
-        if (semester !== undefined) subject.semester = semester;
+        if (grades) {
+            const mapping = {
+                '1': 'Grade 1', 'one': 'Grade 1', 'first': 'Grade 1', 'class 1': 'Grade 1',
+                '2': 'Grade 2', 'two': 'Grade 2', 'second': 'Grade 2', 'class 2': 'Grade 2',
+                '3': 'Grade 3', 'three': 'Grade 3', 'third': 'Grade 3', 'class 3': 'Grade 3',
+                '4': 'Grade 4', 'four': 'Grade 4', 'fourth': 'Grade 4', 'class 4': 'Grade 4',
+                '5': 'Grade 5', 'five': 'Grade 5', 'fifth': 'Grade 5', 'class 5': 'Grade 5',
+                '6': 'Grade 6', 'six': 'Grade 6', 'sixth': 'Grade 6', 'class 6': 'Grade 6',
+                '7': 'Grade 7', 'seven': 'Grade 7', 'seventh': 'Grade 7', 'class 7': 'Grade 7',
+                '8': 'Grade 8', 'eight': 'Grade 8', 'eighth': 'Grade 8', 'class 8': 'Grade 8',
+                '9': 'Grade 9', 'nine': 'Grade 9', 'ninth': 'Grade 9', 'class 9': 'Grade 9',
+                '10': 'Grade 10', 'ten': 'Grade 10', 'tenth': 'Grade 10', 'class 10': 'Grade 10',
+            };
+            subject.grades = [...new Set(grades.map(g => {
+                const key = g.toString().toLowerCase().replace(/\s+/g, ' ').trim();
+                
+                // Check for G+Number pattern (e.g. G1, G10)
+                const gMatch = key.match(/^g(\d+)$/);
+                if (gMatch) return `Grade ${gMatch[1]}`;
+
+                return mapping[key] || g;
+            }))];
+        }
         
         await subject.save();
         return successResponse(200, "Subject updated successfully", { subject });
@@ -126,7 +135,6 @@ export async function DELETE(req, { params }) {
     if (token.role === "SUPER_ADMIN") {
         if (permanent) {
             // Hard Delete
-            await FacultySubject.deleteMany({ subject: id });
             await GradeSubject.deleteMany({ subject: id });
             await Subject.findByIdAndDelete(id);
             return successResponse(200, "Subject permanently deleted");

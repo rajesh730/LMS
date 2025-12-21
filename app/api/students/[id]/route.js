@@ -20,7 +20,7 @@ export async function PUT(req, { params }) {
             name, email, grade, section, rollNumber, 
             phone, address, gender, dob, bloodGroup,
             parentName, parentEmail, parentPhone, emergencyContact,
-            classroom 
+            status // Added status
         } = body;
 
         await connectDB();
@@ -74,7 +74,7 @@ export async function PUT(req, { params }) {
             parentEmail,
             parentPhone,
             emergencyContact,
-            classroom: classroom || null
+            status // Added status
         };
 
         // Name Parsing for Update

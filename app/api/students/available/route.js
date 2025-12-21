@@ -43,13 +43,13 @@ export async function GET(req) {
       _id: { $nin: enrolledStudentIds },
       status: "ACTIVE",
     })
-      .select("name email grade classroom")
+      .select("name email grade")
       .sort({ name: 1 })
       .lean();
 
-    // Extract unique classrooms from students
-    const uniqueClasses = [
-      ...new Set(students.map((s) => s.classroom).filter(Boolean)),
+    // Extract unique grades from students
+    const uniqueGrades = [
+      ...new Set(students.map((s) => s.grade).filter(Boolean)),
     ];
 
     return NextResponse.json(
@@ -59,9 +59,8 @@ export async function GET(req) {
           name: s.name,
           email: s.email,
           grade: s.grade,
-          classroom: s.classroom,
         })),
-        classes: uniqueClasses,
+        grades: uniqueGrades,
       },
       { status: 200 }
     );

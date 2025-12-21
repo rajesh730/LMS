@@ -10,9 +10,9 @@ import {
   FaHistory,
 } from "react-icons/fa";
 
-export default function TeacherAttendanceManager({ teacherClassrooms = [] }) {
-  const [classrooms, setClassrooms] = useState([]);
-  const [selectedClassroom, setSelectedClassroom] = useState("");
+export default function TeacherAttendanceManager({ teacherGrades = [] }) {
+  const [grades, setGrades] = useState([]);
+  const [selectedGrade, setSelectedGrade] = useState("");
   const [attendanceDate, setAttendanceDate] = useState(
     new Date().toISOString().split("T")[0]
   );
@@ -30,27 +30,27 @@ export default function TeacherAttendanceManager({ teacherClassrooms = [] }) {
   );
   const [message, setMessage] = useState("");
 
-  // Initialize classrooms
+  // Initialize grades
   useEffect(() => {
-    const fetchTeacherClassrooms = async () => {
+    const fetchTeacherGrades = async () => {
       try {
-        setMessage("Classroom management feature has been removed. Please use your school's primary attendance system.");
+        setMessage("Grade management feature has been removed. Please use your school's primary attendance system.");
       } catch (error) {
-        console.error("Error fetching classrooms:", error);
-        setMessage("Classroom management feature is not available");
+        console.error("Error fetching grades:", error);
+        setMessage("Grade management feature is not available");
       }
     };
-    fetchTeacherClassrooms();
+    fetchTeacherGrades();
   }, []);
 
-  // Fetch students for selected classroom
+  // Fetch students for selected grade
   useEffect(() => {
-    if (selectedClassroom) {
+    if (selectedGrade) {
       const fetchStudents = async () => {
         setLoading(true);
         try {
           const res = await fetch(
-            `/api/students?classroom=${selectedClassroom}&limit=500`
+            `/api/students?grade=${selectedGrade}&limit=500`
           );
           if (res.ok) {
             const data = await res.json();
@@ -68,27 +68,27 @@ export default function TeacherAttendanceManager({ teacherClassrooms = [] }) {
       };
       fetchStudents();
     }
-  }, [selectedClassroom]);
+  }, [selectedGrade]);
 
   // Fetch attendance for selected date
   useEffect(() => {
-    if (selectedClassroom && mode === "daily") {
+    if (selectedGrade && mode === "daily") {
       fetchDailyAttendance();
     }
-  }, [selectedClassroom, attendanceDate, mode]);
+  }, [selectedGrade, attendanceDate, mode]);
 
   // Fetch monthly attendance
   useEffect(() => {
-    if (selectedClassroom && mode === "monthly") {
+    if (selectedGrade && mode === "monthly") {
       fetchMonthlyAttendance();
     }
-  }, [selectedClassroom, attendanceMonth, attendanceYear, mode]);
+  }, [selectedGrade, attendanceMonth, attendanceYear, mode]);
 
   const fetchDailyAttendance = async () => {
     setLoading(true);
     try {
       const res = await fetch(
-        `/api/attendance?date=${attendanceDate}&type=student&classroom=${selectedClassroom}`
+        `/api/attendance?date=${attendanceDate}&type=student&grade=${selectedGrade}`
       );
       if (res.ok) {
         const data = await res.json();
@@ -114,7 +114,7 @@ export default function TeacherAttendanceManager({ teacherClassrooms = [] }) {
     setLoading(true);
     try {
       const res = await fetch(
-        `/api/attendance/monthly?year=${attendanceYear}&month=${attendanceMonth}&classroom=${selectedClassroom}`
+        `/api/attendance/monthly?year=${attendanceYear}&month=${attendanceMonth}&grade=${selectedGrade}`
       );
       if (res.ok) {
         const data = await res.json();
@@ -140,7 +140,7 @@ export default function TeacherAttendanceManager({ teacherClassrooms = [] }) {
   };
 
   const saveAttendance = async () => {
-    if (!selectedClassroom) return;
+    if (!selectedGrade) return;
     setSaving(true);
     setMessage("");
 
@@ -211,11 +211,11 @@ export default function TeacherAttendanceManager({ teacherClassrooms = [] }) {
     return total > 0 ? Math.round((present / total) * 100) : 0;
   };
 
-  if (!selectedClassroom && classrooms.length === 0) {
+  if (!selectedGrade && grades.length === 0) {
     return (
       <div className="bg-slate-900/50 p-6 rounded-xl border border-slate-800 text-center">
         <p className="text-slate-400">
-          No classrooms assigned. Contact your administrator.
+          No grades assigned. Contact your administrator.
         </p>
       </div>
     );
@@ -231,18 +231,18 @@ export default function TeacherAttendanceManager({ teacherClassrooms = [] }) {
 
         {/* Controls */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          {/* Class Select */}
+          {/* Grade Select */}
           <div>
             <label className="block text-slate-300 font-semibold mb-2">
-              Select Class
+              Select Grade
             </label>
             <select
-              value={selectedClassroom}
-              onChange={(e) => setSelectedClassroom(e.target.value)}
+              value={selectedGrade}
+              onChange={(e) => setSelectedGrade(e.target.value)}
               className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500"
             >
-              <option value="">Choose a class...</option>
-              {classrooms.map((cls) => (
+              <option value="">Choose a grade...</option>
+              {grades.map((cls) => (
                 <option key={cls._id} value={cls._id}>
                   {cls.name}
                 </option>
@@ -350,7 +350,7 @@ export default function TeacherAttendanceManager({ teacherClassrooms = [] }) {
             </div>
           ) : students.length === 0 ? (
             <div className="text-slate-400 text-center py-8">
-              No students in this class
+              No students in this grade
             </div>
           ) : (
             <>
@@ -410,7 +410,7 @@ export default function TeacherAttendanceManager({ teacherClassrooms = [] }) {
             </div>
           ) : students.length === 0 ? (
             <div className="text-slate-400 text-center py-8">
-              No students in this class
+              No students in this grade
             </div>
           ) : (
             <div className="overflow-x-auto">

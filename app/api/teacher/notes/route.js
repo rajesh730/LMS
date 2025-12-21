@@ -5,6 +5,7 @@ import connectDB from "@/lib/db";
 import Subject from "@/models/Subject";
 import TeacherNote from "@/models/TeacherNote";
 import Teacher from "@/models/Teacher";
+import Grade from "@/models/Grade";
 
 export async function GET(req) {
   try {
@@ -29,13 +30,19 @@ export async function GET(req) {
         { status: 400 }
       );
 
-    const subject = await Subject.findOne({
-      _id: subjectId,
-      teacher: teacherDoc._id,
+    // Verify teacher teaches this subject
+    const grades = await Grade.find({
+      "teachers": {
+        $elemMatch: {
+          teacher: teacherDoc._id,
+          subjects: subjectId
+        }
+      }
     });
-    if (!subject)
+
+    if (grades.length === 0)
       return NextResponse.json(
-        { message: "Subject not found" },
+        { message: "Subject not assigned to teacher" },
         { status: 404 }
       );
 
@@ -67,8 +74,7 @@ export async function POST(req) {
         { status: 404 }
       );
 
-    const body = await req.json();
-    const { subjectId, title, content, isPublished = true } = body;
+    const { subjectId, title, content, isPublished = true, gradeId } = body;
     if (!subjectId || !title || !content) {
       return NextResponse.json(
         { message: "subjectId, title, content required" },
@@ -76,19 +82,49 @@ export async function POST(req) {
       );
     }
 
-    const subject = await Subject.findOne({
-      _id: subjectId,
-      teacher: teacherDoc._id,
-    }).populate("classroom", "_id");
-    if (!subject)
+    // Find grades where teacher teaches this subject
+    const grades = await Grade.find({
+      "teachers": {
+        $elemMatch: {
+          teacher: teacherDoc._id,
+          subjects: subjectId
+        }
+      }
+    });
+
+    if (grades.length === 0) {
       return NextResponse.json(
-        { message: "Subject not found" },
+        { message: "Subject not assigned to teacher" },
         { status: 404 }
       );
+    }
+
+    let targetGradeId = gradeId;
+
+    // If gradeId not provided, try to infer
+    if (!targetGradeId) {
+      if (grades.length === 1) {
+        targetGradeId = grades[0]._id;
+      } else {
+        return NextResponse.json(
+          { message: "Multiple grades found for this subject. Please specify gradeId." },
+          { status: 400 }
+        );
+      }
+    } else {
+      // Verify the provided gradeId is valid for this teacher/subject
+      const isValidGrade = grades.some(g => g._id.toString() === targetGradeId);
+      if (!isValidGrade) {
+        return NextResponse.json(
+          { message: "Invalid grade for this subject assignment" },
+          { status: 400 }
+        );
+      }
+    }
 
     const note = await TeacherNote.create({
       subject: subjectId,
-      classroom: subject.classroom._id || subject.classroom,
+      grade: targetGradeId,
       teacher: teacherDoc._id,
       title,
       content,

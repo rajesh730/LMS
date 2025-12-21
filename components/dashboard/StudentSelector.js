@@ -12,18 +12,6 @@ export default function StudentSelector({ selectedIds = [], onChange }) {
 
     // Filters
     const [search, setSearch] = useState('');
-    const [classrooms, setClassrooms] = useState([]);
-    const [classroomFilter, setClassroomFilter] = useState('');
-
-    // Load Classrooms for filter
-    useEffect(() => {
-        fetch('/api/classrooms')
-            .then(res => res.json())
-            .then(data => {
-                if (data.classrooms) setClassrooms(data.classrooms);
-            })
-            .catch(err => console.error('Error loading classrooms', err));
-    }, []);
 
     // Load Students
     const fetchStudents = useCallback(async (page = 1) => {
@@ -33,7 +21,6 @@ export default function StudentSelector({ selectedIds = [], onChange }) {
                 page,
                 limit: 8, // Smaller limit for modal
                 ...(search && { search }),
-                ...(classroomFilter && { classroom: classroomFilter })
             });
 
             const res = await fetch(`/api/students?${params}`);
@@ -56,7 +43,7 @@ export default function StudentSelector({ selectedIds = [], onChange }) {
         } finally {
             setLoading(false);
         }
-    }, [search, classroomFilter]);
+    }, [search]);
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -99,14 +86,6 @@ export default function StudentSelector({ selectedIds = [], onChange }) {
                         className="bg-slate-900 text-white pl-9 pr-3 py-2 rounded-lg border border-slate-700 w-full text-sm focus:border-emerald-500 outline-none"
                     />
                 </div>
-                <select
-                    value={classroomFilter}
-                    onChange={e => setClassroomFilter(e.target.value)}
-                    className="bg-slate-900 text-white px-3 py-2 rounded-lg border border-slate-700 text-sm focus:border-emerald-500 outline-none max-w-[120px]"
-                >
-                    <option value="">All Class</option>
-                    {classrooms.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
-                </select>
             </div>
 
             {loading ? (
@@ -122,7 +101,6 @@ export default function StudentSelector({ selectedIds = [], onChange }) {
                                             <button onClick={selectPage} className="text-xs bg-slate-700 px-1 rounded hover:bg-slate-600" title="Select All on Page">All</button>
                                         </th>
                                         <th className="p-2">Name</th>
-                                        <th className="p-2">Class</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-700/50">
@@ -140,7 +118,6 @@ export default function StudentSelector({ selectedIds = [], onChange }) {
                                                     </div>
                                                 </td>
                                                 <td className="p-2 font-medium text-white">{student.name}</td>
-                                                <td className="p-2 text-xs text-slate-400">{student.classroom?.name || student.grade}</td>
                                             </tr>
                                         );
                                     })}

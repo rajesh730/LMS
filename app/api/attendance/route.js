@@ -5,12 +5,27 @@ import connectDB from '@/lib/db';
 import Attendance from '@/models/Attendance';
 import Student from '@/models/Student';
 import Teacher from '@/models/Teacher';
+import SchoolConfig from '@/models/SchoolConfig';
+import { validateActiveYear, missingYearResponse } from "@/lib/guards";
 
 export async function POST(req) {
     try {
         const session = await getServerSession(authOptions);
         if (!session || session.user.role !== 'SCHOOL_ADMIN') {
             return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+        }
+
+        await connectDB();
+
+        // GUARD: Ensure Active Academic Year
+        let currentAcademicYear;
+        try {
+            currentAcademicYear = await validateActiveYear(session.user.id);
+        } catch (error) {
+            if (error.message === "NO_ACTIVE_YEAR") {
+                return missingYearResponse();
+            }
+            throw error;
         }
 
         const { date, records } = await req.json();
@@ -20,8 +35,6 @@ export async function POST(req) {
         }
 
         console.log('💾 Saving attendance:', { date, recordCount: records.length, sampleRecords: records.slice(0, 2) });
-
-        await connectDB();
 
         // Normalize date to UTC midnight to match fetch queries
         const normalizedDate = new Date(new Date(date).setUTCHours(0, 0, 0, 0));
@@ -38,7 +51,8 @@ export async function POST(req) {
                 $set: { status: record.status },
                 $setOnInsert: {
                     date: normalizedDate,
-                    school: session.user.id
+                    school: session.user.id,
+                    academicYear: currentAcademicYear // Tag with current session
                 }
             };
 
@@ -81,7 +95,7 @@ export async function GET(req) {
         const { searchParams } = new URL(req.url);
         const date = searchParams.get('date');
         const type = searchParams.get('type');
-        const classroomId = searchParams.get('classroom');
+        const grade = searchParams.get('grade');
 
         if (!date) {
             return NextResponse.json({ message: 'Date is required' }, { status: 400 });
@@ -97,12 +111,22 @@ export async function GET(req) {
             date: normalizedDate,
         };
 
-        console.log('🔍 Fetching attendance:', { date, normalizedDate: normalizedDate.toISOString(), type, classroomId });
+        console.log('🔍 Fetching attendance:', { date, normalizedDate: normalizedDate.toISOString(), type, grade });
 
         if (type === 'teacher') {
             query.teacher = { $exists: true };
         } else {
             query.student = { $exists: true };
+            
+            if (grade) {
+                const studentsInGrade = await Student.find({ 
+                    grade: grade, 
+                    school: session.user.id 
+                }).select('_id');
+                
+                const studentIds = studentsInGrade.map(s => s._id);
+                query.student = { $in: studentIds };
+            }
         }
 
         const attendance = await Attendance.find(query)

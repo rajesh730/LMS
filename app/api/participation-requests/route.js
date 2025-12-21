@@ -42,7 +42,7 @@ export async function GET(req) {
     if (eventId) query.event = eventId;
 
     const requests = await ParticipationRequest.find(query)
-      .populate("student", "name email rollNumber grade classroom")
+      .populate("student", "name email rollNumber grade")
       .populate("event", "title date")
       .populate("approvedBy", "name")
       .sort({ status: 1, requestedAt: -1 })

@@ -12,9 +12,9 @@ const MarksSchema = new mongoose.Schema(
       ref: "Subject",
       required: true,
     },
-    classroom: {
+    grade: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Classroom",
+      ref: "Grade",
       required: true,
     },
     teacher: {
@@ -26,6 +26,15 @@ const MarksSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
+    },
+    academicYear: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "AcademicYear",
+      // required: true, // TODO: Make required after migration
+    },
+    exam: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Exam",
     },
     // Assessment types
     assessmentType: {
@@ -111,8 +120,7 @@ MarksSchema.pre("save", function (next) {
 });
 
 // Index for faster queries
-MarksSchema.index({ student: 1, subject: 1, classroom: 1 });
-MarksSchema.index({ classroom: 1, subject: 1 });
+MarksSchema.index({ student: 1, subject: 1 });
 MarksSchema.index({ teacher: 1, subject: 1 });
 MarksSchema.index({ school: 1 });
 

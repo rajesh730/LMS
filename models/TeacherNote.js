@@ -9,9 +9,9 @@ const TeacherNoteSchema = new mongoose.Schema(
       ref: "Subject",
       required: true,
     },
-    classroom: {
+    grade: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Classroom",
+      ref: "Grade",
       required: true,
     },
     teacher: {

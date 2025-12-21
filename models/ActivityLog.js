@@ -42,7 +42,6 @@ const ActivityLogSchema = new mongoose.Schema(
       enum: [
         "Student",
         "Teacher",
-        "Classroom",
         "Event",
         "ParticipationRequest",
         "School",

@@ -13,13 +13,12 @@ import {
   School,
   Trash2
 } from 'lucide-react';
-import CurriculumImporter from './CurriculumImporter';
 
-export default function CurriculumManager() {
+export default function CurriculumManager({ initialGrade }) {
   const [activeTab, setActiveTab] = useState('manage'); // 'manage' or 'import'
-  const [structures, setStructures] = useState([]); // Groups of Grades or Faculties
-  const [selectedGroup, setSelectedGroup] = useState(null); // Currently selected Grade or Faculty
-  const [selectedGroupType, setSelectedGroupType] = useState(null); // 'GRADE' or 'FACULTY'
+  const [structures, setStructures] = useState([]); // Groups of Grades
+  const [selectedGroup, setSelectedGroup] = useState(null); // Currently selected Grade
+  const [selectedGroupType, setSelectedGroupType] = useState(null); // 'GRADE'
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
@@ -28,13 +27,26 @@ export default function CurriculumManager() {
   const [editableSubjects, setEditableSubjects] = useState([]);
   // Suggested Subjects (Global)
   const [suggestedSubjects, setSuggestedSubjects] = useState([]);
+  // Teachers for assignment
+  const [teachers, setTeachers] = useState([]);
 
   // New Subject Form (Array for tabular entry)
   const [newSubjects, setNewSubjects] = useState([]);
 
   useEffect(() => {
     fetchStructure(true);
+    fetchTeachers();
   }, [showArchived]); // Refetch when showArchived changes
+
+  const fetchTeachers = async () => {
+    try {
+      const res = await fetch("/api/teachers");
+      const data = await res.json();
+      setTeachers(data.teachers || []);
+    } catch (error) {
+      console.error("Error fetching teachers:", error);
+    }
+  };
 
   useEffect(() => {
     if (selectedGroup?.subjects) {
@@ -43,9 +55,8 @@ export default function CurriculumManager() {
         isCustom: s.subjectType === 'SCHOOL_CUSTOM',
         // Ensure defaults
         creditHours: s.creditHours || 3,
-        year: s.year || 1,
-        semester: s.semester || 1,
-        linkStatus: s.linkStatus || 'ACTIVE'
+        linkStatus: s.linkStatus || 'ACTIVE',
+        assignedTeacher: s.assignedTeacher || null
       })));
       setSuggestedSubjects(selectedGroup.suggestedSubjects || []);
     } else {
@@ -75,8 +86,26 @@ export default function CurriculumManager() {
         // Auto-select first item of first structure
         if (data.structures.length > 0 && data.structures[0].items.length > 0) {
           if (!selectedGroup) {
-            setSelectedGroup(data.structures[0].items[0]);
-            setSelectedGroupType(data.structures[0].type);
+            // If initialGrade is provided, try to find and select it
+            if (initialGrade) {
+                const gradeStruct = data.structures.find(s => s.type === 'GRADE');
+                // Fuzzy match for grade name
+                const targetGrade = gradeStruct?.items.find(i => 
+                    i.name === initialGrade || 
+                    i.name.replace(/\D/g, '') === initialGrade.toString().replace(/\D/g, '')
+                );
+                if (targetGrade) {
+                    setSelectedGroup(targetGrade);
+                    setSelectedGroupType('GRADE');
+                } else {
+                    // Fallback
+                    setSelectedGroup(data.structures[0].items[0]);
+                    setSelectedGroupType(data.structures[0].type);
+                }
+            } else {
+                setSelectedGroup(data.structures[0].items[0]);
+                setSelectedGroupType(data.structures[0].type);
+            }
           } else {
             // Refresh currently selected group data to show new subjects
             for (const struct of data.structures) {
@@ -97,7 +126,7 @@ export default function CurriculumManager() {
   };
 
   const handleFixGrades = async () => {
-    if (!confirm('This will standardize grade names (e.g., merge "Class 9" into "Grade 9") and fix duplicates. Continue?')) return;
+    if (!confirm('This will standardize grade names and fix duplicates. Continue?')) return;
     setLoading(true);
     try {
       const response = await fetch('/api/school/curriculum/init-grades', { method: 'POST' });
@@ -113,7 +142,7 @@ export default function CurriculumManager() {
   };
 
   const initializeGrades = async (silent = false) => {
-    if (!silent && !confirm('This will check for missing grades (Grade 1-12) and create them. Continue?')) return;
+    if (!silent && !confirm('This will check for missing grades (Grade 1-10) and create them. Continue?')) return;
     try {
       const response = await fetch('/api/school/curriculum/init-grades', { method: 'POST' });
       if (response.ok) {
@@ -136,7 +165,7 @@ export default function CurriculumManager() {
   };
 
   const addSubjectRow = () => {
-    setNewSubjects([...newSubjects, { name: '', code: '', description: '', creditHours: 3, year: 1, semester: 1, isCustom: true }]);
+    setNewSubjects([...newSubjects, { name: '', code: '', description: '', creditHours: 3, isCustom: true }]);
   };
 
   const removeSubjectRow = (index) => {
@@ -156,7 +185,7 @@ export default function CurriculumManager() {
     try {
       const params = new URLSearchParams({
         subjectId,
-        [selectedGroupType === 'GRADE' ? 'gradeId' : 'facultyId']: selectedGroup.name
+        gradeId: selectedGroup.name
       });
       
       const response = await fetch(`/api/school/curriculum/update-subject-link?${params}`, {
@@ -184,8 +213,6 @@ export default function CurriculumManager() {
 
       if (selectedGroupType === 'GRADE') {
         payload.gradeId = selectedGroup.name;
-      } else {
-        payload.facultyId = selectedGroup.name;
       }
 
       const response = await fetch('/api/school/curriculum/update-subject-link', {
@@ -211,7 +238,7 @@ export default function CurriculumManager() {
     try {
       const params = new URLSearchParams({
         subjectId,
-        [selectedGroupType === 'GRADE' ? 'gradeId' : 'facultyId']: selectedGroup.name,
+        gradeId: selectedGroup.name,
         permanent: 'true'
       });
 
@@ -236,16 +263,12 @@ export default function CurriculumManager() {
         name: subject.name,
         code: subject.code,
         creditHours: 3, // Default
-        year: 1,
-        semester: 1,
         isCustom: false,
-        educationLevel: selectedGroupType === 'GRADE' ? 'School' : 'HigherSecondary'
+        educationLevel: 'School'
       };
 
       if (selectedGroupType === 'GRADE') {
         payload.gradeId = selectedGroup.name;
-      } else {
-        payload.facultyId = selectedGroup.name;
       }
 
       const response = await fetch('/api/school/curriculum/sync-subject', {
@@ -279,17 +302,14 @@ export default function CurriculumManager() {
             const payload = {
                 subjectId: subject._id,
                 creditHours: parseFloat(subject.creditHours),
-                year: parseInt(subject.year),
-                semester: parseInt(subject.semester),
                 isCustom: subject.isCustom,
                 name: subject.name,
-                code: subject.code
+                code: subject.code,
+                assignedTeacher: subject.assignedTeacher ? subject.assignedTeacher._id : null
             };
 
             if (selectedGroupType === 'GRADE') {
                 payload.gradeId = selectedGroup.name;
-            } else {
-                payload.facultyId = selectedGroup.name;
             }
 
             const response = await fetch('/api/school/curriculum/update-subject-link', {
@@ -315,13 +335,12 @@ export default function CurriculumManager() {
       try {
         const payload = {
           ...subject,
-          educationLevel: selectedGroupType === 'GRADE' ? 'School' : 'HigherSecondary'
+          educationLevel: 'School',
+          assignedTeacher: subject.assignedTeacher || null
         };
 
         if (selectedGroupType === 'GRADE') {
           payload.gradeId = selectedGroup.name;
-        } else {
-          payload.facultyId = selectedGroup.name;
         }
 
         const response = await fetch('/api/school/curriculum/sync-subject', {
@@ -365,60 +384,35 @@ export default function CurriculumManager() {
   return (
     <div className="bg-slate-900 rounded-xl shadow-sm border border-slate-800 min-h-[600px] flex flex-col">
       {/* Header */}
+      {!initialGrade && (
       <div className="p-6 border-b border-slate-800 flex justify-between items-center">
         <div>
           <h2 className="text-xl font-bold text-white">Curriculum Manager</h2>
-          <p className="text-sm text-slate-400">Manage subjects for Grades and Faculties</p>
-        </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => setActiveTab('manage')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              activeTab === 'manage' 
-                ? 'bg-blue-900/30 text-blue-400 border border-blue-500/30' 
-                : 'text-slate-400 hover:bg-slate-800'
-            }`}
-          >
-            Manage
-          </button>
-          <button
-            onClick={() => setActiveTab('import')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              activeTab === 'import' 
-                ? 'bg-blue-900/30 text-blue-400 border border-blue-500/30' 
-                : 'text-slate-400 hover:bg-slate-800'
-            }`}
-          >
-            <FileJson className="w-4 h-4 inline-block mr-2" />
-            Bulk Import
-          </button>
+          <p className="text-sm text-slate-400">Manage subjects for Grades</p>
         </div>
       </div>
+      )}
 
-      {activeTab === 'import' ? (
-        <div className="p-6">
-          <CurriculumImporter />
-        </div>
-      ) : (
-        <div className="flex flex-1 overflow-hidden">
-          {/* Sidebar - Structure Navigation */}
+      <div className="flex flex-1 overflow-hidden">
+          {/* Sidebar - Structure Navigation - Hide if initialGrade is set (Modal Mode) */}
+          {!initialGrade && (
           <div className="w-64 border-r border-slate-800 bg-slate-900/50 overflow-y-auto p-4">
             
             {/* Duplicate Warning Banner */}
-            {structures.some(s => s.type === 'GRADE' && s.items.some(i => i.name.startsWith('Class '))) && (
+            {structures.some(s => s.type === 'GRADE' && s.items.some(i => !i.name.startsWith('Grade '))) && (
                 <div className="mb-4 p-3 bg-amber-900/20 border border-amber-500/30 rounded-lg">
                     <div className="flex items-start gap-2">
                         <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
                         <div>
-                            <p className="text-xs text-amber-200 font-medium mb-1">Duplicates Detected</p>
+                            <p className="text-xs text-amber-200 font-medium mb-1">Standardization Needed</p>
                             <p className="text-[10px] text-amber-400/80 mb-2 leading-tight">
-                                Found mixed "Class" and "Grade" names.
+                                Found non-standard grade names (e.g. "1", "Class 1").
                             </p>
                             <button 
                                 onClick={handleFixGrades}
                                 className="w-full py-1 bg-amber-600 hover:bg-amber-500 text-white text-xs rounded transition-colors font-medium"
                             >
-                                Fix & Merge Now
+                                Fix & Standardize
                             </button>
                         </div>
                     </div>
@@ -426,7 +420,7 @@ export default function CurriculumManager() {
             )}
 
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Academic Structure</h3>
+              <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Grades</h3>
               <div className="flex gap-2">
                 <button 
                   onClick={fetchStructure} 
@@ -480,7 +474,7 @@ export default function CurriculumManager() {
                             : 'text-slate-400 hover:bg-slate-800'
                         }`}
                       >
-                        {structure.type === 'GRADE' ? <School className="w-4 h-4" /> : <GraduationCap className="w-4 h-4" />}
+                        {structure.type === 'GRADE' ? <School className="w-4 h-4" /> : <School className="w-4 h-4" />}
                         {item.name}
                       </button>
                     ))}
@@ -496,12 +490,13 @@ export default function CurriculumManager() {
                     onClick={initializeGrades}
                     className="text-blue-400 hover:text-blue-300 text-xs underline"
                   >
-                    Initialize Default Grades (Class 1-10)
+                    Initialize Default Grades (Grade 1-10)
                   </button>
                 </div>
               )}
             </div>
           </div>
+          )}
 
           {/* Main Content - Subjects */}
           <div className="flex-1 overflow-y-auto p-6">
@@ -515,7 +510,7 @@ export default function CurriculumManager() {
                     <p className="text-xs text-slate-400">
                       {isEditing 
                         ? 'Modify existing subjects or add new ones below.' 
-                        : 'View subjects assigned to this grade/faculty.'}
+                        : 'View subjects assigned to this grade.'}
                     </p>
                   </div>
                   <div className="flex gap-2 items-center">
@@ -550,19 +545,14 @@ export default function CurriculumManager() {
                             <th className="px-4 py-3 font-medium">Subject Name</th>
                             <th className="px-4 py-3 font-medium">Code</th>
                             <th className="px-4 py-3 font-medium">Credits</th>
+                            <th className="px-4 py-3 font-medium">Teacher</th>
                             <th className="px-4 py-3 font-medium text-center">Type</th>
-                            {selectedGroupType === 'FACULTY' && (
-                              <>
-                                <th className="px-4 py-3 font-medium">Year</th>
-                                <th className="px-4 py-3 font-medium">Sem</th>
-                              </>
-                            )}
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-800">
                           {editableSubjects.length === 0 ? (
                             <tr>
-                              <td colSpan="6" className="p-8 text-center text-slate-500">
+                              <td colSpan="5" className="p-8 text-center text-slate-500">
                                 No subjects found. Click "Edit Subjects" to add some.
                               </td>
                             </tr>
@@ -575,17 +565,14 @@ export default function CurriculumManager() {
                                 </td>
                                 <td className="px-4 py-3 font-mono text-xs">{subject.code}</td>
                                 <td className="px-4 py-3">{subject.creditHours}</td>
+                                <td className="px-4 py-3 text-sm text-slate-300">
+                                    {subject.assignedTeacher ? subject.assignedTeacher.name : <span className="text-slate-600 italic">Unassigned</span>}
+                                </td>
                                 <td className="px-4 py-3 text-center">
                                   <span className={`text-xs px-2 py-0.5 rounded-full ${subject.isCustom ? 'bg-purple-900/30 text-purple-400' : 'bg-blue-900/30 text-blue-400'}`}>
                                     {subject.isCustom ? 'Custom' : 'Global'}
                                   </span>
                                 </td>
-                                {selectedGroupType === 'FACULTY' && (
-                                  <>
-                                    <td className="px-4 py-3">{subject.year}</td>
-                                    <td className="px-4 py-3">{subject.semester}</td>
-                                  </>
-                                )}
                               </tr>
                             ))
                           )}
@@ -605,13 +592,9 @@ export default function CurriculumManager() {
                             <th className="px-4 py-3 font-medium">Subject Name *</th>
                             <th className="px-4 py-3 font-medium w-32">Code *</th>
                             <th className="px-4 py-3 font-medium w-24">Credits</th>
+                            <th className="px-4 py-3 font-medium w-48">Teacher</th>
                             <th className="px-4 py-3 font-medium w-20 text-center">Extra?</th>
-                            {selectedGroupType === 'FACULTY' && (
-                              <>
-                                <th className="px-4 py-3 font-medium w-20">Year</th>
-                                <th className="px-4 py-3 font-medium w-20">Sem</th>
-                              </>
-                            )}
+
                             <th className="px-4 py-3 font-medium">Description</th>
                             <th className="px-4 py-3 font-medium w-10"></th>
                           </tr>
@@ -651,6 +634,23 @@ export default function CurriculumManager() {
                                   readOnly={subject.linkStatus === 'INACTIVE'}
                                 />
                               </td>
+                              <td className="p-2">
+                                <select
+                                    value={subject.assignedTeacher?._id || ""}
+                                    onChange={e => {
+                                        const teacherId = e.target.value;
+                                        const teacher = teachers.find(t => t._id === teacherId);
+                                        updateExistingSubject(index, 'assignedTeacher', teacher || null);
+                                    }}
+                                    className={`w-full px-3 py-2 bg-slate-900 border border-slate-700 text-white rounded focus:ring-1 focus:ring-blue-500 outline-none ${subject.linkStatus === 'INACTIVE' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    disabled={subject.linkStatus === 'INACTIVE'}
+                                >
+                                    <option value="">Unassigned</option>
+                                    {teachers.map(t => (
+                                        <option key={t._id} value={t._id}>{t.name} {t.phone ? `(${t.phone})` : ''}</option>
+                                    ))}
+                                </select>
+                              </td>
                               <td className="p-2 text-center">
                                 <input
                                   type="checkbox"
@@ -660,32 +660,6 @@ export default function CurriculumManager() {
                                   title="Cannot change type of existing subject"
                                 />
                               </td>
-                              {selectedGroupType === 'FACULTY' && (
-                                <>
-                                  <td className="p-2">
-                                    <input
-                                      type="number"
-                                      min="1"
-                                      max="6"
-                                      value={subject.year}
-                                      onChange={e => updateExistingSubject(index, 'year', parseInt(e.target.value) || 1)}
-                                      className={`w-full px-3 py-2 bg-slate-900 border border-slate-700 text-white rounded focus:ring-1 focus:ring-blue-500 outline-none ${subject.linkStatus === 'INACTIVE' ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                      readOnly={subject.linkStatus === 'INACTIVE'}
-                                    />
-                                  </td>
-                                  <td className="p-2">
-                                    <input
-                                      type="number"
-                                      min="1"
-                                      max="12"
-                                      value={subject.semester}
-                                      onChange={e => updateExistingSubject(index, 'semester', parseInt(e.target.value) || 1)}
-                                      className={`w-full px-3 py-2 bg-slate-900 border border-slate-700 text-white rounded focus:ring-1 focus:ring-blue-500 outline-none ${subject.linkStatus === 'INACTIVE' ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                      readOnly={subject.linkStatus === 'INACTIVE'}
-                                    />
-                                  </td>
-                                </>
-                              )}
                               <td className="p-2">
                                 <span className="text-xs text-slate-500 italic">Existing</span>
                               </td>
@@ -756,6 +730,18 @@ export default function CurriculumManager() {
                                   className="w-full px-3 py-2 bg-slate-900 border border-slate-700 text-white rounded focus:ring-1 focus:ring-blue-500 outline-none"
                                 />
                               </td>
+                              <td className="p-2">
+                                <select
+                                    value={subject.assignedTeacher || ""}
+                                    onChange={e => updateSubject(index, 'assignedTeacher', e.target.value)}
+                                    className="w-full px-3 py-2 bg-slate-900 border border-slate-700 text-white rounded focus:ring-1 focus:ring-blue-500 outline-none"
+                                >
+                                    <option value="">Unassigned</option>
+                                    {teachers.map(t => (
+                                        <option key={t._id} value={t._id}>{t.name} {t.phone ? `(${t.phone})` : ''} {t.phone ? `(${t.phone})` : ''}</option>
+                                    ))}
+                                </select>
+                              </td>
                               <td className="p-2 text-center">
                                 <input
                                   type="checkbox"
@@ -765,30 +751,6 @@ export default function CurriculumManager() {
                                   title="Check to create a school-specific subject (not global)"
                                 />
                               </td>
-                              {selectedGroupType === 'FACULTY' && (
-                                <>
-                                  <td className="p-2">
-                                    <input
-                                      type="number"
-                                      min="1"
-                                      max="6"
-                                      value={subject.year}
-                                      onChange={e => updateSubject(index, 'year', parseInt(e.target.value) || 1)}
-                                      className="w-full px-3 py-2 bg-slate-900 border border-slate-700 text-white rounded focus:ring-1 focus:ring-blue-500 outline-none"
-                                    />
-                                  </td>
-                                  <td className="p-2">
-                                    <input
-                                      type="number"
-                                      min="1"
-                                      max="12"
-                                      value={subject.semester}
-                                      onChange={e => updateSubject(index, 'semester', parseInt(e.target.value) || 1)}
-                                      className="w-full px-3 py-2 bg-slate-900 border border-slate-700 text-white rounded focus:ring-1 focus:ring-blue-500 outline-none"
-                                    />
-                                  </td>
-                                </>
-                              )}
                               <td className="p-2">
                                 <input
                                   type="text"
@@ -885,12 +847,11 @@ export default function CurriculumManager() {
             ) : (
               <div className="flex flex-col items-center justify-center h-full text-slate-500">
                 <GraduationCap className="w-12 h-12 mb-4 text-slate-700" />
-                <p>Select a Grade or Faculty to view subjects</p>
+                <p>Select a Grade to view subjects</p>
               </div>
             )}
           </div>
         </div>
-      )}
     </div>
   );
 }

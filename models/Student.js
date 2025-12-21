@@ -64,6 +64,27 @@ const StudentSchema = new mongoose.Schema(
     grade: {
       type: String,
       required: [true, "Please provide a grade"],
+      set: function(name) {
+        if (!name) return name;
+        const lower = name.toLowerCase().trim();
+        
+        // Word map
+        const wordMap = {
+            'one': 1, 'first': 1, 'two': 2, 'second': 2, 'three': 3, 'third': 3,
+            'four': 4, 'fourth': 4, 'five': 5, 'fifth': 5, 'six': 6, 'sixth': 6,
+            'seven': 7, 'seventh': 7, 'eight': 8, 'eighth': 8, 'nine': 9, 'ninth': 9,
+            'ten': 10, 'tenth': 10, 'eleven': 11, 'twelve': 12
+        };
+        
+        for (const [word, num] of Object.entries(wordMap)) {
+            if (lower.includes(word)) return `Grade ${num}`;
+        }
+
+        const match = name.match(/\d+/);
+        if (match) return `Grade ${parseInt(match[0], 10)}`;
+        
+        return name;
+      }
     },
     rollNumber: {
       type: String,
@@ -102,13 +123,6 @@ const StudentSchema = new mongoose.Schema(
       sparse: true,
     },
     
-    // Faculty/Stream (e.g., Science, Commerce)
-    faculty: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Faculty",
-      default: null,
-    },
-
     // Legacy field - kept for backward compatibility
     visiblePassword: {
       type: String, // Stored for admin visibility as requested
@@ -124,7 +138,7 @@ const StudentSchema = new mongoose.Schema(
     // Student status management
     status: {
       type: String,
-      enum: ["ACTIVE", "SUSPENDED", "INACTIVE"],
+      enum: ["ACTIVE", "SUSPENDED", "INACTIVE", "ALUMNI"],
       default: "ACTIVE",
     },
     

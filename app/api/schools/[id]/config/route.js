@@ -13,13 +13,19 @@ export async function GET(req, { params }) {
       return errorResponse(404, "School not found");
     }
 
-    // Generate grades array based on maxGrade
-    const maxGrade = school.schoolConfig?.maxGrade || 10;
-    const grades = Array.from({ length: maxGrade }, (_, i) => (i + 1).toString());
+    let grades = [];
+    
+    // Check if grades are explicitly defined in schoolConfig
+    if (school.schoolConfig?.grades && Array.isArray(school.schoolConfig.grades)) {
+        grades = school.schoolConfig.grades;
+    } else {
+        // Fallback: Generate grades array based on maxGrade
+        const maxGrade = school.schoolConfig?.maxGrade || 10;
+        grades = Array.from({ length: maxGrade }, (_, i) => (i + 1).toString());
+    }
 
     return successResponse(200, "School config fetched", {
       grades,
-      maxGrade,
       config: school.schoolConfig
     });
   } catch (error) {

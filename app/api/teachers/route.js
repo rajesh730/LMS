@@ -6,6 +6,7 @@ import Teacher from "@/models/Teacher";
 import User from "@/models/User";
 import bcrypt from "bcryptjs";
 import { generateStrongPassword } from "@/lib/passwordGenerator";
+import { validateActiveYear, missingYearResponse } from "@/lib/guards";
 
 export async function POST(req) {
   try {
@@ -14,13 +15,22 @@ export async function POST(req) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await req.json();
-
     await connectDB();
+
+    // GUARD: Ensure Active Academic Year
+    try {
+        await validateActiveYear(session.user.id);
+    } catch (error) {
+        if (error.message === "NO_ACTIVE_YEAR") {
+            return missingYearResponse();
+        }
+        throw error;
+    }
+
+    const body = await req.json();
 
     if (Array.isArray(body)) {
       // Bulk Import
-      // Classroom feature has been removed, so we'll import teachers without class assignments
       const teachersToCreate = [];
 
       body.forEach((t, index) => {
@@ -95,7 +105,6 @@ export async function POST(req) {
       }
 
       if (assignments && Array.isArray(assignments)) {
-        // Note: Classroom assignments are no longer supported
         // Assignments parameter is accepted but not processed
       }
 
@@ -144,7 +153,6 @@ export async function PUT(req, { params }) {
     }
 
     if (assignments && Array.isArray(assignments)) {
-      // Note: Classroom assignments are no longer supported
       // Assignments parameter is accepted but not processed
     }
 
@@ -179,9 +187,6 @@ export async function DELETE(req, { params }) {
       );
     }
 
-    // Remove from all classrooms - DEPRECATED (classrooms feature removed)
-    // await Classroom.updateMany(...);
-
     await Teacher.findByIdAndDelete(id);
 
     // Remove linked user account (if any)
@@ -199,9 +204,6 @@ export async function DELETE(req, { params }) {
   }
 }
 
-// DEPRECATED: syncAssignments function removed (classrooms feature removed)
-// async function syncAssignments(teacherId, assignments, schoolId) { ... }
-
 export async function GET(req) {
   try {
     const session = await getServerSession(authOptions);
@@ -209,18 +211,38 @@ export async function GET(req) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
+    const { searchParams } = new URL(req.url);
+    const search = searchParams.get("search") || "";
+    const page = parseInt(searchParams.get("page")) || 1;
+    const limit = parseInt(searchParams.get("limit")) || 100; // Increased limit to ensure dropdowns get all teachers
+    const skip = (page - 1) * limit;
+
     await connectDB();
 
+    // Ensure we only fetch teachers for the current school
+    const query = { school: session.user.id };
+
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+        { subject: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    const totalTeachers = await Teacher.countDocuments(query);
+    const totalPages = Math.ceil(totalTeachers / limit);
+
     // Fetch teachers
-    const teachers = await Teacher.find({ school: session.user.id }).sort({
-      createdAt: -1,
-    });
+    const teachers = await Teacher.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
 
     // Map roles to teachers
     const teachersWithRoles = teachers.map((teacher) => {
       const t = teacher.toObject();
 
-      // Since classrooms feature is removed, return empty detailedRoles
       return {
         ...t,
         detailedRoles: {
@@ -230,7 +252,15 @@ export async function GET(req) {
       };
     });
 
-    return NextResponse.json({ teachers: teachersWithRoles }, { status: 200 });
+    return NextResponse.json({ 
+        teachers: teachersWithRoles,
+        pagination: {
+            page,
+            totalPages,
+            totalTeachers,
+            limit
+        }
+    }, { status: 200 });
   } catch (error) {
     console.error("Fetch Teachers Error:", error);
     return NextResponse.json(

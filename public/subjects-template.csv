@@ -1,10 +1,10 @@
-Name,Code,Type,Academic Type,Education Levels,Applicable Faculties,Description
-Mathematics,MATH,GLOBAL,CORE,School;HigherSecondary;Bachelor,,Core mathematics for all education levels
-Physics,PHY,GLOBAL,CORE,HigherSecondary;Bachelor,Science;Engineering,Physics for higher secondary and bachelor
-Chemistry,CHEM,GLOBAL,CORE,HigherSecondary,Science,Chemistry for higher secondary science stream
-English,ENG,GLOBAL,CORE,School;HigherSecondary;Bachelor,,English language for all education levels
-History,HIST,GLOBAL,ELECTIVE,School;HigherSecondary,Humanities,History for humanities stream
-Geography,GEO,GLOBAL,ELECTIVE,School;HigherSecondary,Humanities;Science,Geography subject for multiple faculties
-Economics,ECO,GLOBAL,ELECTIVE,HigherSecondary;Bachelor,Commerce;Humanities,Economics for commerce and humanities
-Accounting,ACC,GLOBAL,CORE,HigherSecondary;Bachelor,Commerce,Accounting for commerce stream
-Business Studies,BUS,GLOBAL,ELECTIVE,HigherSecondary;Bachelor,Commerce,Business studies for commerce and bachelor
+Name,Code,Type,Academic Type,Description
+Mathematics,MATH,GLOBAL,CORE,Core mathematics
+English,ENG,GLOBAL,CORE,English language
+Science,SCI,GLOBAL,CORE,General Science
+Social Studies,SOC,GLOBAL,CORE,Social Studies
+Nepali,NEP,GLOBAL,CORE,Nepali Language
+Computer Science,COMP,GLOBAL,ELECTIVE,Computer Science
+Health & Physical Education,HPE,GLOBAL,CORE,Health and Physical Education
+Moral Education,MOR,GLOBAL,CORE,Moral Education
+Occupation, Business & Technology,OBT,GLOBAL,ELECTIVE,Occupation Business and Technology

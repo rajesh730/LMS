@@ -30,15 +30,7 @@ const STEPS = [
   { id: "theme", title: "Theme", icon: FaPalette },
 ];
 
-// Utility function to normalize faculty names (trim spaces)
-const normalizeFaculties = (facultiesString) => {
-  if (!facultiesString || typeof facultiesString !== 'string') return '';
-  return facultiesString
-    .split(',')
-    .map(f => f.trim())
-    .filter(f => f.length > 0)
-    .join(', ');
-};
+
 
 export default function RegisterPage() {
   const [currentStep, setCurrentStep] = useState(0);
@@ -79,23 +71,12 @@ export default function RegisterPage() {
 
     // Education Levels
     educationLevels: {
-      school: false,
-      highSchool: false,
-      bachelor: false,
+      school: true, // Default to true as it's the only option now
     },
     schoolConfig: {
       schoolLevel: {
         minGrade: 1,
         maxGrade: 10,
-      },
-      highSchool: {
-        faculties: "",
-      },
-      bachelor: {
-        startingYear: 1,
-        endingYear: 4,
-        hasSemesters: false,
-        faculties: "",
       },
     },
 
@@ -188,29 +169,8 @@ export default function RegisterPage() {
         break;
 
       case 4: // Education
-        const hasEducationLevel = Object.values(formData.educationLevels).some(
-          (level) => level
-        );
-        if (!hasEducationLevel)
+        if (!formData.educationLevels.school)
           errors.educationLevels = "Select at least one education level";
-
-        // Check if high school is selected but no faculty is provided
-        if (
-          formData.educationLevels.highSchool &&
-          !formData.schoolConfig.highSchool.faculties?.trim()
-        ) {
-          errors.highSchoolFaculty =
-            "Please specify the faculties/streams for high school";
-        }
-
-        // Check if bachelor is selected but no faculties are provided
-        if (
-          formData.educationLevels.bachelor &&
-          !formData.schoolConfig.bachelor.faculties?.trim()
-        ) {
-          errors.bachelorFaculties =
-            "Please specify the faculties/programs for bachelor level";
-        }
         break;
     }
 
@@ -259,27 +219,6 @@ export default function RegisterPage() {
         minGrade: 1,
         maxGrade: 10,
       };
-    } 
-    // If ONLY HIGH SCHOOL is selected (no school), set grades 11-12
-    else if (newEducationLevels.highSchool && !newEducationLevels.school) {
-      newSchoolConfig.schoolLevel = {
-        minGrade: 11,
-        maxGrade: 12,
-      };
-    }
-    // If ONLY BACHELOR is selected, no schoolLevel
-    else if (newEducationLevels.bachelor && !newEducationLevels.school && !newEducationLevels.highSchool) {
-      // No schoolLevel for bachelor only
-    }
-
-    // Add highSchool config if selected
-    if (newEducationLevels.highSchool) {
-      newSchoolConfig.highSchool = formData.schoolConfig.highSchool;
-    }
-
-    // Add bachelor config if selected
-    if (newEducationLevels.bachelor) {
-      newSchoolConfig.bachelor = formData.schoolConfig.bachelor;
     }
 
     updateFormData({
@@ -319,30 +258,6 @@ export default function RegisterPage() {
       // If SCHOOL is selected, add schoolLevel with grades 1-10
       if (formData.educationLevels.school) {
         cleanedSchoolConfig.schoolLevel = formData.schoolConfig.schoolLevel;
-      } 
-      // If ONLY HIGH SCHOOL is selected (no school), set grades 11-12
-      else if (formData.educationLevels.highSchool && !formData.educationLevels.school) {
-        cleanedSchoolConfig.schoolLevel = {
-          minGrade: 11,
-          maxGrade: 12,
-        };
-      }
-      // If ONLY BACHELOR is selected, no schoolLevel
-
-      // Add highSchool config if selected
-      if (formData.educationLevels.highSchool) {
-        cleanedSchoolConfig.highSchool = {
-          ...formData.schoolConfig.highSchool,
-          faculties: normalizeFaculties(formData.schoolConfig.highSchool.faculties),
-        };
-      }
-
-      // Add bachelor config if selected
-      if (formData.educationLevels.bachelor) {
-        cleanedSchoolConfig.bachelor = {
-          ...formData.schoolConfig.bachelor,
-          faculties: normalizeFaculties(formData.schoolConfig.bachelor.faculties),
-        };
       }
 
       // Prepare final form data
@@ -906,19 +821,7 @@ export default function RegisterPage() {
                 label: "School Level",
                 desc: "Primary & Secondary",
                 color: "blue",
-              },
-              {
-                key: "highSchool",
-                label: "High School",
-                desc: "Grade 11-12",
-                color: "green",
-              },
-              {
-                key: "bachelor",
-                label: "Bachelor Level",
-                desc: "Degree Programs",
-                color: "purple",
-              },
+              }
             ].map((level) => (
               <div
                 key={level.key}
@@ -926,9 +829,7 @@ export default function RegisterPage() {
                   formData.educationLevels[level.key]
                     ? level.color === "blue"
                       ? "border-blue-400 bg-blue-500/20 text-blue-200"
-                      : level.color === "green"
-                      ? "border-emerald-400 bg-emerald-500/20 text-emerald-200"
-                      : "border-purple-400 bg-purple-500/20 text-purple-200"
+                      : "border-slate-600 bg-slate-800 hover:border-slate-500"
                     : "border-slate-600 bg-slate-800 hover:border-slate-500"
                 }`}
               >
@@ -945,9 +846,7 @@ export default function RegisterPage() {
                     formData.educationLevels[level.key]
                       ? level.color === "blue"
                         ? "bg-blue-500 text-white hover:bg-blue-600"
-                        : level.color === "green"
-                        ? "bg-emerald-500 text-white hover:bg-emerald-600"
-                        : "bg-purple-500 text-white hover:bg-purple-600"
+                        : "bg-slate-700 text-white hover:bg-slate-600"
                       : "bg-slate-700 text-white hover:bg-slate-600"
                   }`}
                 >
@@ -1021,184 +920,11 @@ export default function RegisterPage() {
           </div>
         )}
 
-        {formData.educationLevels.highSchool && (
-          <div className="bg-emerald-500/20 border border-emerald-400 rounded-lg p-6">
-            <h4 className="text-md font-medium text-white mb-3">
-              High School Configuration
-            </h4>
-            <p className="text-sm text-emerald-200 mb-4">
-              High School automatically includes Grade 11 and Grade 12. Total: 2 Classes
-            </p>
-            <div className="grid grid-cols-3 gap-4 mb-6">
-              <div className="bg-emerald-900/30 rounded p-4">
-                <span className="text-sm font-medium text-emerald-200">Lowest Grade</span>
-                <p className="text-2xl font-bold text-emerald-300 mt-1">Grade 11</p>
-              </div>
-              <div className="bg-emerald-900/30 rounded p-4">
-                <span className="text-sm font-medium text-emerald-200">Highest Grade</span>
-                <p className="text-2xl font-bold text-emerald-300 mt-1">Grade 12</p>
-              </div>
-              <div className="bg-emerald-900/30 rounded p-4">
-                <span className="text-sm font-medium text-emerald-200">Total Classes</span>
-                <p className="text-2xl font-bold text-emerald-300 mt-1">2</p>
-              </div>
-            </div>
 
-            <div>
-              <label className="block text-sm font-medium text-white mb-2">
-                Faculty/Stream Offered
-              </label>
-              <div className="space-y-2">
-                <input
-                  type="text"
-                  placeholder="e.g., Science, Management, Humanities, Computer Science"
-                  className="w-full border border-slate-600 bg-slate-700 text-white placeholder-slate-400 rounded-lg p-3 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                  value={formData.schoolConfig.highSchool?.faculties || ""}
-                  onChange={(e) =>
-                    updateFormData({
-                      schoolConfig: {
-                        ...formData.schoolConfig,
-                        highSchool: {
-                          ...formData.schoolConfig.highSchool,
-                          faculties: normalizeFaculties(e.target.value),
-                        },
-                      },
-                    })
-                  }
-                />
-                <p className="text-xs text-emerald-300">
-                  Enter the streams/faculties your high school offers (separate
-                  multiple with commas)
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
 
-        {formData.educationLevels.bachelor && (
-          <div className="bg-purple-500/20 border border-purple-400 rounded-lg p-6">
-            <h4 className="text-md font-medium text-white mb-3">
-              Bachelor Level Configuration
-            </h4>
-            <p className="text-sm text-purple-200 mb-4">
-              Configure degree programs, duration, and faculties
-            </p>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-              <div>
-                <label className="block text-sm font-medium text-white mb-2">
-                  Lower Grade (Starting Year) <span className="text-red-400">*</span>
-                </label>
-                <select
-                  className="w-full border border-slate-600 bg-slate-700 text-white rounded-lg p-3 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                  value={formData.schoolConfig.bachelor?.startingYear || 1}
-                  onChange={(e) =>
-                    updateFormData({
-                      schoolConfig: {
-                        ...formData.schoolConfig,
-                        bachelor: {
-                          ...formData.schoolConfig.bachelor,
-                          startingYear: parseInt(e.target.value),
-                        },
-                      },
-                    })
-                  }
-                >
-                  <option value={1}>1st Year</option>
-                </select>
-              </div>
 
-              <div>
-                <label className="block text-sm font-medium text-white mb-2">
-                  Upper Grade (Ending Year) <span className="text-red-400">*</span>
-                </label>
-                <select
-                  className="w-full border border-slate-600 bg-slate-700 text-white rounded-lg p-3 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                  value={formData.schoolConfig.bachelor?.endingYear || 4}
-                  onChange={(e) =>
-                    updateFormData({
-                      schoolConfig: {
-                        ...formData.schoolConfig,
-                        bachelor: {
-                          ...formData.schoolConfig.bachelor,
-                          endingYear: parseInt(e.target.value),
-                        },
-                      },
-                    })
-                  }
-                >
-                  <option value={2}>2nd Year</option>
-                  <option value={3}>3rd Year</option>
-                  <option value={4}>4th Year</option>
-                </select>
-              </div>
-            </div>
 
-            <div className="bg-purple-900/30 rounded p-4 mb-6">
-              <div className="flex items-center space-x-3">
-                <input
-                  type="checkbox"
-                  id="hasSemesters"
-                  className="w-4 h-4 text-purple-600 bg-slate-700 border-slate-600 rounded focus:ring-purple-500 focus:ring-2"
-                  checked={formData.schoolConfig.bachelor?.hasSemesters || false}
-                  onChange={(e) =>
-                    updateFormData({
-                      schoolConfig: {
-                        ...formData.schoolConfig,
-                        bachelor: {
-                          ...formData.schoolConfig.bachelor,
-                          hasSemesters: e.target.checked,
-                        },
-                      },
-                    })
-                  }
-                />
-                <label htmlFor="hasSemesters" className="text-white font-medium">
-                  Include Semester Division
-                </label>
-              </div>
-              {formData.schoolConfig.bachelor?.hasSemesters && (
-                <div className="text-sm text-purple-300 mt-3 space-y-1">
-                  <p>
-                    Duration: <strong>{(formData.schoolConfig.bachelor?.endingYear || 4) - (formData.schoolConfig.bachelor?.startingYear || 1) + 1} Years</strong>
-                  </p>
-                  <p>
-                    Total Semesters: <strong>{((formData.schoolConfig.bachelor?.endingYear || 4) - (formData.schoolConfig.bachelor?.startingYear || 1) + 1) * 2} Semesters</strong>
-                  </p>
-                </div>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-white mb-2">
-                Faculties/Programs Offered
-              </label>
-              <div className="space-y-2">
-                <input
-                  type="text"
-                  placeholder="e.g., BCA, BIT, BSc Computer Science, BBA, MBA, Engineering, etc."
-                  className="w-full border border-slate-600 bg-slate-700 text-white placeholder-slate-400 rounded-lg p-3 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                  value={formData.schoolConfig.bachelor?.faculties || ""}
-                  onChange={(e) =>
-                    updateFormData({
-                      schoolConfig: {
-                        ...formData.schoolConfig,
-                        bachelor: {
-                          ...formData.schoolConfig.bachelor,
-                          faculties: normalizeFaculties(e.target.value),
-                        },
-                      },
-                    })
-                  }
-                />
-                <p className="text-xs text-purple-300">
-                  Enter the degree programs your institution offers (separate
-                  multiple with commas)
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     );
   };

@@ -33,14 +33,13 @@ export async function GET(req) {
     const subjects = await Subject.find(query).sort({ name: 1 });
 
     // Format as CSV
-    const headers = ["Name", "Code", "Type", "Academic Type", "Education Levels", "Applicable Faculties", "Description"];
+    const headers = ["Name", "Code", "Type", "Academic Type", "Education Levels", "Description"];
     const rows = subjects.map(s => [
       s.name,
       s.code,
       s.subjectType,
       s.academicType,
       (s.educationLevel || []).join(";"),
-      (s.applicableFaculties || []).join(";"),
       s.description || "",
     ]);
 
@@ -104,7 +103,6 @@ export async function POST(req) {
     const typeIdx = headers.indexOf("type");
     const academicIdx = headers.indexOf("academic type");
     const descIdx = headers.indexOf("description");
-    const facultiesIdx = headers.indexOf("applicable faculties");
     const educationIdx = headers.indexOf("education levels");
 
     if (nameIdx === -1 || codeIdx === -1 || typeIdx === -1 || academicIdx === -1) {
@@ -130,11 +128,8 @@ export async function POST(req) {
         const type = row[typeIdx].toUpperCase();
         const academic = row[academicIdx].toUpperCase();
         const description = descIdx !== -1 ? row[descIdx] : "";
-        const applicableFaculties = facultiesIdx !== -1 && row[facultiesIdx]
-          ? row[facultiesIdx].split(";").map(f => f.trim()).filter(f => f.length > 0)
-          : [];
         const educationLevel = educationIdx !== -1 && row[educationIdx]
-          ? row[educationIdx].split(";").map(e => e.trim()).filter(e => ['School', 'HigherSecondary', 'Bachelor'].includes(e))
+          ? row[educationIdx].split(";").map(e => e.trim()).filter(e => ['School'].includes(e))
           : [];
 
         // Validate type
@@ -172,7 +167,6 @@ export async function POST(req) {
           subjectType: type,
           school,
           academicType: academic,
-          applicableFaculties,
           status: "ACTIVE",
           createdBy: session.user.id,
         });

@@ -9,14 +9,14 @@ import {
   FaUsers,
   FaCog,
   FaSignOutAlt,
-  FaUniversity,
+  FaSchool,
   FaChalkboardTeacher,
   FaHeadset,
   FaUserPlus,
   FaBook,
 } from "react-icons/fa";
 
-export default function Sidebar({ role }) {
+export default function Sidebar({ role, isRestricted = false, isPending = false }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const currentTab = searchParams?.get("tab");
@@ -63,7 +63,7 @@ export default function Sidebar({ role }) {
   ];
 
   const studentLinks = [
-    { name: "My Learning", href: "/student/dashboard", icon: FaUniversity },
+    { name: "My Learning", href: "/student/dashboard", icon: FaSchool },
     { name: "Events", href: "/student/events", icon: FaCalendarAlt },
   ];
 
@@ -73,11 +73,18 @@ export default function Sidebar({ role }) {
   else if (role === "TEACHER") links = teacherLinks;
   else if (role === "STUDENT") links = studentLinks;
 
+  // RESTRICTION LOGIC
+  if (isPending) {
+    links = []; // Hide all navigation for pending users
+  } else if (isRestricted && role === "SCHOOL_ADMIN") {
+    links = links.filter(link => link.name === "Settings");
+  }
+
   return (
     <aside className="w-64 bg-slate-900/95 backdrop-blur-xl border-r border-slate-800 h-screen fixed left-0 top-0 flex flex-col z-50 transition-all duration-300">
       <div className="p-6 border-b border-slate-800 flex items-center gap-3">
         <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-emerald-500 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/20">
-          <FaUniversity className="text-white text-sm" />
+          <FaSchool className="text-white text-sm" />
         </div>
         <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-emerald-400">
           E-Grantha

@@ -21,14 +21,54 @@ export async function GET(req, { params }) {
 
     await connectDB();
 
+    console.log(`Fetching students for School: ${schoolId}, Grade Param: "${grade}"`);
+
+    // Construct a flexible query to handle "Grade 9" vs "9" mismatches
+    let gradeQuery = grade;
+    
+    // Decode the grade parameter just in case
+    const decodedGrade = decodeURIComponent(grade);
+    
+    // If grade is "Grade 9", also look for "9"
+    // If grade is "9", also look for "Grade 9"
+    const numericPart = decodedGrade.replace(/\D/g, '');
+    
+    if (numericPart) {
+        // We have a number, so we can construct variations
+        const variations = [
+            decodedGrade, // The original param
+            numericPart, // Just the number "9"
+            `Grade ${numericPart}`, // "Grade 9"
+            `Class ${numericPart}` // "Class 9"
+        ];
+        // Remove duplicates
+        const uniqueVariations = [...new Set(variations)];
+        gradeQuery = { $in: uniqueVariations };
+        console.log(`Searching for grade variations: ${JSON.stringify(uniqueVariations)}`);
+    } else {
+        // If no number found, use the decoded grade
+        gradeQuery = decodedGrade;
+    }
+
+    // Use regex for case-insensitive matching as a fallback if exact match fails
+    // This mimics the logic in the main students API which seems to work
+    const query = {
+        school: schoolId,
+        status: "ACTIVE",
+        $or: [
+            { grade: gradeQuery },
+            // Also try regex matching for "Grade X" vs "grade x"
+            { grade: { $regex: new RegExp(`^${decodedGrade}$`, 'i') } },
+            { grade: { $regex: new RegExp(`^Grade ${numericPart}$`, 'i') } }
+        ]
+    };
+
+    console.log("Executing query:", JSON.stringify(query));
+
     // Fetch all students for this school and grade
-    const students = await Student.find({
-      school: schoolId,
-      grade: grade,
-      status: "ACTIVE",
-    })
+    const students = await Student.find(query)
       .select(
-        "firstName lastName name rollNumber email phone parentName parentEmail parentContactNumber status"
+        "firstName lastName name rollNumber email phone parentName parentEmail parentContactNumber status grade"
       )
       .sort({ rollNumber: 1 });
 

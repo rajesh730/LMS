@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import Subject from '@/models/Subject';
-import Faculty from '@/models/Faculty';
 import connectDB from '@/lib/db';
 
 export async function GET(req) {
@@ -14,7 +13,6 @@ export async function GET(req) {
     }
 
     const schoolId = token.role === 'SCHOOL_ADMIN' ? token.sub : req.nextUrl.searchParams.get('schoolId');
-    const facultyId = req.nextUrl.searchParams.get('facultyId');
 
     if (!schoolId) {
       return NextResponse.json({ error: 'School ID is required' }, { status: 400 });
@@ -27,11 +25,6 @@ export async function GET(req) {
         { school: schoolId, subjectType: 'SCHOOL_CUSTOM' }
       ]
     };
-
-    // If facultyId is provided, filter subjects that are applicable to this faculty
-    if (facultyId) {
-      query.applicableFaculties = facultyId;
-    }
 
     const subjects = await Subject.find(query).sort({ name: 1 });
 
@@ -56,10 +49,10 @@ export async function POST(req) {
     }
 
     const body = await req.json();
-    const { name, code, facultyId, description, creditHours } = body;
+    const { name, code, description, creditHours } = body;
 
-    if (!name || !code || !facultyId) {
-      return NextResponse.json({ error: 'Name, Code and Faculty are required' }, { status: 400 });
+    if (!name || !code) {
+      return NextResponse.json({ error: 'Name and Code are required' }, { status: 400 });
     }
 
     // Check if subject exists (Global or Custom)
@@ -71,13 +64,7 @@ export async function POST(req) {
       ]
     });
 
-    if (subject) {
-      // If subject exists, just link the faculty
-      if (!subject.applicableFaculties.includes(facultyId)) {
-        subject.applicableFaculties.push(facultyId);
-        await subject.save();
-      }
-    } else {
+    if (!subject) {
       // Create new Custom Subject
       subject = await Subject.create({
         name,
@@ -86,7 +73,6 @@ export async function POST(req) {
         subjectType: 'SCHOOL_CUSTOM',
         school: token.sub,
         createdBy: token.sub,
-        applicableFaculties: [facultyId],
         // You might want to store creditHours in GradeSubject, but for now we can store it in description or metadata if needed
       });
     }

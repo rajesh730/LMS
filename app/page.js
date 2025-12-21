@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { FaUniversity, FaShieldAlt, FaChartLine, FaUsers } from 'react-icons/fa';
+import { FaSchool, FaShieldAlt, FaChartLine, FaUsers } from 'react-icons/fa';
 
 export default function Home() {
   return (
@@ -9,7 +9,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-emerald-500 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
-              <FaUniversity className="text-white text-lg" />
+              <FaSchool className="text-white text-lg" />
             </div>
             <span className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-emerald-400">
               E-Grantha

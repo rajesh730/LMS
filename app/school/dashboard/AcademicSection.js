@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import AcademicGradeCard from "@/components/AcademicGradeCard";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import GradeDetailView from "@/components/dashboard/GradeDetailView";
 import { FaBook, FaExclamationTriangle } from "react-icons/fa";
 
 export default function AcademicSection() {
@@ -10,6 +11,8 @@ export default function AcademicSection() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [studentCounts, setStudentCounts] = useState({});
+  const [selectedGrade, setSelectedGrade] = useState(null);
+  const [initialTab, setInitialTab] = useState("students");
 
   useEffect(() => {
     const fetchGrades = async () => {
@@ -69,8 +72,28 @@ export default function AcademicSection() {
     fetchGrades();
   }, []);
 
+  const handleManageGrade = (grade) => {
+    setSelectedGrade(grade);
+    setInitialTab("students");
+  };
+
+  const handleAssignTeachers = (grade) => {
+    setSelectedGrade(grade);
+    setInitialTab("curriculum");
+  };
+
   if (loading) {
     return <LoadingSpinner />;
+  }
+
+  if (selectedGrade) {
+    return (
+      <GradeDetailView 
+        grade={selectedGrade} 
+        onBack={() => setSelectedGrade(null)} 
+        initialTab={initialTab}
+      />
+    );
   }
 
   return (
@@ -113,6 +136,8 @@ export default function AcademicSection() {
                 key={grade}
                 grade={grade}
                 studentCount={studentCounts[grade] || 0}
+                onManageGrade={handleManageGrade}
+                onAssignTeachers={handleAssignTeachers}
               />
             ))}
           </div>

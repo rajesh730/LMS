@@ -8,9 +8,7 @@ import {
   FaExclamationCircle,
 } from "react-icons/fa";
 
-export default function AttendanceReports({ teacherClassrooms = [] }) {
-  const [classrooms, setClassrooms] = useState([]);
-  const [selectedClassroom, setSelectedClassroom] = useState("");
+export default function AttendanceReports() {
   const [reportMonth, setReportMonth] = useState(new Date().getMonth() + 1);
   const [reportYear, setReportYear] = useState(new Date().getFullYear());
   const [reportData, setReportData] = useState([]);
@@ -24,38 +22,16 @@ export default function AttendanceReports({ teacherClassrooms = [] }) {
     studentsBelow60: 0,
   });
 
-  // Initialize classrooms
-  useEffect(() => {
-    const fetchTeacherClassrooms = async () => {
-      try {
-        const res = await fetch("/api/classrooms");
-        if (res.ok) {
-          const data = await res.json();
-          const classrooms = Array.isArray(data) ? data : data.classrooms || [];
-          setClassrooms(classrooms);
-          if (classrooms.length > 0) {
-            setSelectedClassroom(classrooms[0]._id);
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching classrooms:", error);
-      }
-    };
-    fetchTeacherClassrooms();
-  }, []);
-
   // Generate report
   useEffect(() => {
-    if (selectedClassroom) {
-      generateReport();
-    }
-  }, [selectedClassroom, reportMonth, reportYear]);
+    generateReport();
+  }, [reportMonth, reportYear]);
 
   const generateReport = async () => {
     setLoading(true);
     try {
       const res = await fetch(
-        `/api/attendance/monthly?year=${reportYear}&month=${reportMonth}&classroom=${selectedClassroom}`
+        `/api/attendance/monthly?year=${reportYear}&month=${reportMonth}`
       );
 
       if (res.ok) {
@@ -171,14 +147,6 @@ export default function AttendanceReports({ teacherClassrooms = [] }) {
     window.URL.revokeObjectURL(url);
   };
 
-  if (classrooms.length === 0) {
-    return (
-      <div className="bg-slate-900/50 p-6 rounded-xl border border-slate-800 text-center">
-        <p className="text-slate-400">No classrooms assigned</p>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -189,24 +157,6 @@ export default function AttendanceReports({ teacherClassrooms = [] }) {
 
         {/* Controls */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div>
-            <label className="block text-slate-300 font-semibold mb-2">
-              Select Class
-            </label>
-            <select
-              value={selectedClassroom}
-              onChange={(e) => setSelectedClassroom(e.target.value)}
-              className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500"
-            >
-              <option value="">Choose a class...</option>
-              {classrooms.map((cls) => (
-                <option key={cls._id} value={cls._id}>
-                  {cls.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
           <div>
             <label className="block text-slate-300 font-semibold mb-2">
               Month

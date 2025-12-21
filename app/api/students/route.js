@@ -6,6 +6,7 @@ import Student from "@/models/Student";
 import User from "@/models/User";
 import bcrypt from "bcryptjs";
 import { generateStudentPassword } from "@/lib/passwordGenerator";
+import { validateActiveYear, missingYearResponse } from "@/lib/guards";
 
 export const dynamic = "force-dynamic";
 
@@ -16,9 +17,19 @@ export async function POST(req) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await req.json();
-
     await connectDB();
+
+    // GUARD: Ensure Active Academic Year
+    try {
+        await validateActiveYear(session.user.id);
+    } catch (error) {
+        if (error.message === "NO_ACTIVE_YEAR") {
+            return missingYearResponse();
+        }
+        throw error;
+    }
+
+    const body = await req.json();
 
     if (Array.isArray(body)) {
       // Bulk Import
@@ -57,7 +68,6 @@ export async function POST(req) {
           middleName,
           lastName,
           school: session.user.id,
-          classroom: s.classroom || undefined,
           username,
           password: hashedPassword,
           visiblePassword: password,
@@ -94,7 +104,7 @@ export async function POST(req) {
       }
     } else {
       // Single Creation
-      const { name, email, grade, parentEmail, classroom, rollNumber, ...otherData } = body;
+      const { name, email, grade, parentEmail, rollNumber, ...otherData } = body;
 
       if (!name || !email || !grade || !parentEmail || !rollNumber) {
         return NextResponse.json(
@@ -140,7 +150,6 @@ export async function POST(req) {
         username,
         password: hashedPassword,
         visiblePassword: generatedPassword,
-        classroom: classroom || null,
         school: session.user.id,
         ...otherData
       });
@@ -180,7 +189,6 @@ export async function GET(req) {
     }
 
     const { searchParams } = new URL(req.url);
-    const classroomId = searchParams.get("classroom");
     const grade = searchParams.get("grade");
     const search = searchParams.get("search") || "";
     const page = parseInt(searchParams.get("page")) || 1;
@@ -189,28 +197,63 @@ export async function GET(req) {
 
     await connectDB();
 
-    const query = { school: session.user.id };
-
-    if (classroomId) {
-      query.classroom = classroomId;
+    // Ensure we only fetch students for the current school
+    const andConditions = [{ school: session.user.id }];
+    
+    // Filter by Status (default to ACTIVE if not specified, unless 'ALL' is requested)
+    const status = searchParams.get("status");
+    if (status && status !== "ALL") {
+        // Case-insensitive status check
+        andConditions.push({ status: { $regex: new RegExp(`^${status}$`, 'i') } });
+    } else if (!status) {
+        // Default behavior: Show only ACTIVE students (case-insensitive)
+        andConditions.push({ status: { $regex: /^ACTIVE$/i } });
     }
 
     if (grade) {
-      query.grade = grade;
+      // Extract digits to handle "Grade 9", "9", "Class 9" variations robustly
+      const gradeNumber = grade.replace(/\D/g, ""); 
+      
+      if (gradeNumber) {
+          andConditions.push({
+            $or: [
+                { grade: grade }, // Exact match
+                { grade: { $regex: new RegExp(`^${grade}$`, 'i') } }, // Case insensitive
+                { grade: { $regex: new RegExp(`^Grade\\s*${gradeNumber}$`, 'i') } }, // "Grade 9", "Grade  9"
+                { grade: { $regex: new RegExp(`^Class\\s*${gradeNumber}$`, 'i') } }, // "Class 9"
+                { grade: gradeNumber } // "9"
+            ]
+          });
+      } else {
+          // Non-numeric grades (e.g. "Kindergarten")
+          andConditions.push({
+             $or: [
+                { grade: grade },
+                { grade: { $regex: new RegExp(`^${grade}$`, 'i') } }
+             ]
+          });
+      }
     }
 
     if (search) {
-      query.$or = [
-        { name: { $regex: search, $options: "i" } },
-        { email: { $regex: search, $options: "i" } },
-      ];
+      andConditions.push({
+        $or: [
+          { name: { $regex: search, $options: "i" } },
+          { email: { $regex: search, $options: "i" } },
+        ]
+      });
     }
 
+    const query = andConditions.length > 0 ? { $and: andConditions } : {};
+
+    console.log("DEBUG: Fetching students with query:", JSON.stringify(query));
+
     const totalStudents = await Student.countDocuments(query);
+    console.log("DEBUG: Found total students:", totalStudents);
+
     const totalPages = Math.ceil(totalStudents / limit);
 
     const students = await Student.find(query)
-      // .populate("classroom", "name") // Classroom is now a string, not a reference
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
@@ -224,6 +267,11 @@ export async function GET(req) {
           totalStudents,
           limit,
         },
+        debug: {
+            query: JSON.stringify(query),
+            gradeParam: grade,
+            statusParam: status
+        }
       },
       { status: 200 }
     );

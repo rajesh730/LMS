@@ -6,6 +6,7 @@ import Subject from "@/models/Subject";
 import Chapter from "@/models/Chapter";
 import Question from "@/models/Question";
 import Teacher from "@/models/Teacher";
+import Grade from "@/models/Grade";
 
 export async function GET(_req, context) {
   try {
@@ -33,17 +34,24 @@ export async function GET(_req, context) {
       );
     }
 
-    const subject = await Subject.findOne({
-      _id: id,
-      teacher: teacherDoc._id,
-    }).populate("classroom", "name");
+    // Verify teacher teaches this subject
+    const grades = await Grade.find({
+      "teachers": {
+        $elemMatch: {
+          teacher: teacherDoc._id,
+          subjects: id
+        }
+      }
+    });
 
-    if (!subject) {
+    if (grades.length === 0) {
       return NextResponse.json(
-        { message: "Subject not found" },
+        { message: "Subject not assigned to teacher" },
         { status: 404 }
       );
     }
+
+    const subject = await Subject.findById(id);
 
     const chapters = await Chapter.find({ subject: subject._id })
       .sort({ order: 1 })

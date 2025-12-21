@@ -5,6 +5,7 @@ import connectDB from "@/lib/db";
 import Marks from "@/models/Marks";
 import Student from "@/models/Student";
 import Subject from "@/models/Subject";
+import SchoolConfig from "@/models/SchoolConfig";
 import {
   successResponse,
   errorResponse,
@@ -27,7 +28,7 @@ export async function POST(req) {
     const {
       studentId,
       subjectId,
-      classroomId,
+      gradeId,
       assessmentType,
       assessmentName,
       totalMarks,
@@ -39,6 +40,7 @@ export async function POST(req) {
     if (
       !studentId ||
       !subjectId ||
+      !gradeId ||
       !assessmentType ||
       !assessmentName ||
       totalMarks === undefined ||
@@ -48,6 +50,7 @@ export async function POST(req) {
         required: [
           "studentId",
           "subjectId",
+          "gradeId",
           "assessmentType",
           "assessmentName",
           "totalMarks",
@@ -74,6 +77,10 @@ export async function POST(req) {
       return notFoundError("Subject");
     }
 
+    // Fetch current academic year
+    const schoolConfig = await SchoolConfig.findOne({ school: session.user.schoolId || session.user.id });
+    const currentAcademicYear = schoolConfig?.currentAcademicYear;
+
     // Create or update marks
     const marks = await Marks.findOneAndUpdate(
       {
@@ -81,12 +88,16 @@ export async function POST(req) {
         subject: subjectId,
         assessmentType,
         assessmentName,
+        // Ensure we only update marks for the current academic year if it exists
+        ...(currentAcademicYear && { academicYear: currentAcademicYear })
       },
       {
         student: studentId,
         subject: subjectId,
+        grade: gradeId,
         teacher: session.user.id,
         school: session.user.schoolId || session.user.id,
+        academicYear: currentAcademicYear, // Tag with current session
         assessmentType,
         assessmentName,
         totalMarks,
@@ -116,12 +127,14 @@ export async function GET(req) {
     const { searchParams } = new URL(req.url);
     const studentId = searchParams.get("student");
     const subjectId = searchParams.get("subject");
+    const gradeId = searchParams.get("grade");
     const assessmentType = searchParams.get("assessmentType");
 
     let query = { school: session.user.schoolId || session.user.id };
 
     if (studentId) query.student = studentId;
     if (subjectId) query.subject = subjectId;
+    if (gradeId) query.grade = gradeId;
     if (assessmentType) query.assessmentType = assessmentType;
 
     // Teachers can only see marks for their subjects

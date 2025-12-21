@@ -26,14 +26,9 @@ export default function SendEventForm({
   const [status, setStatus] = useState("");
 
   const schoolGrades = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"];
-  const highSchoolGrades = ["11", "12"];
-  const bachelorGrades = ["Bachelor"];
 
   // Helper function to display friendly grade labels
   const getGradeLabel = (grade) => {
-    if (grade === "Bachelor") {
-      return "Bachelor Level";
-    }
     return `Grade ${grade}`;
   };
 
@@ -272,81 +267,9 @@ export default function SendEventForm({
             </div>
           </div>
 
-          {/* High School (11-12) */}
-          <div className="mb-3">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-slate-500 uppercase font-bold tracking-wider">
-                High School (Grade 11-12)
-              </span>
-              <button
-                type="button"
-                onClick={() => toggleGroup(highSchoolGrades)}
-                className="text-xs text-blue-400 hover:text-blue-300 transition"
-              >
-                {highSchoolGrades.every((g) =>
-                  formData.eligibleGrades.includes(g)
-                )
-                  ? "Deselect All"
-                  : "Select All"}
-              </button>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 bg-slate-800 p-3 rounded border border-blue-500/20">
-              {highSchoolGrades.map((grade) => (
-                <label
-                  key={grade}
-                  className="flex items-center gap-2 cursor-pointer hover:bg-slate-700/50 p-1 rounded transition select-none"
-                >
-                  <input
-                    type="checkbox"
-                    checked={formData.eligibleGrades.includes(grade)}
-                    onChange={() => handleGradeChange(grade)}
-                    className="rounded border-slate-600 bg-slate-700 text-blue-600 focus:ring-blue-500"
-                  />
-                  <span className="text-white text-sm font-semibold text-cyan-200">
-                    {getGradeLabel(grade)}
-                  </span>
-                </label>
-              ))}
-            </div>
-          </div>
 
-          {/* Bachelor Level */}
-          <div className="mb-3">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-slate-500 uppercase font-bold tracking-wider">
-                Bachelor Level (1-4)
-              </span>
-              <button
-                type="button"
-                onClick={() => toggleGroup(bachelorGrades)}
-                className="text-xs text-blue-400 hover:text-blue-300 transition"
-              >
-                {bachelorGrades.every((g) =>
-                  formData.eligibleGrades.includes(g)
-                )
-                  ? "Deselect All"
-                  : "Select All"}
-              </button>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 bg-slate-800 p-3 rounded border border-purple-500/20">
-              {bachelorGrades.map((grade) => (
-                <label
-                  key={grade}
-                  className="flex items-center gap-2 cursor-pointer hover:bg-slate-700/50 p-1 rounded transition select-none"
-                >
-                  <input
-                    type="checkbox"
-                    checked={formData.eligibleGrades.includes(grade)}
-                    onChange={() => handleGradeChange(grade)}
-                    className="rounded border-slate-600 bg-slate-700 text-purple-600 focus:ring-purple-500"
-                  />
-                  <span className="text-white text-sm font-semibold text-purple-200">
-                    {getGradeLabel(grade)}
-                  </span>
-                </label>
-              ))}
-            </div>
-          </div>
+
+
         </div>
 
         <div>

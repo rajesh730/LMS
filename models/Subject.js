@@ -59,38 +59,48 @@ const SubjectSchema = new mongoose.Schema(
             default: 'ACTIVE',
         },
 
-        // Faculty/Stream Applicability (for smart filtering)
-        // Optional: helps filter subjects by faculty when assigning to grades
-        // References the Faculty model for data integrity
-        applicableFaculties: [{
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'Faculty',
-        }],
-
         // Education Level Applicability (for smart filtering)
         // Specifies which education levels this subject applies to
-        // Values: "School" (1-10), "HigherSecondary" (11-12), "Bachelor" (13+)
+        // Values: "School" (1-10)
         educationLevel: {
             type: [String],
-            enum: ['School', 'HigherSecondary', 'Bachelor'],
+            enum: ['School'],
             default: [],
         },
 
-        // Specific Grades (e.g., "1", "2", "10", "11", "12")
+        // Specific Grades (e.g., "Grade 1", "Grade 10")
         // Allows more granular filtering than educationLevel
         grades: {
             type: [String],
             default: [],
-        },
+            set: function(grades) {
+                if (!grades || !Array.isArray(grades)) return [];
+                
+                const standardize = (name) => {
+                    if (!name) return name;
+                    const lower = name.toString().toLowerCase().trim();
+                    
+                    // Word map
+                    const wordMap = {
+                        'one': 1, 'first': 1, 'two': 2, 'second': 2, 'three': 3, 'third': 3,
+                        'four': 4, 'fourth': 4, 'five': 5, 'fifth': 5, 'six': 6, 'sixth': 6,
+                        'seven': 7, 'seventh': 7, 'eight': 8, 'eighth': 8, 'nine': 9, 'ninth': 9,
+                        'ten': 10, 'tenth': 10, 'eleven': 11, 'twelve': 12
+                    };
+                    
+                    for (const [word, num] of Object.entries(wordMap)) {
+                        if (lower.includes(word)) return `Grade ${num}`;
+                    }
 
-        // For Bachelor/Higher Ed: Recommended Year and Semester
-        year: {
-            type: Number,
-            default: null,
-        },
-        semester: {
-            type: Number,
-            default: null,
+                    // Number extraction
+                    const match = name.toString().match(/\d+/);
+                    if (match) return `Grade ${parseInt(match[0], 10)}`;
+                    
+                    return name;
+                };
+
+                return [...new Set(grades.map(standardize))];
+            }
         },
 
         // Metadata
@@ -130,9 +140,6 @@ SubjectSchema.index({ school: 1, status: 1 });
 
 // Index for queries by subject type
 SubjectSchema.index({ subjectType: 1, status: 1 });
-
-// Index for queries by faculty (for filtering)
-SubjectSchema.index({ applicableFaculties: 1 });
 
 // Index for queries by education level (for filtering)
 SubjectSchema.index({ educationLevel: 1 });

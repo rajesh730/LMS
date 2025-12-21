@@ -107,7 +107,6 @@ export async function GET(req, { params }) {
     const marks = await Marks.findById(id)
       .populate("student", "name email rollNumber grade")
       .populate("subject", "name code")
-      .populate("classroom", "name")
       .populate("teacher", "name");
 
     if (!marks) {

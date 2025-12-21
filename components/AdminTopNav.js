@@ -51,6 +51,17 @@ export default function AdminTopNav({ pendingCount = 0 }) {
       >
         <FaLayerGroup /> Groups
       </Link>
+
+      <Link
+        href="/admin/dashboard?tab=academic-years"
+        className={`flex items-center gap-2 px-4 py-2 rounded-t-lg transition whitespace-nowrap ${
+          isDashboard && currentTab === 'academic-years'
+            ? "bg-blue-600 text-white"
+            : "text-slate-400 hover:text-white"
+        }`}
+      >
+        <FaCalendarAlt /> Academic Years
+      </Link>
       
       <Link
         href="/admin/dashboard?tab=events"

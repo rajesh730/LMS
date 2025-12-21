@@ -11,16 +11,16 @@ import {
 } from "react-icons/fa";
 import { useNotification } from "@/components/NotificationSystem";
 
-export default function MarksManager({ classrooms = [] }) {
+export default function MarksManager({ grades = [] }) {
   const [subjects, setSubjects] = useState([]);
-  const [selectedClassroom, setSelectedClassroom] = useState("");
+  const [selectedGrade, setSelectedGrade] = useState("");
   const [selectedSubject, setSelectedSubject] = useState("");
   const [marks, setMarks] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingMark, setEditingMark] = useState(null);
   const [students, setStudents] = useState([]);
-  const [fetchedClassrooms, setFetchedClassrooms] = useState(classrooms);
+  const [fetchedGrades, setFetchedGrades] = useState(grades);
   const { success, error: showError } = useNotification();
 
   const [formData, setFormData] = useState({
@@ -32,49 +32,49 @@ export default function MarksManager({ classrooms = [] }) {
     feedback: "",
   });
 
-  // Fetch classrooms on mount
+  // Fetch grades on mount
   useEffect(() => {
-    const fetchClassrooms = async () => {
+    const fetchGrades = async () => {
       try {
-        const res = await fetch("/api/classrooms");
+        const res = await fetch("/api/grades");
         if (res.ok) {
           const data = await res.json();
-          const classroomsList = Array.isArray(data)
+          const gradesList = Array.isArray(data)
             ? data
-            : data.classrooms || [];
-          setFetchedClassrooms(classroomsList);
+            : data.grades || [];
+          setFetchedGrades(gradesList);
         }
       } catch (err) {
-        console.error("Error fetching classrooms:", err);
+        console.error("Error fetching grades:", err);
       }
     };
 
-    if (classrooms.length === 0) {
-      fetchClassrooms();
+    if (grades.length === 0) {
+      fetchGrades();
     } else {
-      setFetchedClassrooms(classrooms);
+      setFetchedGrades(grades);
     }
-  }, [classrooms]);
+  }, [grades]);
 
-  // Fetch subjects for selected classroom
+  // Fetch subjects for selected grade
   useEffect(() => {
-    if (selectedClassroom) {
+    if (selectedGrade) {
       fetchSubjects();
       fetchStudents();
     }
-  }, [selectedClassroom]);
+  }, [selectedGrade]);
 
   // Fetch marks for selected subject
   useEffect(() => {
-    if (selectedSubject && selectedClassroom) {
+    if (selectedSubject && selectedGrade) {
       fetchMarks();
     }
-  }, [selectedSubject, selectedClassroom]);
+  }, [selectedSubject, selectedGrade]);
 
   const fetchSubjects = async () => {
     try {
       const res = await fetch(
-        `/api/teacher/subjects?classroom=${selectedClassroom}`
+        `/api/teacher/subjects?grade=${selectedGrade}`
       );
       if (res.ok) {
         const data = await res.json();
@@ -88,7 +88,7 @@ export default function MarksManager({ classrooms = [] }) {
   const fetchStudents = async () => {
     try {
       const res = await fetch(
-        `/api/students?classroom=${selectedClassroom}&limit=500`
+        `/api/students?grade=${selectedGrade}&limit=500`
       );
       if (res.ok) {
         const data = await res.json();
@@ -103,7 +103,7 @@ export default function MarksManager({ classrooms = [] }) {
     setLoading(true);
     try {
       const res = await fetch(
-        `/api/marks?subject=${selectedSubject}&classroom=${selectedClassroom}`
+        `/api/marks?subject=${selectedSubject}&grade=${selectedGrade}`
       );
       if (res.ok) {
         const data = await res.json();
@@ -147,7 +147,7 @@ export default function MarksManager({ classrooms = [] }) {
         body: JSON.stringify({
           studentId: formData.studentId,
           subjectId: selectedSubject,
-          classroomId: selectedClassroom,
+          gradeId: selectedGrade,
           ...formData,
         }),
       });
@@ -229,10 +229,10 @@ export default function MarksManager({ classrooms = [] }) {
     }
   };
 
-  if (classrooms.length === 0) {
+  if (grades.length === 0) {
     return (
       <div className="bg-slate-900/50 p-6 rounded-xl border border-slate-800 text-center">
-        <p className="text-slate-400">No classrooms assigned</p>
+        <p className="text-slate-400">No grades assigned</p>
       </div>
     );
   }
@@ -249,15 +249,15 @@ export default function MarksManager({ classrooms = [] }) {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label className="block text-slate-300 font-semibold mb-2">
-              Select Class
+              Select Grade
             </label>
             <select
-              value={selectedClassroom}
-              onChange={(e) => setSelectedClassroom(e.target.value)}
+              value={selectedGrade}
+              onChange={(e) => setSelectedGrade(e.target.value)}
               className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500"
             >
-              <option value="">Choose a class...</option>
-              {fetchedClassrooms.map((cls) => (
+              <option value="">Choose a grade...</option>
+              {fetchedGrades.map((cls) => (
                 <option key={cls._id} value={cls._id}>
                   {cls.name}
                 </option>
@@ -265,7 +265,7 @@ export default function MarksManager({ classrooms = [] }) {
             </select>
           </div>
 
-          {selectedClassroom && (
+          {selectedGrade && (
             <div>
               <label className="block text-slate-300 font-semibold mb-2">
                 Select Subject

@@ -13,30 +13,14 @@ export async function DELETE(req) {
     }
 
     await connectDB();
-    const { studentIds, classroomId } = await req.json();
+    const { studentIds } = await req.json();
 
     const collectEmails = async (filter) => {
       const students = await Student.find(filter).select("email");
       return students.map((s) => s.email).filter(Boolean);
     };
 
-    if (classroomId) {
-      // Delete all students in the class
-      const emails = await collectEmails({
-        classroom: classroomId,
-        school: session.user.id,
-      });
-      await Student.deleteMany({
-        classroom: classroomId,
-        school: session.user.id,
-      });
-      if (emails.length) {
-        await User.deleteMany({ email: { $in: emails } });
-      }
-      return NextResponse.json({
-        message: "All students in class deleted successfully",
-      });
-    } else if (
+    if (
       studentIds &&
       Array.isArray(studentIds) &&
       studentIds.length > 0

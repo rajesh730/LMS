@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { FaGraduationCap, FaSchool, FaUniversity } from "react-icons/fa";
+import { FaGraduationCap, FaSchool } from "react-icons/fa";
 
 export default function EducationConfigCard() {
   const [educationConfig, setEducationConfig] = useState(null);
@@ -52,24 +52,6 @@ export default function EducationConfigCard() {
         details: `Grades 1-${educationConfig.schoolConfig?.maxGrade || 10}`,
       });
     }
-    if (educationConfig.educationLevels?.highSchool) {
-      levels.push({
-        name: "High School",
-        icon: FaGraduationCap,
-        color: "text-green-600",
-        bg: "bg-green-50",
-        details: "Grades 11-12",
-      });
-    }
-    if (educationConfig.educationLevels?.bachelor) {
-      levels.push({
-        name: "Bachelor Level",
-        icon: FaUniversity,
-        color: "text-purple-600",
-        bg: "bg-purple-50",
-        details: "Degree Programs",
-      });
-    }
     return levels;
   };
 
@@ -112,25 +94,6 @@ export default function EducationConfigCard() {
           );
         })}
       </div>
-
-      {educationConfig.schoolConfig?.faculties &&
-        educationConfig.schoolConfig.faculties.length > 0 && (
-          <div className="mt-4 pt-4 border-t border-slate-200">
-            <h4 className="font-medium text-slate-800 mb-2">
-              Available Faculties
-            </h4>
-            <div className="flex flex-wrap gap-2">
-              {educationConfig.schoolConfig.faculties.map((faculty, index) => (
-                <span
-                  key={index}
-                  className="px-3 py-1 bg-indigo-100 text-indigo-800 text-sm rounded-full"
-                >
-                  {faculty}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
     </div>
   );
 }

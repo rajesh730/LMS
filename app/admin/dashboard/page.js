@@ -8,6 +8,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import AdminTopNav from "@/components/AdminTopNav";
 import SendEventForm from "./SendEventForm";
 import EventCard from "./EventCard";
+import AcademicYearManager from "@/components/settings/AcademicYearManager";
 
 // Lazy load the participants view component
 const EventParticipantsView = dynamic(() => import("./EventParticipantsView"), {
@@ -433,7 +434,7 @@ export default function AdminDashboard() {
                   type="text"
                   value={groupName}
                   onChange={(e) => setGroupName(e.target.value)}
-                  placeholder="e.g., High Schools"
+                  placeholder="e.g., Primary Schools"
                   className="w-full bg-slate-800 text-white rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />
@@ -603,6 +604,12 @@ export default function AdminDashboard() {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {activeTab === "academic-years" && (
+        <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800">
+          <AcademicYearManager />
         </div>
       )}
 

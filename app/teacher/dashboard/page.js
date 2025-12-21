@@ -9,6 +9,7 @@ import PasswordField from "@/components/PasswordField";
 import TeacherAttendanceManager from "@/components/TeacherAttendanceManager";
 import AttendanceReports from "@/components/AttendanceReports";
 import MarksManager from "@/components/MarksManager";
+import BulkMarksEntry from "@/components/dashboard/BulkMarksEntry";
 import TeacherSubjectManager from "@/components/TeacherSubjectManager";
 import {
   FaUser,
@@ -22,6 +23,7 @@ export default function TeacherDashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [subjects, setSubjects] = useState([]);
+  const [grades, setGrades] = useState([]);
   const [loading, setLoading] = useState(true);
   const [credentialsModal, setCredentialsModal] = useState({
     isOpen: false,
@@ -30,7 +32,10 @@ export default function TeacherDashboard() {
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
-    if (status === "authenticated") fetchSubjects();
+    if (status === "authenticated") {
+      fetchSubjects();
+      fetchGrades();
+    }
   }, [status, router]);
 
   const fetchSubjects = async () => {
@@ -44,6 +49,18 @@ export default function TeacherDashboard() {
       console.error("Error fetching subjects", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchGrades = async () => {
+    try {
+      const res = await fetch("/api/school/grade-structure");
+      if (res.ok) {
+        const data = await res.json();
+        setGrades(data.grades || []);
+      }
+    } catch (error) {
+      console.error("Error fetching grades", error);
     }
   };
 
@@ -102,7 +119,14 @@ export default function TeacherDashboard() {
         <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
           <FaFileAlt className="text-blue-400" /> Marks & Grades
         </h2>
-        <MarksManager classrooms={[]} />
+        <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800">
+          <h3 className="text-xl font-semibold text-white mb-4">Bulk Marks Entry</h3>
+          <BulkMarksEntry subjects={subjects} grades={grades} />
+        </div>
+        <div className="mt-8">
+          <h3 className="text-xl font-semibold text-white mb-4">Individual Marks Management</h3>
+          <MarksManager />
+        </div>
       </div>
 
       <TeacherSubjectManager />

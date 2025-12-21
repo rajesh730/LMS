@@ -4,7 +4,6 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import connectDB from '@/lib/db';
 import Subject from '@/models/Subject';
 import GradeSubject from '@/models/GradeSubject';
-import FacultySubject from '@/models/FacultySubject';
 import User from '@/models/User';
 
 export async function POST(req) {
@@ -14,15 +13,14 @@ export async function POST(req) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
-    const { name, code, gradeId, facultyId, educationLevel, year, semester, isCustom } = await req.json();
-    console.log('Sync Subject Payload:', { name, code, gradeId, facultyId, educationLevel, year, semester, isCustom, userId: session.user.id });
-
+    const { name, code, gradeId, educationLevel, isCustom, assignedTeacher } = await req.json();
+    
     if (!name || !code) {
       return NextResponse.json({ message: 'Name and Code are required' }, { status: 400 });
     }
 
-    if (!gradeId && !facultyId) {
-      return NextResponse.json({ message: 'Either Grade or Faculty must be specified' }, { status: 400 });
+    if (!gradeId) {
+      return NextResponse.json({ message: 'Grade must be specified' }, { status: 400 });
     }
 
     await connectDB();
@@ -36,7 +34,7 @@ export async function POST(req) {
       // Handle Custom/Extra Subject (School Specific)
       // Check if this school already has this custom subject by CODE first (Code should be unique per school)
       // Or by Name? Usually Code is the strict identifier.
-      // The user says: "if subject code and subject ,and grade or faculty match then do not entry"
+      // The user says: "if subject code and subject ,and grade match then do not entry"
       
       // First, try to find by Code within this school
       subject = await Subject.findOne({
@@ -91,8 +89,10 @@ export async function POST(req) {
     } else {
       // Handle Global Subject (Standard Logic)
       // Case-insensitive search for GLOBAL subject
+      // MUST include code to distinguish between subjects with same name (e.g. Math 001 vs Math 002)
       subject = await Subject.findOne({
         name: { $regex: new RegExp(`^${name}$`, 'i') },
+        code: code,
         subjectType: 'GLOBAL'
       });
 
@@ -136,27 +136,54 @@ export async function POST(req) {
       }
     }
 
-    // 2. Link to School Context (Grade or Faculty)
+    // 2. Link to School Context (Grade)
 
     try {
       if (gradeId) {
-        // Check if already assigned to this grade
+        // Check if already assigned to this grade (by ID)
         const existingLink = await GradeSubject.findOne({
           school: schoolId,
           grade: gradeId,
           subject: subject._id
         });
 
+        // Also check if ANY subject with this CODE is already assigned to this grade
+        // This prevents duplicate codes in the same grade (e.g. MTH001 global and MTH001 custom)
+        if (!existingLink) {
+            // Find all subjects assigned to this grade
+            const gradeSubjects = await GradeSubject.find({
+                school: schoolId,
+                grade: gradeId,
+                status: 'ACTIVE'
+            }).populate('subject');
+
+            const duplicateCode = gradeSubjects.find(gs => gs.subject && gs.subject.code === code);
+            
+            if (duplicateCode) {
+                 return NextResponse.json({ 
+                  message: `A subject with code '${code}' (${duplicateCode.subject.name}) is already assigned to this grade.`,
+                  subject 
+                }, { status: 409 });
+            }
+        }
+
         if (existingLink) {
           if (existingLink.status === 'INACTIVE') {
             // Reactivate
             existingLink.status = 'ACTIVE';
+            if (assignedTeacher !== undefined) existingLink.assignedTeacher = assignedTeacher;
             await existingLink.save();
           } else {
-            return NextResponse.json({ 
-              message: 'Subject already assigned to this grade',
-              subject 
-            }, { status: 409 });
+            // If already active, we might just want to update the teacher if provided
+            if (assignedTeacher !== undefined) {
+                existingLink.assignedTeacher = assignedTeacher;
+                await existingLink.save();
+            } else {
+                return NextResponse.json({ 
+                  message: 'Subject already assigned to this grade',
+                  subject 
+                }, { status: 409 });
+            }
           }
         } else {
           await GradeSubject.create({
@@ -167,42 +194,8 @@ export async function POST(req) {
             fullMarks: 100, // Default
             passMarks: 40,   // Default
             createdBy: session.user.id, // Required by schema
-            status: 'ACTIVE'
-          });
-        }
-      } else if (facultyId) {
-        // Check if already assigned to this faculty (and year/sem if applicable)
-        const query = {
-          school: schoolId,
-          faculty: facultyId,
-          subject: subject._id
-        };
-        
-        if (year) query.year = year;
-        if (semester) query.semester = semester;
-
-        const existingLink = await FacultySubject.findOne(query);
-
-        if (existingLink) {
-          if (existingLink.status === 'INACTIVE') {
-            // Reactivate
-            existingLink.status = 'ACTIVE';
-            await existingLink.save();
-          } else {
-            return NextResponse.json({ 
-              message: 'Subject already assigned to this faculty/semester',
-              subject 
-            }, { status: 409 });
-          }
-        } else {
-          await FacultySubject.create({
-            school: schoolId,
-            faculty: facultyId,
-            subject: subject._id,
             status: 'ACTIVE',
-            year: year || 1,
-            semester: semester || 1,
-            addedBy: session.user.id
+            assignedTeacher: assignedTeacher || null
           });
         }
       }
