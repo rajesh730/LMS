@@ -17,6 +17,7 @@ import {
   FaCalendarCheck,
   FaChartBar,
   FaFileAlt,
+  FaExclamationTriangle,
 } from "react-icons/fa";
 
 export default function TeacherDashboard() {
@@ -25,6 +26,7 @@ export default function TeacherDashboard() {
   const [subjects, setSubjects] = useState([]);
   const [grades, setGrades] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isRestricted, setIsRestricted] = useState(false);
   const [credentialsModal, setCredentialsModal] = useState({
     isOpen: false,
     credentials: null,
@@ -41,6 +43,10 @@ export default function TeacherDashboard() {
   const fetchSubjects = async () => {
     try {
       const res = await fetch("/api/teacher/subjects");
+      if (res.status === 403) {
+        setIsRestricted(true);
+        return;
+      }
       if (res.ok) {
         const data = await res.json();
         setSubjects(data.subjects);
@@ -65,6 +71,25 @@ export default function TeacherDashboard() {
   };
 
   if (loading) return <div className="p-8 text-white">Loading...</div>;
+
+  if (isRestricted) {
+    return (
+      <DashboardLayout>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-8">
+          <div className="bg-yellow-500/10 p-6 rounded-full mb-6">
+            <FaExclamationTriangle className="text-6xl text-yellow-500" />
+          </div>
+          <h1 className="text-3xl font-bold text-white mb-4">
+            Academic Year Not Active
+          </h1>
+          <p className="text-slate-400 max-w-md text-lg mb-8">
+            The school administrator has not activated the current academic year yet. 
+            Please contact your school administration to enable dashboard access.
+          </p>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>

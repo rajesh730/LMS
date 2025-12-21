@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { FaCalendarAlt, FaBookOpen, FaGamepad } from "react-icons/fa";
+import { FaCalendarAlt, FaBookOpen, FaGamepad, FaExclamationTriangle } from "react-icons/fa";
 
 export default function StudentClassContent() {
   const [data, setData] = useState({ events: [], notes: [], games: [] });
@@ -15,6 +15,12 @@ export default function StudentClassContent() {
         const res = await fetch("/api/student/class-content", {
           cache: "no-store",
         });
+        
+        if (res.status === 403) {
+            setError("ACADEMIC_YEAR_RESTRICTED");
+            return;
+        }
+
         if (!res.ok) {
           const msg = `Failed to load class content (status ${res.status})`;
           throw new Error(msg);
@@ -39,6 +45,18 @@ export default function StudentClassContent() {
         Loading your class updates...
       </div>
     );
+  }
+
+  if (error === "ACADEMIC_YEAR_RESTRICTED") {
+      return (
+        <div className="flex flex-col items-center justify-center p-8 text-center bg-slate-900/50 rounded-2xl border border-slate-800">
+            <FaExclamationTriangle className="text-5xl text-yellow-500 mb-4" />
+            <h3 className="text-xl font-bold text-white mb-2">Academic Year Not Active</h3>
+            <p className="text-slate-400">
+                The school year has not started yet. Please check back later.
+            </p>
+        </div>
+      );
   }
 
   if (error) {

@@ -10,6 +10,8 @@ import Chapter from "@/models/Chapter";
 import Question from "@/models/Question";
 import Grade from "@/models/Grade";
 
+import { validateActiveYear, missingYearResponse } from "@/lib/guards";
+
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
@@ -19,13 +21,23 @@ export async function GET() {
 
     await connectDB();
 
-    const student = await Student.findById(session.user.id).select("grade");
+    const student = await Student.findById(session.user.id).select("grade school");
     if (!student) {
       return NextResponse.json({
         success: true,
         data: { events: [], notes: [], games: [] },
         message: "Student not found",
       });
+    }
+
+    // Validate Active Year
+    try {
+        await validateActiveYear(student.school);
+    } catch (error) {
+        if (error.message === "NO_ACTIVE_YEAR") {
+            return missingYearResponse();
+        }
+        throw error;
     }
 
     const gradeName = student.grade;

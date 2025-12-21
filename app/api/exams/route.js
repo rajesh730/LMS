@@ -2,6 +2,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import Exam from "@/models/Exam";
+import Student from "@/models/Student";
+import Teacher from "@/models/Teacher";
 import { NextResponse } from "next/server";
 import { validateActiveYear, missingYearResponse } from "@/lib/guards";
 
@@ -15,37 +17,40 @@ export async function GET(req) {
     }
 
     const { searchParams } = new URL(req.url);
-    const academicYear = searchParams.get("academicYear");
     const status = searchParams.get("status");
 
-    let query = {};
+    let schoolId = null;
 
-    // If user is a school admin, filter by their ID
-    if (session.user.role === "admin") {
-      query.school = session.user.id;
-    } 
-    // If user is teacher or student, we need to find their school
-    else if (session.user.role === "teacher" || session.user.role === "student") {
-      // Assuming the session or user object has a schoolId or we need to fetch it.
-      // For now, let's assume the school ID is passed or we can derive it.
-      // In this system, usually teachers/students are linked to a school.
-      // Let's check the session structure or User model if needed.
-      // For simplicity, if schoolId is passed in query, use it, otherwise rely on session if available.
-      
-      if (session.user.schoolId) {
-         query.school = session.user.schoolId;
-      } else {
-         // Fallback: if the user is a teacher/student, they should be associated with a school.
-         // We might need to fetch the user to get the school ID if it's not in the session.
-         // For now, let's assume the client passes the school ID or we filter by what we know.
-         // If we can't determine school, we might return empty or error.
-         // However, usually in this app, we might want to allow fetching if the user belongs to the school.
-      }
+    // Determine School ID based on Role
+    if (session.user.role === "SCHOOL_ADMIN" || session.user.role === "admin") {
+      schoolId = session.user.id;
+    } else if (session.user.role === "TEACHER") {
+      const teacher = await Teacher.findOne({ email: session.user.email });
+      if (teacher) schoolId = teacher.school;
+    } else if (session.user.role === "STUDENT") {
+      const student = await Student.findOne({ email: session.user.email });
+      if (student) schoolId = student.school;
     }
 
-    if (academicYear) {
-      query.academicYear = academicYear;
+    if (!schoolId) {
+      return NextResponse.json({ error: "School not found for user" }, { status: 404 });
     }
+
+    // GUARD: Ensure Active Academic Year
+    let activeYearId;
+    try {
+        activeYearId = await validateActiveYear(schoolId);
+    } catch (error) {
+        if (error.message === "NO_ACTIVE_YEAR") {
+            return missingYearResponse();
+        }
+        throw error;
+    }
+
+    let query = {
+      school: schoolId,
+      academicYear: activeYearId // Only fetch exams for the active year
+    };
 
     if (status) {
       query.status = status;

@@ -5,6 +5,7 @@ import connectDB from '@/lib/db';
 import Subject from '@/models/Subject';
 import Teacher from '@/models/Teacher';
 import Grade from '@/models/Grade';
+import { validateActiveYear, missingYearResponse } from '@/lib/guards';
 
 export async function GET(req) {
     try {
@@ -22,6 +23,17 @@ export async function GET(req) {
             if (!teacherDoc) {
                 return NextResponse.json({ message: 'Teacher profile not found' }, { status: 404 });
             }
+            
+            // Validate Active Year
+            try {
+                await validateActiveYear(teacherDoc.school);
+            } catch (error) {
+                if (error.message === "NO_ACTIVE_YEAR") {
+                    return missingYearResponse();
+                }
+                throw error;
+            }
+
             teacherId = teacherDoc._id;
         }
 
