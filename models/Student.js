@@ -122,6 +122,32 @@ const StudentSchema = new mongoose.Schema(
       type: String,
       sparse: true,
     },
+    parentAccessPin: {
+      type: String,
+      minlength: 4,
+      maxlength: 4,
+      default: "1234", // Default PIN, should be changed by parent
+    },
+
+    // Gamification
+    gamification: {
+      totalPoints: {
+        type: Number,
+        default: 0,
+      },
+      badges: [
+        {
+          id: String, // e.g., "math_wizard"
+          name: String, // e.g., "Math Wizard"
+          description: String,
+          icon: String,
+          earnedAt: {
+            type: Date,
+            default: Date.now,
+          },
+        },
+      ],
+    },
     
     // Legacy field - kept for backward compatibility
     visiblePassword: {

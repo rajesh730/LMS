@@ -6,7 +6,6 @@ import Teacher from "@/models/Teacher";
 import User from "@/models/User";
 import bcrypt from "bcryptjs";
 import { generateStrongPassword } from "@/lib/passwordGenerator";
-import { validateActiveYear, missingYearResponse } from "@/lib/guards";
 
 export async function POST(req) {
   try {
@@ -17,61 +16,103 @@ export async function POST(req) {
 
     await connectDB();
 
-    // GUARD: Ensure Active Academic Year
-    try {
-        await validateActiveYear(session.user.id);
-    } catch (error) {
-        if (error.message === "NO_ACTIVE_YEAR") {
-            return missingYearResponse();
-        }
-        throw error;
-    }
-
     const body = await req.json();
 
     if (Array.isArray(body)) {
       // Bulk Import
       const teachersToCreate = [];
+      const usersToCreate = [];
+      const generatedCredentials = [];
+      const emails = body
+        .map((teacher) => teacher.email)
+        .filter(Boolean)
+        .map((email) => email.toLowerCase());
 
-      body.forEach((t, index) => {
+      const [existingTeachers, existingUsers] = await Promise.all([
+        Teacher.find({ email: { $in: emails } }).select("email").lean(),
+        User.find({ email: { $in: emails } }).select("email").lean(),
+      ]);
+
+      const existingEmails = new Set([
+        ...existingTeachers.map((teacher) => teacher.email.toLowerCase()),
+        ...existingUsers.map((user) => user.email.toLowerCase()),
+      ]);
+
+      if (existingEmails.size > 0) {
+        return NextResponse.json(
+          {
+            message: `Some mentor emails already exist: ${Array.from(existingEmails).join(", ")}`,
+          },
+          { status: 409 },
+        );
+      }
+
+      for (const t of body) {
+        const plainPassword = t.password || generateStrongPassword();
+        const hashedPassword = await bcrypt.hash(plainPassword, 10);
         const teacherData = {
           name: t.name,
           email: t.email,
           phone: t.phone,
           subject: t.subject || "General", // Default if not provided
-          roles: t.roles || ["SUBJECT_TEACHER"],
+          roles: t.roles || ["MENTOR"],
+          password: hashedPassword,
+          visiblePassword: plainPassword,
           school: session.user.id,
         };
         teachersToCreate.push(teacherData);
-      });
+        usersToCreate.push({
+          email: t.email,
+          password: hashedPassword,
+          role: "TEACHER",
+          schoolName: session.user.name,
+          status: "APPROVED",
+        });
+        generatedCredentials.push({
+          name: t.name,
+          email: t.email,
+          password: plainPassword,
+        });
+      }
 
       try {
         const createdTeachers = await Teacher.insertMany(teachersToCreate, {
           ordered: true,
-        }); // Ordered true to map by index
+        });
+        await User.insertMany(usersToCreate, { ordered: true });
 
         return NextResponse.json(
           {
-            message: "Teachers imported successfully",
+            message: "Mentors imported successfully",
             count: createdTeachers.length,
+            credentials: generatedCredentials,
           },
-          { status: 201 }
+          { status: 201 },
         );
       } catch (bulkError) {
         console.error("Bulk Import Error", bulkError);
         return NextResponse.json(
           { message: "Error importing teachers. Emails must be unique." },
-          { status: 500 }
+          { status: 500 },
         );
       }
     } else {
       // Single Creation
-      let { name, email, phone, subject, roles, assignments, password, employmentType } = body;
+      let {
+        name,
+        email,
+        phone,
+        subject,
+        roles,
+        assignments,
+        password,
+        employmentType,
+      } = body;
 
       if (!name || !email) {
         return NextResponse.json(
           { message: "Name and Email are required" },
-          { status: 400 }
+          { status: 400 },
         );
       }
 
@@ -80,21 +121,24 @@ export async function POST(req) {
         password = generateStrongPassword();
       }
 
+      const hashedPassword = await bcrypt.hash(password, 10);
+
       const newTeacher = await Teacher.create({
         name,
         email,
         phone,
         subject: subject || "General",
-        roles: roles || ["SUBJECT_TEACHER"],
+        roles: roles || ["MENTOR"],
         employmentType: employmentType || "FULL_TIME",
         visiblePassword: password,
+        password: hashedPassword,
         school: session.user.id,
       });
 
       // Create User account for Teacher
       const existingUser = await User.findOne({ email });
       if (!existingUser) {
-        const hashedPassword = await bcrypt.hash(password, 10);
+        // const hashedPassword = await bcrypt.hash(password, 10); // Already hashed above
         await User.create({
           email,
           password: hashedPassword,
@@ -114,14 +158,14 @@ export async function POST(req) {
           teacher: newTeacher,
           credentials: { email, password },
         },
-        { status: 201 }
+        { status: 201 },
       );
     }
   } catch (error) {
     console.error("Create Teacher Error:", error);
     return NextResponse.json(
       { message: "Error creating teacher(s)" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -142,13 +186,13 @@ export async function PUT(req, { params }) {
     const updatedTeacher = await Teacher.findByIdAndUpdate(
       id,
       { name, email, phone, subject, roles },
-      { new: true }
+      { new: true },
     );
 
     if (!updatedTeacher) {
       return NextResponse.json(
         { message: "Teacher not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -158,13 +202,13 @@ export async function PUT(req, { params }) {
 
     return NextResponse.json(
       { message: "Teacher updated", teacher: updatedTeacher },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error) {
     console.error("Update Teacher Error:", error);
     return NextResponse.json(
       { message: "Error updating teacher" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -183,7 +227,7 @@ export async function DELETE(req, { params }) {
     if (!teacherDoc) {
       return NextResponse.json(
         { message: "Teacher not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -199,7 +243,7 @@ export async function DELETE(req, { params }) {
     console.error("Delete Teacher Error:", error);
     return NextResponse.json(
       { message: "Error deleting teacher" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -246,26 +290,29 @@ export async function GET(req) {
       return {
         ...t,
         detailedRoles: {
-          classTeacherOf: [],
-          subjectTeacherOf: [],
+          activityLeadOf: [],
+          mentorOf: [],
         },
       };
     });
 
-    return NextResponse.json({ 
+    return NextResponse.json(
+      {
         teachers: teachersWithRoles,
         pagination: {
-            page,
-            totalPages,
-            totalTeachers,
-            limit
-        }
-    }, { status: 200 });
+          page,
+          totalPages,
+          totalTeachers,
+          limit,
+        },
+      },
+      { status: 200 },
+    );
   } catch (error) {
     console.error("Fetch Teachers Error:", error);
     return NextResponse.json(
       { message: "Error fetching teachers" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -285,23 +332,28 @@ export async function PATCH(req, { params }) {
     if (!teacherDoc) {
       return NextResponse.json(
         { message: "Teacher not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
     const newPassword = generateStrongPassword();
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
     await Teacher.findByIdAndUpdate(
       id,
-      { visiblePassword: newPassword },
-      { new: true }
+      {
+        visiblePassword: newPassword,
+        password: hashedPassword,
+      },
+      { new: true },
     );
 
     // Also update User password
     if (teacherDoc.email) {
-      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      // const hashedPassword = await bcrypt.hash(newPassword, 10); // Already hashed
       await User.findOneAndUpdate(
         { email: teacherDoc.email },
-        { password: hashedPassword }
+        { password: hashedPassword },
       );
     }
 
@@ -310,13 +362,13 @@ export async function PATCH(req, { params }) {
         message: "Password reset successfully",
         credentials: { email: teacherDoc.email, password: newPassword },
       },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error) {
     console.error("Reset Teacher Password Error:", error);
     return NextResponse.json(
       { message: "Error resetting password" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -2,18 +2,17 @@
 
 import Link from 'next/link';
 import { useSearchParams, usePathname } from 'next/navigation';
-import { FaCheckCircle, FaSchool, FaLayerGroup, FaCalendarAlt, FaBook } from 'react-icons/fa';
+import { FaCheckCircle, FaSchool, FaLayerGroup, FaCalendarAlt, FaTrophy, FaHandshake } from 'react-icons/fa';
 
 export default function AdminTopNav({ pendingCount = 0 }) {
   const searchParams = useSearchParams();
   const pathname = usePathname();
-  const currentTab = searchParams.get('tab') || 'approvals';
+  const rawTab = searchParams.get("tab") || "approvals";
+  const currentTab = rawTab === "judging" ? "results" : rawTab;
   
   const isDashboard = pathname === '/admin/dashboard';
-  const isCurriculum = pathname === '/admin/curriculum';
-
   return (
-    <div className="flex gap-4 mb-8 border-b border-slate-800 pb-1 overflow-x-auto">
+    <div className="flex gap-4 mb-8 border-b border-slate-800 pb-1 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
       <Link
         href="/admin/dashboard?tab=approvals"
         className={`flex items-center gap-2 px-4 py-2 rounded-t-lg transition whitespace-nowrap ${
@@ -53,17 +52,6 @@ export default function AdminTopNav({ pendingCount = 0 }) {
       </Link>
 
       <Link
-        href="/admin/dashboard?tab=academic-years"
-        className={`flex items-center gap-2 px-4 py-2 rounded-t-lg transition whitespace-nowrap ${
-          isDashboard && currentTab === 'academic-years'
-            ? "bg-blue-600 text-white"
-            : "text-slate-400 hover:text-white"
-        }`}
-      >
-        <FaCalendarAlt /> Academic Years
-      </Link>
-      
-      <Link
         href="/admin/dashboard?tab=events"
         className={`flex items-center gap-2 px-4 py-2 rounded-t-lg transition whitespace-nowrap ${
           isDashboard && currentTab === 'events'
@@ -71,18 +59,29 @@ export default function AdminTopNav({ pendingCount = 0 }) {
             : "text-slate-400 hover:text-white"
         }`}
       >
-        <FaCalendarAlt /> Events
+        <FaCalendarAlt /> Platform Events
       </Link>
 
       <Link
-        href="/admin/curriculum"
+        href="/admin/dashboard?tab=partners"
         className={`flex items-center gap-2 px-4 py-2 rounded-t-lg transition whitespace-nowrap ${
-          isCurriculum
+          isDashboard && currentTab === "partners"
             ? "bg-blue-600 text-white"
             : "text-slate-400 hover:text-white"
         }`}
       >
-        <FaBook /> Curriculum
+        <FaHandshake /> Partners
+      </Link>
+
+      <Link
+        href="/admin/dashboard?tab=results"
+        className={`flex items-center gap-2 px-4 py-2 rounded-t-lg transition whitespace-nowrap ${
+          isDashboard && currentTab === "results"
+            ? "bg-blue-600 text-white"
+            : "text-slate-400 hover:text-white"
+        }`}
+      >
+        <FaTrophy /> Results
       </Link>
     </div>
   );

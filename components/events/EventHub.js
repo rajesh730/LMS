@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useCallback, useEffect, useState } from "react";
 import {
   FaCalendarAlt,
   FaClock,
@@ -19,7 +20,7 @@ import {
 import EventParticipationForm from "./EventParticipationForm";
 import { useSession } from "next-auth/react";
 
-export default function EventHub() {
+export default function EventHub({ refreshKey = 0 }) {
   const { data: session } = useSession();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -27,9 +28,30 @@ export default function EventHub() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("all"); // all, participated, pending, approved, rejected
 
+  const fetchEvents = useCallback(async () => {
+    try {
+      setLoading(true);
+      // Use different endpoint based on user role
+      const endpoint =
+        session?.user?.role === "STUDENT"
+          ? "/api/events/hub/available"
+          : "/api/events";
+
+      const res = await fetch(endpoint);
+      if (res.ok) {
+        const data = await res.json();
+        setEvents(data.events || data || []);
+      }
+    } catch (error) {
+      console.error("Error fetching events:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [session?.user?.role]);
+
   useEffect(() => {
     fetchEvents();
-  }, []);
+  }, [fetchEvents, refreshKey]);
 
   const handleWithdraw = async (eventId) => {
     if (
@@ -57,28 +79,16 @@ export default function EventHub() {
     }
   };
 
-  const fetchEvents = async () => {
-    try {
-      setLoading(true);
-      // Use different endpoint based on user role
-      const endpoint =
-        session?.user?.role === "STUDENT"
-          ? "/api/events/hub/available"
-          : "/api/events";
-
-      const res = await fetch(endpoint);
-      if (res.ok) {
-        const data = await res.json();
-        setEvents(data.events || data || []);
-      }
-    } catch (error) {
-      console.error("Error fetching events:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const filteredEvents = events.filter((event) => {
+    if (
+      session?.user?.role === "SCHOOL_ADMIN" &&
+      event.eventScope === "PLATFORM" &&
+      event.schoolInvitationStatus !== "APPROVED" &&
+      !event.participationStatus
+    ) {
+      return false;
+    }
+
     const matchesSearch = event.title
       .toLowerCase()
       .includes(searchQuery.toLowerCase());
@@ -328,6 +338,16 @@ export default function EventHub() {
 
                       {event.participationStatus ? (
                         <div className="flex gap-2">
+                          {event.visibility === "PUBLIC" && (
+                            <Link
+                              href={`/events/${event._id}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="bg-slate-700 hover:bg-slate-600 text-slate-100 px-3 py-2 rounded-lg transition-colors"
+                              title="View public event page"
+                            >
+                              View Page
+                            </Link>
+                          )}
                           {session?.user?.role === "SCHOOL_ADMIN" && (
                             <>
                               <button
@@ -358,16 +378,27 @@ export default function EventHub() {
                           )}
                         </div>
                       ) : (
-                        <div
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setExpandedEventId(event._id);
-                          }}
-                          className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap cursor-pointer"
-                        >
-                          {session?.user?.role === "STUDENT"
-                            ? "Join Event"
-                            : "Register Participants"}
+                        <div className="flex gap-2">
+                          {event.visibility === "PUBLIC" && (
+                            <Link
+                              href={`/events/${event._id}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="bg-slate-700 hover:bg-slate-600 text-slate-100 px-3 py-2 rounded-lg transition-colors"
+                            >
+                              View Page
+                            </Link>
+                          )}
+                          <div
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setExpandedEventId(event._id);
+                            }}
+                            className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap cursor-pointer"
+                          >
+                            {session?.user?.role === "STUDENT"
+                              ? "Join Event"
+                              : "Register Participants"}
+                          </div>
                         </div>
                       )}
                     </div>

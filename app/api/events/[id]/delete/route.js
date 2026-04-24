@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import Event from "@/models/Event";
+import EventSchoolInvitation from "@/models/EventSchoolInvitation";
+import ParticipationRequest from "@/models/ParticipationRequest";
 
 export async function POST(req, props) {
   try {
@@ -27,6 +29,11 @@ export async function POST(req, props) {
     if (!deletedEvent) {
       return NextResponse.json({ message: "Event not found" }, { status: 404 });
     }
+
+    await Promise.all([
+      EventSchoolInvitation.deleteMany({ event: id }),
+      ParticipationRequest.deleteMany({ event: id }),
+    ]);
 
     return NextResponse.json(
       { message: "Event deleted via POST" },

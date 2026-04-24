@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import Event from "@/models/Event";
+import EventSchoolInvitation from "@/models/EventSchoolInvitation";
 import Student from "@/models/Student";
 import ParticipationRequest from "@/models/ParticipationRequest";
 
@@ -26,7 +27,7 @@ export async function GET(req) {
     await connectDB();
 
     // Get student's grade from Student model
-    const student = await Student.findById(session.user.id).select("grade");
+    const student = await Student.findById(session.user.id).select("grade school");
 
     if (!student) {
       return NextResponse.json(
@@ -43,9 +44,22 @@ export async function GET(req) {
     }
 
     const studentGrade = student.grade;
+    const approvedPlatformEventIds = student.school
+      ? await EventSchoolInvitation.find({
+          school: student.school,
+          status: "APPROVED",
+        }).distinct("event")
+      : [];
 
     // Get all APPROVED events (status-filtered by event creation role)
-    const events = await Event.find({ status: "APPROVED" })
+    const events = await Event.find({
+      status: "APPROVED",
+      lifecycleStatus: "ACTIVE",
+      $or: [
+        { eventScope: "SCHOOL", school: student.school },
+        { eventScope: "PLATFORM", _id: { $in: approvedPlatformEventIds } },
+      ],
+    })
       .populate("targetGroup", "name grades")
       .populate("participants.school", "schoolName _id")
       .populate("participants.students", "_id")

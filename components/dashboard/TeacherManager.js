@@ -4,8 +4,10 @@ import { useState, useEffect, useCallback } from "react";
 import {
   FaChalkboardTeacher,
   FaSearch,
+  FaKey,
 } from "react-icons/fa";
 import PaginationControls from "@/components/PaginationControls";
+import CredentialsModal from "@/components/CredentialsModal";
 
 export default function TeacherManager() {
   // Data State
@@ -17,6 +19,10 @@ export default function TeacherManager() {
     totalTeachers: 0,
     limit: 10,
   });
+
+  // Modal State
+  const [selectedCredentials, setSelectedCredentials] = useState(null);
+  const [isCredentialsModalOpen, setIsCredentialsModalOpen] = useState(false);
 
   // Filters & Search
   const [search, setSearch] = useState("");
@@ -68,6 +74,15 @@ export default function TeacherManager() {
     fetchTeachers(newPage);
   };
 
+  const handleViewCredentials = (teacher) => {
+    setSelectedCredentials({
+      username: teacher.email,
+      email: teacher.email,
+      password: teacher.visiblePassword || "Not available",
+    });
+    setIsCredentialsModalOpen(true);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header & Controls */}
@@ -93,20 +108,21 @@ export default function TeacherManager() {
                 <th className="p-4">Teacher</th>
                 <th className="p-4">Contact</th>
                 <th className="p-4">Details</th>
-                <th className="p-4">Role & Subject</th>
+                <th className="p-4">Role & Focus Area</th>
                 <th className="p-4">Status</th>
+                <th className="p-4">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800">
               {loading ? (
                 <tr>
-                  <td colSpan="5" className="p-8 text-center text-slate-500">
+                  <td colSpan="6" className="p-8 text-center text-slate-500">
                     Loading teachers...
                   </td>
                 </tr>
               ) : teachers.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="p-8 text-center text-slate-500">
+                  <td colSpan="6" className="p-8 text-center text-slate-500">
                     No teachers found.
                   </td>
                 </tr>
@@ -142,12 +158,21 @@ export default function TeacherManager() {
                           </span>
                         ))}
                       </div>
-                      <div className="text-xs text-emerald-400">{teacher.subject}</div>
+                      <div className="text-xs text-emerald-400">{teacher.subject || "General mentoring"}</div>
                     </td>
                     <td className="p-4">
                         <span className="bg-emerald-500/10 text-emerald-400 px-2 py-1 rounded text-xs">
                             Active
                         </span>
+                    </td>
+                    <td className="p-4">
+                      <button
+                        onClick={() => handleViewCredentials(teacher)}
+                        className="text-slate-400 hover:text-emerald-400 transition-colors"
+                        title="View Credentials"
+                      >
+                        <FaKey />
+                      </button>
                     </td>
                   </tr>
                 ))
@@ -167,6 +192,12 @@ export default function TeacherManager() {
             </div>
         )}
       </div>
+
+      <CredentialsModal
+        isOpen={isCredentialsModalOpen}
+        credentials={selectedCredentials}
+        onClose={() => setIsCredentialsModalOpen(false)}
+      />
     </div>
   );
 }

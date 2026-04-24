@@ -937,7 +937,7 @@ export default function RegisterPage() {
             School Theme Colors
           </h3>
           <p className="text-slate-300 mb-6">
-            Choose colors that represent your school's identity
+            Choose colors that represent your school&apos;s identity
           </p>
 
           <div className="mb-6">
@@ -977,7 +977,7 @@ export default function RegisterPage() {
                 </span>
               </label>
               <p className="text-slate-400 text-sm ml-7">
-                Customize colors to match your school's branding
+                Customize colors to match your school&apos;s branding
               </p>
             </div>
           </div>

@@ -52,8 +52,8 @@ export async function POST(req) {
       }
     }
 
-    // Hash password - DISABLED as per request
-    // const hashedPassword = await hashPassword(password);
+    // Hash password
+    const hashedPassword = await hashPassword(password);
 
     // Check if student already exists
     const existingStudent = await Student.findOne({
@@ -88,7 +88,8 @@ export async function POST(req) {
     const newStudent = new Student({
       // Login credentials
       username,
-      password: password, // Storing plain text password as requested
+      password: hashedPassword,
+      visiblePassword: password, // Store plain text for admin visibility
 
       // Student details
       firstName,

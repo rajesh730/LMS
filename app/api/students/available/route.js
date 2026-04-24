@@ -14,8 +14,14 @@ export async function GET(req) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session) {
+    if (!session || !["SCHOOL_ADMIN", "TEACHER"].includes(session.user.role)) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
+    const schoolId =
+      session.user.role === "SCHOOL_ADMIN" ? session.user.id : session.user.schoolId;
+    if (!schoolId) {
+      return NextResponse.json({ message: "Forbidden" }, { status: 403 });
     }
 
     await dbConnect();
@@ -33,6 +39,7 @@ export async function GET(req) {
     // Get students already in this event
     const enrolledRequests = await ParticipationRequest.find({
       event: eventId,
+      school: schoolId,
       status: { $in: ["APPROVED", "ENROLLED"] },
     }).select("student");
 
@@ -41,6 +48,7 @@ export async function GET(req) {
     // Get all available students
     const students = await Student.find({
       _id: { $nin: enrolledStudentIds },
+      school: schoolId,
       status: "ACTIVE",
     })
       .select("name email grade")

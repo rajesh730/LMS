@@ -12,7 +12,7 @@ export default async function StudentEventsPage() {
   const session = await getServerSession(authOptions);
 
   if (!session) {
-    redirect("/auth/login");
+    redirect("/login");
   }
 
   if (session.user.role !== "STUDENT") {

@@ -21,7 +21,7 @@ export default function StudentLogin() {
 
     try {
       const result = await signIn("credentials", {
-        username,
+        email: username.trim(),
         password,
         redirect: false,
       });
@@ -84,7 +84,7 @@ export default function StudentLogin() {
             {/* Username Field */}
             <div>
               <label htmlFor="username" className="block text-sm font-semibold text-gray-700 mb-2">
-                Username
+                Username or Email
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
@@ -95,7 +95,7 @@ export default function StudentLogin() {
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Enter your username"
+                  placeholder="Enter your username or email"
                   required
                   disabled={loading}
                   className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition disabled:bg-gray-100 disabled:cursor-not-allowed"
@@ -133,7 +133,7 @@ export default function StudentLogin() {
               </div>
             </div>
 
-            {/* Remember Me & Forgot Password */}
+            {/* Remember Me & Help */}
             <div className="flex items-center justify-between">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
@@ -142,12 +142,12 @@ export default function StudentLogin() {
                 />
                 <span className="text-sm text-gray-600">Remember me</span>
               </label>
-              <Link
-                href="/student/forgot-password"
+              <a
+                href="mailto:support@egrantha.com"
                 className="text-sm text-blue-600 hover:text-blue-700 font-medium transition"
               >
-                Forgot password?
-              </Link>
+                Need help logging in?
+              </a>
             </div>
 
             {/* Login Button */}
@@ -192,7 +192,7 @@ export default function StudentLogin() {
           {/* Other Options */}
           <div className="space-y-3">
             <Link
-              href="/(auth)/login"
+              href="/login"
               className="block w-full text-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium"
             >
               Parent Portal

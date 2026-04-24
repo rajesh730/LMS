@@ -6,8 +6,43 @@ import Event from "@/models/Event";
 import Group from "@/models/Group";
 import Student from "@/models/Student";
 import ParticipationRequest from "@/models/ParticipationRequest";
+import EventProposal from "@/models/EventProposal";
+import EventSchoolInvitation from "@/models/EventSchoolInvitation";
+import {
+  ensureSchoolInvitationsForPublishedEvents,
+  syncEventSchoolInvitations,
+} from "@/lib/eventInvitations";
+import "@/models/ExternalOrganizer";
 
 export const dynamic = "force-dynamic";
+
+const EVENT_PARTNER_ROLES = [
+  "ORGANIZER_PARTNER",
+  "CHALLENGE_PARTNER",
+  "SPONSOR",
+  "VENUE_PARTNER",
+  "MENTOR_PARTNER",
+  "MEDIA_PARTNER",
+  "PRESENTED_BY",
+  "OTHER",
+];
+
+function normalizeEventPartners(partners) {
+  if (!Array.isArray(partners)) return [];
+
+  return partners
+    .filter((partner) => partner?.organizer || partner?.displayName)
+    .map((partner, index) => ({
+      organizer: partner.organizer || null,
+      role: EVENT_PARTNER_ROLES.includes(partner.role)
+        ? partner.role
+        : "ORGANIZER_PARTNER",
+      displayName: partner.displayName || "",
+      logoUrl: partner.logoUrl || "",
+      website: partner.website || "",
+      isPrimary: index === 0 ? true : Boolean(partner.isPrimary),
+    }));
+}
 
 export async function POST(req) {
   try {
@@ -25,10 +60,20 @@ export async function POST(req) {
       description,
       date,
       targetGroup,
+      eventScope,
+      eventType,
+      visibility,
+      registrationMode,
+      featuredOnLanding,
+      publicHighlightsEnabled,
+      partnerBrandingEnabled,
+      partners,
+      sourceProposal,
       registrationDeadline,
       maxParticipants,
       maxParticipantsPerSchool,
       eligibleGrades,
+      assignedMentors,
     } = await req.json();
 
     if (!title || !description || !date) {
@@ -46,6 +91,16 @@ export async function POST(req) {
     const school = ["SCHOOL_ADMIN", "TEACHER"].includes(session.user.role)
       ? session.user.schoolId || null
       : null;
+    const normalizedScope =
+      session.user.role === "SUPER_ADMIN"
+        ? eventScope || "PLATFORM"
+        : "SCHOOL";
+    const ownerId = normalizedScope === "SCHOOL" ? school : session.user.id;
+    const ownerType = normalizedScope === "SCHOOL" ? "SCHOOL" : "PLATFORM";
+    const normalizedPartners =
+      session.user.role === "SUPER_ADMIN" ? normalizeEventPartners(partners) : [];
+    const normalizedSourceProposal =
+      session.user.role === "SUPER_ADMIN" ? sourceProposal || null : null;
 
     const newEvent = await Event.create({
       title,
@@ -54,12 +109,45 @@ export async function POST(req) {
       createdBy: session.user.id,
       targetGroup: targetGroup || null,
       school,
+      eventScope: normalizedScope,
+      ownerType,
+      ownerId,
+      eventType: eventType || "COMPETITION",
+      visibility: visibility || (normalizedScope === "PLATFORM" ? "PUBLIC" : "INVITED"),
+      registrationMode: registrationMode || "THROUGH_SCHOOL",
+      featuredOnLanding: Boolean(featuredOnLanding),
+      publicHighlightsEnabled:
+        publicHighlightsEnabled === undefined ? true : Boolean(publicHighlightsEnabled),
+      partnerBrandingEnabled:
+        session.user.role === "SUPER_ADMIN" &&
+        Boolean(partnerBrandingEnabled) &&
+        normalizedPartners.length > 0,
+      partners: normalizedPartners,
+      sourceProposal: normalizedSourceProposal,
       registrationDeadline: registrationDeadline || null,
       maxParticipants: maxParticipants || null,
       maxParticipantsPerSchool: maxParticipantsPerSchool || null,
       eligibleGrades: eligibleGrades || [],
+      assignedMentors: Array.isArray(assignedMentors) ? assignedMentors : [],
       status,
     });
+
+    if (normalizedSourceProposal) {
+      await EventProposal.findByIdAndUpdate(normalizedSourceProposal, {
+        linkedEvent: newEvent._id,
+        status: "CONVERTED_TO_EVENT",
+      });
+    }
+
+    if (normalizedScope === "PLATFORM" && status === "APPROVED") {
+      try {
+        await syncEventSchoolInvitations(newEvent._id, {
+          createdBy: session.user.id,
+        });
+      } catch (invitationError) {
+        console.error("Sync Event Invitations Error:", invitationError);
+      }
+    }
 
     return NextResponse.json(
       { message: "Event created successfully", event: newEvent },
@@ -96,6 +184,7 @@ export async function GET(req) {
     await connectDB();
 
     let query = {};
+    let currentSchoolId = null;
 
     if (
       session.user.role === "SCHOOL_ADMIN" ||
@@ -113,6 +202,11 @@ export async function GET(req) {
       const schoolObjectId = session.user.schoolId
         ? new mongoose.Types.ObjectId(session.user.schoolId)
         : null;
+      currentSchoolId = schoolObjectId;
+
+      if (session.user.role === "SCHOOL_ADMIN" && schoolObjectId) {
+        await ensureSchoolInvitationsForPublishedEvents(schoolObjectId);
+      }
 
       let groupIds = [];
       if (schoolObjectId) {
@@ -122,29 +216,52 @@ export async function GET(req) {
         groupIds = schoolGroups.map((g) => g._id);
       }
 
-      // Base query: Global events OR Targeted events OR same-school events
-      const orConditions = [{ targetGroup: null }];
-      if (schoolObjectId) {
-        orConditions.push({ school: schoolObjectId });
+      // A school's internal feed should include:
+      // - its own school-owned events
+      // - approved platform-wide events
+      // - approved group-targeted events for any network the school belongs to
+      const schoolOwnedCondition = schoolObjectId ? { school: schoolObjectId } : null;
+      const visibleConditions = [
+        { eventScope: "PLATFORM", targetGroup: null, status: "APPROVED" },
+      ];
+
+      if (schoolOwnedCondition) {
+        visibleConditions.push(schoolOwnedCondition);
       }
+
       if (groupIds.length > 0) {
-        orConditions.push({ targetGroup: { $in: groupIds } });
+        visibleConditions.push({
+          targetGroup: { $in: groupIds },
+          status: "APPROVED",
+        });
       }
 
-      query = { $or: orConditions };
+      query = { $or: visibleConditions };
 
-      // Status Filter:
-      // SCHOOL_ADMIN sees all; TEACHER sees approved (or their own pending?)
       if (session.user.role === "TEACHER") {
-        // Allow teachers to see approved events plus their own (even if pending)
-        query = {
-          $and: [
-            { $or: orConditions },
-            {
-              $or: [{ status: "APPROVED" }, { createdBy: session.user.id }],
-            },
-          ],
-        };
+        const teacherConditions = [
+          { eventScope: "PLATFORM", targetGroup: null, status: "APPROVED" },
+        ];
+
+        if (schoolOwnedCondition) {
+          teacherConditions.push({
+            school: schoolObjectId,
+            status: "APPROVED",
+          });
+          teacherConditions.push({
+            school: schoolObjectId,
+            createdBy: session.user.id,
+          });
+        }
+
+        if (groupIds.length > 0) {
+          teacherConditions.push({
+            targetGroup: { $in: groupIds },
+            status: "APPROVED",
+          });
+        }
+
+        query = { $or: teacherConditions };
       }
     }
 
@@ -157,6 +274,12 @@ export async function GET(req) {
         events = await Event.find(query)
           .sort({ date: 1 })
           .populate("targetGroup", "name")
+          .populate("assignedMentors", "name subject roles")
+          .populate("sourceProposal", "eventTitle organizationName status")
+          .populate(
+            "partners.organizer",
+            "organizationName slug logoUrl website verificationStatus profileVisibility"
+          )
           .populate(
             "participants.school",
             "schoolName email principalName principalPhone schoolPhone"
@@ -168,11 +291,30 @@ export async function GET(req) {
         events = await Event.find(query)
           .sort({ date: 1 })
           .populate("targetGroup", "name")
+          .populate("assignedMentors", "name subject roles")
+          .populate(
+            "partners.organizer",
+            "organizationName slug logoUrl website verificationStatus profileVisibility"
+          )
           .lean();
       }
     } catch (queryError) {
       console.error("Query Error:", queryError.message);
       throw queryError;
+    }
+
+    const schoolInvitationMap = new Map();
+    if (session.user.role === "SCHOOL_ADMIN" && currentSchoolId) {
+      const invitations = await EventSchoolInvitation.find({
+        school: currentSchoolId,
+        event: { $in: events.map((event) => event._id) },
+      })
+        .select("event status notifiedAt readAt decisionAt reason")
+        .lean();
+
+      invitations.forEach((invitation) => {
+        schoolInvitationMap.set(String(invitation.event), invitation);
+      });
     }
 
     // Add computed fields for frontend compatibility
@@ -183,6 +325,13 @@ export async function GET(req) {
         // Map fields to frontend expectations
         eventObj.deadline = event.registrationDeadline;
         eventObj.capacity = event.maxParticipants;
+        eventObj.isPlatformEvent = event.eventScope === "PLATFORM";
+        eventObj.isSchoolEvent = event.eventScope === "SCHOOL";
+        if (session.user.role === "SCHOOL_ADMIN") {
+          const invitation = schoolInvitationMap.get(String(event._id));
+          eventObj.schoolInvitationStatus = invitation?.status || null;
+          eventObj.schoolInvitation = invitation || null;
+        }
 
         // Calculate real-time counts from ParticipationRequest
         // This ensures Super Admin sees all activity (Pending + Approved)

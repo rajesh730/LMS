@@ -73,13 +73,14 @@ export default function LoginPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-slate-300 mb-1">Email</label>
+            <label className="block text-slate-300 mb-1">Email or Username</label>
             <input
-              type="email"
+              type="text"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full bg-slate-700 text-white rounded p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
+              placeholder="Enter email or username"
             />
           </div>
           <div>
@@ -102,7 +103,7 @@ export default function LoginPage() {
         </form>
 
         <p className="text-slate-400 mt-4 text-center text-sm">
-          Don't have an account?{" "}
+          Don&apos;t have an account?{" "}
           <Link href="/register" className="text-blue-400 hover:underline">
             Register School
           </Link>

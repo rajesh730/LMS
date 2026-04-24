@@ -2,15 +2,15 @@
 
 import { useState, useEffect, useCallback } from "react";
 import {
-  FaUserGraduate,
   FaEdit,
   FaTrash,
+  FaKey,
 } from "react-icons/fa";
 import { TableSkeleton } from "@/components/Skeletons";
 import PaginationControls from "@/components/PaginationControls";
 import EmptyState from "@/components/EmptyState";
 import Modal from "@/components/Modal";
-import StudentPromotionManager from "./StudentPromotionManager";
+import CredentialsModal from "@/components/CredentialsModal";
 
 export default function StudentManager({ initialGrade, hideGradeFilter = false }) {
   // Data State
@@ -33,9 +33,11 @@ export default function StudentManager({ initialGrade, hideGradeFilter = false }
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   
-  // Promotion State
-  const [isPromotionModalOpen, setIsPromotionModalOpen] = useState(false);
-
+  // Credentials State
+  const [credentialsModal, setCredentialsModal] = useState({
+    isOpen: false,
+    credentials: null,
+  });
   useEffect(() => {
     if (initialGrade) {
       setSelectedGrade(initialGrade);
@@ -186,14 +188,6 @@ export default function StudentManager({ initialGrade, hideGradeFilter = false }
             <option value="ALL">All Records</option>
           </select>
         </div>
-
-        <button 
-            onClick={() => setIsPromotionModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium"
-        >
-            <FaUserGraduate />
-            <span>Promote Students</span>
-        </button>
       </div>
       )}
 
@@ -207,19 +201,20 @@ export default function StudentManager({ initialGrade, hideGradeFilter = false }
                 <th className="p-4">Grade</th>
                 <th className="p-4">Contact</th>
                 <th className="p-4">Parent</th>
+                <th className="p-4">Credentials</th>
                 <th className="p-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800">
               {loading ? (
                 <tr>
-                  <td colSpan="5" className="p-8 text-center text-slate-500">
+                  <td colSpan="6" className="p-8 text-center text-slate-500">
                     <TableSkeleton />
                   </td>
                 </tr>
               ) : students.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="p-8 text-center text-slate-500">
+                  <td colSpan="6" className="p-8 text-center text-slate-500">
                     <EmptyState message="No students found" />
                   </td>
                 </tr>
@@ -241,6 +236,24 @@ export default function StudentManager({ initialGrade, hideGradeFilter = false }
                     <td className="p-4">
                       <div className="text-white">{student.parentName}</div>
                       <div className="text-xs text-slate-500">{student.parentPhone}</div>
+                    </td>
+                    <td className="p-4">
+                      <button
+                        onClick={() =>
+                          setCredentialsModal({
+                            isOpen: true,
+                            credentials: {
+                              username: student.username,
+                              password: student.visiblePassword || "Not Available",
+                              email: student.email,
+                            },
+                          })
+                        }
+                        className="flex items-center gap-2 px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs transition-colors border border-slate-700"
+                      >
+                        <FaKey className="text-emerald-400" />
+                        <span>View</span>
+                      </button>
                     </td>
                     <td className="p-4 text-right">
                       <div className="flex items-center justify-end gap-2">
@@ -406,20 +419,14 @@ export default function StudentManager({ initialGrade, hideGradeFilter = false }
         )}
       </Modal>
 
-      {/* Promotion Modal */}
-      <Modal
-        isOpen={isPromotionModalOpen}
-        onClose={() => setIsPromotionModalOpen(false)}
-        title="Promote Students"
-      >
-        <StudentPromotionManager 
-            onClose={() => setIsPromotionModalOpen(false)}
-            onSuccess={() => {
-                fetchStudents(pagination.page);
-                setIsPromotionModalOpen(false);
-            }}
-        />
-      </Modal>
+      {/* Credentials Modal */}
+      <CredentialsModal
+        isOpen={credentialsModal.isOpen}
+        credentials={credentialsModal.credentials}
+        onClose={() =>
+          setCredentialsModal({ isOpen: false, credentials: null })
+        }
+      />
     </div>
   );
 }

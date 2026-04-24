@@ -2,12 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { FiSave, FiAlertCircle, FiCheckCircle, FiSettings, FiCalendar } from "react-icons/fi";
-import AcademicYearManager from "@/components/settings/AcademicYearManager";
+import { FiSave, FiAlertCircle, FiCheckCircle, FiSettings } from "react-icons/fi";
 
 export default function SchoolSettingsManager() {
   const { data: session, status } = useSession();
-  const [activeTab, setActiveTab] = useState("general");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
@@ -115,32 +113,13 @@ export default function SchoolSettingsManager() {
         </p>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-4 border-b border-slate-800">
-        <button
-            onClick={() => setActiveTab("general")}
-            className={`pb-3 px-2 flex items-center gap-2 font-medium transition-colors relative ${
-                activeTab === "general" ? "text-blue-400" : "text-slate-400 hover:text-slate-200"
-            }`}
-        >
-            <FiSettings /> General Info
-            {activeTab === "general" && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-400 rounded-t-full"></div>}
-        </button>
-        <button
-            onClick={() => setActiveTab("academic")}
-            className={`pb-3 px-2 flex items-center gap-2 font-medium transition-colors relative ${
-                activeTab === "academic" ? "text-blue-400" : "text-slate-400 hover:text-slate-200"
-            }`}
-        >
-            <FiCalendar /> Academic Sessions
-            {activeTab === "academic" && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-400 rounded-t-full"></div>}
-        </button>
+      <div className="flex gap-4 border-b border-slate-800 pb-3">
+        <div className="pb-3 px-2 flex items-center gap-2 font-medium text-blue-400 relative">
+          <FiSettings /> General Info
+          <div className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-400 rounded-t-full"></div>
+        </div>
       </div>
 
-      {activeTab === "academic" ? (
-        <AcademicYearManager />
-      ) : (
-        <>
       {message.text && (
         <div
           className={`p-4 rounded-lg flex items-center gap-2 ${
@@ -358,8 +337,6 @@ export default function SchoolSettingsManager() {
           {saving ? "Saving..." : "Save Changes"}
         </button>
       </div>
-      </>
-      )}
     </div>
   );
 }

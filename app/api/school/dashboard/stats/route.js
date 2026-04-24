@@ -4,13 +4,12 @@ import connectDB from "@/lib/db";
 import Student from "@/models/Student";
 import Teacher from "@/models/Teacher";
 import Event from "@/models/Event";
-import Attendance from "@/models/Attendance";
 import { successResponse, errorResponse } from "@/lib/apiResponse";
 
 /**
  * GET /api/school/dashboard/stats
  * Get dashboard statistics for school admin
- * Returns: students, teachers, events, attendance data
+ * Returns: students, teachers, and event data
  */
 export async function GET(req) {
   try {
@@ -26,7 +25,7 @@ export async function GET(req) {
     await connectDB();
 
     // Fetch all data in parallel
-    const [students, teachers, events, attendance] =
+    const [students, teachers, events] =
       await Promise.all([
         Student.countDocuments({
           school: session.user.schoolId,
@@ -37,9 +36,6 @@ export async function GET(req) {
         }),
         Event.countDocuments({
           schools: session.user.schoolId,
-        }),
-        Attendance.countDocuments({
-          school: session.user.schoolId,
         }),
       ]);
 
@@ -81,41 +77,6 @@ export async function GET(req) {
       },
     ]);
 
-    // Get attendance data for current month
-    const currentMonth = new Date();
-    currentMonth.setDate(1);
-    const nextMonth = new Date(currentMonth);
-    nextMonth.setMonth(nextMonth.getMonth() + 1);
-
-    const attendanceThisMonth = await Attendance.countDocuments({
-      school: session.user.schoolId,
-      date: {
-        $gte: currentMonth,
-        $lt: nextMonth,
-      },
-    });
-
-    // Get today's attendance
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-
-    const attendanceToday = await Attendance.countDocuments({
-      school: session.user.schoolId,
-      date: {
-        $gte: today,
-        $lt: tomorrow,
-      },
-    });
-
-    // Calculate attendance percentage
-    const totalExpected = students * 1; // Simplified: 1 day per student
-    const attendancePercentage =
-      totalExpected > 0
-        ? Math.round((attendanceToday / (students || 1)) * 100)
-        : 0;
-
     // Format status breakdown
     const statusBreakdown = {};
     studentsByStatus.forEach((item) => {
@@ -132,12 +93,6 @@ export async function GET(req) {
         total: students,
         byStatus: statusBreakdown,
         byGrade: studentsByGrade,
-      },
-      attendance: {
-        total: attendance,
-        thisMonth: attendanceThisMonth,
-        today: attendanceToday,
-        percentage: attendancePercentage,
       },
       teachers: {
         total: teachers,

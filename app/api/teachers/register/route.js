@@ -70,7 +70,7 @@ export async function POST(req) {
       bloodGroup,
       visiblePassword: password, // Store plain text for admin visibility
       school: schoolId,
-      roles: ["SUBJECT_TEACHER"],
+      roles: ["MENTOR"],
     });
 
     return NextResponse.json(

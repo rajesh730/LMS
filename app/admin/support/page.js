@@ -8,6 +8,8 @@ import connectDB from '@/lib/db';
 import User from '@/models/User';
 import { FaHeadset } from "react-icons/fa";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = {
   title: "Support Tickets - Admin Panel",
   description: "Manage school support tickets and responses",
@@ -17,7 +19,7 @@ export default async function AdminSupportPage() {
   const session = await getServerSession(authOptions);
 
   if (!session) {
-    redirect("/auth/login");
+    redirect("/login");
   }
 
   if (session.user.role !== "SUPER_ADMIN") {

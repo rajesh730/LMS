@@ -1,0 +1,40 @@
+
+> schoolproject@0.1.0 dev
+> next dev
+
+   ▲ Next.js 16.0.3 (Turbopack)
+   - Local:         http://localhost:3000
+   - Network:       http://192.168.1.2:3000
+   - Environments: .env.local
+
+ ✓ Starting...
+Creating turbopack project {
+  dir: 'C:\\Users\\rajes\\OneDrive\\Desktop\\schoolproject',
+  testMode: true
+}
+ ✓ Ready in 2.4s
+ ○ Compiling /admin/dashboard ...
+ GET /admin/dashboard 200 in 7.4s (compile: 6.9s, proxy.ts: 221ms, render: 353ms)
+ GET /api/auth/session 200 in 4.0s (compile: 4.0s, render: 61ms)
+ GET /api/event-proposals 200 in 1170ms (compile: 832ms, render: 338ms)
+ GET /api/external-organizers 200 in 1191ms (compile: 926ms, render: 265ms)
+ GET /api/groups 200 in 1205ms (compile: 665ms, render: 540ms)
+ GET /api/schools/list 200 in 1249ms (compile: 1001ms, render: 249ms)
+ GET /api/events 200 in 1273ms (compile: 765ms, render: 508ms)
+ GET /api/auth/session 200 in 72ms (compile: 44ms, render: 28ms)
+ GET /admin/dashboard 200 in 181ms (compile: 13ms, proxy.ts: 19ms, render: 148ms)
+ GET /api/auth/session 200 in 97ms (compile: 61ms, render: 36ms)
+ GET /api/schools/list 200 in 159ms (compile: 15ms, render: 145ms)
+ GET /api/groups 200 in 160ms (compile: 30ms, render: 130ms)
+ GET /api/external-organizers 200 in 171ms (compile: 57ms, render: 113ms)
+ GET /api/event-proposals 200 in 140ms (compile: 49ms, render: 92ms)
+ GET /api/events 200 in 184ms (compile: 45ms, render: 139ms)
+ GET /api/auth/session 200 in 49ms (compile: 34ms, render: 15ms)
+ GET /admin/dashboard 200 in 139ms (compile: 7ms, proxy.ts: 27ms, render: 105ms)
+ GET /api/auth/session 200 in 108ms (compile: 74ms, render: 34ms)
+ GET /api/schools/list 200 in 140ms (compile: 23ms, render: 117ms)
+ GET /api/groups 200 in 163ms (compile: 40ms, render: 123ms)
+ GET /api/external-organizers 200 in 170ms (compile: 71ms, render: 99ms)
+ GET /api/event-proposals 200 in 184ms (compile: 76ms, render: 108ms)
+ GET /api/events 200 in 200ms (compile: 57ms, render: 143ms)
+[?25h

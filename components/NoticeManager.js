@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   FaBullhorn,
   FaPlus,
@@ -43,10 +43,10 @@ export default function NoticeManager() {
   const noticeTypes = [
     { value: "GENERAL", label: "General", color: "bg-blue-500" },
     { value: "URGENT", label: "Urgent", color: "bg-red-500" },
-    { value: "ACADEMIC", label: "Academic", color: "bg-green-500" },
+    { value: "CLUB", label: "Club Update", color: "bg-green-500" },
     { value: "EVENT", label: "Event", color: "bg-purple-500" },
     { value: "HOLIDAY", label: "Holiday", color: "bg-yellow-500" },
-    { value: "EXAM", label: "Exam", color: "bg-orange-500" },
+    { value: "SHOWCASE", label: "Showcase", color: "bg-orange-500" },
   ];
 
   const priorities = [
@@ -69,11 +69,7 @@ export default function NoticeManager() {
     "Grade 10",
   ];
 
-  useEffect(() => {
-    fetchNotices();
-  }, [filters]);
-
-  const fetchNotices = async () => {
+  const fetchNotices = useCallback(async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
@@ -89,7 +85,11 @@ export default function NoticeManager() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filters]);
+
+  useEffect(() => {
+    fetchNotices();
+  }, [fetchNotices]);
 
   const createNotice = async (e) => {
     e.preventDefault();

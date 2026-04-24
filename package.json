@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "cleanup:remove-talent-categories": "node scripts/remove-talent-categories.mjs",
+    "cleanup:remove-judging-system": "node scripts/remove-judging-system.mjs"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import SchoolConfig from "@/models/SchoolConfig";
+import User from "@/models/User";
 import {
   successResponse,
   errorResponse,
@@ -20,7 +21,26 @@ export async function GET(req) {
 
     let config = await SchoolConfig.findOne({ school: session.user.id });
     if (!config) {
-      config = await SchoolConfig.create({ school: session.user.id });
+      // Fetch user to get schoolLevel config
+      const user = await User.findById(session.user.id);
+      let grades = [];
+      
+      if (user && user.schoolConfig && user.schoolConfig.schoolLevel) {
+          const { minGrade, maxGrade } = user.schoolConfig.schoolLevel;
+          if (minGrade && maxGrade) {
+              for (let i = minGrade; i <= maxGrade; i++) {
+                  grades.push(`Grade ${i}`);
+              }
+          }
+      }
+      
+      // If no user config found, fallback to default (handled by schema default if we pass undefined, but let's be explicit if we have grades)
+      const createData = { school: session.user.id };
+      if (grades.length > 0) {
+          createData.grades = grades;
+      }
+      
+      config = await SchoolConfig.create(createData);
     }
 
     return successResponse(200, "Config retrieved", config);
@@ -49,7 +69,6 @@ export async function PUT(req) {
       pincode,
       principalName,
       teacherRoles,
-      subjects,
     } = body;
 
     await connectDB();
@@ -65,7 +84,6 @@ export async function PUT(req) {
     if (pincode !== undefined) updateData.pincode = pincode;
     if (principalName !== undefined) updateData.principalName = principalName;
     if (teacherRoles) updateData.teacherRoles = teacherRoles;
-    if (subjects) updateData.subjects = subjects;
 
     const config = await SchoolConfig.findOneAndUpdate(
       { school: session.user.id },

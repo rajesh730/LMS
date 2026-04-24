@@ -7,10 +7,13 @@ import Teacher from "@/models/Teacher";
 import Student from "@/models/Student";
 import { ensureDefaultAdmin } from "@/lib/seed";
 
-// Run seed on startup
-connectDB().then(() => {
-  ensureDefaultAdmin();
-});
+let hasCheckedDefaultAdmin = false;
+
+async function ensureDefaultAdminOnce() {
+  if (hasCheckedDefaultAdmin) return;
+  await ensureDefaultAdmin();
+  hasCheckedDefaultAdmin = true;
+}
 
 export const authOptions = {
   providers: [
@@ -22,15 +25,32 @@ export const authOptions = {
       },
       async authorize(credentials) {
         await connectDB();
+        await ensureDefaultAdminOnce();
 
         // 1. Try Teacher collection FIRST (Clean Architecture)
         const teacher = await Teacher.findOne({ email: credentials.email });
 
         if (teacher) {
-          const isValid = await bcrypt.compare(
-            credentials.password,
-            teacher.password
-          );
+          let isValid = false;
+
+          if (teacher.password) {
+            isValid = await bcrypt.compare(
+              credentials.password,
+              teacher.password,
+            );
+          } else {
+            // Fallback: Try User collection or visiblePassword
+            const user = await User.findOne({ email: credentials.email });
+            if (user && user.password) {
+              isValid = await bcrypt.compare(
+                credentials.password,
+                user.password,
+              );
+            } else if (teacher.visiblePassword) {
+              // Last resort: Plain text comparison (for legacy data)
+              isValid = credentials.password === teacher.visiblePassword;
+            }
+          }
 
           if (!isValid) {
             throw new Error("Invalid password");
@@ -53,7 +73,7 @@ export const authOptions = {
         if (user) {
           const isValid = await bcrypt.compare(
             credentials.password,
-            user.password
+            user.password,
           );
 
           if (!isValid) {
@@ -108,7 +128,7 @@ export const authOptions = {
         if (student) {
           const isValid = await bcrypt.compare(
             credentials.password,
-            student.password
+            student.password,
           );
 
           if (!isValid) {

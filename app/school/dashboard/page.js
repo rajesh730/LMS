@@ -1,25 +1,13 @@
 "use client";
 
-import { useState, useEffect, lazy, Suspense } from "react";
+import { Suspense, useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
-import DashboardLayout from "@/components/DashboardLayout";
 import Sidebar from "@/components/Sidebar";
 import EventFeed from "./EventFeed";
-import CSVUploader from "@/components/CSVUploader";
 import CredentialsModal from "@/components/CredentialsModal";
-import PasswordField from "@/components/PasswordField";
 
-// Lazy load heavy components
-const AttendanceManager = dynamic(
-  () => import("@/components/AttendanceManager"),
-  {
-    loading: () => (
-      <div className="p-4 text-slate-400">Loading attendance...</div>
-    ),
-  }
-);
 const StudentManager = dynamic(
   () => import("@/components/dashboard/StudentManager"),
   {
@@ -44,48 +32,19 @@ const DashboardOverview = dynamic(
     ),
   }
 );
-const TeacherAttendanceReport = dynamic(
-  () => import("@/components/TeacherAttendanceReport"),
-  {
-    loading: () => <div className="p-4 text-slate-400">Loading report...</div>,
-  }
-);const ExamManager = dynamic(
-  () => import("@/components/dashboard/ExamManager"),
-  {
-    loading: () => (
-      <div className="p-4 text-slate-400">Loading exams...</div>
-    ),
-  }
-);
-const GradingScaleManager = dynamic(
-  () => import("@/components/dashboard/GradingScaleManager"),
-  {
-    loading: () => (
-      <div className="p-4 text-slate-400">Loading grading scales...</div>
-    ),
-  }
-);
-const AcademicSection = dynamic(
-  () => import("./AcademicSection"),
-  {
-    loading: () => (
-      <div className="p-4 text-slate-400">Loading academic...</div>
-    ),
-  }
-);
-const CurriculumManager = dynamic(
-  () => import("@/components/CurriculumManager"),
-  {
-    loading: () => (
-      <div className="p-4 text-slate-400">Loading curriculum...</div>
-    ),
-  }
-);
 const SupportTicketManager = dynamic(
   () => import("@/components/support/SupportTicketManager"),
   {
     loading: () => (
       <div className="p-4 text-slate-400">Loading support...</div>
+    ),
+  }
+);
+const ParentCommunicationManager = dynamic(
+  () => import("@/components/ParentCommunicationManager"),
+  {
+    loading: () => (
+      <div className="p-4 text-slate-400">Loading communication...</div>
     ),
   }
 );
@@ -113,37 +72,51 @@ const SchoolSettingsManager = dynamic(
     ),
   }
 );
+const ShowcaseProfileManager = dynamic(
+  () => import("@/components/ShowcaseProfileManager"),
+  {
+    loading: () => (
+      <div className="p-4 text-slate-400">Loading showcase profile...</div>
+    ),
+  }
+);
+const ClubManager = dynamic(() => import("@/components/ClubManager"), {
+  loading: () => <div className="p-4 text-slate-400">Loading clubs...</div>,
+});
+const SubmissionReviewManager = dynamic(
+  () => import("@/components/SubmissionReviewManager"),
+  {
+    loading: () => (
+      <div className="p-4 text-slate-400">Loading submission review...</div>
+    ),
+  }
+);
+const EventResultsManager = dynamic(
+  () => import("@/components/EventResultsManager"),
+  {
+    loading: () => <div className="p-4 text-slate-400">Loading results...</div>,
+  }
+);
 
 import {
-  FaUserGraduate,
-  FaChalkboardTeacher,
-  FaLayerGroup,
-  FaEdit,
-  FaTrash,
-  FaPlus,
   FaCalendarCheck,
   FaSignOutAlt,
-  FaKey,
-  FaDownload,
-  FaHeadset,
-  FaExclamationTriangle,
+  FaBullhorn,
   FaClock,
 } from "react-icons/fa";
-import EventHub from "@/components/events/EventHub";
+import SchoolEventWorkspace from "@/components/events/SchoolEventWorkspace";
 import NoticeManager from "@/components/NoticeManager";
 
-export default function SchoolDashboard() {
+function SchoolDashboardContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState("overview");
-  const [attendanceSubTab, setAttendanceSubTab] = useState("students"); // 'students' or 'teachers'
-  const [selectedGradeForStudents, setSelectedGradeForStudents] = useState(null);
 
   useEffect(() => {
     const tab = searchParams.get("tab");
     if (tab) {
-      setActiveTab(tab);
+      setActiveTab(tab === "judging" ? "results" : tab);
     }
   }, [searchParams]);
 
@@ -156,7 +129,7 @@ export default function SchoolDashboard() {
     email: "",
     phone: "",
     subject: "",
-    roles: ["SUBJECT_TEACHER"],
+    roles: ["MENTOR"],
     assignments: [],
     password: "",
   });
@@ -170,22 +143,13 @@ export default function SchoolDashboard() {
 
   const [schoolConfig, setSchoolConfig] = useState({ teacherRoles: [] });
 
-  // Check for active academic year or pending status
   const isPending = session?.user?.status === "PENDING";
-  const hasActiveYear = schoolConfig?.currentAcademicYear;
-  const isRestricted = isPending || (!loading && !hasActiveYear);
+  const isRestricted = isPending;
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
     if (status === "authenticated") fetchData();
   }, [status, router]);
-
-  // Force redirect to settings if no active year (but not if pending)
-  useEffect(() => {
-    if (!isPending && isRestricted && activeTab !== 'settings') {
-        router.replace('/school/dashboard?tab=settings');
-    }
-  }, [isRestricted, activeTab, router, isPending]);
 
   const fetchData = async () => {
     try {
@@ -206,14 +170,14 @@ export default function SchoolDashboard() {
         // Handle both { data: config } and { config: config } formats
         setSchoolConfig(
           configData.data ||
-            configData.config || { teacherRoles: [], subjects: [] }
+            configData.config || { teacherRoles: [] }
         );
       } else {
-        setSchoolConfig({ teacherRoles: [], subjects: [] });
+        setSchoolConfig({ teacherRoles: [] });
       }
     } catch (error) {
       console.error("Error fetching data", error);
-      setSchoolConfig({ teacherRoles: [], subjects: [] });
+      setSchoolConfig({ teacherRoles: [] });
     } finally {
       setLoading(false);
     }
@@ -242,7 +206,7 @@ export default function SchoolDashboard() {
           email: "",
           phone: "",
           subject: "",
-          roles: ["SUBJECT_TEACHER"],
+          roles: ["MENTOR"],
           assignments: [],
           password: "",
         });
@@ -317,7 +281,13 @@ export default function SchoolDashboard() {
       });
       if (res.ok) {
         const resData = await res.json();
-        alert(`Successfully imported ${resData.count} teachers`);
+        alert(`Successfully imported ${resData.count} mentors`);
+        if (resData.credentials?.length > 0) {
+          setCredentialsModal({
+            isOpen: true,
+            credentials: resData.credentials,
+          });
+        }
         fetchData(); // Reload to get updated list
       } else {
         const error = await res.json();
@@ -329,11 +299,10 @@ export default function SchoolDashboard() {
     }
   };
 
-  const updateSchoolConfig = async (newRoles, newSubjects) => {
+  const updateSchoolConfig = async (newRoles) => {
     try {
       const payload = {};
       if (newRoles) payload.teacherRoles = newRoles;
-      if (newSubjects) payload.subjects = newSubjects;
 
       const res = await fetch("/api/school/config", {
         method: "PUT",
@@ -362,10 +331,10 @@ export default function SchoolDashboard() {
         <header className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold text-white tracking-tight">
-              School Dashboard
+              School Talent Hub
             </h1>
             <p className="text-slate-400 mt-1">
-              Manage your school operations efficiently
+              Run activities, mentor talent, and promote your school publicly
             </p>
           </div>
           <div className="flex items-center gap-4">
@@ -401,30 +370,18 @@ export default function SchoolDashboard() {
             </div>
         )}
 
-        {!isPending && isRestricted && (
-            <div className="bg-yellow-500/10 border border-yellow-500/30 p-4 mb-6 rounded-xl flex items-center gap-3 text-yellow-200 animate-pulse">
-                <FaExclamationTriangle className="text-yellow-500 text-xl" />
-                <div>
-                    <h3 className="font-bold">Action Required</h3>
-                    <p className="text-sm text-yellow-200/80">Please activate an Academic Year in the Settings below to unlock the full dashboard.</p>
-                </div>
-            </div>
-        )}
-
         {/* Navigation Tabs - Hide if Pending */}
         {!isPending && (
-        <div className="flex gap-4 mb-8 border-b border-slate-800 pb-1 overflow-x-auto">
+        <div className="flex gap-4 mb-8 border-b border-slate-800 pb-1 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           {[
             "overview",
             "students",
             "teachers",
-            "academic",
-            "exams",
-            "grading",
-            "attendance",
-            "notices",
-            "events",
-            "settings"
+            "clubs",
+            "reviews",
+            "results",
+            "communication",
+            "events"
           ].map((tab) => (
             <button
               key={tab}
@@ -437,9 +394,19 @@ export default function SchoolDashboard() {
               } ${isRestricted && tab !== 'settings' ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               {tab === "events"
-                ? "Event Management"
+                ? "Talent Events"
                 : tab === "notices"
                 ? "Notice Board"
+                : tab === "teachers"
+                ? "Mentors"
+                : tab === "clubs"
+                ? "Clubs"
+                : tab === "reviews"
+                ? "Submission Review"
+                : tab === "results"
+                ? "Results"
+                : tab === "showcase"
+                ? "Public Showcase"
                 : tab.charAt(0).toUpperCase() + tab.slice(1)}
             </button>
           ))}
@@ -460,34 +427,36 @@ export default function SchoolDashboard() {
             <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800 mt-8">
               <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
                 <FaCalendarCheck className="text-emerald-400" />
-                Upcoming Events
+                Upcoming Talent Events
               </h2>
               <EventFeed />
+            </div>
+            <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800 mt-8">
+              <h2 className="text-xl font-semibold text-white mb-2 flex items-center gap-2">
+                <FaBullhorn className="text-blue-400" />
+                Platform Direction
+              </h2>
+              <p className="text-slate-400">
+                This workspace is being reshaped around extracurricular activities, talent discovery, showcases, and inter-school competitions. Academic modules are being retired from the main product surface.
+              </p>
             </div>
           </>
         )}
 
-        {activeTab === "students" && <StudentManager initialGrade={selectedGradeForStudents} />}
+        {activeTab === "students" && <StudentManager />}
 
         {activeTab === "teachers" && <TeacherManager />}
-
-        {activeTab === "academic" && (
-          <div className="space-y-6">
-            <AcademicSection
-              onManageGrade={(grade) => {
-                setSelectedGradeForStudents(grade);
-                setActiveTab("students");
-              }}
-            />
-          </div>
+        {activeTab === "clubs" && <ClubManager />}
+        {activeTab === "reviews" && <SubmissionReviewManager />}
+        {activeTab === "results" && (
+          <EventResultsManager
+            title="School Event Results"
+            description="Finalize placements, keep participant history, and choose whether winners appear publicly."
+          />
         )}
-
-        {activeTab === "exams" && <ExamManager />}
-
-        {activeTab === "grading" && <GradingScaleManager />}
-
-        {activeTab === "curriculum" && <CurriculumManager />}
+        {activeTab === "showcase" && <ShowcaseProfileManager />}
         {activeTab === "support" && <SupportTicketManager />}
+        {activeTab === "communication" && <ParentCommunicationManager />}
         {activeTab === "register-student" && (
           <EnhancedStudentRegistration 
             schoolId={session?.user?.id} 
@@ -502,44 +471,7 @@ export default function SchoolDashboard() {
         )}
         {activeTab === "settings" && <SchoolSettingsManager />}
 
-        {activeTab === "attendance" && (
-          <div className="space-y-6">
-            {/* Attendance Subtabs */}
-            <div className="flex gap-4 border-b border-slate-700 pb-2">
-              <button
-                onClick={() => setAttendanceSubTab("students")}
-                className={`px-4 py-2 text-sm font-medium transition ${
-                  attendanceSubTab === "students"
-                    ? "text-emerald-400 border-b-2 border-emerald-400"
-                    : "text-slate-400 hover:text-white"
-                }`}
-              >
-                Student Attendance
-              </button>
-              <button
-                onClick={() => setAttendanceSubTab("teachers")}
-                className={`px-4 py-2 text-sm font-medium transition ${
-                  attendanceSubTab === "teachers"
-                    ? "text-emerald-400 border-b-2 border-emerald-400"
-                    : "text-slate-400 hover:text-white"
-                }`}
-              >
-                Teacher Attendance
-              </button>
-            </div>
-
-            {attendanceSubTab === "students" && (
-              <AttendanceManager
-                teachers={teachers}
-                grades={schoolConfig.grades || []}
-              />
-            )}
-
-            {attendanceSubTab === "teachers" && <TeacherAttendanceReport />}
-          </div>
-        )}
-
-        {activeTab === "events" && <EventHub />}
+        {activeTab === "events" && <SchoolEventWorkspace />}
 
         {activeTab === "notices" && <NoticeManager />}
             </>
@@ -583,6 +515,7 @@ export default function SchoolDashboard() {
                       subject: e.target.value,
                     })
                   }
+                  placeholder="Focus area"
                   className="w-full bg-slate-800 text-white p-2 rounded"
                 />
                 <div className="bg-slate-800 p-2 rounded">
@@ -644,5 +577,13 @@ export default function SchoolDashboard() {
         />
       </main>
     </div>
+  );
+}
+
+export default function SchoolDashboard() {
+  return (
+    <Suspense fallback={<div className="p-8 text-white">Loading dashboard...</div>}>
+      <SchoolDashboardContent />
+    </Suspense>
   );
 }

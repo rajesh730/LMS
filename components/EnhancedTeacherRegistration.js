@@ -14,7 +14,7 @@ const EnhancedTeacherRegistration = ({ schoolId, onSuccess }) => {
     fullName: "",
     email: "",
     phone: "",
-    subject: "",
+    focusArea: "",
     qualification: "",
     gender: "",
     address: "",
@@ -29,8 +29,8 @@ const EnhancedTeacherRegistration = ({ schoolId, onSuccess }) => {
     setSuccess("");
     
     // Validation
-    if (!formData.fullName || !formData.email || !formData.subject) {
-      setError("Please fill in all required fields (Name, Email, Subject)");
+    if (!formData.fullName || !formData.email || !formData.focusArea) {
+      setError("Please fill in all required fields (Name, Email, Focus Area)");
       return;
     }
 
@@ -48,7 +48,7 @@ const EnhancedTeacherRegistration = ({ schoolId, onSuccess }) => {
         name: formData.fullName,
         email: formData.email,
         phone: formData.phone,
-        subject: formData.subject,
+        subject: formData.focusArea,
         qualification: formData.qualification,
         gender: formData.gender,
         address: formData.address,
@@ -79,7 +79,7 @@ const EnhancedTeacherRegistration = ({ schoolId, onSuccess }) => {
         fullName: "",
         email: "",
         phone: "",
-        subject: "",
+        focusArea: "",
         qualification: "",
         gender: "",
         address: "",
@@ -117,7 +117,7 @@ const EnhancedTeacherRegistration = ({ schoolId, onSuccess }) => {
             return {
                 name: fullName,
                 email: row['Email*'] || row.Email,
-                subject: row['Subject*'] || row.Subject,
+                subject: row['FocusArea*'] || row.FocusArea || row['Subject*'] || row.Subject,
                 phone: row.Phone,
                 qualification: row.Qualification,
                 gender: row.Gender,
@@ -131,7 +131,7 @@ const EnhancedTeacherRegistration = ({ schoolId, onSuccess }) => {
         }).filter(t => t.name && t.email && t.subject);
 
         if (teachers.length === 0) {
-            throw new Error("No valid teacher records found. Please check mandatory fields (FullName, Email, Subject).");
+            throw new Error("No valid mentor records found. Please check mandatory fields (FullName, Email, FocusArea).");
         }
 
         const response = await fetch("/api/teachers/bulk-register", {
@@ -156,7 +156,7 @@ const EnhancedTeacherRegistration = ({ schoolId, onSuccess }) => {
     const headers = [
         "FullName*", 
         "Email*", 
-        "Subject*", 
+        "FocusArea*", 
         "Phone", 
         "Qualification", 
         "Gender", 
@@ -170,7 +170,7 @@ const EnhancedTeacherRegistration = ({ schoolId, onSuccess }) => {
     const sampleData = [
         "Sarah Smith", 
         "sarah.smith@example.com", 
-        "Mathematics", 
+        "Debate & Public Speaking", 
         "9800000000", 
         "M.Sc. Math", 
         "FEMALE", 
@@ -200,7 +200,7 @@ const EnhancedTeacherRegistration = ({ schoolId, onSuccess }) => {
   return (
     <div className="bg-[#0f172a] text-white rounded-lg shadow-xl p-6 max-w-4xl mx-auto border border-slate-700">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-white">Add New Teacher</h2>
+        <h2 className="text-2xl font-bold text-white">Add New Mentor</h2>
         <div className="flex gap-2 bg-slate-800 p-1 rounded-lg">
             <button 
                 onClick={() => setActiveTab("single")}
@@ -307,12 +307,12 @@ const EnhancedTeacherRegistration = ({ schoolId, onSuccess }) => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">Subject *</label>
+                <label className="block text-sm font-medium text-slate-300 mb-1">Focus Area *</label>
                 <input
                   type="text"
-                  placeholder="e.g. Mathematics"
-                  value={formData.subject}
-                  onChange={(e) => setFormData({...formData, subject: e.target.value})}
+                  placeholder="e.g. Dance, Debate, Music, Robotics"
+                  value={formData.focusArea}
+                  onChange={(e) => setFormData({...formData, focusArea: e.target.value})}
                   className="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500 outline-none"
                 />
               </div>
@@ -412,7 +412,7 @@ const EnhancedTeacherRegistration = ({ schoolId, onSuccess }) => {
               disabled={loading}
               className="flex items-center gap-2 px-8 py-2.5 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? "Registering..." : "Register Teacher"}
+              {loading ? "Registering..." : "Register Mentor"}
             </button>
           </div>
         </div>
@@ -421,13 +421,13 @@ const EnhancedTeacherRegistration = ({ schoolId, onSuccess }) => {
             <div className="bg-slate-800 p-6 rounded-lg border border-slate-700">
                 <div className="flex justify-between items-start mb-4">
                     <div>
-                        <h3 className="text-lg font-medium text-white mb-2">Upload Teacher Data</h3>
+                        <h3 className="text-lg font-medium text-white mb-2">Upload Mentor Data</h3>
                         <div className="text-slate-400 text-sm space-y-2">
                             <p>Upload a CSV file with the following headers:</p>
                             <div className="bg-slate-900 p-3 rounded border border-slate-700 font-mono text-xs overflow-x-auto">
                                 <span className="text-red-400">FullName*</span>, 
                                 <span className="text-red-400"> Email*</span>, 
-                                <span className="text-red-400"> Subject*</span>, 
+                                <span className="text-red-400"> FocusArea*</span>, 
                                 <span className="text-blue-300"> Phone</span>, 
                                 <span className="text-blue-300"> Qualification</span>, 
                                 <span className="text-blue-300"> Gender</span>, 

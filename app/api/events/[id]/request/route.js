@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import dbConnect from "@/lib/db";
 import Event from "@/models/Event";
+import EventSchoolInvitation from "@/models/EventSchoolInvitation";
 import Student from "@/models/Student";
 import ParticipationRequest from "@/models/ParticipationRequest";
 
@@ -15,6 +16,27 @@ import ParticipationRequest from "@/models/ParticipationRequest";
  * - Registration deadline
  * - No duplicate requests
  */
+async function getPlatformInvitationBlocker(event, schoolId) {
+  if (event.eventScope !== "PLATFORM") return null;
+
+  const invitation = await EventSchoolInvitation.findOne({
+    event: event._id,
+    school: schoolId,
+  }).select("status");
+
+  if (invitation?.status === "APPROVED") return null;
+
+  if (invitation?.status === "DISAPPROVED") {
+    return "Your school has disapproved this platform event.";
+  }
+
+  if (invitation?.status === "WITHDRAWN") {
+    return "This platform event is no longer available for your school.";
+  }
+
+  return "Your school must approve this platform event before students can participate.";
+}
+
 export async function POST(req, { params }) {
   try {
     const session = await getServerSession(authOptions);
@@ -50,6 +72,15 @@ export async function POST(req, { params }) {
       return NextResponse.json(
         { message: "Student profile not found" },
         { status: 404 }
+      );
+    }
+
+    const schoolId = student.school?._id || student.school || session.user.schoolId;
+    const invitationBlocker = await getPlatformInvitationBlocker(event, schoolId);
+    if (invitationBlocker) {
+      return NextResponse.json(
+        { message: invitationBlocker, code: "SCHOOL_EVENT_NOT_APPROVED" },
+        { status: 403 }
       );
     }
 

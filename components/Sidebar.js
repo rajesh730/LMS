@@ -6,14 +6,13 @@ import { signOut } from "next-auth/react";
 import {
   FaChartPie,
   FaCalendarAlt,
-  FaUsers,
   FaCog,
   FaSignOutAlt,
   FaSchool,
   FaChalkboardTeacher,
   FaHeadset,
   FaUserPlus,
-  FaBook,
+  FaBullhorn,
 } from "react-icons/fa";
 
 export default function Sidebar({ role, isRestricted = false, isPending = false }) {
@@ -22,18 +21,27 @@ export default function Sidebar({ role, isRestricted = false, isPending = false 
   const currentTab = searchParams?.get("tab");
 
   const adminLinks = [
-    { name: "Dashboard", href: "/admin/dashboard", icon: FaChartPie },
-    { name: "Curriculum", href: "/admin/curriculum", icon: FaBook },
+    { name: "Platform Hub", href: "/admin/dashboard", icon: FaChartPie },
     { name: "Support Tickets", href: "/admin/support", icon: FaHeadset },
     { name: "Settings", href: "/admin/settings", icon: FaCog },
   ];
 
   const schoolLinks = [
-    { name: "Dashboard", href: "/school/dashboard", icon: FaChartPie },
+    { name: "School Hub", href: "/school/dashboard", icon: FaChartPie },
     {
-      name: "Support",
-      href: "/school/dashboard?tab=support",
-      icon: FaHeadset,
+      name: "Public Showcase",
+      href: "/school/dashboard?tab=showcase",
+      icon: FaSchool,
+    },
+    {
+      name: "Talent Events",
+      href: "/school/dashboard?tab=events",
+      icon: FaCalendarAlt,
+    },
+    {
+      name: "School Notices",
+      href: "/school/dashboard?tab=notices",
+      icon: FaBullhorn,
     },
     {
       name: "Register Student",
@@ -46,24 +54,23 @@ export default function Sidebar({ role, isRestricted = false, isPending = false 
       icon: FaChalkboardTeacher,
     },
     {
-      name: "Curriculum",
-      href: "/school/dashboard?tab=curriculum",
-      icon: FaBook,
+      name: "Parent Messages",
+      href: "/school/dashboard?tab=communication",
+      icon: FaHeadset,
     },
     { name: "Settings", href: "/school/dashboard?tab=settings", icon: FaCog },
   ];
 
   const teacherLinks = [
     {
-      name: "My Subjects",
+      name: "Mentor Workspace",
       href: "/teacher/dashboard",
       icon: FaChalkboardTeacher,
-    }, // LMS
-    { name: "School Dashboard", href: "/school/dashboard", icon: FaChartPie }, // SMS View (if allowed)
+    },
   ];
 
   const studentLinks = [
-    { name: "My Learning", href: "/student/dashboard", icon: FaSchool },
+    { name: "My Activity", href: "/student/dashboard", icon: FaSchool },
     { name: "Events", href: "/student/events", icon: FaCalendarAlt },
   ];
 
@@ -87,7 +94,7 @@ export default function Sidebar({ role, isRestricted = false, isPending = false 
           <FaSchool className="text-white text-sm" />
         </div>
         <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-emerald-400">
-          E-Grantha
+          E-Grantha Talent
         </h1>
       </div>
 

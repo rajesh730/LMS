@@ -1,23 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
-  FaUserGraduate,
+  FaCalendarAlt,
   FaChalkboardTeacher,
   FaLayerGroup,
-  FaCalendarAlt,
-  FaClipboardList,
+  FaUserGraduate,
+  FaUsers,
 } from "react-icons/fa";
 import StatisticsCard, { StatisticsGrid } from "@/components/StatisticsCard";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import EmptyState from "@/components/EmptyState";
 import EducationConfigCard from "@/components/EducationConfigCard";
 
-/**
- * DashboardOverview Component
- * Shows key metrics and statistics for school admin
- * Displays: Students, Teachers, Events, Attendance
- */
 export default function DashboardOverview() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -82,12 +77,10 @@ export default function DashboardOverview() {
 
   return (
     <div className="space-y-8">
-      {/* Education Configuration */}
       <div>
         <EducationConfigCard />
       </div>
 
-      {/* Main Statistics */}
       <div>
         <h2 className="text-2xl font-bold text-white mb-6">Overview</h2>
         <StatisticsGrid>
@@ -100,26 +93,25 @@ export default function DashboardOverview() {
           />
           <StatisticsCard
             icon={FaChalkboardTeacher}
-            label="Total Teachers"
+            label="Total Mentors"
             value={stats.teachers?.total || 0}
             color="emerald"
           />
           <StatisticsCard
             icon={FaLayerGroup}
-            label="Active Grades"
+            label="Student Groups"
             value={stats.students?.byGrade?.length || 0}
             color="purple"
           />
           <StatisticsCard
             icon={FaCalendarAlt}
-            label="Events"
+            label="Talent Events"
             value={stats.overview?.totalEvents || 0}
             color="amber"
           />
         </StatisticsGrid>
       </div>
 
-      {/* Student Status Breakdown */}
       <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800">
         <h3 className="text-xl font-bold text-white mb-4">Student Status</h3>
         <div className="grid md:grid-cols-3 gap-4">
@@ -136,23 +128,22 @@ export default function DashboardOverview() {
         </div>
       </div>
 
-      {/* Students by Grade */}
       {stats.students?.byGrade && stats.students.byGrade.length > 0 && (
         <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800">
           <h3 className="text-xl font-bold text-white mb-4">
-            Students by Grade
+            Students by Group
           </h3>
           <div className="space-y-2">
-            {stats.students.byGrade.map((grade) => (
+            {stats.students.byGrade.map((group) => (
               <div
-                key={grade._id}
+                key={group._id}
                 className="flex items-center justify-between bg-slate-800/50 p-4 rounded-lg border border-slate-700"
               >
                 <span className="text-slate-300">
-                  {grade.gradeName || "Unassigned"}
+                  {group.gradeName || "Unassigned"}
                 </span>
                 <span className="bg-blue-600/20 text-blue-400 px-3 py-1 rounded-full text-sm font-semibold">
-                  {grade.count} students
+                  {group.count} students
                 </span>
               </div>
             ))}
@@ -160,44 +151,40 @@ export default function DashboardOverview() {
         </div>
       )}
 
-      {/* Attendance Summary */}
       <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800">
         <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-          <FaClipboardList /> Attendance Summary
+          <FaUsers /> Participation Snapshot
         </h3>
         <div className="grid md:grid-cols-3 gap-4">
           <div className="bg-slate-800/50 p-4 rounded-lg border border-slate-700">
-            <p className="text-slate-400 text-sm mb-1">Total Records</p>
+            <p className="text-slate-400 text-sm mb-1">Students Ready to Participate</p>
             <p className="text-2xl font-bold text-white">
-              {stats.attendance?.total || 0}
+              {stats.overview?.totalStudents || 0}
             </p>
           </div>
           <div className="bg-slate-800/50 p-4 rounded-lg border border-slate-700">
-            <p className="text-slate-400 text-sm mb-1">This Month</p>
+            <p className="text-slate-400 text-sm mb-1">Mentors Available</p>
             <p className="text-2xl font-bold text-white">
-              {stats.attendance?.thisMonth || 0}
+              {stats.teachers?.total || 0}
             </p>
           </div>
           <div className="bg-slate-800/50 p-4 rounded-lg border border-slate-700">
-            <p className="text-slate-400 text-sm mb-1">Today</p>
+            <p className="text-slate-400 text-sm mb-1">Events in Motion</p>
             <div className="flex items-end gap-2">
               <p className="text-2xl font-bold text-white">
-                {stats.attendance?.today || 0}
+                {stats.overview?.totalEvents || 0}
               </p>
-              <p className="text-emerald-400 text-sm mb-1">
-                ({stats.attendance?.percentage || 0}%)
-              </p>
+              <p className="text-emerald-400 text-sm mb-1">live</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Quick Info */}
       <div className="bg-blue-900/20 border border-blue-500/30 p-6 rounded-xl">
-        <h4 className="text-white font-semibold mb-2">💡 Quick Info</h4>
+        <h4 className="text-white font-semibold mb-2">Platform Snapshot</h4>
         <ul className="text-blue-200 text-sm space-y-1">
           <li>
-            • You have{" "}
+            You currently have{" "}
             <strong>
               {stats.students?.byStatus?.SUSPENDED || 0} suspended{" "}
               {(stats.students?.byStatus?.SUSPENDED || 0) === 1
@@ -206,7 +193,7 @@ export default function DashboardOverview() {
             </strong>
           </li>
           <li>
-            • {stats.overview?.totalEvents || 0} school event
+            {stats.overview?.totalEvents || 0} school event
             {(stats.overview?.totalEvents || 0) !== 1 ? "s" : ""} planned
           </li>
         </ul>

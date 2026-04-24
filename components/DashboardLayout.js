@@ -5,7 +5,6 @@ import { useSession } from 'next-auth/react';
 
 export default function DashboardLayout({ children }) {
     const { data: session } = useSession();
-    console.log("[DashboardLayout] session:", session);
 
     // If no session, we don't render the sidebar (middleware handles redirect)
     // But for smooth transition, we check.

@@ -3,10 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import Student from "@/models/Student";
-import User from "@/models/User";
 import bcrypt from "bcryptjs";
-import { generateStudentPassword } from "@/lib/passwordGenerator";
-import { validateActiveYear, missingYearResponse } from "@/lib/guards";
 
 export const dynamic = "force-dynamic";
 
@@ -18,16 +15,6 @@ export async function POST(req) {
     }
 
     await connectDB();
-
-    // GUARD: Ensure Active Academic Year
-    try {
-        await validateActiveYear(session.user.id);
-    } catch (error) {
-        if (error.message === "NO_ACTIVE_YEAR") {
-            return missingYearResponse();
-        }
-        throw error;
-    }
 
     const body = await req.json();
 
@@ -266,11 +253,6 @@ export async function GET(req) {
           totalPages,
           totalStudents,
           limit,
-        },
-        debug: {
-            query: JSON.stringify(query),
-            gradeParam: grade,
-            statusParam: status
         }
       },
       { status: 200 }
@@ -279,63 +261,6 @@ export async function GET(req) {
     console.error("Fetch Students Error:", error);
     return NextResponse.json(
       { message: "Error fetching students", error: error.message },
-      { status: 500 }
-    );
-  }
-}
-
-// Reset student password
-export async function PATCH(req, { params }) {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== "SCHOOL_ADMIN") {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    }
-
-    const { id } = params;
-    await connectDB();
-
-    const studentDoc = await Student.findById(id);
-    if (!studentDoc) {
-      return NextResponse.json(
-        { message: "Student not found" },
-        { status: 404 }
-      );
-    }
-
-    const firstName = studentDoc.name.split(" ")[0];
-    const newPassword = generateStudentPassword(
-      firstName,
-      studentDoc.rollNumber,
-      studentDoc.grade
-    );
-
-    await Student.findByIdAndUpdate(
-      id,
-      { visiblePassword: newPassword },
-      { new: true }
-    );
-
-    // Also update User password
-    if (studentDoc.email) {
-      const hashedPassword = await bcrypt.hash(newPassword, 10);
-      await User.findOneAndUpdate(
-        { email: studentDoc.email },
-        { password: hashedPassword }
-      );
-    }
-
-    return NextResponse.json(
-      {
-        message: "Password reset successfully",
-        credentials: { email: studentDoc.email, password: newPassword },
-      },
-      { status: 200 }
-    );
-  } catch (error) {
-    console.error("Reset Student Password Error:", error);
-    return NextResponse.json(
-      { message: "Error resetting password" },
       { status: 500 }
     );
   }

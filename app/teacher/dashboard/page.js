@@ -3,30 +3,20 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import DashboardLayout from "@/components/DashboardLayout";
 import CredentialsModal from "@/components/CredentialsModal";
-import PasswordField from "@/components/PasswordField";
-import TeacherAttendanceManager from "@/components/TeacherAttendanceManager";
-import AttendanceReports from "@/components/AttendanceReports";
-import MarksManager from "@/components/MarksManager";
-import BulkMarksEntry from "@/components/dashboard/BulkMarksEntry";
-import TeacherSubjectManager from "@/components/TeacherSubjectManager";
+import DashboardLayout from "@/components/DashboardLayout";
+import EventHub from "@/components/events/EventHub";
+import SubmissionReviewManager from "@/components/SubmissionReviewManager";
 import {
   FaUser,
-  FaEnvelope,
-  FaCalendarCheck,
-  FaChartBar,
-  FaFileAlt,
+  FaChalkboardTeacher,
   FaExclamationTriangle,
+  FaCalendarAlt,
 } from "react-icons/fa";
 
 export default function TeacherDashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [subjects, setSubjects] = useState([]);
-  const [grades, setGrades] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [isRestricted, setIsRestricted] = useState(false);
   const [credentialsModal, setCredentialsModal] = useState({
     isOpen: false,
     credentials: null,
@@ -34,62 +24,9 @@ export default function TeacherDashboard() {
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
-    if (status === "authenticated") {
-      fetchSubjects();
-      fetchGrades();
-    }
   }, [status, router]);
 
-  const fetchSubjects = async () => {
-    try {
-      const res = await fetch("/api/teacher/subjects");
-      if (res.status === 403) {
-        setIsRestricted(true);
-        return;
-      }
-      if (res.ok) {
-        const data = await res.json();
-        setSubjects(data.subjects);
-      }
-    } catch (error) {
-      console.error("Error fetching subjects", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchGrades = async () => {
-    try {
-      const res = await fetch("/api/school/grade-structure");
-      if (res.ok) {
-        const data = await res.json();
-        setGrades(data.grades || []);
-      }
-    } catch (error) {
-      console.error("Error fetching grades", error);
-    }
-  };
-
-  if (loading) return <div className="p-8 text-white">Loading...</div>;
-
-  if (isRestricted) {
-    return (
-      <DashboardLayout>
-        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-8">
-          <div className="bg-yellow-500/10 p-6 rounded-full mb-6">
-            <FaExclamationTriangle className="text-6xl text-yellow-500" />
-          </div>
-          <h1 className="text-3xl font-bold text-white mb-4">
-            Academic Year Not Active
-          </h1>
-          <p className="text-slate-400 max-w-md text-lg mb-8">
-            The school administrator has not activated the current academic year yet. 
-            Please contact your school administration to enable dashboard access.
-          </p>
-        </div>
-      </DashboardLayout>
-    );
-  }
+  if (status === "loading") return <div className="p-8 text-white">Loading...</div>;
 
   return (
     <DashboardLayout>
@@ -99,7 +36,7 @@ export default function TeacherDashboard() {
           <div>
             <h2 className="text-2xl font-bold text-white flex items-center gap-2 mb-1">
               <FaUser className="text-blue-400" />{" "}
-              {session?.user?.name || "Teacher"}
+              {session?.user?.name || "Mentor"}
             </h2>
             <p className="text-slate-400">{session?.user?.email}</p>
           </div>
@@ -119,42 +56,59 @@ export default function TeacherDashboard() {
           </button>
         </div>
         <p className="text-slate-400 text-sm">
-          Role: <span className="text-blue-400 font-semibold">Teacher</span>
+          Role: <span className="text-blue-400 font-semibold">Mentor / Coordinator</span>
         </p>
       </div>
 
-      {/* Attendance Section */}
       <div className="mb-12">
         <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
-          <FaCalendarCheck className="text-emerald-400" /> Attendance Management
+          <FaChalkboardTeacher className="text-emerald-400" /> Mentor Workspace
         </h2>
-        <TeacherAttendanceManager />
-      </div>
-
-      {/* Attendance Reports Section */}
-      <div className="mb-12">
-        <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
-          <FaChartBar className="text-purple-400" /> Attendance Analysis
-        </h2>
-        <AttendanceReports />
-      </div>
-
-      {/* Marks Management Section */}
-      <div className="mb-12">
-        <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
-          <FaFileAlt className="text-blue-400" /> Marks & Grades
-        </h2>
-        <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800">
-          <h3 className="text-xl font-semibold text-white mb-4">Bulk Marks Entry</h3>
-          <BulkMarksEntry subjects={subjects} grades={grades} />
+        <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800 mb-8">
+          <div className="flex items-start gap-4">
+            <div className="bg-yellow-500/10 p-4 rounded-2xl">
+              <FaExclamationTriangle className="text-2xl text-yellow-500" />
+            </div>
+            <div>
+              <h3 className="text-xl font-semibold text-white mb-2">
+                Transition In Progress
+              </h3>
+              <p className="text-slate-400">
+                This dashboard is shifting away from attendance, marks, and academic administration. The mentor workspace will focus on guiding talent, organizing activity content, and supporting school events.
+              </p>
+            </div>
+          </div>
         </div>
-        <div className="mt-8">
-          <h3 className="text-xl font-semibold text-white mb-4">Individual Marks Management</h3>
-          <MarksManager />
+
+        <div className="space-y-8">
+          <SubmissionReviewManager
+            title="Mentor Review Queue"
+            description="Shortlist student entries, leave coaching notes, and help the school prepare final event results."
+            compact
+          />
+
+          <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800">
+            <h3 className="text-xl font-semibold text-white mb-2">
+              Event Results Follow School Decisions
+            </h3>
+            <p className="text-slate-400">
+              Mentors can review submissions and support participants here. Final placements and public winner publishing are now handled from the school admin results workspace.
+            </p>
+          </div>
+
+          <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800">
+            <h3 className="text-xl font-semibold text-white mb-2 flex items-center gap-2">
+              <FaCalendarAlt className="text-blue-400" />
+              Talent Events and Coordination
+            </h3>
+            <p className="text-slate-400">
+              Use this workspace to follow upcoming talent events, help students prepare entries, and coordinate participation with your school team.
+            </p>
+          </div>
+
+          <EventHub />
         </div>
       </div>
-
-      <TeacherSubjectManager />
 
       <CredentialsModal
         isOpen={credentialsModal.isOpen}

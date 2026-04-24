@@ -3,7 +3,9 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import connectDB from '@/lib/db';
 import Student from '@/models/Student';
+import User from '@/models/User';
 import bcrypt from 'bcryptjs';
+import { generateStudentPassword } from '@/lib/passwordGenerator';
 
 export async function PUT(req, { params }) {
     try {
@@ -150,5 +152,57 @@ export async function DELETE(req, { params }) {
     } catch (error) {
         console.error('Delete Student Error:', error);
         return NextResponse.json({ message: 'Error deleting student' }, { status: 500 });
+    }
+}
+
+
+export async function PATCH(req, { params }) {
+    try {
+        const session = await getServerSession(authOptions);
+        if (!session || session.user.role !== 'SCHOOL_ADMIN') {
+            return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+        }
+
+        const { id } = await params;
+
+        await connectDB();
+        const studentDoc = await Student.findOne({ _id: id, school: session.user.id });
+
+        if (!studentDoc) {
+            return NextResponse.json({ message: 'Student not found' }, { status: 404 });
+        }
+
+        const firstName = (studentDoc.firstName || studentDoc.name?.split(' ')?.[0] || 'Student').trim();
+        const newPassword = generateStudentPassword(
+            firstName,
+            studentDoc.rollNumber,
+            studentDoc.grade
+        );
+
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        await Student.findByIdAndUpdate(
+            id,
+            { password: hashedPassword, visiblePassword: newPassword },
+            { new: true }
+        );
+
+        if (studentDoc.email) {
+            await User.findOneAndUpdate(
+                { email: studentDoc.email },
+                { password: hashedPassword }
+            );
+        }
+
+        return NextResponse.json(
+            {
+                message: 'Password reset successfully',
+                credentials: { email: studentDoc.email, password: newPassword },
+            },
+            { status: 200 }
+        );
+    } catch (error) {
+        console.error('Reset Student Password Error:', error);
+        return NextResponse.json({ message: 'Error resetting password' }, { status: 500 });
     }
 }

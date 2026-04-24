@@ -24,7 +24,7 @@ export async function POST(req) {
       try {
         // Validation
         if (!teacherData.name || !teacherData.email || !teacherData.subject) {
-          throw new Error("Missing required fields (Name, Email, Subject)");
+          throw new Error("Missing required fields (Name, Email, Focus Area)");
         }
 
         // Check if Teacher already exists
@@ -53,7 +53,7 @@ export async function POST(req) {
           bloodGroup: teacherData.bloodGroup,
           visiblePassword: plainPassword,
           school: schoolId,
-          roles: ["SUBJECT_TEACHER"],
+          roles: ["MENTOR"],
         });
 
         results.success.push({

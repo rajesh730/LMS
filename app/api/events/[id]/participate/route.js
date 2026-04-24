@@ -3,12 +3,75 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import Student from "@/models/Student";
 import Event from "@/models/Event";
+import EventSchoolInvitation from "@/models/EventSchoolInvitation";
 import ParticipationRequest from "@/models/ParticipationRequest";
 import {
   successResponse,
   errorResponse,
   internalServerError,
 } from "@/lib/apiResponse";
+
+const ACTIVE_REQUEST_STATUSES = ["PENDING", "APPROVED", "ENROLLED"];
+
+async function getPlatformInvitationBlocker(event, schoolId) {
+  if (event.eventScope !== "PLATFORM") return null;
+
+  const invitation = await EventSchoolInvitation.findOne({
+    event: event._id,
+    school: schoolId,
+  }).select("status");
+
+  if (invitation?.status === "APPROVED") return null;
+
+  if (invitation?.status === "DISAPPROVED") {
+    return "Your school has disapproved this platform event.";
+  }
+
+  if (invitation?.status === "WITHDRAWN") {
+    return "This platform event is no longer available for your school.";
+  }
+
+  return "Your school must approve this platform event before students can participate.";
+}
+
+function syncSchoolParticipants(event, schoolId, studentIds, contactInfo = {}) {
+  const normalizedStudentIds = Array.from(
+    new Set((studentIds || []).map((id) => String(id)))
+  );
+
+  const existingParticipant = event.participants.find(
+    (participant) => participant.school?.toString() === schoolId.toString()
+  );
+
+  if (normalizedStudentIds.length === 0) {
+    event.participants = event.participants.filter(
+      (participant) => participant.school?.toString() !== schoolId.toString()
+    );
+    return;
+  }
+
+  if (existingParticipant) {
+    existingParticipant.students = normalizedStudentIds;
+    existingParticipant.contactPerson =
+      contactInfo.contactPerson || existingParticipant.contactPerson;
+    existingParticipant.contactPhone =
+      contactInfo.contactPhone || existingParticipant.contactPhone;
+    existingParticipant.notes =
+      contactInfo.notes !== undefined ? contactInfo.notes : existingParticipant.notes;
+    existingParticipant.expectedStudents = normalizedStudentIds.length;
+    return;
+  }
+
+  event.participants.push({
+    school: schoolId,
+    students: normalizedStudentIds,
+    joinedAt: new Date(),
+    contactPerson: contactInfo.contactPerson || undefined,
+    contactPhone: contactInfo.contactPhone || undefined,
+    notes: contactInfo.notes || undefined,
+    expectedStudents: normalizedStudentIds.length,
+  });
+}
 
 export async function POST(req, { params }) {
   try {
@@ -55,6 +118,14 @@ export async function POST(req, { params }) {
         return errorResponse(400, "Student school information not found");
       }
 
+      const invitationBlocker = await getPlatformInvitationBlocker(
+        event,
+        schoolId
+      );
+      if (invitationBlocker) {
+        return errorResponse(403, invitationBlocker);
+      }
+
       // Check Grade Eligibility
       if (event.eligibleGrades && event.eligibleGrades.length > 0) {
         if (!event.eligibleGrades.includes(student.grade)) {
@@ -74,7 +145,7 @@ export async function POST(req, { params }) {
         const approvedCount = await ParticipationRequest.countDocuments({
           event: eventId,
           school: schoolId,
-          status: "APPROVED",
+          status: { $in: ACTIVE_REQUEST_STATUSES },
         });
 
         if (approvedCount >= event.maxParticipantsPerSchool) {
@@ -89,7 +160,7 @@ export async function POST(req, { params }) {
       if (event.maxParticipants) {
         const totalApproved = await ParticipationRequest.countDocuments({
           event: eventId,
-          status: "APPROVED",
+          status: { $in: ACTIVE_REQUEST_STATUSES },
         });
 
         if (totalApproved >= event.maxParticipants) {
@@ -152,6 +223,13 @@ export async function POST(req, { params }) {
       }
 
       const schoolId = session.user.id;
+      const invitationBlocker = await getPlatformInvitationBlocker(
+        event,
+        schoolId
+      );
+      if (invitationBlocker) {
+        return errorResponse(403, invitationBlocker);
+      }
 
       // ===== VALIDATION: Check Max Participants Per School =====
       if (event.maxParticipantsPerSchool) {
@@ -159,7 +237,7 @@ export async function POST(req, { params }) {
         const existingCount = await ParticipationRequest.countDocuments({
           event: eventId,
           school: schoolId,
-          status: { $in: ["PENDING", "APPROVED", "ENROLLED"] },
+          status: { $in: ACTIVE_REQUEST_STATUSES },
         });
 
         const availableSlots = event.maxParticipantsPerSchool - existingCount;
@@ -176,7 +254,7 @@ export async function POST(req, { params }) {
           await ParticipationRequest.countDocuments({
             event: eventId,
             student: { $in: studentIds },
-            status: { $in: ["PENDING", "APPROVED", "ENROLLED"] },
+            status: { $in: ACTIVE_REQUEST_STATUSES },
           });
 
         const newStudentsCount = studentIds.length - alreadyRegisteredCount;
@@ -189,8 +267,34 @@ export async function POST(req, { params }) {
         }
       }
 
+      if (event.maxParticipants) {
+        const existingGlobalCount = await ParticipationRequest.countDocuments({
+          event: eventId,
+          status: { $in: ACTIVE_REQUEST_STATUSES },
+        });
+
+        const alreadyRegisteredCount =
+          await ParticipationRequest.countDocuments({
+            event: eventId,
+            student: { $in: studentIds },
+            status: { $in: ACTIVE_REQUEST_STATUSES },
+          });
+
+        const newStudentsCount = studentIds.length - alreadyRegisteredCount;
+        const availableGlobalSlots = event.maxParticipants - existingGlobalCount;
+
+        if (newStudentsCount > availableGlobalSlots) {
+          return errorResponse(
+            400,
+            `Registration failed: You are trying to register ${newStudentsCount} new students, but only ${availableGlobalSlots} total slots remain for this event (Limit: ${event.maxParticipants}).`
+          );
+        }
+      }
+
       let successCount = 0;
       let errors = [];
+      const approvedStudentIds = [];
+      const now = new Date();
 
       // Process each student
       for (const studentId of studentIds) {
@@ -223,18 +327,11 @@ export async function POST(req, { params }) {
           });
 
           if (existingRequest) {
-            // Update contact info if provided
-            if (contactPerson || phone || notes) {
-              existingRequest.contactPerson =
-                contactPerson || existingRequest.contactPerson;
-              existingRequest.contactPhone =
-                phone || existingRequest.contactPhone;
-              existingRequest.notes = notes || existingRequest.notes;
-
-              // Reset status to PENDING on update
-              existingRequest.status = "PENDING";
-
-              await existingRequest.save();
+            if (
+              existingRequest.status === "APPROVED" ||
+              existingRequest.status === "ENROLLED"
+            ) {
+              approvedStudentIds.push(studentId);
             }
             continue;
           }
@@ -244,17 +341,31 @@ export async function POST(req, { params }) {
             student: studentId,
             event: eventId,
             school: schoolId,
-            status: "PENDING",
+            status: "APPROVED",
+            approvedAt: now,
+            approvedBy: session.user.id,
+            enrollmentConfirmedAt: now,
+            studentNotifiedAt: now,
             contactPerson: contactPerson || undefined,
             contactPhone: phone || undefined,
             notes: notes || undefined,
           });
 
+          approvedStudentIds.push(studentId);
           successCount++;
         } catch (err) {
           console.error(`Error processing student ${studentId}:`, err);
           errors.push(`Error processing student ${studentId}`);
         }
+      }
+
+      if (approvedStudentIds.length > 0) {
+        syncSchoolParticipants(event, schoolId, approvedStudentIds, {
+          contactPerson,
+          contactPhone: phone,
+          notes,
+        });
+        await event.save();
       }
 
       return successResponse(
@@ -378,8 +489,7 @@ export async function DELETE(req, { params }) {
       const result = await ParticipationRequest.deleteMany({
         event: eventId,
         school: schoolId,
-        // Allow withdrawing PENDING, APPROVED, and REJECTED.
-        status: { $in: ["PENDING", "APPROVED", "REJECTED"] },
+        status: { $in: ["PENDING", "APPROVED", "ENROLLED", "REJECTED"] },
       });
 
       // Also remove from Event.participants to keep sync
@@ -476,6 +586,14 @@ export async function PUT(req, { params }) {
       return errorResponse(404, "Event not found");
     }
 
+    const invitationBlocker = await getPlatformInvitationBlocker(
+      event,
+      schoolId
+    );
+    if (invitationBlocker) {
+      return errorResponse(403, invitationBlocker);
+    }
+
     // Check Max Participants Per School
     if (
       event.maxParticipantsPerSchool &&
@@ -506,38 +624,43 @@ export async function PUT(req, { params }) {
       (id) => !studentIds.includes(id)
     );
 
+    if (event.maxParticipants) {
+      const globalActiveCount = await ParticipationRequest.countDocuments({
+        event: eventId,
+        status: { $in: ACTIVE_REQUEST_STATUSES },
+      });
+      const toRemoveActiveCount = existingRequests.filter(
+        (request) =>
+          toRemove.includes(request.student.toString()) &&
+          ACTIVE_REQUEST_STATUSES.includes(request.status)
+      ).length;
+      const reactivatedCount = existingRequests.filter(
+        (request) =>
+          studentIds.includes(request.student.toString()) &&
+          !ACTIVE_REQUEST_STATUSES.includes(request.status)
+      ).length;
+      const projectedCount =
+        globalActiveCount - toRemoveActiveCount + toAdd.length + reactivatedCount;
+
+      if (projectedCount > event.maxParticipants) {
+        return errorResponse(
+          400,
+          `Cannot update: This change would exceed the global event limit of ${event.maxParticipants} students.`
+        );
+      }
+    }
+
     // Remove students
     if (toRemove.length > 0) {
       await ParticipationRequest.deleteMany({
         event: eventId,
         school: schoolId,
         student: { $in: toRemove },
-        // Only allow removing PENDING or APPROVED (maybe not REJECTED? or yes?)
-        // If we remove REJECTED, they can re-apply. That seems fine.
       });
-
-      // Also remove from Event.participants to keep sync
-      await Event.updateOne(
-        { _id: eventId, "participants.school": schoolId },
-        {
-          $pull: {
-            "participants.$.students": { $in: toRemove },
-          },
-        }
-      );
-
-      // Cleanup empty participants (schools with 0 students)
-      await Event.updateOne(
-        { _id: eventId },
-        {
-          $pull: {
-            participants: { students: { $size: 0 } },
-          },
-        }
-      );
     }
 
     // Add new students
+    const now = new Date();
     for (const studentId of toAdd) {
       // Verify student belongs to this school
       const student = await Student.findOne({
@@ -550,7 +673,11 @@ export async function PUT(req, { params }) {
           student: studentId,
           event: eventId,
           school: schoolId,
-          status: "PENDING",
+          status: "APPROVED",
+          approvedAt: now,
+          approvedBy: session.user.id,
+          enrollmentConfirmedAt: now,
+          studentNotifiedAt: now,
           contactPerson: contactPerson || undefined,
           contactPhone: phone || undefined,
           notes: notes || undefined,
@@ -558,16 +685,22 @@ export async function PUT(req, { params }) {
       }
     }
 
-    // Update contact info and reset status for existing (kept) students
+    // Update contact info and keep selected students approved
     const toKeep = studentIds.filter((id) => existingStudentIds.includes(id));
     if (toKeep.length > 0) {
       const updateData = {
-        status: "PENDING", // Reset status to PENDING on any update
+        status: "APPROVED",
+        approvedAt: now,
+        approvedBy: session.user.id,
+        rejectedAt: null,
+        rejectionReason: null,
       };
 
       if (contactPerson) updateData.contactPerson = contactPerson;
       if (phone) updateData.contactPhone = phone;
-      if (notes) updateData.notes = notes;
+      if (notes !== undefined) updateData.notes = notes;
+      updateData.enrollmentConfirmedAt = now;
+      updateData.studentNotifiedAt = now;
 
       await ParticipationRequest.updateMany(
         {
@@ -580,6 +713,13 @@ export async function PUT(req, { params }) {
         }
       );
     }
+
+    syncSchoolParticipants(event, schoolId, studentIds, {
+      contactPerson,
+      contactPhone: phone,
+      notes,
+    });
+    await event.save();
 
     return successResponse(200, "Participation updated successfully");
   } catch (error) {

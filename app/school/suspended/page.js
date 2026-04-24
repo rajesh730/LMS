@@ -12,7 +12,7 @@ export default function SuspendedPage() {
                 </div>
                 <h1 className="text-2xl font-bold mb-4">Account Suspended</h1>
                 <p className="text-slate-400 mb-8">
-                    Your school's subscription is currently inactive. Please contact the Super Admin to reactivate your account.
+                    Your school&apos;s subscription is currently inactive. Please contact the Super Admin to reactivate your account.
                 </p>
                 <button
                     onClick={() => signOut({ callbackUrl: '/login' })}

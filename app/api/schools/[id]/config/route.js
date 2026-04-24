@@ -1,5 +1,6 @@
 import connectDB from "../../../../../lib/db";
 import User from "../../../../../models/User";
+import SchoolConfig from "../../../../../models/SchoolConfig";
 import { successResponse, errorResponse } from "../../../../../lib/apiResponse";
 
 export async function GET(req, { params }) {
@@ -7,6 +8,17 @@ export async function GET(req, { params }) {
     await connectDB();
     const { id } = await params;
 
+    // 1. Try to fetch from SchoolConfig collection first (Source of Truth)
+    const schoolConfigDoc = await SchoolConfig.findOne({ school: id });
+    
+    if (schoolConfigDoc && schoolConfigDoc.grades && schoolConfigDoc.grades.length > 0) {
+        return successResponse(200, "School config fetched from SchoolConfig", {
+            grades: schoolConfigDoc.grades,
+            config: schoolConfigDoc
+        });
+    }
+
+    // 2. Fallback to User profile config
     const school = await User.findById(id).select("schoolConfig educationLevels");
 
     if (!school) {
@@ -19,12 +31,25 @@ export async function GET(req, { params }) {
     if (school.schoolConfig?.grades && Array.isArray(school.schoolConfig.grades)) {
         grades = school.schoolConfig.grades;
     } else {
-        // Fallback: Generate grades array based on maxGrade
-        const maxGrade = school.schoolConfig?.maxGrade || 10;
-        grades = Array.from({ length: maxGrade }, (_, i) => (i + 1).toString());
+        // Handle nested structure: schoolConfig.schoolLevel.maxGrade
+        let maxGrade = 10;
+        let minGrade = 1;
+
+        if (school.schoolConfig?.schoolLevel?.maxGrade) {
+            maxGrade = parseInt(school.schoolConfig.schoolLevel.maxGrade);
+            minGrade = parseInt(school.schoolConfig.schoolLevel.minGrade) || 1;
+        } else if (school.schoolConfig?.maxGrade) {
+            // Legacy/Flat structure support
+            maxGrade = parseInt(school.schoolConfig.maxGrade);
+        }
+
+        // Generate grades array
+        for (let i = minGrade; i <= maxGrade; i++) {
+            grades.push(i.toString());
+        }
     }
 
-    return successResponse(200, "School config fetched", {
+    return successResponse(200, "School config fetched from User profile", {
       grades,
       config: school.schoolConfig
     });

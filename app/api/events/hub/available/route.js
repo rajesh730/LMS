@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import dbConnect from "@/lib/db";
 import Event from "@/models/Event";
+import EventSchoolInvitation from "@/models/EventSchoolInvitation";
 import Student from "@/models/Student";
 import ParticipationRequest from "@/models/ParticipationRequest";
 
@@ -22,7 +23,14 @@ export async function GET(req) {
     await dbConnect();
 
     // Get student info
-    const student = await Student.findOne({ userId: session.user.id });
+    const student = await Student.findOne({
+      $or: [
+        { _id: session.user.id },
+        { userId: session.user.id },
+        { email: session.user.email },
+        { username: session.user.email },
+      ],
+    });
 
     if (!student) {
       return NextResponse.json(
@@ -48,14 +56,33 @@ export async function GET(req) {
         }
       : {};
 
-    // Find eligible events
+    const approvedPlatformEventIds = student.school
+      ? await EventSchoolInvitation.find({
+          school: student.school,
+          status: "APPROVED",
+        }).distinct("event")
+      : [];
+
+    // Find eligible events. Platform/partner events are visible only after
+    // the student's school approves the platform invitation.
     const baseQuery = {
       ...searchQuery,
       status: "APPROVED",
+      lifecycleStatus: "ACTIVE",
       date: { $gt: new Date() }, // Only future events
-      $or: [
-        { eligibleGrades: { $size: 0 } }, // No grade restrictions
-        { eligibleGrades: student.grade },
+      $and: [
+        {
+          $or: [
+            { eligibleGrades: { $size: 0 } }, // No grade restrictions
+            { eligibleGrades: student.grade },
+          ],
+        },
+        {
+          $or: [
+            { eventScope: "SCHOOL", school: student.school },
+            { eventScope: "PLATFORM", _id: { $in: approvedPlatformEventIds } },
+          ],
+        },
       ],
     };
 

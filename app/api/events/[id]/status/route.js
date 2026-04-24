@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import Event from '@/models/Event';
 import connectDB from '@/lib/db';
+import { syncEventSchoolInvitations } from '@/lib/eventInvitations';
 
 export async function PUT(req, { params }) {
     try {
@@ -17,7 +18,8 @@ export async function PUT(req, { params }) {
         }
 
         await connectDB();
-        const { id } = params;
+        const resolvedParams = await params;
+        const { id } = resolvedParams;
         const { status } = await req.json();
 
         if (!['PENDING', 'APPROVED', 'REJECTED'].includes(status)) {
@@ -45,7 +47,18 @@ export async function PUT(req, { params }) {
             // Try finding by ID only if we assume admin has access to all events (simplified for now)
             const eventById = await Event.findByIdAndUpdate(id, { status }, { new: true });
             if (!eventById) return NextResponse.json({ error: 'Event not found' }, { status: 404 });
+            if (session.user.role === 'SUPER_ADMIN') {
+                await syncEventSchoolInvitations(eventById._id, {
+                    createdBy: session.user.id,
+                });
+            }
             return NextResponse.json(eventById);
+        }
+
+        if (session.user.role === 'SUPER_ADMIN') {
+            await syncEventSchoolInvitations(event._id, {
+                createdBy: session.user.id,
+            });
         }
 
         return NextResponse.json(event);

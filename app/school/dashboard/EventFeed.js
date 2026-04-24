@@ -57,6 +57,15 @@ export default function EventFeed() {
 
   // Filter events based on active tab
   const filteredEvents = events.filter((event) => {
+    if (
+      session?.user?.role === "SCHOOL_ADMIN" &&
+      event.eventScope === "PLATFORM" &&
+      event.schoolInvitationStatus !== "APPROVED" &&
+      !event.isParticipating
+    ) {
+      return false;
+    }
+
     if (activeTab === "participated") {
       return event.isParticipating;
     }

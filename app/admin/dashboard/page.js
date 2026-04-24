@@ -1,14 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import DashboardLayout from "@/components/DashboardLayout";
 import AdminTopNav from "@/components/AdminTopNav";
+import EventResultsManager from "@/components/EventResultsManager";
+import AdminPartnerWorkspace from "@/components/partners/AdminPartnerWorkspace";
 import SendEventForm from "./SendEventForm";
 import EventCard from "./EventCard";
-import AcademicYearManager from "@/components/settings/AcademicYearManager";
 
 // Lazy load the participants view component
 const EventParticipantsView = dynamic(() => import("./EventParticipantsView"), {
@@ -30,17 +31,46 @@ import {
   FaInfoCircle,
 } from "react-icons/fa";
 
-export default function AdminDashboard() {
+const FETCH_TIMEOUT_MS = 10000;
+
+async function fetchJsonWithTimeout(url) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+  try {
+    const res = await fetch(url, {
+      cache: "no-store",
+      signal: controller.signal,
+    });
+
+    if (!res.ok) {
+      throw new Error(`${url} failed with ${res.status}`);
+    }
+
+    return await res.json();
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+function AdminDashboardContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const activeTab = searchParams.get('tab') || 'approvals';
+  const rawTab = searchParams.get("tab") || "approvals";
+  const activeTab = rawTab === "judging" ? "results" : rawTab;
   const [schools, setSchools] = useState([]);
   const [groups, setGroups] = useState([]);
   const [events, setEvents] = useState([]);
+  const [partners, setPartners] = useState([]);
+  const [proposals, setProposals] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [viewingEvent, setViewingEvent] = useState(null);
   const [eventFilter, setEventFilter] = useState("active"); // active, completed, archived
+  const [deletingId, setDeletingId] = useState(null);
+  const [lastError, setLastError] = useState(null);
+  const [editingEvent, setEditingEvent] = useState(null);
 
   // Group Form State
   const [groupName, setGroupName] = useState("");
@@ -50,24 +80,81 @@ export default function AdminDashboard() {
   // Editing State
   const [editingGroup, setEditingGroup] = useState(null);
 
+  const closeOverlays = () => {
+    setEditingGroup(null);
+    setEditingEvent(null);
+    setViewingEvent(null);
+  };
+
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
     if (status === "authenticated") fetchData();
   }, [status, router]);
 
-  const fetchData = async () => {
-    try {
-      const schoolsRes = await fetch("/api/schools/list", {
-        cache: "no-store",
-      });
-      const groupsRes = await fetch("/api/groups", { cache: "no-store" });
-      const eventsRes = await fetch("/api/events", { cache: "no-store" });
+  useEffect(() => {
+    closeOverlays();
+  }, [activeTab]);
 
-      if (schoolsRes.ok) setSchools((await schoolsRes.json()).schools);
-      if (groupsRes.ok) setGroups((await groupsRes.json()).groups);
-      if (eventsRes.ok) setEvents((await eventsRes.json()).events);
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        closeOverlays();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  const fetchData = async () => {
+    setLoading(true);
+    setLoadError("");
+
+    try {
+      const results = await Promise.allSettled([
+        fetchJsonWithTimeout("/api/schools/list"),
+        fetchJsonWithTimeout("/api/groups"),
+        fetchJsonWithTimeout("/api/events"),
+        fetchJsonWithTimeout("/api/external-organizers"),
+        fetchJsonWithTimeout("/api/event-proposals"),
+      ]);
+
+      const [schoolsResult, groupsResult, eventsResult, partnersResult, proposalsResult] =
+        results;
+      const failed = results.filter((result) => result.status === "rejected");
+
+      if (schoolsResult.status === "fulfilled") {
+        setSchools(schoolsResult.value.schools || []);
+      }
+      if (groupsResult.status === "fulfilled") {
+        setGroups(groupsResult.value.groups || []);
+      }
+      if (eventsResult.status === "fulfilled") {
+        setEvents(eventsResult.value.events || []);
+      }
+      if (partnersResult.status === "fulfilled") {
+        setPartners(partnersResult.value.data || []);
+      }
+      if (proposalsResult.status === "fulfilled") {
+        const proposalData = proposalsResult.value.data || [];
+        setProposals(
+          proposalData.filter((proposal) =>
+            ["APPROVED", "CONVERTED_TO_EVENT"].includes(proposal.status)
+          )
+        );
+      }
+
+      if (failed.length > 0) {
+        console.error("Some admin dashboard data failed to load", failed);
+        setLoadError(
+          "Some dashboard data could not load. The dashboard is still usable; refresh after checking the server/database connection."
+        );
+      }
     } catch (error) {
       console.error("Error fetching data", error);
+      setLoadError(
+        "Dashboard data could not load. Please check the server/database connection and try refresh."
+      );
     } finally {
       setLoading(false);
     }
@@ -162,10 +249,6 @@ export default function AdminDashboard() {
     }
   };
 
-  const [deletingId, setDeletingId] = useState(null);
-  const [lastError, setLastError] = useState(null);
-  const [editingEvent, setEditingEvent] = useState(null);
-
   // Event CRUD
   const deleteEvent = async (id, permanent = false) => {
     setLastError(null);
@@ -250,17 +333,15 @@ export default function AdminDashboard() {
 
   const pendingSchools = schools.filter((s) => s.status === "PENDING");
 
-  if (loading) return <div className="p-8 text-white">Loading...</div>;
-
   return (
     <DashboardLayout>
       <header className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-3xl font-bold text-white">
-            Super Admin Dashboard
+            Platform Admin Dashboard
           </h1>
           <p className="text-slate-400 mt-1">
-            Manage schools, groups, and events
+            Oversee schools, networks, and platform competitions
           </p>
           <p className="text-xs text-slate-500 mt-1 font-mono">
             Logged in as:{" "}
@@ -274,6 +355,18 @@ export default function AdminDashboard() {
 
       {/* Tabs */}
       <AdminTopNav pendingCount={pendingSchools.length} />
+
+      {(loading || loadError) && (
+        <div
+          className={`mb-6 rounded-2xl border p-4 text-sm ${
+            loadError
+              ? "border-yellow-500/30 bg-yellow-500/10 text-yellow-100"
+              : "border-blue-500/30 bg-blue-500/10 text-blue-100"
+          }`}
+        >
+          {loadError || "Loading dashboard data..."}
+        </div>
+      )}
 
       {/* Content */}
       {activeTab === "approvals" && (
@@ -423,18 +516,18 @@ export default function AdminDashboard() {
         <div className="space-y-6">
           <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800">
             <h2 className="text-xl font-semibold text-white mb-4">
-              Create New Group
+              Create School Network
             </h2>
             <form onSubmit={createGroup} className="space-y-4">
               <div>
                 <label className="block text-slate-400 mb-2 text-sm">
-                  Group Name
+                  Network Name
                 </label>
                 <input
                   type="text"
                   value={groupName}
                   onChange={(e) => setGroupName(e.target.value)}
-                  placeholder="e.g., Primary Schools"
+                  placeholder="e.g., Valley Arts Network"
                   className="w-full bg-slate-800 text-white rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />
@@ -489,11 +582,24 @@ export default function AdminDashboard() {
 
           {/* Edit Modal */}
           {editingGroup && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-              <div className="bg-slate-900 p-6 rounded-2xl border border-slate-700 w-full max-w-md shadow-2xl">
-                <h3 className="text-xl font-bold text-white mb-4">
-                  Edit Group
-                </h3>
+            <div
+              className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm"
+              onClick={() => setEditingGroup(null)}
+            >
+              <div
+                className="bg-slate-900 p-6 rounded-2xl border border-slate-700 w-full max-w-md shadow-2xl"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <div className="flex items-start justify-between gap-4 mb-4">
+                  <h3 className="text-xl font-bold text-white">Edit Group</h3>
+                  <button
+                    type="button"
+                    onClick={() => setEditingGroup(null)}
+                    className="rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1 text-sm"
+                  >
+                    Close
+                  </button>
+                </div>
                 <form onSubmit={updateGroup} className="space-y-4">
                   <div>
                     <label className="block text-slate-400 mb-2 text-sm">
@@ -607,10 +713,15 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {activeTab === "academic-years" && (
-        <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800">
-          <AcademicYearManager />
-        </div>
+      {activeTab === "results" && (
+        <EventResultsManager
+          title="Platform Event Results"
+          description="Record final winners for platform competitions and control what becomes public."
+        />
+      )}
+
+      {activeTab === "partners" && (
+        <AdminPartnerWorkspace onChanged={fetchData} />
       )}
 
       {activeTab === "events" && (
@@ -624,6 +735,8 @@ export default function AdminDashboard() {
             <>
               <SendEventForm
                 groups={groups}
+                partners={partners}
+                proposals={proposals}
                 onEventCreated={() => {
                   fetchData();
                 }}
@@ -639,7 +752,7 @@ export default function AdminDashboard() {
 
                 <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
                   <h2 className="text-xl font-semibold text-white">
-                    Existing Events
+                    Platform Events
                   </h2>
                   <div className="flex bg-slate-800 p-1 rounded-lg">
                     {["active", "completed", "archived"].map((filter) => (
@@ -704,11 +817,26 @@ export default function AdminDashboard() {
 
       {/* Edit Event Modal */}
       {editingEvent && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto bg-slate-900 rounded-2xl shadow-2xl border border-slate-700">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+          onClick={() => setEditingEvent(null)}
+        >
+          <div
+            className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto bg-slate-900 rounded-2xl shadow-2xl border border-slate-700"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setEditingEvent(null)}
+              className="absolute right-4 top-4 z-10 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-2 text-sm"
+            >
+              Close
+            </button>
             <div className="p-1">
               <SendEventForm
                 groups={groups}
+                partners={partners}
+                proposals={proposals}
                 onEventCreated={() => {
                   fetchData();
                   setEditingEvent(null);
@@ -721,5 +849,13 @@ export default function AdminDashboard() {
         </div>
       )}
     </DashboardLayout>
+  );
+}
+
+export default function AdminDashboard() {
+  return (
+    <Suspense fallback={<div className="p-8 text-white">Loading dashboard...</div>}>
+      <AdminDashboardContent />
+    </Suspense>
   );
 }

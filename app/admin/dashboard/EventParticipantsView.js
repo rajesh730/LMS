@@ -273,7 +273,7 @@ export default function EventParticipantsView({ event, onBack, onRefresh }) {
                       </div>
                       {participant.notes && (
                         <p className="text-slate-500 text-xs italic mt-2 bg-slate-950/50 p-2 rounded border border-slate-800">
-                          "{participant.notes}"
+                          &quot;{participant.notes}&quot;
                         </p>
                       )}
                     </td>

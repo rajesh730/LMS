@@ -1,12 +1,26 @@
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import User from "@/models/User";
 import Student from "@/models/Student";
 import SchoolConfig from "@/models/SchoolConfig";
 import bcrypt from "bcryptjs";
 
-export async function POST(req) {
+export async function POST() {
   try {
+    if (
+      process.env.NODE_ENV === "production" ||
+      process.env.ENABLE_DEMO_SEED !== "true"
+    ) {
+      return NextResponse.json({ message: "Not found" }, { status: 404 });
+    }
+
+    const session = await getServerSession(authOptions);
+    if (!session || session.user.role !== "SUPER_ADMIN") {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
     await connectDB();
 
     // 1. Create School Admin

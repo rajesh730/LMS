@@ -131,11 +131,12 @@ const EnhancedStudentRegistration = ({ schoolId, onSuccess }) => {
       const lastName = nameParts.slice(1).join(" ") || "."; // Default if no last name
 
       // Auto-generate Credentials
-      // Username = full name (lowercase, no spaces)
-      const username = formData.fullName.toLowerCase().replace(/\s+/g, '');
+      // Username = firstName + rollNumber (lowercase, no spaces) to ensure uniqueness with different roll numbers
+      const cleanFirstName = firstName.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const username = `${cleanFirstName}${formData.rollNumber}`;
       
       // Password = firstName + rollNumber + @123
-      const password = `${firstName.toLowerCase()}${formData.rollNumber}@123`;
+      const password = `${cleanFirstName}${formData.rollNumber}@123`;
 
       const payload = {
         // Credentials (Auto-generated)
