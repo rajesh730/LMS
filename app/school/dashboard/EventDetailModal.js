@@ -1,17 +1,29 @@
 'use client';
 
-import { FaTimes, FaCalendarAlt, FaClock, FaUsers, FaUser, FaPhone, FaUserGraduate, FaCheckCircle, FaTimesCircle, FaInfoCircle } from 'react-icons/fa';
+import { FaTimes, FaCalendarAlt, FaClock, FaUsers, FaUser, FaPhone, FaUserGraduate, FaCheckCircle, FaTimesCircle, FaInfoCircle, FaEdit } from 'react-icons/fa';
+import SchoolRoundPanel from './SchoolRoundPanel';
+import EventCertificatesPanel from '@/components/events/EventCertificatesPanel';
+import { isDatePast } from '@/lib/eventUiStatus';
+import { isTeamEventLike } from '@/lib/eventParticipationFormat';
 
-export default function EventDetailModal({ event, isParticipating, onClose, onJoin, onLeave, currentParticipation }) {
+export default function EventDetailModal({ event, isParticipating, onClose, onJoin, onManage, onLeave, currentParticipation }) {
     if (!event) return null;
 
-    const isDeadlinePassed = event.registrationDeadline && new Date() > new Date(event.registrationDeadline);
-    const isFull = event.maxParticipants && (event.participantCount || 0) >= event.maxParticipants;
+    const isDeadlinePassed =
+        event.registrationDeadline &&
+        isDatePast(event.registrationDeadline, { endOfDay: true });
+    const isTeamEvent = isTeamEventLike(event);
+    const registeredCount = event.studentCapacityCount || event.studentCount || 0;
+    const isFull = event.maxParticipants && registeredCount >= event.maxParticipants;
     const canJoin = !isParticipating && !isDeadlinePassed && !isFull;
+    const schoolRegisteredCount =
+        isTeamEvent
+            ? currentParticipation?.teamCount || 0
+            : currentParticipation?.studentCount || currentParticipation?.students?.length || 0;
 
     const getStatusBadge = () => {
         if (isParticipating) {
-            return <span className="bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded-full text-sm flex items-center gap-1"><FaCheckCircle /> Participating</span>;
+            return <span className="bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded-full text-sm flex items-center gap-1"><FaCheckCircle /> Team Registered</span>;
         }
         if (isDeadlinePassed) {
             return <span className="bg-red-500/20 text-red-400 px-3 py-1 rounded-full text-sm">Registration Closed</span>;
@@ -33,7 +45,7 @@ export default function EventDetailModal({ event, isParticipating, onClose, onJo
 
     return (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-slate-800 rounded-2xl max-w-lg w-full border border-slate-700 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="bg-slate-800 rounded-2xl max-w-4xl w-full border border-slate-700 shadow-2xl max-h-[90vh] overflow-y-auto">
                 {/* Header */}
                 <div className="p-6 border-b border-slate-700 flex justify-between items-start">
                     <div>
@@ -61,19 +73,29 @@ export default function EventDetailModal({ event, isParticipating, onClose, onJo
                         </div>
                         <div className="bg-slate-900/50 p-4 rounded-xl">
                             <div className="flex items-center gap-2 text-slate-400 text-sm mb-1">
-                                <FaUsers /> Participants
+                                <FaUsers /> {isTeamEvent ? 'Teams Registered' : 'Students Registered'}
                             </div>
                             <div className="text-white font-medium">
-                                {event.participantCount || 0} {event.maxParticipants ? `/ ${event.maxParticipants}` : ''} schools
+                                {registeredCount} {event.maxParticipants ? `/ ${event.maxParticipants}` : ''} {isTeamEvent ? 'teams' : 'students'}
                             </div>
                         </div>
                         {event.maxParticipantsPerSchool && (
                             <div className="bg-slate-900/50 p-4 rounded-xl">
                                 <div className="flex items-center gap-2 text-slate-400 text-sm mb-1">
-                                    <FaUser /> Max Students / School
+                                    <FaUser /> {isTeamEvent ? 'Max Teams / School' : 'Max Students / School'}
                                 </div>
                                 <div className="text-white font-medium">
-                                    {event.maxParticipantsPerSchool} Students
+                                    {event.maxParticipantsPerSchool} {isTeamEvent ? 'Teams' : 'Students'}
+                                </div>
+                            </div>
+                        )}
+                        {isTeamEvent && (event.minTeamSize || event.maxTeamSize) && (
+                            <div className="bg-slate-900/50 p-4 rounded-xl">
+                                <div className="flex items-center gap-2 text-slate-400 text-sm mb-1">
+                                    <FaUsers /> Team Size Rule
+                                </div>
+                                <div className="text-white font-medium">
+                                    {event.minTeamSize || 'No minimum'} to {event.maxTeamSize || 'No maximum'} members
                                 </div>
                             </div>
                         )}
@@ -114,7 +136,7 @@ export default function EventDetailModal({ event, isParticipating, onClose, onJo
                     {isParticipating && currentParticipation && (
                         <div className="bg-emerald-900/20 border border-emerald-800 p-4 rounded-xl">
                             <h3 className="text-emerald-400 font-semibold mb-3 flex items-center gap-2">
-                                <FaCheckCircle /> Your Participation Details
+                                <FaCheckCircle /> {isTeamEvent ? 'Registered Teams' : 'Registered Team'}
                             </h3>
                             <div className="grid grid-cols-2 gap-3 text-sm">
                                 <div className="flex items-center gap-2">
@@ -125,21 +147,43 @@ export default function EventDetailModal({ event, isParticipating, onClose, onJo
                                     <FaPhone className="text-slate-500" />
                                     <span className="text-slate-300">{currentParticipation.contactPhone}</span>
                                 </div>
-                                {currentParticipation.expectedStudents > 0 && (
+                                {schoolRegisteredCount > 0 && (
                                     <div className="flex items-center gap-2">
                                         <FaUserGraduate className="text-slate-500" />
-                                        <span className="text-slate-300">{currentParticipation.expectedStudents} students</span>
+                                        <span className="text-slate-300">{schoolRegisteredCount} {isTeamEvent ? 'teams registered' : 'students selected'}</span>
                                     </div>
                                 )}
-                                <div className="flex items-center gap-2">
-                                    <FaCalendarAlt className="text-slate-500" />
-                                    <span className="text-slate-300">Joined {new Date(currentParticipation.joinedAt).toLocaleDateString()}</span>
-                                </div>
+                                {isTeamEvent && Array.isArray(currentParticipation.teams) && currentParticipation.teams.length > 0 && (
+                                    <div className="col-span-2 flex flex-wrap gap-2">
+                                        {currentParticipation.teams.map((team) => (
+                                            <span key={team.teamName} className="rounded-full border border-slate-700 bg-slate-950 px-3 py-1 text-xs text-slate-300">
+                                                {team.teamName} ({team.memberCount} members)
+                                            </span>
+                                        ))}
+                                    </div>
+                                )}
+                                {currentParticipation.registeredAt && (
+                                    <div className="flex items-center gap-2">
+                                        <FaCalendarAlt className="text-slate-500" />
+                                        <span className="text-slate-300">Registered {new Date(currentParticipation.registeredAt).toLocaleDateString()}</span>
+                                    </div>
+                                )}
                             </div>
                             {currentParticipation.notes && (
                                 <p className="text-slate-400 text-sm mt-3 italic">Note: {currentParticipation.notes}</p>
                             )}
                         </div>
+                    )}
+
+                    {isParticipating && (
+                        <div>
+                            <h3 className="text-white font-semibold mb-3">Competition Rounds</h3>
+                            <SchoolRoundPanel eventId={event._id} />
+                        </div>
+                    )}
+
+                    {isParticipating && (
+                        <EventCertificatesPanel eventId={event._id} />
                     )}
                 </div>
 
@@ -151,13 +195,25 @@ export default function EventDetailModal({ event, isParticipating, onClose, onJo
                     >
                         Close
                     </button>
-                    {isParticipating ? (
-                        <button
-                            onClick={onLeave}
-                            className="bg-red-600 hover:bg-red-500 text-white px-6 py-2 rounded-lg font-medium transition flex items-center gap-2"
-                        >
-                            <FaTimesCircle /> Leave Event
-                        </button>
+                    {isParticipating && !isDeadlinePassed ? (
+                        <>
+                            <button
+                                onClick={onLeave}
+                                className="bg-red-600/20 hover:bg-red-600/40 text-red-300 px-5 py-2 rounded-lg font-medium transition flex items-center gap-2"
+                            >
+                                <FaTimesCircle /> Withdraw
+                            </button>
+                            <button
+                                onClick={onManage}
+                                className="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-2 rounded-lg font-medium transition flex items-center gap-2"
+                            >
+                                <FaEdit /> Manage Registration
+                            </button>
+                        </>
+                    ) : isParticipating && isDeadlinePassed ? (
+                        <span className="px-4 py-2 text-sm font-medium text-slate-400">
+                            Team locked after deadline
+                        </span>
                     ) : canJoin ? (
                         <button
                             onClick={onJoin}

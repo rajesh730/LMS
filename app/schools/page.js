@@ -2,6 +2,7 @@ import Link from "next/link";
 import connectDB from "@/lib/db";
 import User from "@/models/User";
 import SchoolShowcaseProfile from "@/models/SchoolShowcaseProfile";
+import PublicSiteNav from "@/components/public/PublicSiteNav";
 
 export const dynamic = "force-dynamic";
 
@@ -39,22 +40,47 @@ export default async function PublicSchoolsPage() {
     .filter((school) => school.profile);
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100 px-6 py-16 md:px-12">
-      <div className="max-w-6xl mx-auto">
-        <div className="max-w-3xl mb-12">
-          <p className="text-sm uppercase tracking-[0.35em] text-emerald-400 mb-4">
-            Discover Active Schools
-          </p>
-          <h1 className="text-4xl md:text-5xl font-black tracking-tight">
-            Public school activity profiles built around talent and extracurricular life
-          </h1>
-          <p className="text-slate-400 mt-4 text-lg">
-            Explore how schools host showcases, join competitions, and build vibrant activity cultures beyond academics.
-          </p>
+    <main className="min-h-screen bg-[#08111f] text-slate-100">
+      <PublicSiteNav active="schools" />
+      <section className="relative overflow-hidden border-b border-white/10 px-6 py-14 md:px-12">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(52,211,153,.22),transparent_32%),radial-gradient(circle_at_78%_16%,rgba(251,191,36,.16),transparent_28%)]" />
+        <div className="relative mx-auto grid max-w-6xl gap-8 lg:grid-cols-[1fr_360px] lg:items-center">
+          <div className="max-w-3xl">
+            <p className="text-sm uppercase tracking-[0.35em] text-emerald-300 mb-4">
+              Discover Active Schools
+            </p>
+            <h1 className="text-4xl md:text-5xl font-black tracking-tight">
+              Public school activity profiles built around talent and extracurricular life
+            </h1>
+            <p className="text-slate-300 mt-4 text-lg leading-8">
+              Explore how schools host showcases, join competitions, and build
+              vibrant activity cultures beyond academics.
+            </p>
+          </div>
+          <svg
+            viewBox="0 0 360 260"
+            aria-hidden="true"
+            className="hidden h-64 w-full lg:block"
+          >
+            <defs>
+              <linearGradient id="schoolPageAccent" x1="0" x2="1" y1="0" y2="1">
+                <stop offset="0%" stopColor="#34d399" />
+                <stop offset="100%" stopColor="#fbbf24" />
+              </linearGradient>
+            </defs>
+            <path d="M38 212h284" stroke="#334155" strokeLinecap="round" strokeWidth="16" />
+            <path d="M72 212V92l108-54 108 54v120" fill="#0f1b2d" stroke="#475569" strokeWidth="8" strokeLinejoin="round" />
+            <path d="M132 212v-58h96v58" fill="#08111f" stroke="#64748b" strokeWidth="8" />
+            <circle cx="180" cy="95" r="26" fill="url(#schoolPageAccent)" />
+            <path d="M110 126h38M212 126h38" stroke="#94a3b8" strokeLinecap="round" strokeWidth="12" />
+            <path d="M74 80l106-54 106 54" fill="none" stroke="url(#schoolPageAccent)" strokeLinecap="round" strokeWidth="10" />
+          </svg>
         </div>
+      </section>
 
+      <div className="max-w-6xl mx-auto px-6 py-12 md:px-12">
         {publicSchools.length === 0 ? (
-          <div className="rounded-3xl border border-slate-800 bg-slate-900/60 p-10 text-center text-slate-400">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-10 text-center text-slate-400">
             No public school profiles are available yet.
           </div>
         ) : (
@@ -62,7 +88,7 @@ export default async function PublicSchoolsPage() {
             {publicSchools.map((school) => (
               <article
                 key={String(school._id)}
-                className="rounded-3xl overflow-hidden border border-slate-800 bg-slate-900/70"
+                className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.05]"
               >
                 <div
                   className="h-48 bg-cover bg-center"
@@ -92,12 +118,11 @@ export default async function PublicSchoolsPage() {
                       {school.profile.summary}
                     </p>
                   )}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6">
+                  <div className="grid grid-cols-3 gap-3 mt-6">
                     {[
                       ["Hosted", school.profile.highlightMetrics?.eventsHosted || 0],
                       ["Joined", school.profile.highlightMetrics?.eventsParticipated || 0],
                       ["Awards", school.profile.highlightMetrics?.awardsCount || 0],
-                      ["Clubs", school.profile.highlightMetrics?.clubsCount || 0],
                     ].map(([label, value]) => (
                       <div
                         key={label}

@@ -7,6 +7,8 @@ export default function CapacityTab({
   perSchoolBreakdown,
   event,
 }) {
+  const isTeamEvent =
+    String(event?.participationFormat || "INDIVIDUAL").toUpperCase() === "TEAM";
   const getStatusColor = (percentage) => {
     if (percentage >= 100) return "text-red-600";
     if (percentage >= 80) return "text-yellow-600";
@@ -38,7 +40,7 @@ export default function CapacityTab({
             </div>
             <div>
               <p className="text-sm font-medium text-slate-600">
-                Total Capacity
+                Total {isTeamEvent ? "Team" : "Student"} Capacity
               </p>
               <p className="text-2xl font-bold text-slate-900">
                 {capacityInfo.filled} / {capacityInfo.total}
@@ -138,12 +140,12 @@ export default function CapacityTab({
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <h3 className="font-semibold text-blue-900 mb-2">Capacity Summary</h3>
         <ul className="space-y-1 text-sm text-blue-800">
-          <li>• Total Capacity: {capacityInfo.total || "Unlimited"}</li>
-          <li>• Currently Enrolled: {capacityInfo.filled}</li>
+          <li>• Total {isTeamEvent ? "Team" : "Student"} Capacity: {capacityInfo.total || "Unlimited"}</li>
+          <li>• Currently Enrolled {isTeamEvent ? "Teams" : "Students"}: {capacityInfo.filled}</li>
           <li>• Pending Approvals: {capacityInfo.pending}</li>
-          <li>• Available Slots: {capacityInfo.available || "Unlimited"}</li>
+          <li>• Available {isTeamEvent ? "Team" : "Student"} Slots: {capacityInfo.available || "Unlimited"}</li>
           {event.maxParticipantsPerSchool && (
-            <li>• Per-School Limit: {event.maxParticipantsPerSchool}</li>
+            <li>• Max {isTeamEvent ? "Teams" : "Students"} Per School: {event.maxParticipantsPerSchool}</li>
           )}
         </ul>
       </div>

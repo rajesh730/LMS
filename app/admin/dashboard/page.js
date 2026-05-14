@@ -6,8 +6,8 @@ import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import DashboardLayout from "@/components/DashboardLayout";
 import AdminTopNav from "@/components/AdminTopNav";
-import EventResultsManager from "@/components/EventResultsManager";
 import AdminPartnerWorkspace from "@/components/partners/AdminPartnerWorkspace";
+import CredentialsModal from "@/components/CredentialsModal";
 import SendEventForm from "./SendEventForm";
 import EventCard from "./EventCard";
 
@@ -20,7 +20,6 @@ const EventParticipantsView = dynamic(() => import("./EventParticipantsView"), {
 
 import {
   FaSchool,
-  FaLayerGroup,
   FaCalendarAlt,
   FaToggleOn,
   FaToggleOff,
@@ -29,6 +28,7 @@ import {
   FaCheckCircle,
   FaTimesCircle,
   FaInfoCircle,
+  FaKey,
 } from "react-icons/fa";
 
 const FETCH_TIMEOUT_MS = 10000;
@@ -53,35 +53,44 @@ async function fetchJsonWithTimeout(url) {
   }
 }
 
+async function fetchNamedResource(label, url) {
+  try {
+    const data = await fetchJsonWithTimeout(url);
+    return { ok: true, label, data };
+  } catch (error) {
+    return {
+      ok: false,
+      label,
+      error: error?.name === "AbortError"
+        ? `${label} timed out after ${FETCH_TIMEOUT_MS / 1000}s`
+        : error?.message || `Failed to load ${label}`,
+    };
+  }
+}
+
 function AdminDashboardContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
   const rawTab = searchParams.get("tab") || "approvals";
-  const activeTab = rawTab === "judging" ? "results" : rawTab;
+  const activeTab = ["judging", "results"].includes(rawTab) ? "events" : rawTab;
   const [schools, setSchools] = useState([]);
-  const [groups, setGroups] = useState([]);
   const [events, setEvents] = useState([]);
   const [partners, setPartners] = useState([]);
   const [proposals, setProposals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [viewingEvent, setViewingEvent] = useState(null);
-  const [eventFilter, setEventFilter] = useState("active"); // active, completed, archived
+  const [eventWorkspaceTab, setEventWorkspaceTab] = useState("manage");
   const [deletingId, setDeletingId] = useState(null);
   const [lastError, setLastError] = useState(null);
   const [editingEvent, setEditingEvent] = useState(null);
-
-  // Group Form State
-  const [groupName, setGroupName] = useState("");
-  const [selectedSchools, setSelectedSchools] = useState([]);
-  const [searchTerm, setSearchTerm] = useState("");
-
-  // Editing State
-  const [editingGroup, setEditingGroup] = useState(null);
+  const [credentialsModal, setCredentialsModal] = useState({
+    isOpen: false,
+    credentials: null,
+  });
 
   const closeOverlays = () => {
-    setEditingGroup(null);
     setEditingEvent(null);
     setViewingEvent(null);
   };
@@ -111,32 +120,32 @@ function AdminDashboardContent() {
     setLoadError("");
 
     try {
-      const results = await Promise.allSettled([
-        fetchJsonWithTimeout("/api/schools/list"),
-        fetchJsonWithTimeout("/api/groups"),
-        fetchJsonWithTimeout("/api/events"),
-        fetchJsonWithTimeout("/api/external-organizers"),
-        fetchJsonWithTimeout("/api/event-proposals"),
+      const results = await Promise.all([
+        fetchNamedResource("Schools", "/api/schools/list"),
+        fetchNamedResource("Events", "/api/events?summary=1"),
+        fetchNamedResource("Partners", "/api/external-organizers"),
+        fetchNamedResource("Event proposals", "/api/event-proposals"),
       ]);
 
-      const [schoolsResult, groupsResult, eventsResult, partnersResult, proposalsResult] =
-        results;
-      const failed = results.filter((result) => result.status === "rejected");
+      const [
+        schoolsResult,
+        eventsResult,
+        partnersResult,
+        proposalsResult,
+      ] = results;
+      const failed = results.filter((result) => !result.ok);
 
-      if (schoolsResult.status === "fulfilled") {
-        setSchools(schoolsResult.value.schools || []);
+      if (schoolsResult.ok) {
+        setSchools(schoolsResult.data.schools || []);
       }
-      if (groupsResult.status === "fulfilled") {
-        setGroups(groupsResult.value.groups || []);
+      if (eventsResult.ok) {
+        setEvents(eventsResult.data.events || []);
       }
-      if (eventsResult.status === "fulfilled") {
-        setEvents(eventsResult.value.events || []);
+      if (partnersResult.ok) {
+        setPartners(partnersResult.data.data || []);
       }
-      if (partnersResult.status === "fulfilled") {
-        setPartners(partnersResult.value.data || []);
-      }
-      if (proposalsResult.status === "fulfilled") {
-        const proposalData = proposalsResult.value.data || [];
+      if (proposalsResult.ok) {
+        const proposalData = proposalsResult.data.data || [];
         setProposals(
           proposalData.filter((proposal) =>
             ["APPROVED", "CONVERTED_TO_EVENT"].includes(proposal.status)
@@ -145,9 +154,14 @@ function AdminDashboardContent() {
       }
 
       if (failed.length > 0) {
-        console.error("Some admin dashboard data failed to load", failed);
+        const failedSummary = failed
+          .map((result) => `${result.label}: ${result.error}`)
+          .join(" | ");
+        console.warn("Some admin dashboard data failed to load:", failedSummary);
         setLoadError(
-          "Some dashboard data could not load. The dashboard is still usable; refresh after checking the server/database connection."
+          `Some dashboard data could not load: ${failed
+            .map((result) => result.label)
+            .join(", ")}. The dashboard is still usable; refresh after checking the server/database connection.`
         );
       }
     } catch (error) {
@@ -192,60 +206,34 @@ function AdminDashboardContent() {
     }
   };
 
-  // Group CRUD
-  const createGroup = async (e) => {
-    e.preventDefault();
+  const resetSchoolPassword = async (school) => {
+    if (
+      !confirm(
+        `Reset the password for ${school.schoolName}? The current password will stop working immediately.`
+      )
+    ) {
+      return;
+    }
+
     try {
-      const res = await fetch("/api/groups", {
+      const res = await fetch(`/api/schools/${school._id}/reset-password`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: groupName,
-          schools: selectedSchools,
-        }),
       });
-      if (res.ok) {
-        const data = await res.json();
-        setGroups([...groups, data.group]);
-        setGroupName("");
-        setSelectedSchools([]);
-        setSearchTerm("");
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to reset school password");
+      }
+
+      if (data.data?.credentials) {
+        setCredentialsModal({
+          isOpen: true,
+          credentials: data.data.credentials,
+        });
       }
     } catch (error) {
-      console.error("Error creating group", error);
-    }
-  };
-
-  const updateGroup = async (e) => {
-    e.preventDefault();
-    try {
-      const res = await fetch(`/api/groups/${editingGroup._id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: editingGroup.name,
-          schools: editingGroup.schools,
-        }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setGroups(
-          groups.map((g) => (g._id === editingGroup._id ? data.group : g))
-        );
-        setEditingGroup(null);
-      }
-    } catch (error) {
-      console.error("Error updating group", error);
-    }
-  };
-
-  const deleteGroup = async (id) => {
-    if (!confirm("Are you sure you want to delete this group?")) return;
-    try {
-      const res = await fetch(`/api/groups/${id}`, { method: "DELETE" });
-      if (res.ok) setGroups(groups.filter((g) => g._id !== id));
-    } catch (error) {
-      console.error("Error deleting group", error);
+      console.error("Error resetting school password", error);
+      alert(`Error: ${error.message}`);
     }
   };
 
@@ -313,25 +301,10 @@ function AdminDashboardContent() {
     }
   };
 
-  const handleSchoolSelection = (schoolId) => {
-    if (selectedSchools.includes(schoolId)) {
-      setSelectedSchools(selectedSchools.filter((id) => id !== schoolId));
-    } else {
-      setSelectedSchools([...selectedSchools, schoolId]);
-    }
-  };
-
-  const filteredSchools = schools.filter((s) => {
-    const isSubscribed = ["SUBSCRIBED", "APPROVED"].includes(
-      s.status || "SUBSCRIBED"
-    );
-    const matchesSearch = s.schoolName
-      ?.toLowerCase()
-      .includes(searchTerm.toLowerCase());
-    return isSubscribed && matchesSearch;
-  });
-
   const pendingSchools = schools.filter((s) => s.status === "PENDING");
+  const platformEvents = events.filter(
+    (event) => (event.eventScope || "PLATFORM") === "PLATFORM"
+  );
 
   return (
     <DashboardLayout>
@@ -341,7 +314,7 @@ function AdminDashboardContent() {
             Platform Admin Dashboard
           </h1>
           <p className="text-slate-400 mt-1">
-            Oversee schools, networks, and platform competitions
+            Oversee schools, partners, and platform competitions
           </p>
           <p className="text-xs text-slate-500 mt-1 font-mono">
             Logged in as:{" "}
@@ -453,6 +426,7 @@ function AdminDashboardContent() {
                   <th className="p-3">Principal</th>
                   <th className="p-3">Email</th>
                   <th className="p-3">Status</th>
+                  <th className="p-3">Support</th>
                   <th className="p-3">Action</th>
                 </tr>
               </thead>
@@ -487,6 +461,15 @@ function AdminDashboardContent() {
                         </td>
                         <td className="p-3">
                           <button
+                            onClick={() => resetSchoolPassword(school)}
+                            className="flex items-center gap-2 px-3 py-1 rounded transition bg-blue-500/20 text-blue-300 hover:bg-blue-500/30"
+                          >
+                            <FaKey />
+                            Reset password
+                          </button>
+                        </td>
+                        <td className="p-3">
+                          <button
                             onClick={() =>
                               updateStatus(
                                 school._id,
@@ -512,214 +495,6 @@ function AdminDashboardContent() {
         </div>
       )}
 
-      {activeTab === "groups" && (
-        <div className="space-y-6">
-          <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800">
-            <h2 className="text-xl font-semibold text-white mb-4">
-              Create School Network
-            </h2>
-            <form onSubmit={createGroup} className="space-y-4">
-              <div>
-                <label className="block text-slate-400 mb-2 text-sm">
-                  Network Name
-                </label>
-                <input
-                  type="text"
-                  value={groupName}
-                  onChange={(e) => setGroupName(e.target.value)}
-                  placeholder="e.g., Valley Arts Network"
-                  className="w-full bg-slate-800 text-white rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-slate-400 mb-2 text-sm">
-                  Select Schools (Active Only)
-                </label>
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Search schools by name..."
-                  className="w-full bg-slate-800 text-white rounded p-2 mb-2 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm border border-slate-700"
-                />
-                <div className="grid md:grid-cols-3 gap-3 max-h-60 overflow-y-auto p-2 bg-slate-800/50 rounded-lg border border-slate-700">
-                  {filteredSchools.map((school) => (
-                    <label
-                      key={school._id}
-                      className="flex items-center gap-2 p-2 hover:bg-slate-700/50 rounded cursor-pointer transition"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedSchools.includes(school._id)}
-                        onChange={() => handleSchoolSelection(school._id)}
-                        className="rounded border-slate-600 bg-slate-700 text-blue-600 focus:ring-blue-500"
-                      />
-                      <span className="text-sm text-slate-200 truncate">
-                        {school.schoolName}
-                      </span>
-                    </label>
-                  ))}
-                  {filteredSchools.length === 0 && (
-                    <p className="text-slate-500 text-sm col-span-3 text-center py-2">
-                      {searchTerm
-                        ? "No matching schools found."
-                        : "No active schools available."}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded font-bold w-full md:w-auto"
-              >
-                Create Group
-              </button>
-            </form>
-          </div>
-
-          {/* Edit Modal */}
-          {editingGroup && (
-            <div
-              className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm"
-              onClick={() => setEditingGroup(null)}
-            >
-              <div
-                className="bg-slate-900 p-6 rounded-2xl border border-slate-700 w-full max-w-md shadow-2xl"
-                onClick={(event) => event.stopPropagation()}
-              >
-                <div className="flex items-start justify-between gap-4 mb-4">
-                  <h3 className="text-xl font-bold text-white">Edit Group</h3>
-                  <button
-                    type="button"
-                    onClick={() => setEditingGroup(null)}
-                    className="rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1 text-sm"
-                  >
-                    Close
-                  </button>
-                </div>
-                <form onSubmit={updateGroup} className="space-y-4">
-                  <div>
-                    <label className="block text-slate-400 mb-2 text-sm">
-                      Group Name
-                    </label>
-                    <input
-                      type="text"
-                      value={editingGroup.name}
-                      onChange={(e) =>
-                        setEditingGroup({
-                          ...editingGroup,
-                          name: e.target.value,
-                        })
-                      }
-                      className="w-full bg-slate-800 text-white rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-slate-400 mb-2 text-sm">
-                      Manage Members
-                    </label>
-                    <div className="max-h-40 overflow-y-auto bg-slate-800 p-2 rounded border border-slate-700">
-                      {schools
-                        .filter((s) =>
-                          ["SUBSCRIBED", "APPROVED"].includes(
-                            s.status || "SUBSCRIBED"
-                          )
-                        )
-                        .map((school) => (
-                          <label
-                            key={school._id}
-                            className="flex items-center gap-2 p-2 hover:bg-slate-700/50 rounded cursor-pointer"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={editingGroup.schools.includes(
-                                school._id
-                              )}
-                              onChange={() => {
-                                const newSchools =
-                                  editingGroup.schools.includes(school._id)
-                                    ? editingGroup.schools.filter(
-                                        (id) => id !== school._id
-                                      )
-                                    : [...editingGroup.schools, school._id];
-                                setEditingGroup({
-                                  ...editingGroup,
-                                  schools: newSchools,
-                                });
-                              }}
-                              className="rounded border-slate-600 bg-slate-700 text-blue-600"
-                            />
-                            <span className="text-sm text-slate-300">
-                              {school.schoolName}
-                            </span>
-                          </label>
-                        ))}
-                    </div>
-                  </div>
-                  <div className="flex justify-end gap-2 pt-2">
-                    <button
-                      type="button"
-                      onClick={() => setEditingGroup(null)}
-                      className="text-slate-400 hover:text-white px-4 py-2"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded"
-                    >
-                      Save Changes
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          )}
-
-          <div className="grid md:grid-cols-2 gap-6">
-            {groups.map((group) => (
-              <div
-                key={group._id}
-                className="bg-slate-800 p-5 rounded-xl border border-slate-700 flex justify-between items-start hover:border-slate-600 transition"
-              >
-                <div>
-                  <h3 className="text-lg font-bold text-white">{group.name}</h3>
-                  <p className="text-slate-400 text-sm mt-1">
-                    {group.schools.length} schools
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setEditingGroup(group)}
-                    className="p-2 bg-blue-500/10 text-blue-400 rounded hover:bg-blue-500/20 transition"
-                    title="Edit Group"
-                  >
-                    <FaEdit />
-                  </button>
-                  <button
-                    onClick={() => deleteGroup(group._id)}
-                    className="p-2 bg-red-500/10 text-red-400 rounded hover:bg-red-500/20 transition"
-                    title="Delete Group"
-                  >
-                    <FaTrash />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {activeTab === "results" && (
-        <EventResultsManager
-          title="Platform Event Results"
-          description="Record final winners for platform competitions and control what becomes public."
-        />
-      )}
-
       {activeTab === "partners" && (
         <AdminPartnerWorkspace onChanged={fetchData} />
       )}
@@ -733,17 +508,44 @@ function AdminDashboardContent() {
             />
           ) : (
             <>
-              <SendEventForm
-                groups={groups}
-                partners={partners}
-                proposals={proposals}
-                onEventCreated={() => {
-                  fetchData();
-                }}
-                initialData={null}
-              />
+              <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-2">
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { id: "manage", label: "Manage Events" },
+                    { id: "completed", label: "Completed Events" },
+                    { id: "archived", label: "Archived Events" },
+                    { id: "create", label: "Create Event" },
+                  ].map((tab) => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setEventWorkspaceTab(tab.id)}
+                      className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
+                        eventWorkspaceTab === tab.id
+                          ? "bg-blue-600 text-white"
+                          : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-              <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800">
+              {eventWorkspaceTab === "create" && (
+                <SendEventForm
+                  partners={partners}
+                  proposals={proposals}
+                  onEventCreated={() => {
+                    fetchData();
+                    setEventWorkspaceTab("manage");
+                  }}
+                  initialData={null}
+                />
+              )}
+
+              {eventWorkspaceTab === "manage" && (
+                <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800">
                 {lastError && (
                   <div className="mb-4 p-4 bg-red-500/20 text-red-200 border border-red-500 rounded text-lg font-bold">
                     {lastError}
@@ -754,45 +556,21 @@ function AdminDashboardContent() {
                   <h2 className="text-xl font-semibold text-white">
                     Platform Events
                   </h2>
-                  <div className="flex bg-slate-800 p-1 rounded-lg">
-                    {["active", "completed", "archived"].map((filter) => (
-                      <button
-                        key={filter}
-                        onClick={() => setEventFilter(filter)}
-                        className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                          eventFilter === filter
-                            ? "bg-blue-600 text-white"
-                            : "text-slate-400 hover:text-white"
-                        }`}
-                      >
-                        {filter.charAt(0).toUpperCase() + filter.slice(1)}
-                      </button>
-                    ))}
-                  </div>
                 </div>
 
-                {events.filter((e) => {
+                {platformEvents.filter((e) => {
                   const status = e.lifecycleStatus || "ACTIVE";
-                  if (eventFilter === "active") return status === "ACTIVE";
-                  if (eventFilter === "completed") return status === "COMPLETED";
-                  if (eventFilter === "archived") return status === "ARCHIVED";
-                  return true;
+                  return status === "ACTIVE";
                 }).length === 0 ? (
                   <p className="text-slate-500 italic">
-                    No {eventFilter} events found.
+                    No active events found.
                   </p>
                 ) : (
                   <div className="space-y-4">
-                    {events
+                    {platformEvents
                       .filter((e) => {
                         const status = e.lifecycleStatus || "ACTIVE";
-                        if (eventFilter === "active")
-                          return status === "ACTIVE";
-                        if (eventFilter === "completed")
-                          return status === "COMPLETED";
-                        if (eventFilter === "archived")
-                          return status === "ARCHIVED";
-                        return true;
+                        return status === "ACTIVE";
                       })
                       .map((event) => (
                         <EventCard
@@ -805,11 +583,96 @@ function AdminDashboardContent() {
                             setEditingEvent(e);
                           }}
                           onViewParticipants={(e) => setViewingEvent(e)}
+                          actionMode="manage"
                         />
                       ))}
                   </div>
                 )}
-              </div>
+                </div>
+              )}
+
+              {eventWorkspaceTab === "completed" && (
+                <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800">
+                  <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+                    <h2 className="text-xl font-semibold text-white">
+                      Completed Platform Events
+                    </h2>
+                    <div className="rounded-lg bg-emerald-500/10 px-4 py-2 text-sm text-emerald-300 border border-emerald-500/20">
+                      Closed competitions with published or finalized results
+                    </div>
+                  </div>
+
+                  {platformEvents.filter(
+                    (event) => (event.lifecycleStatus || "ACTIVE") === "COMPLETED"
+                  ).length === 0 ? (
+                    <p className="text-slate-500 italic">
+                      No completed events found.
+                    </p>
+                  ) : (
+                    <div className="space-y-4">
+                      {platformEvents
+                        .filter(
+                          (event) =>
+                            (event.lifecycleStatus || "ACTIVE") === "COMPLETED"
+                        )
+                        .map((event) => (
+                          <EventCard
+                            key={event._id}
+                            event={event}
+                            onDelete={deleteEvent}
+                            onUpdateStatus={updateEventStatus}
+                            isDeleting={deletingId === event._id}
+                            onViewParticipants={(e) => setViewingEvent(e)}
+                            actionMode="completed"
+                          />
+                        ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {eventWorkspaceTab === "archived" && (
+                <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800">
+                  <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+                    <h2 className="text-xl font-semibold text-white">
+                      Archived Platform Events
+                    </h2>
+                    <div className="rounded-lg bg-orange-500/10 px-4 py-2 text-sm text-orange-300 border border-orange-500/20">
+                      Archive history and permanent cleanup for old events
+                    </div>
+                  </div>
+
+                  {platformEvents.filter(
+                    (event) => (event.lifecycleStatus || "ACTIVE") === "ARCHIVED"
+                  ).length === 0 ? (
+                    <p className="text-slate-500 italic">
+                      No archived events found.
+                    </p>
+                  ) : (
+                    <div className="space-y-4">
+                      {platformEvents
+                        .filter(
+                          (event) =>
+                            (event.lifecycleStatus || "ACTIVE") === "ARCHIVED"
+                        )
+                        .map((event) => (
+                          <EventCard
+                            key={event._id}
+                            event={event}
+                            onDelete={deleteEvent}
+                            onUpdateStatus={updateEventStatus}
+                            isDeleting={deletingId === event._id}
+                            onEdit={(e) => {
+                              setEditingEvent(e);
+                            }}
+                            onViewParticipants={(e) => setViewingEvent(e)}
+                            actionMode="archived"
+                          />
+                        ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </>
           )}
         </div>
@@ -834,7 +697,6 @@ function AdminDashboardContent() {
             </button>
             <div className="p-1">
               <SendEventForm
-                groups={groups}
                 partners={partners}
                 proposals={proposals}
                 onEventCreated={() => {
@@ -848,6 +710,14 @@ function AdminDashboardContent() {
           </div>
         </div>
       )}
+
+      <CredentialsModal
+        isOpen={credentialsModal.isOpen}
+        credentials={credentialsModal.credentials}
+        onClose={() =>
+          setCredentialsModal({ isOpen: false, credentials: null })
+        }
+      />
     </DashboardLayout>
   );
 }

@@ -2,13 +2,13 @@
 
 import Link from 'next/link';
 import { useSearchParams, usePathname } from 'next/navigation';
-import { FaCheckCircle, FaSchool, FaLayerGroup, FaCalendarAlt, FaTrophy, FaHandshake } from 'react-icons/fa';
+import { FaCheckCircle, FaSchool, FaCalendarAlt, FaHandshake } from 'react-icons/fa';
 
 export default function AdminTopNav({ pendingCount = 0 }) {
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const rawTab = searchParams.get("tab") || "approvals";
-  const currentTab = rawTab === "judging" ? "results" : rawTab;
+  const currentTab = ["judging", "results"].includes(rawTab) ? "events" : rawTab;
   
   const isDashboard = pathname === '/admin/dashboard';
   return (
@@ -41,17 +41,6 @@ export default function AdminTopNav({ pendingCount = 0 }) {
       </Link>
       
       <Link
-        href="/admin/dashboard?tab=groups"
-        className={`flex items-center gap-2 px-4 py-2 rounded-t-lg transition whitespace-nowrap ${
-          isDashboard && currentTab === 'groups'
-            ? "bg-blue-600 text-white"
-            : "text-slate-400 hover:text-white"
-        }`}
-      >
-        <FaLayerGroup /> Groups
-      </Link>
-
-      <Link
         href="/admin/dashboard?tab=events"
         className={`flex items-center gap-2 px-4 py-2 rounded-t-lg transition whitespace-nowrap ${
           isDashboard && currentTab === 'events'
@@ -71,17 +60,6 @@ export default function AdminTopNav({ pendingCount = 0 }) {
         }`}
       >
         <FaHandshake /> Partners
-      </Link>
-
-      <Link
-        href="/admin/dashboard?tab=results"
-        className={`flex items-center gap-2 px-4 py-2 rounded-t-lg transition whitespace-nowrap ${
-          isDashboard && currentTab === "results"
-            ? "bg-blue-600 text-white"
-            : "text-slate-400 hover:text-white"
-        }`}
-      >
-        <FaTrophy /> Results
       </Link>
     </div>
   );

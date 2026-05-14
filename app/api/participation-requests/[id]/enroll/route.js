@@ -13,6 +13,7 @@ import {
   notFoundError,
   internalServerError,
 } from "@/lib/apiResponse";
+import { gradeListContains } from "@/lib/schoolGrades";
 
 /**
  * POST /api/participation-requests/[id]/enroll
@@ -59,7 +60,9 @@ export async function POST(req, { params }) {
       request.event.eligibleGrades &&
       request.event.eligibleGrades.length > 0
     ) {
-      if (!request.event.eligibleGrades.includes(request.student.grade)) {
+      if (
+        !gradeListContains(request.event.eligibleGrades, request.student.grade)
+      ) {
         validationErrors.push(
           `Student grade "${request.student.grade}" not eligible`
         );

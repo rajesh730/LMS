@@ -38,6 +38,26 @@ const AchievementSchema = new mongoose.Schema(
       ref: "Student",
       default: null,
     },
+    recipientType: {
+      type: String,
+      enum: ["STUDENT", "TEAM"],
+      default: "STUDENT",
+    },
+    teamName: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    captainStudent: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Student",
+      default: null,
+    },
+    parentAchievement: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Achievement",
+      default: null,
+    },
     event: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Event",
@@ -68,12 +88,32 @@ const AchievementSchema = new mongoose.Schema(
       enum: [
         "PARTICIPANT",
         "MERIT",
+        "FINALIST",
         "THIRD_PLACE",
         "RUNNER_UP",
         "WINNER",
         "SPECIAL_MENTION",
       ],
       default: "PARTICIPANT",
+    },
+    certificateRecipientName: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    finalStatus: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    highestRoundReached: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    schoolSharedAt: {
+      type: Date,
+      default: null,
     },
     certificateUrl: {
       type: String,
@@ -105,7 +145,7 @@ const AchievementSchema = new mongoose.Schema(
     },
     isPublic: {
       type: Boolean,
-      default: true,
+      default: false,
     },
     awardedAt: {
       type: Date,
@@ -126,5 +166,17 @@ AchievementSchema.index(
   }
 );
 
-export default mongoose.models.Achievement ||
-  mongoose.model("Achievement", AchievementSchema);
+const existingAchievementModel = mongoose.models.Achievement;
+
+if (
+  existingAchievementModel &&
+  (!existingAchievementModel.schema.path("recipientType") ||
+    !existingAchievementModel.schema.path("parentAchievement"))
+) {
+  delete mongoose.models.Achievement;
+}
+
+const Achievement =
+  mongoose.models.Achievement || mongoose.model("Achievement", AchievementSchema);
+
+export default Achievement;

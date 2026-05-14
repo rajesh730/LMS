@@ -6,6 +6,9 @@ import Event from "@/models/Event";
 import EventSchoolInvitation from "@/models/EventSchoolInvitation";
 import Student from "@/models/Student";
 import ParticipationRequest from "@/models/ParticipationRequest";
+import { isAfterEndOfDay, startOfToday } from "@/lib/eventDates";
+import { getEquivalentGradeValues } from "@/lib/schoolGrades";
+import { buildEventPresentationState } from "@/lib/eventPresentation";
 
 /**
  * GET /api/events/hub/available
@@ -62,25 +65,43 @@ export async function GET(req) {
           status: "APPROVED",
         }).distinct("event")
       : [];
+    const eligibleGradeValues = getEquivalentGradeValues(student.grade);
+    const requestedEventIds = await ParticipationRequest.find({
+      student: student._id,
+    }).distinct("event");
 
-    // Find eligible events. Platform/partner events are visible only after
-    // the student's school approves the platform invitation.
+    // Find eligible events. Already registered events stay visible for tracking
+    // and history, even after completion. Discovery remains limited to active
+    // direct-registration events.
     const baseQuery = {
       ...searchQuery,
       status: "APPROVED",
-      lifecycleStatus: "ACTIVE",
-      date: { $gt: new Date() }, // Only future events
       $and: [
         {
           $or: [
             { eligibleGrades: { $size: 0 } }, // No grade restrictions
-            { eligibleGrades: student.grade },
+            { eligibleGrades: { $in: eligibleGradeValues } },
           ],
         },
         {
           $or: [
-            { eventScope: "SCHOOL", school: student.school },
-            { eventScope: "PLATFORM", _id: { $in: approvedPlatformEventIds } },
+            { _id: { $in: requestedEventIds } },
+            {
+              lifecycleStatus: "ACTIVE",
+              date: { $gte: startOfToday() },
+              $or: [
+                {
+                  registrationMode: "DIRECT",
+                  eventScope: "SCHOOL",
+                  school: student.school,
+                },
+                {
+                  registrationMode: "DIRECT",
+                  eventScope: "PLATFORM",
+                  _id: { $in: approvedPlatformEventIds },
+                },
+              ],
+            },
           ],
         },
       ],
@@ -109,24 +130,38 @@ export async function GET(req) {
     // Enhance events with participation status
     const enrichedEvents = events.map((event) => {
       const request = requestMap.get(event._id.toString());
-      const now = new Date();
       const isDeadlinePassed =
-        event.registrationDeadline && event.registrationDeadline < now;
+        event.registrationDeadline && isAfterEndOfDay(event.registrationDeadline);
       const isFull =
         event.maxParticipants &&
-        event.participants.length >= event.maxParticipants;
-
-      return {
+        getStudentEnrollmentCount(event) >= event.maxParticipants;
+      const presentedEvent = {
         ...event,
         userStatus: request ? request.status : null,
-        canRequest: !request && !isDeadlinePassed && !isFull,
+        participationStatus: request ? request.status : null,
+        isParticipating: Boolean(request),
+        deadline: event.registrationDeadline,
+        capacity: event.maxParticipants,
+      };
+
+      return {
+        ...presentedEvent,
+        canRequest:
+          event.registrationMode === "DIRECT" &&
+          !request &&
+          !isDeadlinePassed &&
+          !isFull,
         capacityInfo: getCapacityInfo(event),
         daysUntilDeadline: event.registrationDeadline
           ? Math.ceil(
-              (event.registrationDeadline - now) / (1000 * 60 * 60 * 24)
+              (event.registrationDeadline - new Date()) / (1000 * 60 * 60 * 24)
             )
           : null,
         eventStatus: getEventStatus(event),
+        ...buildEventPresentationState(presentedEvent, {
+          participationStatus: request ? request.status : null,
+          studentCount: Boolean(request) ? 1 : 0,
+        }),
       };
     });
 
@@ -151,17 +186,18 @@ export async function GET(req) {
 }
 
 function getCapacityInfo(event) {
+  const filled = getStudentEnrollmentCount(event);
+
   if (!event.maxParticipants) {
     return {
       unlimited: true,
       total: null,
-      filled: event.participants.length,
+      filled,
       available: null,
       percentage: 0,
     };
   }
 
-  const filled = event.participants.length;
   const total = event.maxParticipants;
   const available = Math.max(0, total - filled);
   const percentage = Math.round((filled / total) * 100);
@@ -176,29 +212,45 @@ function getCapacityInfo(event) {
 }
 
 function getEventStatus(event) {
+  const lifecycleStatus = String(event.lifecycleStatus || "").toUpperCase();
+  if (["COMPLETED", "ARCHIVED", "CANCELLED"].includes(lifecycleStatus)) {
+    return lifecycleStatus;
+  }
+
   const now = new Date();
+  const filled = getStudentEnrollmentCount(event);
 
   if (event.date < now) {
     return "ENDED";
   }
 
-  if (event.registrationDeadline && event.registrationDeadline < now) {
+  if (
+    event.registrationDeadline &&
+    isAfterEndOfDay(event.registrationDeadline)
+  ) {
     return "CLOSED";
   }
 
   if (
     event.maxParticipants &&
-    event.participants.length >= event.maxParticipants
+    filled >= event.maxParticipants
   ) {
     return "FULL";
   }
 
   if (
     event.maxParticipants &&
-    event.participants.length > event.maxParticipants * 0.8
+    filled > event.maxParticipants * 0.8
   ) {
     return "FILLING";
   }
 
   return "OPEN";
+}
+
+function getStudentEnrollmentCount(event) {
+  return (event.participants || []).reduce(
+    (total, participant) => total + (participant.students?.length || 0),
+    0
+  );
 }

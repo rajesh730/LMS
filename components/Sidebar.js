@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
+import { useEffect } from "react";
 import {
   FaChartPie,
   FaCalendarAlt,
@@ -11,14 +12,21 @@ import {
   FaSchool,
   FaChalkboardTeacher,
   FaHeadset,
-  FaUserPlus,
-  FaBullhorn,
+  FaUsers,
 } from "react-icons/fa";
+import PratyoLogo from "@/components/brand/PratyoLogo";
 
 export default function Sidebar({ role, isRestricted = false, isPending = false }) {
+  const { data: session } = useSession();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const currentTab = searchParams?.get("tab");
+
+  useEffect(() => {
+    if (session?.error === "SessionRevoked") {
+      signOut({ callbackUrl: "/login" });
+    }
+  }, [session]);
 
   const adminLinks = [
     { name: "Platform Hub", href: "/admin/dashboard", icon: FaChartPie },
@@ -27,36 +35,23 @@ export default function Sidebar({ role, isRestricted = false, isPending = false 
   ];
 
   const schoolLinks = [
-    { name: "School Hub", href: "/school/dashboard", icon: FaChartPie },
+    { name: "Overview", href: "/school/dashboard", icon: FaChartPie },
+    { name: "Students", href: "/school/dashboard?tab=students", icon: FaUsers },
+    { name: "Teachers", href: "/school/dashboard?tab=teachers", icon: FaChalkboardTeacher },
+    {
+      name: "Platform Events",
+      href: "/school/dashboard?tab=platform-events",
+      icon: FaCalendarAlt,
+    },
+    {
+      name: "School Events",
+      href: "/school/dashboard?tab=school-events",
+      icon: FaCalendarAlt,
+    },
     {
       name: "Public Showcase",
       href: "/school/dashboard?tab=showcase",
       icon: FaSchool,
-    },
-    {
-      name: "Talent Events",
-      href: "/school/dashboard?tab=events",
-      icon: FaCalendarAlt,
-    },
-    {
-      name: "School Notices",
-      href: "/school/dashboard?tab=notices",
-      icon: FaBullhorn,
-    },
-    {
-      name: "Register Student",
-      href: "/school/dashboard?tab=register-student",
-      icon: FaUserPlus,
-    },
-    {
-      name: "Register Teacher",
-      href: "/school/dashboard?tab=register-teacher",
-      icon: FaChalkboardTeacher,
-    },
-    {
-      name: "Parent Messages",
-      href: "/school/dashboard?tab=communication",
-      icon: FaHeadset,
     },
     { name: "Settings", href: "/school/dashboard?tab=settings", icon: FaCog },
   ];
@@ -88,14 +83,19 @@ export default function Sidebar({ role, isRestricted = false, isPending = false 
   }
 
   return (
-    <aside className="w-64 bg-slate-900/95 backdrop-blur-xl border-r border-slate-800 h-screen fixed left-0 top-0 flex flex-col z-50 transition-all duration-300">
-      <div className="p-6 border-b border-slate-800 flex items-center gap-3">
-        <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-emerald-500 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/20">
-          <FaSchool className="text-white text-sm" />
+    <aside className="w-64 border-r border-[#16396d] bg-[#081b39]/95 backdrop-blur-xl h-screen fixed left-0 top-0 flex flex-col z-50 transition-all duration-300">
+      <div className="border-b border-[#16396d] p-6">
+        <div className="flex items-center gap-3">
+          <PratyoLogo variant="icon" compact withSurface />
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.24em] text-[#8fc4ff]">
+              Pratyo
+            </p>
+            <p className="text-sm font-semibold text-[#f6fbff]">
+              School Platform
+            </p>
+          </div>
         </div>
-        <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-emerald-400">
-          E-Grantha Talent
-        </h1>
       </div>
 
       <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
@@ -107,14 +107,14 @@ export default function Sidebar({ role, isRestricted = false, isPending = false 
               key={link.href}
               href={link.href}
               className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group ${isActive
-                  ? "bg-blue-600/10 text-blue-400 shadow-sm border border-blue-500/20"
-                  : "text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+                  ? "border border-[#ffb21c]/25 bg-[#ffb21c]/10 text-[#ffe09a] shadow-sm"
+                  : "text-[#bfd3f5] hover:bg-[#0f2953] hover:text-[#f6fbff]"
                 }`}
             >
               <Icon
                 className={`text-lg ${isActive
-                    ? "text-blue-400"
-                    : "text-slate-500 group-hover:text-slate-300"
+                    ? "text-[#ffb21c]"
+                    : "text-[#6fa6ef] group-hover:text-[#d9e8ff]"
                   }`}
               />
               <span className="font-medium">{link.name}</span>
@@ -123,12 +123,12 @@ export default function Sidebar({ role, isRestricted = false, isPending = false 
         })}
       </nav>
 
-      <div className="p-4 border-t border-slate-800">
+      <div className="p-4 border-t border-[#16396d]">
         <button
           onClick={() => signOut({ callbackUrl: "/login" })}
-          className="flex items-center gap-3 px-4 py-3 w-full rounded-xl text-red-400 hover:bg-red-500/10 transition-all duration-200 group"
+          className="flex items-center gap-3 px-4 py-3 w-full rounded-xl text-[#ffc37a] hover:bg-[#ffb21c]/10 transition-all duration-200 group"
         >
-          <FaSignOutAlt className="text-lg group-hover:text-red-300" />
+          <FaSignOutAlt className="text-lg group-hover:text-[#fff0c9]" />
           <span className="font-medium">Logout</span>
         </button>
       </div>

@@ -6,6 +6,9 @@ import Event from "@/models/Event";
 import EventProposal from "@/models/EventProposal";
 import EventSchoolInvitation from "@/models/EventSchoolInvitation";
 import { syncEventSchoolInvitations } from "@/lib/eventInvitations";
+import { validateEventDates } from "@/lib/eventDates";
+import { validateEventCapacity } from "@/lib/eventCapacity";
+import { normalizeGradeValue } from "@/lib/schoolGrades";
 import "@/models/ExternalOrganizer";
 
 const EVENT_PARTNER_ROLES = [
@@ -34,6 +37,62 @@ function normalizeEventPartners(partners) {
       website: partner.website || "",
       isPrimary: index === 0 ? true : Boolean(partner.isPrimary),
     }));
+}
+
+function buildEventPartnerFromProposal(proposal) {
+  const organizer = proposal?.organizer;
+  if (!organizer) return null;
+
+  return {
+    organizer: organizer._id || organizer,
+    role: proposal.proposedRoles?.[0] || "ORGANIZER_PARTNER",
+    displayName: organizer.organizationName || proposal.organizationName || "",
+    logoUrl: organizer.logoUrl || "",
+    website: organizer.website || proposal.website || "",
+    isPrimary: true,
+  };
+}
+
+function normalizeParticipationFormat(value) {
+  return value === "TEAM" ? "TEAM" : "INDIVIDUAL";
+}
+
+function resolveParticipationFormat(value, minTeamSize, maxTeamSize, fallbackValue) {
+  if (
+    value === "TEAM" ||
+    minTeamSize !== undefined && minTeamSize !== null && minTeamSize !== "" ||
+    maxTeamSize !== undefined && maxTeamSize !== null && maxTeamSize !== ""
+  ) {
+    return "TEAM";
+  }
+  return normalizeParticipationFormat(value ?? fallbackValue);
+}
+
+function validateTeamRules({ participationFormat, minTeamSize, maxTeamSize }) {
+  if (participationFormat !== "TEAM") {
+    return null;
+  }
+
+  const min = minTeamSize === "" || minTeamSize === undefined || minTeamSize === null
+    ? null
+    : Number(minTeamSize);
+  const max = maxTeamSize === "" || maxTeamSize === undefined || maxTeamSize === null
+    ? null
+    : Number(maxTeamSize);
+
+  if (min !== null && (!Number.isFinite(min) || min < 1)) {
+    return "Minimum team size must be at least 1.";
+  }
+
+  if (max !== null && (!Number.isFinite(max) || max < 1)) {
+    return "Maximum team size must be at least 1.";
+  }
+
+  if (min !== null && max !== null && min > max) {
+    return "Minimum team size cannot exceed maximum team size.";
+  }
+
+  return null;
 }
 
 function canManageEvent(session, event) {
@@ -81,11 +140,12 @@ export async function PUT(req, props) {
       title,
       description,
       date,
-      targetGroup,
+      schoolId,
       eventScope,
       eventType,
       visibility,
       registrationMode,
+      participationFormat,
       featuredOnLanding,
       publicHighlightsEnabled,
       partnerBrandingEnabled,
@@ -95,6 +155,8 @@ export async function PUT(req, props) {
       registrationDeadline,
       maxParticipants,
       maxParticipantsPerSchool,
+      minTeamSize,
+      maxTeamSize,
       eligibleGrades,
       lifecycleStatus,
       assignedMentors,
@@ -111,32 +173,135 @@ export async function PUT(req, props) {
       return NextResponse.json({ message: "Forbidden" }, { status: 403 });
     }
 
+    if (date !== undefined || registrationDeadline !== undefined) {
+      const dateValidationMessage = validateEventDates({
+        date: date ?? event.date,
+        registrationDeadline:
+          registrationDeadline !== undefined
+            ? registrationDeadline || null
+            : event.registrationDeadline,
+      });
+      if (dateValidationMessage) {
+        return NextResponse.json(
+          { message: dateValidationMessage },
+          { status: 400 }
+        );
+      }
+    }
+
     const requestedScope =
       session.user.role === "SUPER_ADMIN"
         ? eventScope || event.eventScope
         : event.eventScope;
 
+    let resolvedSchool = event.school;
+    if (requestedScope === "SCHOOL") {
+      if (session.user.role === "SUPER_ADMIN") {
+        resolvedSchool = schoolId || event.school || null;
+      }
+      if (!resolvedSchool) {
+        return NextResponse.json(
+          { message: "SCHOOL events require a valid school" },
+          { status: 400 }
+        );
+      }
+    } else {
+      resolvedSchool = null;
+    }
+
+    const resolvedVisibility = visibility || event.visibility;
+    if (resolvedVisibility === "PUBLIC" && event.status !== "APPROVED") {
+      return NextResponse.json(
+        {
+          message:
+            "Only approved events can be public. Approve the event before publishing.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (
+      featuredOnLanding !== undefined &&
+      Boolean(featuredOnLanding) &&
+      (session.user.role !== "SUPER_ADMIN" ||
+        requestedScope !== "PLATFORM" ||
+        resolvedVisibility !== "PUBLIC" ||
+        event.status !== "APPROVED")
+    ) {
+      return NextResponse.json(
+        {
+          message:
+            "Featured events must be approved, platform-scoped, and public, and can only be managed by SUPER_ADMIN.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (resultsPublished !== undefined && Boolean(resultsPublished) && event.status !== "APPROVED") {
+      return NextResponse.json(
+        { message: "Results can only be published for approved events." },
+        { status: 400 }
+      );
+    }
+
+    const capacityValidation = validateEventCapacity({
+      maxParticipants:
+        maxParticipants !== undefined ? maxParticipants : event.maxParticipants,
+      maxParticipantsPerSchool:
+        maxParticipantsPerSchool !== undefined
+          ? maxParticipantsPerSchool
+          : event.maxParticipantsPerSchool,
+    });
+    if (capacityValidation.message) {
+      return NextResponse.json(
+        { message: capacityValidation.message },
+        { status: 400 }
+      );
+    }
+
+    const resolvedParticipationFormat =
+      resolveParticipationFormat(
+        participationFormat,
+        minTeamSize,
+        maxTeamSize,
+        event.participationFormat
+      );
+    const teamValidationMessage = validateTeamRules({
+      participationFormat: resolvedParticipationFormat,
+      minTeamSize:
+        minTeamSize !== undefined ? minTeamSize : event.minTeamSize,
+      maxTeamSize:
+        maxTeamSize !== undefined ? maxTeamSize : event.maxTeamSize,
+    });
+    if (teamValidationMessage) {
+      return NextResponse.json(
+        { message: teamValidationMessage },
+        { status: 400 }
+      );
+    }
+
     event.title = title ?? event.title;
     event.description = description ?? event.description;
     event.date = date ?? event.date;
-    if (targetGroup !== undefined) {
-      event.targetGroup = targetGroup || null;
-    }
     event.eventScope = requestedScope;
-    event.ownerType =
-      requestedScope === "SCHOOL"
-        ? "SCHOOL"
-        : requestedScope === "PLATFORM"
-        ? "PLATFORM"
-        : event.ownerType;
+    event.school = resolvedSchool;
+    event.ownerType = requestedScope === "SCHOOL" ? "SCHOOL" : "PLATFORM";
+    event.ownerId = requestedScope === "SCHOOL" ? resolvedSchool : session.user.id;
     event.eventType = eventType || event.eventType;
-    event.visibility = visibility || event.visibility;
-    event.registrationMode = registrationMode || event.registrationMode;
+    event.visibility = resolvedVisibility;
+    event.participationFormat = resolvedParticipationFormat;
+    event.registrationMode =
+      resolvedParticipationFormat === "TEAM"
+        ? "THROUGH_SCHOOL"
+        : registrationMode || event.registrationMode;
     if (featuredOnLanding !== undefined) {
       event.featuredOnLanding = Boolean(featuredOnLanding);
     }
     if (publicHighlightsEnabled !== undefined) {
       event.publicHighlightsEnabled = Boolean(publicHighlightsEnabled);
+      if (!event.publicHighlightsEnabled) {
+        event.featuredOnLanding = false;
+      }
     }
     if (session.user.role === "SUPER_ADMIN") {
       if (Array.isArray(partners)) {
@@ -150,6 +315,24 @@ export async function PUT(req, props) {
           Boolean(partnerBrandingEnabled) && event.partners.length > 0;
       }
     }
+
+    if (session.user.role === "SUPER_ADMIN" && event.sourceProposal) {
+      const proposal = await EventProposal.findById(event.sourceProposal)
+        .populate("organizer", "organizationName logoUrl website")
+        .lean();
+      const proposalPartner = buildEventPartnerFromProposal(proposal);
+      if (
+        proposalPartner &&
+        !(event.partners || []).some(
+          (partner) => String(partner.organizer) === String(proposalPartner.organizer)
+        )
+      ) {
+        event.partners = [proposalPartner, ...(event.partners || [])];
+      }
+      if (proposalPartner && event.partners.length > 0) {
+        event.partnerBrandingEnabled = true;
+      }
+    }
     if (resultsPublished !== undefined) {
       event.resultsPublished = Boolean(resultsPublished);
     }
@@ -157,13 +340,33 @@ export async function PUT(req, props) {
       event.registrationDeadline = registrationDeadline || null;
     }
     if (maxParticipants !== undefined) {
-      event.maxParticipants = maxParticipants || null;
+      event.maxParticipants = capacityValidation.totalStudentCapacity;
     }
     if (maxParticipantsPerSchool !== undefined) {
-      event.maxParticipantsPerSchool = maxParticipantsPerSchool || null;
+      event.maxParticipantsPerSchool =
+        capacityValidation.maxStudentsPerSchool;
+    }
+    if (resolvedParticipationFormat === "TEAM") {
+      event.minTeamSize =
+        minTeamSize !== undefined && minTeamSize !== ""
+          ? Number(minTeamSize) || null
+          : minTeamSize === ""
+          ? null
+          : event.minTeamSize;
+      event.maxTeamSize =
+        maxTeamSize !== undefined && maxTeamSize !== ""
+          ? Number(maxTeamSize) || null
+          : maxTeamSize === ""
+          ? null
+          : event.maxTeamSize;
+    } else {
+      event.minTeamSize = null;
+      event.maxTeamSize = null;
     }
     if (eligibleGrades !== undefined) {
-      event.eligibleGrades = eligibleGrades || [];
+      event.eligibleGrades = Array.isArray(eligibleGrades)
+        ? eligibleGrades.map(normalizeGradeValue).filter(Boolean)
+        : [];
     }
     if (Array.isArray(assignedMentors)) {
       event.assignedMentors = assignedMentors;

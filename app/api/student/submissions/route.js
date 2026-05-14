@@ -8,12 +8,13 @@ import EventSchoolInvitation from "@/models/EventSchoolInvitation";
 import ParticipationRequest from "@/models/ParticipationRequest";
 import TalentProfile from "@/models/TalentProfile";
 import TalentSubmission from "@/models/TalentSubmission";
+import { gradeListContains } from "@/lib/schoolGrades";
 
 export const dynamic = "force-dynamic";
 const SUBMISSION_READY_STATUSES = ["APPROVED", "ENROLLED"];
 
 function isEligibleForEvent(event, grade) {
-  return !event.eligibleGrades?.length || event.eligibleGrades.includes(grade);
+  return gradeListContains(event.eligibleGrades, grade);
 }
 
 async function ensureTalentProfile(student) {

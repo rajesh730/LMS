@@ -16,6 +16,8 @@ import {
 } from "react-icons/fa";
 import EventDetailModal from "./EventDetailModal";
 import StudentSelector from "@/components/dashboard/StudentSelector";
+import { isDatePast } from "@/lib/eventUiStatus";
+import { isTeamEventLike } from "@/lib/eventParticipationFormat";
 
 export default function EventFeed() {
   const { data: session } = useSession();
@@ -57,15 +59,6 @@ export default function EventFeed() {
 
   // Filter events based on active tab
   const filteredEvents = events.filter((event) => {
-    if (
-      session?.user?.role === "SCHOOL_ADMIN" &&
-      event.eventScope === "PLATFORM" &&
-      event.schoolInvitationStatus !== "APPROVED" &&
-      !event.isParticipating
-    ) {
-      return false;
-    }
-
     if (activeTab === "participated") {
       return event.isParticipating;
     }
@@ -73,6 +66,12 @@ export default function EventFeed() {
   });
 
   const participatedCount = events.filter((e) => e.isParticipating).length;
+  const getRegisteredStudentCount = (event) =>
+    isTeamEventLike(event)
+      ? event.myParticipation?.teamCount || 0
+      : event.myParticipation?.studentCount ||
+        event.myParticipation?.students?.length ||
+        0;
 
   const handleViewDetails = (event) => {
     setSelectedEvent(event);
@@ -94,6 +93,11 @@ export default function EventFeed() {
   };
 
   const handleEditParticipation = (event) => {
+    if (isDeadlinePassed(event.registrationDeadline)) {
+      alert("Registration is closed, so this team can no longer be changed.");
+      return;
+    }
+
     setSelectedEvent(event);
     setIsEditing(true);
     const myPart = event.myParticipation || {};
@@ -152,6 +156,12 @@ export default function EventFeed() {
   };
 
   const handleLeaveEvent = async (eventId) => {
+    const event = events.find((item) => item._id === eventId);
+    if (event && isDeadlinePassed(event.registrationDeadline)) {
+      alert("Registration is closed, so this team can no longer be withdrawn.");
+      return;
+    }
+
     if (!confirm("Are you sure you want to leave this event?")) return;
 
     try {
@@ -173,12 +183,12 @@ export default function EventFeed() {
 
   const isDeadlinePassed = (deadline) => {
     if (!deadline) return false;
-    return new Date() > new Date(deadline);
+    return isDatePast(deadline, { endOfDay: true });
   };
 
   const isFull = (event) => {
     if (!event.maxParticipants) return false;
-    return (event.participantCount || 0) >= event.maxParticipants;
+    return (event.studentCapacityCount || event.studentCount || 0) >= event.maxParticipants;
   };
 
   if (loading) {
@@ -207,7 +217,7 @@ export default function EventFeed() {
               : "bg-slate-700 text-slate-300 hover:bg-slate-600"
           }`}
         >
-          <FaCheckCircle /> My Participated
+          <FaCheckCircle /> Registered Events
           {participatedCount > 0 && (
             <span className="bg-white/20 px-2 py-0.5 rounded-full text-xs">
               {participatedCount}
@@ -221,13 +231,18 @@ export default function EventFeed() {
         <div className="text-center py-8">
           <p className="text-slate-400">
             {activeTab === "participated"
-              ? "You haven't participated in any events yet."
+              ? "No registered events yet."
               : "No upcoming events."}
           </p>
         </div>
       ) : (
         <div className="space-y-4">
           {filteredEvents.map((event) => {
+            const needsSchoolApproval =
+              session?.user?.role === "SCHOOL_ADMIN" &&
+              event.eventScope === "PLATFORM" &&
+              event.schoolInvitationStatus !== "APPROVED" &&
+              !event.isParticipating;
             let cardStyle = "bg-slate-800/50 border-slate-700";
             if (event.isParticipating) {
               if (event.participationStatus === "APPROVED")
@@ -268,6 +283,19 @@ export default function EventFeed() {
                           )}
                         </>
                       )}
+                      {event.isParticipating && (
+                        <span className="text-xs border border-slate-600 text-slate-300 px-2 py-0.5 rounded-full">
+                          {getRegisteredStudentCount(event)}{" "}
+                          {isTeamEventLike(event)
+                            ? "teams registered"
+                            : "students registered"}
+                        </span>
+                      )}
+                      {needsSchoolApproval && (
+                        <span className="text-xs border border-amber-500/30 bg-amber-500/10 text-amber-200 px-2 py-0.5 rounded-full">
+                          School approval needed
+                        </span>
+                      )}
                       {isFull(event) && !event.isParticipating && (
                         <span className="text-xs bg-red-600 text-white px-2 py-0.5 rounded-full">
                           Full
@@ -288,11 +316,13 @@ export default function EventFeed() {
                       </span>
                       <span className="flex items-center gap-1">
                         <FaUsers className="text-blue-400" />
-                        {event.participantCount || 0}{" "}
+                        {event.studentCapacityCount || event.studentCount || 0}{" "}
                         {event.maxParticipants
                           ? `/ ${event.maxParticipants}`
                           : ""}{" "}
-                        schools
+                        {isTeamEventLike(event)
+                          ? "teams"
+                          : "students"}
                       </span>
                       {event.registrationDeadline && (
                         <span
@@ -312,7 +342,10 @@ export default function EventFeed() {
                       {event.maxParticipantsPerSchool && (
                         <span className="flex items-center gap-1 text-slate-400">
                           <FaUser className="text-slate-500" />
-                          Max {event.maxParticipantsPerSchool}/School
+                          Max {event.maxParticipantsPerSchool}{" "}
+                          {isTeamEventLike(event)
+                            ? "teams/school"
+                            : "students/school"}
                         </span>
                       )}
                       {event.eligibleGrades &&
@@ -342,33 +375,37 @@ export default function EventFeed() {
                       (event.isParticipating ? (
                         <>
                           <button
+                            disabled={isDeadlinePassed(event.registrationDeadline)}
                             onClick={() => handleEditParticipation(event)}
-                            className="text-xs bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white px-3 py-1.5 rounded flex items-center gap-1 transition"
+                            className="text-xs bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white px-3 py-1.5 rounded flex items-center gap-1 transition disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-500"
                           >
-                            <FaEdit /> Manage Team
+                            <FaEdit /> Manage Registration
                           </button>
                           <button
+                            disabled={isDeadlinePassed(event.registrationDeadline)}
                             onClick={() => handleLeaveEvent(event._id)}
-                            className="text-xs bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white px-3 py-1.5 rounded flex items-center gap-1 transition"
+                            className="text-xs bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white px-3 py-1.5 rounded flex items-center gap-1 transition disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-500"
                           >
-                            <FaTrash /> Leave
+                            <FaTrash /> Withdraw
                           </button>
                         </>
                       ) : (
                         <button
                           onClick={() => handleTakePart(event)}
                           disabled={
+                            needsSchoolApproval ||
                             isDeadlinePassed(event.registrationDeadline) ||
                             isFull(event)
                           }
                           className={`text-xs px-3 py-1.5 rounded flex items-center gap-1 transition ${
+                            needsSchoolApproval ||
                             isDeadlinePassed(event.registrationDeadline) ||
                             isFull(event)
                               ? "bg-slate-700 text-slate-500 cursor-not-allowed"
                               : "bg-emerald-600 hover:bg-emerald-500 text-white"
                           }`}
                         >
-                          Take Part
+                          {needsSchoolApproval ? "Approve First" : "Take Part"}
                         </button>
                       ))}
                   </div>
@@ -387,6 +424,7 @@ export default function EventFeed() {
           currentParticipation={selectedEvent.myParticipation}
           onClose={() => setShowDetailModal(false)}
           onJoin={() => handleTakePart(selectedEvent)}
+          onManage={() => handleEditParticipation(selectedEvent)}
           onLeave={() => handleLeaveEvent(selectedEvent._id)}
         />
       )}
@@ -397,7 +435,7 @@ export default function EventFeed() {
           <div className="bg-slate-800 rounded-xl w-full max-w-4xl border border-slate-700 flex flex-col max-h-[90vh]">
             <div className="p-6 border-b border-slate-700">
               <h3 className="text-xl font-bold text-white">
-                {isEditing ? "Manage Participation" : "Join Event"}:{" "}
+                {isEditing ? "Manage Registration" : "Register Team"}:{" "}
                 {selectedEvent.title}
               </h3>
             </div>
@@ -479,6 +517,7 @@ export default function EventFeed() {
 
                     <StudentSelector
                       selectedIds={participationForm.students}
+                      eligibleGrades={selectedEvent.eligibleGrades || []}
                       onChange={(ids) =>
                         setParticipationForm({
                           ...participationForm,

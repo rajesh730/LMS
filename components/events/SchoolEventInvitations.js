@@ -8,6 +8,8 @@ import {
   FaTimesCircle,
   FaUsers,
 } from "react-icons/fa";
+import EventParticipationForm from "./EventParticipationForm";
+import { getEventStage, getStageClasses, isDatePast } from "@/lib/eventUiStatus";
 
 const FILTERS = [
   { id: "PENDING", label: "Pending" },
@@ -41,12 +43,25 @@ function getPartnerName(event) {
   );
 }
 
+function isRegistrationClosed(event) {
+  if (!event) return true;
+  if (event.date && isDatePast(event.date, { endOfDay: true })) return true;
+  if (
+    event.registrationDeadline &&
+    isDatePast(event.registrationDeadline, { endOfDay: true })
+  ) {
+    return true;
+  }
+  return false;
+}
+
 export default function SchoolEventInvitations({ refreshKey = 0, onChanged }) {
   const [invitations, setInvitations] = useState([]);
   const [filter, setFilter] = useState("PENDING");
   const [loading, setLoading] = useState(true);
   const [actioningId, setActioningId] = useState(null);
   const [message, setMessage] = useState("");
+  const [participationEvent, setParticipationEvent] = useState(null);
 
   const fetchInvitations = useCallback(async () => {
     try {
@@ -75,7 +90,14 @@ export default function SchoolEventInvitations({ refreshKey = 0, onChanged }) {
 
   const counts = useMemo(
     () =>
-      invitations.reduce(
+      invitations
+        .filter((invitation) => {
+          const lifecycle = String(
+            invitation.event?.lifecycleStatus || "ACTIVE"
+          ).toUpperCase();
+          return !["COMPLETED", "ARCHIVED"].includes(lifecycle);
+        })
+        .reduce(
         (acc, invitation) => {
           acc.ALL += 1;
           if (acc[invitation.status] !== undefined) {
@@ -89,12 +111,28 @@ export default function SchoolEventInvitations({ refreshKey = 0, onChanged }) {
   );
 
   const visibleInvitations = invitations.filter((invitation) => {
+    const lifecycle = String(
+      invitation.event?.lifecycleStatus || "ACTIVE"
+    ).toUpperCase();
+    if (["COMPLETED", "ARCHIVED"].includes(lifecycle)) {
+      return false;
+    }
     if (filter === "ALL") return true;
     return invitation.status === filter;
   });
 
   const updateInvitation = async (invitation, action) => {
     try {
+      if (
+        action === "disapprove" &&
+        invitation.status === "APPROVED" &&
+        !confirm(
+          "Disapprove this event for your school? If you already registered a team and registration is still open, this will withdraw that team."
+        )
+      ) {
+        return;
+      }
+
       setActioningId(invitation._id);
       setMessage("");
 
@@ -178,12 +216,23 @@ export default function SchoolEventInvitations({ refreshKey = 0, onChanged }) {
           </div>
         ) : visibleInvitations.length === 0 ? (
           <div className="rounded-xl border border-slate-700 bg-slate-800/70 p-6 text-center text-slate-400">
-            No {filter.toLowerCase()} event notifications right now.
+            <p className="font-semibold text-slate-300">
+              No {filter.toLowerCase()} platform invitations right now.
+            </p>
+            <p className="mt-1 text-sm text-slate-500">
+              Platform events sent to your school will appear here for approval before students can join.
+            </p>
           </div>
         ) : (
           visibleInvitations.map((invitation) => {
             const event = invitation.event;
             if (!event) return null;
+            const participation = invitation.participation || {};
+            const hasParticipation = Boolean(participation.hasParticipation);
+            const stage = getEventStage(event, {
+              invitationStatus: invitation.status,
+              participationStatus: hasParticipation ? "APPROVED" : undefined,
+            });
 
             return (
               <article
@@ -208,6 +257,12 @@ export default function SchoolEventInvitations({ refreshKey = 0, onChanged }) {
                           Partner: {getPartnerName(event)}
                         </span>
                       )}
+                      {hasParticipation && (
+                        <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-200">
+                          Team registered:{" "}
+                          {participation.registeredStudentCount || 0} students
+                        </span>
+                      )}
                     </div>
 
                     <h3 className="text-xl font-bold text-white">
@@ -216,6 +271,17 @@ export default function SchoolEventInvitations({ refreshKey = 0, onChanged }) {
                     <p className="mt-2 line-clamp-2 text-sm text-slate-400">
                       {event.description}
                     </p>
+
+                    <div
+                      className={`mt-4 rounded-xl border px-3 py-2 text-sm ${getStageClasses(
+                        stage.tone
+                      )}`}
+                    >
+                      <div className="font-semibold">{stage.label}</div>
+                      <div className="text-xs opacity-90">
+                        {stage.nextAction}
+                      </div>
+                    </div>
 
                     <div className="mt-4 flex flex-wrap gap-4 text-sm text-slate-300">
                       <span className="flex items-center gap-2">
@@ -236,6 +302,20 @@ export default function SchoolEventInvitations({ refreshKey = 0, onChanged }) {
                   </div>
 
                   <div className="flex flex-wrap gap-2 lg:justify-end">
+                    {invitation.status === "APPROVED" && (
+                      <button
+                        disabled={isRegistrationClosed(event)}
+                        onClick={() => setParticipationEvent(event)}
+                        className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
+                      >
+                        <FaUsers />
+                        {isRegistrationClosed(event)
+                          ? "Registration Closed"
+                          : hasParticipation
+                          ? "Manage Team"
+                          : "Take Part"}
+                      </button>
+                    )}
                     {invitation.status !== "APPROVED" && (
                       <button
                         disabled={actioningId === invitation._id}
@@ -265,6 +345,50 @@ export default function SchoolEventInvitations({ refreshKey = 0, onChanged }) {
           })
         )}
       </div>
+
+      {participationEvent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
+          <div className="max-h-[90vh] w-full max-w-6xl overflow-y-auto rounded-2xl border border-slate-700 bg-slate-900 p-6 shadow-2xl">
+            <div className="mb-4 flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-xl font-bold text-white">
+                  {invitations.find(
+                    (invitation) =>
+                      invitation.event?._id === participationEvent._id
+                  )?.participation?.hasParticipation
+                    ? "Manage Team"
+                    : "Take Part"}
+                  : {participationEvent.title}
+                </h3>
+                <p className="mt-1 text-sm text-slate-400">
+                  Only eligible students for{" "}
+                  {participationEvent.eligibleGrades?.length
+                    ? participationEvent.eligibleGrades.join(", ")
+                    : "all grades"}{" "}
+                  will be shown.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setParticipationEvent(null)}
+                className="rounded-lg bg-slate-800 px-3 py-2 text-sm font-semibold text-slate-300 transition hover:bg-slate-700 hover:text-white"
+              >
+                Close
+              </button>
+            </div>
+
+            <EventParticipationForm
+              event={participationEvent}
+              isEditing
+              onSuccess={async () => {
+                setParticipationEvent(null);
+                await fetchInvitations();
+                onChanged?.();
+              }}
+            />
+          </div>
+        </div>
+      )}
     </section>
   );
 }

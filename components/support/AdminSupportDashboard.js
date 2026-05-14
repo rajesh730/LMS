@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useState, useEffect } from "react";
 import {
   FaCheckCircle,
   FaClock,
@@ -32,11 +32,7 @@ export default function AdminSupportDashboard() {
   const [faqContent, setFaqContent] = useState("");
   const [showResolved, setShowResolved] = useState(false);
 
-  useEffect(() => {
-    fetchTickets();
-  }, [filterStatus]);
-
-  const fetchTickets = async () => {
+  const fetchTickets = useCallback(async () => {
     setLoading(true);
     try {
       const url =
@@ -54,23 +50,18 @@ export default function AdminSupportDashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filterStatus]);
+
+  useEffect(() => {
+    fetchTickets();
+  }, [fetchTickets]);
 
   const handleSelectTicket = async (ticketId) => {
     try {
-      console.log("Fetching ticket:", ticketId);
       const res = await fetch(`/api/support-tickets/${ticketId}`);
-      
-      console.log("Response status:", res.status);
-      console.log("Response ok:", res.ok);
-      console.log("Response headers:", {
-        contentType: res.headers.get("content-type"),
-        contentLength: res.headers.get("content-length"),
-      });
-      
+
       const text = await res.text();
-      console.log("Raw response text:", text);
-      
+
       let data;
       try {
         data = JSON.parse(text);
@@ -79,11 +70,8 @@ export default function AdminSupportDashboard() {
         setError("Invalid response from server");
         return;
       }
-      
-      console.log("Parsed data:", data);
-      
+
       if (res.ok) {
-        console.log("Ticket loaded successfully:", data.data?.ticket);
         setSelectedTicket(data.data?.ticket);
         setNewStatus(data.data?.ticket?.status);
         setReplyMessage("");
@@ -91,7 +79,6 @@ export default function AdminSupportDashboard() {
         setError("");
       } else {
         setError(data.message || `Server error: ${res.status}`);
-        console.error("Error response:", data);
       }
     } catch (err) {
       setError("Failed to load ticket details: " + err.message);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useState, useEffect } from "react";
 import {
   FaCheckCircle,
   FaTimesCircle,
@@ -22,15 +22,7 @@ export default function ParticipationApprovalManager() {
   const [showForceEnroll, setShowForceEnroll] = useState(false);
   const [validationErrors, setValidationErrors] = useState([]);
 
-  useEffect(() => {
-    fetchRequests();
-  }, []);
-
-  useEffect(() => {
-    applyFilter();
-  }, [filter, requests]);
-
-  const fetchRequests = async () => {
+  const fetchRequests = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch("/api/participation-requests");
@@ -51,15 +43,23 @@ export default function ParticipationApprovalManager() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const applyFilter = () => {
+  const applyFilter = useCallback(() => {
     if (filter === "ALL") {
       setFilteredRequests(requests);
     } else {
       setFilteredRequests(requests.filter((r) => r.status === filter));
     }
-  };
+  }, [filter, requests]);
+
+  useEffect(() => {
+    fetchRequests();
+  }, [fetchRequests]);
+
+  useEffect(() => {
+    applyFilter();
+  }, [applyFilter]);
 
   const handleApprove = async (requestId, forceEnroll = false) => {
     try {

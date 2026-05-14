@@ -2,9 +2,11 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
+import Event from "@/models/Event";
 import EventSchoolInvitation from "@/models/EventSchoolInvitation";
+import ParticipationRequest from "@/models/ParticipationRequest";
 import { ensureSchoolInvitationForEvent } from "@/lib/eventInvitations";
-import "@/models/Event";
+import { isAfterEndOfDay, isBeforeToday } from "@/lib/eventDates";
 import "@/models/ExternalOrganizer";
 
 export const dynamic = "force-dynamic";
@@ -75,6 +77,61 @@ export async function PUT(req, props) {
       );
     }
 
+    const event = await Event.findById(params.id).select(
+      "date registrationDeadline"
+    );
+    if (!event) {
+      return NextResponse.json({ message: "Event not found" }, { status: 404 });
+    }
+
+    const isEventPassed = isBeforeToday(event.date);
+    const isRegistrationClosed = event.registrationDeadline
+      ? isAfterEndOfDay(event.registrationDeadline)
+      : false;
+
+    if (action === "approve" && (isEventPassed || isRegistrationClosed)) {
+      return NextResponse.json(
+        {
+          message:
+            "This event can no longer be approved because the event date or registration deadline has passed.",
+        },
+        { status: 400 }
+      );
+    }
+
+    let withdrawnCount = 0;
+    if (action !== "approve") {
+      const activeParticipationCount = await ParticipationRequest.countDocuments({
+        event: params.id,
+        school: session.user.id,
+        status: { $in: ["PENDING", "APPROVED", "ENROLLED", "REJECTED"] },
+      });
+
+      if (activeParticipationCount > 0 && (isEventPassed || isRegistrationClosed)) {
+        return NextResponse.json(
+          {
+            message:
+              "Registration is closed, so this school team can no longer be withdrawn by changing the school decision.",
+          },
+          { status: 400 }
+        );
+      }
+
+      if (activeParticipationCount > 0) {
+        const result = await ParticipationRequest.deleteMany({
+          event: params.id,
+          school: session.user.id,
+          status: { $in: ["PENDING", "APPROVED", "ENROLLED", "REJECTED"] },
+        });
+        withdrawnCount = result.deletedCount || 0;
+
+        await Event.updateOne(
+          { _id: params.id },
+          { $pull: { participants: { school: session.user.id } } }
+        );
+      }
+    }
+
     const now = new Date();
     invitation.status = action === "approve" ? "APPROVED" : "DISAPPROVED";
     invitation.readAt = invitation.readAt || now;
@@ -90,7 +147,7 @@ export async function PUT(req, props) {
       .populate({
         path: "event",
         select:
-          "title description date eventType visibility registrationDeadline maxParticipants maxParticipantsPerSchool eligibleGrades eventScope lifecycleStatus status partnerBrandingEnabled partners targetGroup",
+          "title description date eventType visibility registrationDeadline maxParticipants maxParticipantsPerSchool participationFormat minTeamSize maxTeamSize eligibleGrades eventScope lifecycleStatus status partnerBrandingEnabled partners",
         populate: {
           path: "partners.organizer",
           select:
@@ -104,8 +161,11 @@ export async function PUT(req, props) {
         message:
           invitation.status === "APPROVED"
             ? "Event approved for your school"
+            : withdrawnCount > 0
+            ? `Event disapproved for your school and ${withdrawnCount} team registration${withdrawnCount === 1 ? "" : "s"} withdrawn.`
             : "Event disapproved for your school",
         invitation: populatedInvitation,
+        withdrawnCount,
       },
       { status: 200 }
     );

@@ -5,13 +5,329 @@ import Student from "@/models/Student";
 import Event from "@/models/Event";
 import EventSchoolInvitation from "@/models/EventSchoolInvitation";
 import ParticipationRequest from "@/models/ParticipationRequest";
+import User from "@/models/User";
 import {
   successResponse,
   errorResponse,
   internalServerError,
 } from "@/lib/apiResponse";
+import { isAfterEndOfDay, isBeforeToday } from "@/lib/eventDates";
+import { gradeListContains } from "@/lib/schoolGrades";
+import {
+  removeStudentsFromCompetition,
+  syncApprovedRequestsToRoundOne,
+} from "@/lib/competitionFlow";
+import {
+  ACTIVE_PARTICIPATION_REQUEST_STATUSES,
+  applySchoolParticipationProjection,
+  buildSchoolParticipationPresentation,
+} from "@/lib/participationPresentation";
 
-const ACTIVE_REQUEST_STATUSES = ["PENDING", "APPROVED", "ENROLLED"];
+function getRegistrationLockMessage(event, action = "change participation") {
+  const lifecycleStatus = String(event.lifecycleStatus || "ACTIVE").toUpperCase();
+
+  if (lifecycleStatus === "ARCHIVED") {
+    return "This event is archived. Registration changes are locked.";
+  }
+
+  if (lifecycleStatus === "COMPLETED") {
+    return "This event is completed. Registration changes are locked.";
+  }
+
+  if (isBeforeToday(event.date)) {
+    return `Cannot ${action} for a past event.`;
+  }
+
+  if (event.registrationDeadline) {
+    if (isAfterEndOfDay(event.registrationDeadline)) {
+      return `Registration deadline has passed (${new Date(
+        event.registrationDeadline
+      ).toLocaleDateString()})`;
+    }
+  }
+
+  return "";
+}
+
+function normalizeParticipationFormat(event) {
+  if (
+    String(event?.participationFormat || "").toUpperCase() === "TEAM" ||
+    event?.minTeamSize ||
+    event?.maxTeamSize
+  ) {
+    return "TEAM";
+  }
+  return "INDIVIDUAL";
+}
+
+function normalizeSchoolTeamBaseName(schoolName = "") {
+  const cleaned = String(schoolName || "")
+    .replace(/\bschool\b/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  return cleaned || "School";
+}
+
+function buildDefaultTeamName(schoolName = "", index = 0) {
+  const base = `Team ${normalizeSchoolTeamBaseName(schoolName)}`.trim();
+  return index > 0 ? `${base} ${index + 1}` : base;
+}
+
+function validateTeamSelection(event, studentIds = [], teamName = "", captainStudentId = "") {
+  if (normalizeParticipationFormat(event) !== "TEAM") {
+    return null;
+  }
+
+  if (!String(teamName || "").trim()) {
+    return "Team events require a team name.";
+  }
+
+  if (!captainStudentId) {
+    return "Team events require a team captain.";
+  }
+
+  const normalizedStudentIds = Array.from(
+    new Set((studentIds || []).map((id) => String(id)))
+  );
+
+  if (!normalizedStudentIds.includes(String(captainStudentId))) {
+    return "Team captain must be included in the selected team members.";
+  }
+
+  const minTeamSize = Number(event.minTeamSize || 0) || 0;
+  const maxTeamSize = Number(event.maxTeamSize || 0) || 0;
+
+  if (minTeamSize && normalizedStudentIds.length < minTeamSize) {
+    return `This event requires at least ${minTeamSize} team members.`;
+  }
+
+  if (maxTeamSize && normalizedStudentIds.length > maxTeamSize) {
+    return `This event allows at most ${maxTeamSize} team members.`;
+  }
+
+  return null;
+}
+
+async function countActiveTeams(eventId, schoolId = null) {
+  const requests = await ParticipationRequest.find({
+    event: eventId,
+    ...(schoolId ? { school: schoolId } : {}),
+    status: { $in: ACTIVE_PARTICIPATION_REQUEST_STATUSES },
+  }).select("school teamName");
+
+  const uniqueTeams = new Set(
+    requests.map(
+      (request) =>
+        `${String(request.school)}::${String(request.teamName || "")
+          .trim()
+          .toLowerCase() || "default-team"}`
+    )
+  );
+
+  return uniqueTeams.size;
+}
+
+function normalizeTeamPayload(rawTeams = []) {
+  return (Array.isArray(rawTeams) ? rawTeams : [])
+    .map((team) => ({
+      teamName: String(team?.teamName || "").trim(),
+      captainStudentId: String(team?.captainStudentId || "").trim(),
+      studentIds: Array.from(
+        new Set((team?.studentIds || team?.students || []).map((id) => String(id)))
+      ),
+      contactPerson: String(team?.contactPerson || "").trim(),
+      phone: String(team?.phone || team?.contactPhone || "").trim(),
+      notes: String(team?.notes || "").trim(),
+    }))
+    .filter((team) => team.teamName || team.studentIds.length > 0);
+}
+
+function applyDefaultTeamNames(teams = [], schoolName = "") {
+  return (Array.isArray(teams) ? teams : []).map((team, index) => ({
+    ...team,
+    teamName: String(team.teamName || "").trim() || buildDefaultTeamName(schoolName, index),
+  }));
+}
+
+function validateMultiTeamPayload(event, teams = []) {
+  if (normalizeParticipationFormat(event) !== "TEAM") {
+    return null;
+  }
+
+  if (!Array.isArray(teams) || teams.length === 0) {
+    return "Please create at least one team.";
+  }
+
+  const normalizedNames = new Set();
+  const usedStudents = new Set();
+
+  for (const team of teams) {
+    const nameKey = String(team.teamName || "").trim().toLowerCase();
+    if (!nameKey) {
+      return "Every team must have a team name.";
+    }
+    if (normalizedNames.has(nameKey)) {
+      return `Duplicate team name found: ${team.teamName}`;
+    }
+    normalizedNames.add(nameKey);
+
+    const teamValidationMessage = validateTeamSelection(
+      event,
+      team.studentIds,
+      team.teamName,
+      team.captainStudentId
+    );
+    if (teamValidationMessage) {
+      return `${team.teamName}: ${teamValidationMessage}`;
+    }
+
+    for (const studentId of team.studentIds) {
+      if (usedStudents.has(studentId)) {
+        return "A student cannot be added to more than one team in the same event.";
+      }
+      usedStudents.add(studentId);
+    }
+  }
+
+  return null;
+}
+
+async function replaceTeamParticipation({
+  event,
+  eventId,
+  schoolId,
+  sessionUserId,
+  teams,
+}) {
+  const allStudentIds = Array.from(
+    new Set(teams.flatMap((team) => team.studentIds))
+  );
+
+  const selectedStudents = await Student.find({
+    _id: { $in: allStudentIds },
+    school: schoolId,
+  }).select("name grade");
+
+  if (selectedStudents.length !== allStudentIds.length) {
+    return { error: "One or more selected students were not found in your school." };
+  }
+
+  const studentById = new Map(
+    selectedStudents.map((student) => [String(student._id), student])
+  );
+
+  const ineligibleStudents = selectedStudents.filter(
+    (student) => !gradeListContains(event.eligibleGrades, student.grade)
+  );
+  if (ineligibleStudents.length > 0) {
+    return {
+      error: `Some selected students are not eligible for this event: ${ineligibleStudents
+        .map((student) => `${student.name} (${student.grade})`)
+        .join(", ")}`,
+    };
+  }
+
+  if (event.maxParticipantsPerSchool && teams.length > event.maxParticipantsPerSchool) {
+    return {
+      error: `This event allows at most ${event.maxParticipantsPerSchool} teams from one school.`,
+    };
+  }
+
+  const existingRequests = await ParticipationRequest.find({
+    event: eventId,
+    school: schoolId,
+  }).select("student");
+
+  const existingStudentIds = existingRequests.map((request) =>
+    String(request.student)
+  );
+  const removedStudentIds = existingStudentIds.filter(
+    (studentId) => !allStudentIds.includes(studentId)
+  );
+
+  const otherSchoolTeamCount = event.maxParticipants
+    ? (await countActiveTeams(eventId)) - (await countActiveTeams(eventId, schoolId))
+    : 0;
+
+  if (
+    event.maxParticipants &&
+    otherSchoolTeamCount + teams.length > event.maxParticipants
+  ) {
+    return {
+      error: `This event allows at most ${event.maxParticipants} teams in total.`,
+    };
+  }
+
+  await ParticipationRequest.deleteMany({
+    event: eventId,
+    school: schoolId,
+  });
+
+  const now = new Date();
+  const documents = teams.flatMap((team) =>
+    team.studentIds.map((studentId) => {
+      const student = studentById.get(studentId);
+      return {
+        student: studentId,
+        event: eventId,
+        school: schoolId,
+        status: "APPROVED",
+        approvedAt: now,
+        approvedBy: sessionUserId,
+        enrollmentConfirmedAt: now,
+        studentNotifiedAt: now,
+        contactPerson: team.contactPerson || undefined,
+        contactPhone: team.phone || undefined,
+        teamName: team.teamName,
+        captainStudent: team.captainStudentId || undefined,
+        notes: team.notes || undefined,
+        requestedAt: now,
+      };
+    })
+  );
+
+  if (documents.length > 0) {
+    await ParticipationRequest.insertMany(documents);
+  }
+
+  const updatedRequests = await ParticipationRequest.find({
+    event: eventId,
+    school: schoolId,
+  }).select(
+    "status contactPerson contactPhone teamName captainStudent notes student requestedAt approvedAt enrollmentConfirmedAt"
+  );
+  applySchoolParticipationProjection(event, schoolId, updatedRequests);
+  await event.save();
+
+  if (removedStudentIds.length > 0) {
+    await removeStudentsFromCompetition({
+      eventId,
+      studentIds: removedStudentIds,
+    });
+  }
+
+  await syncApprovedRequestsToRoundOne({
+    eventId,
+    createdBy: sessionUserId,
+  });
+
+  return {
+    success: true,
+    teamCount: teams.length,
+    memberCount: documents.length,
+  };
+}
+
+function studentLookupQuery(session) {
+  return {
+    $or: [
+      { _id: session.user.id },
+      { userId: session.user.id },
+      { email: session.user.email },
+      { username: session.user.email },
+    ],
+  };
+}
 
 async function getPlatformInvitationBlocker(event, schoolId) {
   if (event.eventScope !== "PLATFORM") return null;
@@ -90,24 +406,23 @@ export async function POST(req, { params }) {
       return errorResponse(404, "Event not found");
     }
 
-    // ===== VALIDATION 0: Check Registration Deadline =====
-    if (event.registrationDeadline) {
-      const now = new Date();
-      const deadline = new Date(event.registrationDeadline);
-      if (now > deadline) {
-        return errorResponse(
-          400,
-          `Registration deadline has passed (${deadline.toLocaleDateString()})`
-        );
-      }
+    const lockMessage = getRegistrationLockMessage(event, "join");
+    if (lockMessage) {
+      return errorResponse(400, lockMessage);
     }
 
     // ==========================================
     // CASE 1: STUDENT SELF-REGISTRATION
     // ==========================================
     if (session.user.role === "STUDENT") {
-      // Fetch student by email from session
-      const student = await Student.findOne({ email: session.user.email });
+      if (event.registrationMode !== "DIRECT") {
+        return errorResponse(
+          403,
+          "This event is managed through the school. Please contact your school admin for registration."
+        );
+      }
+
+      const student = await Student.findOne(studentLookupQuery(session));
       if (!student) {
         return errorResponse(404, "Student not found");
       }
@@ -128,7 +443,7 @@ export async function POST(req, { params }) {
 
       // Check Grade Eligibility
       if (event.eligibleGrades && event.eligibleGrades.length > 0) {
-        if (!event.eligibleGrades.includes(student.grade)) {
+        if (!gradeListContains(event.eligibleGrades, student.grade)) {
           return errorResponse(
             400,
             `Student grade "${
@@ -142,10 +457,19 @@ export async function POST(req, { params }) {
 
       // Check Max Participants Per School
       if (event.maxParticipantsPerSchool) {
+        if (normalizeParticipationFormat(event) === "TEAM") {
+          const approvedTeamCount = await countActiveTeams(eventId, schoolId);
+          if (approvedTeamCount >= event.maxParticipantsPerSchool) {
+            return errorResponse(
+              400,
+              `This school has reached the maximum team limit (${event.maxParticipantsPerSchool}) for this event`
+            );
+          }
+        } else {
         const approvedCount = await ParticipationRequest.countDocuments({
           event: eventId,
           school: schoolId,
-          status: { $in: ACTIVE_REQUEST_STATUSES },
+          status: { $in: ACTIVE_PARTICIPATION_REQUEST_STATUSES },
         });
 
         if (approvedCount >= event.maxParticipantsPerSchool) {
@@ -154,19 +478,23 @@ export async function POST(req, { params }) {
             `This school has reached the maximum participant limit (${event.maxParticipantsPerSchool}) for this event`
           );
         }
+        }
       }
 
       // Check Global Max Participants
       if (event.maxParticipants) {
-        const totalApproved = await ParticipationRequest.countDocuments({
-          event: eventId,
-          status: { $in: ACTIVE_REQUEST_STATUSES },
-        });
+        const totalApproved =
+          normalizeParticipationFormat(event) === "TEAM"
+            ? await countActiveTeams(eventId)
+            : await ParticipationRequest.countDocuments({
+                event: eventId,
+                status: { $in: ACTIVE_PARTICIPATION_REQUEST_STATUSES },
+              });
 
         if (totalApproved >= event.maxParticipants) {
           return errorResponse(
             400,
-            `This event has reached the maximum participant limit (${event.maxParticipants})`
+            `This event has reached the maximum ${normalizeParticipationFormat(event) === "TEAM" ? "team" : "participant"} limit (${event.maxParticipants})`
           );
         }
       }
@@ -211,18 +539,61 @@ export async function POST(req, { params }) {
     // CASE 2: SCHOOL ADMIN BULK REGISTRATION
     // ==========================================
     if (session.user.role === "SCHOOL_ADMIN") {
+      if (event.registrationMode !== "THROUGH_SCHOOL") {
+        return errorResponse(
+          403,
+          "This event uses direct student registration. School team management is not available here."
+        );
+      }
+
       const body = await req.json();
+      const normalizedTeams = normalizeTeamPayload(body.teams);
       // Allow both naming conventions
       const studentIds = body.studentIds || body.students;
       const contactPerson = body.contactPerson;
       const phone = body.phone || body.contactPhone;
       const notes = body.notes;
+      const teamName = String(body.teamName || "").trim();
+      const captainStudentId = body.captainStudentId || null;
 
-      if (!Array.isArray(studentIds) || studentIds.length === 0) {
+      if (
+        normalizeParticipationFormat(event) !== "TEAM" &&
+        (!Array.isArray(studentIds) || studentIds.length === 0)
+      ) {
         return errorResponse(400, "No students selected");
       }
 
+      if (normalizeParticipationFormat(event) === "TEAM") {
+        const multiTeamValidationMessage = validateMultiTeamPayload(
+          event,
+          normalizedTeams
+        );
+        if (multiTeamValidationMessage) {
+          return errorResponse(400, multiTeamValidationMessage);
+        }
+      } else {
+        const teamValidationMessage = validateTeamSelection(
+          event,
+          studentIds,
+          teamName,
+          captainStudentId
+        );
+        if (teamValidationMessage) {
+          return errorResponse(400, teamValidationMessage);
+        }
+      }
+
       const schoolId = session.user.id;
+      const schoolRecord =
+        normalizeParticipationFormat(event) === "TEAM"
+          ? await User.findById(schoolId).select("schoolName name").lean()
+          : null;
+      const schoolName =
+        schoolRecord?.schoolName || schoolRecord?.name || session.user.schoolName || session.user.name || "";
+      const resolvedTeams =
+        normalizeParticipationFormat(event) === "TEAM"
+          ? applyDefaultTeamNames(normalizedTeams, schoolName)
+          : normalizedTeams;
       const invitationBlocker = await getPlatformInvitationBlocker(
         event,
         schoolId
@@ -231,13 +602,45 @@ export async function POST(req, { params }) {
         return errorResponse(403, invitationBlocker);
       }
 
+      if (normalizeParticipationFormat(event) === "TEAM") {
+        const replacementResult = await replaceTeamParticipation({
+          event,
+          eventId,
+          schoolId,
+          sessionUserId: session.user.id,
+          teams: resolvedTeams,
+        });
+
+        if (replacementResult?.error) {
+          return errorResponse(400, replacementResult.error);
+        }
+
+        return successResponse(
+          200,
+          `Successfully registered ${replacementResult.teamCount} teams.`,
+          replacementResult
+        );
+      }
+
       // ===== VALIDATION: Check Max Participants Per School =====
       if (event.maxParticipantsPerSchool) {
+        if (normalizeParticipationFormat(event) === "TEAM") {
+          const existingTeamCount = await countActiveTeams(eventId, schoolId);
+          const availableTeamSlots =
+            event.maxParticipantsPerSchool - existingTeamCount;
+
+          if (availableTeamSlots <= 0) {
+            return errorResponse(
+              400,
+              `Registration failed: Your school has already reached the limit of ${event.maxParticipantsPerSchool} team entries for this event.`
+            );
+          }
+        } else {
         // Count existing active requests (PENDING, APPROVED, ENROLLED)
         const existingCount = await ParticipationRequest.countDocuments({
           event: eventId,
           school: schoolId,
-          status: { $in: ACTIVE_REQUEST_STATUSES },
+          status: { $in: ACTIVE_PARTICIPATION_REQUEST_STATUSES },
         });
 
         const availableSlots = event.maxParticipantsPerSchool - existingCount;
@@ -254,7 +657,7 @@ export async function POST(req, { params }) {
           await ParticipationRequest.countDocuments({
             event: eventId,
             student: { $in: studentIds },
-            status: { $in: ACTIVE_REQUEST_STATUSES },
+            status: { $in: ACTIVE_PARTICIPATION_REQUEST_STATUSES },
           });
 
         const newStudentsCount = studentIds.length - alreadyRegisteredCount;
@@ -265,29 +668,43 @@ export async function POST(req, { params }) {
             `Registration failed: You are trying to register ${newStudentsCount} new students, but only ${availableSlots} slots are remaining for your school (Limit: ${event.maxParticipantsPerSchool}).`
           );
         }
+        }
       }
 
       if (event.maxParticipants) {
-        const existingGlobalCount = await ParticipationRequest.countDocuments({
-          event: eventId,
-          status: { $in: ACTIVE_REQUEST_STATUSES },
-        });
+        if (normalizeParticipationFormat(event) === "TEAM") {
+          const existingGlobalTeamCount = await countActiveTeams(eventId);
+          const availableGlobalTeamSlots =
+            event.maxParticipants - existingGlobalTeamCount;
 
-        const alreadyRegisteredCount =
-          await ParticipationRequest.countDocuments({
+          if (availableGlobalTeamSlots <= 0) {
+            return errorResponse(
+              400,
+              `Registration failed: This event has already reached its limit of ${event.maxParticipants} team entries.`
+            );
+          }
+        } else {
+          const existingGlobalCount = await ParticipationRequest.countDocuments({
             event: eventId,
-            student: { $in: studentIds },
-            status: { $in: ACTIVE_REQUEST_STATUSES },
+            status: { $in: ACTIVE_PARTICIPATION_REQUEST_STATUSES },
           });
 
-        const newStudentsCount = studentIds.length - alreadyRegisteredCount;
-        const availableGlobalSlots = event.maxParticipants - existingGlobalCount;
+          const alreadyRegisteredCount =
+            await ParticipationRequest.countDocuments({
+              event: eventId,
+              student: { $in: studentIds },
+              status: { $in: ACTIVE_PARTICIPATION_REQUEST_STATUSES },
+            });
 
-        if (newStudentsCount > availableGlobalSlots) {
-          return errorResponse(
-            400,
-            `Registration failed: You are trying to register ${newStudentsCount} new students, but only ${availableGlobalSlots} total slots remain for this event (Limit: ${event.maxParticipants}).`
-          );
+          const newStudentsCount = studentIds.length - alreadyRegisteredCount;
+          const availableGlobalSlots = event.maxParticipants - existingGlobalCount;
+
+          if (newStudentsCount > availableGlobalSlots) {
+            return errorResponse(
+              400,
+              `Registration failed: You are trying to register ${newStudentsCount} new students, but only ${availableGlobalSlots} total slots remain for this event (Limit: ${event.maxParticipants}).`
+            );
+          }
         }
       }
 
@@ -312,7 +729,7 @@ export async function POST(req, { params }) {
 
           // Check Grade Eligibility
           if (event.eligibleGrades && event.eligibleGrades.length > 0) {
-            if (!event.eligibleGrades.includes(student.grade)) {
+            if (!gradeListContains(event.eligibleGrades, student.grade)) {
               errors.push(
                 `Student ${student.name} (Grade ${student.grade}) is not eligible for this event.`
               );
@@ -348,6 +765,8 @@ export async function POST(req, { params }) {
             studentNotifiedAt: now,
             contactPerson: contactPerson || undefined,
             contactPhone: phone || undefined,
+            teamName: teamName || undefined,
+            captainStudent: captainStudentId || undefined,
             notes: notes || undefined,
           });
 
@@ -360,12 +779,18 @@ export async function POST(req, { params }) {
       }
 
       if (approvedStudentIds.length > 0) {
-        syncSchoolParticipants(event, schoolId, approvedStudentIds, {
-          contactPerson,
-          contactPhone: phone,
-          notes,
-        });
+      const updatedRequests = await ParticipationRequest.find({
+        event: eventId,
+        school: schoolId,
+      }).select(
+        "status contactPerson contactPhone teamName captainStudent notes student requestedAt approvedAt enrollmentConfirmedAt"
+      );
+        applySchoolParticipationProjection(event, schoolId, updatedRequests);
         await event.save();
+        await syncApprovedRequestsToRoundOne({
+          eventId,
+          createdBy: session.user.id,
+        });
       }
 
       return successResponse(
@@ -403,47 +828,40 @@ export async function GET(req, { params }) {
         school: session.user.id,
       })
         .populate("student", "name grade")
+        .populate("captainStudent", "name")
         .lean();
-
-      console.log(
-        `[GET Participate] Found ${requests.length} requests for event ${eventId}`
-      );
-      if (requests.length > 0) {
-        console.log(
-          "[GET Participate] First request student:",
-          JSON.stringify(requests[0].student, null, 2)
-        );
-        console.log(
-          "[GET Participate] First request contact:",
-          requests[0].contactPerson,
-          requests[0].contactPhone
-        );
-      }
 
       if (!requests || requests.length === 0) {
         return successResponse(200, "No participation requests found", {
           requests: [],
         });
       }
-
-      // Extract common contact info from the first request (assuming it's consistent)
-      const firstReq = requests[0];
-      const contactInfo = {
-        contactPerson: firstReq.contactPerson || "",
-        contactPhone: firstReq.contactPhone || "",
-        notes: firstReq.notes || "",
-      };
+      const participation = buildSchoolParticipationPresentation(requests);
 
       return successResponse(200, "Participation details found", {
         requests,
-        contactInfo,
+        contactInfo: participation.myParticipation
+          ? {
+              contactPerson: participation.myParticipation.contactPerson,
+              contactPhone: participation.myParticipation.contactPhone,
+              teamName: participation.myParticipation.teamName,
+              captainStudent: participation.myParticipation.captainStudent,
+              notes: participation.myParticipation.notes,
+            }
+          : {
+              contactPerson: "",
+              contactPhone: "",
+              teamName: "",
+              captainStudent: null,
+              notes: "",
+            },
+        participation,
       });
     }
 
     // CASE 2: STUDENT
     if (session.user.role === "STUDENT") {
-      // Fetch student by email from session
-      const student = await Student.findOne({ email: session.user.email });
+      const student = await Student.findOne(studentLookupQuery(session));
       if (!student) {
         return errorResponse(404, "Student not found");
       }
@@ -481,9 +899,25 @@ export async function DELETE(req, { params }) {
     }
 
     const { id: eventId } = await params;
+    const event = await Event.findById(eventId);
+    if (!event) {
+      return errorResponse(404, "Event not found");
+    }
+
+    const lockMessage = getRegistrationLockMessage(event, "withdraw");
+    if (lockMessage) {
+      return errorResponse(400, lockMessage);
+    }
 
     // CASE 1: SCHOOL ADMIN WITHDRAWAL (ALL)
     if (session.user.role === "SCHOOL_ADMIN") {
+      if (event.registrationMode !== "THROUGH_SCHOOL") {
+        return errorResponse(
+          403,
+          "This event uses direct student registration. School-wide withdrawal is not available here."
+        );
+      }
+
       const schoolId = session.user.id;
 
       const result = await ParticipationRequest.deleteMany({
@@ -492,15 +926,8 @@ export async function DELETE(req, { params }) {
         status: { $in: ["PENDING", "APPROVED", "ENROLLED", "REJECTED"] },
       });
 
-      // Also remove from Event.participants to keep sync
-      await Event.updateOne(
-        { _id: eventId },
-        {
-          $pull: {
-            participants: { school: schoolId },
-          },
-        }
-      );
+      applySchoolParticipationProjection(event, schoolId, []);
+      await event.save();
 
       if (result.deletedCount === 0) {
         return errorResponse(404, "No active participation found to withdraw");
@@ -519,10 +946,16 @@ export async function DELETE(req, { params }) {
       );
     }
 
-    // Fetch student by email (consistent with POST/GET)
-    const student = await Student.findOne({ email: session.user.email });
+    const student = await Student.findOne(studentLookupQuery(session));
     if (!student) {
       return errorResponse(404, "Student not found");
+    }
+
+    if (event.registrationMode !== "DIRECT") {
+      return errorResponse(
+        403,
+        "This event is managed through the school. Please contact your school admin for registration changes."
+      );
     }
 
     // Get school from student's record
@@ -566,24 +999,43 @@ export async function PUT(req, { params }) {
 
     const { id: eventId } = await params;
     const body = await req.json();
-    console.log("[PUT Participate] Received update for event:", eventId);
-    console.log("[PUT Participate] Body:", JSON.stringify(body, null, 2));
+    const normalizedTeams = normalizeTeamPayload(body.teams);
 
     // Allow both naming conventions (frontend sends 'students' and 'contactPhone')
     const studentIds = body.studentIds || body.students;
     const contactPerson = body.contactPerson;
     const phone = body.phone || body.contactPhone;
     const notes = body.notes;
-
-    if (!Array.isArray(studentIds)) {
-      console.log("[PUT Participate] Invalid student list:", studentIds);
-      return errorResponse(400, "Invalid student list");
-    }
+    const teamName = String(body.teamName || "").trim();
+    const captainStudentId = body.captainStudentId || null;
 
     const schoolId = session.user.id;
     const event = await Event.findById(eventId);
     if (!event) {
       return errorResponse(404, "Event not found");
+    }
+
+    if (
+      normalizeParticipationFormat(event) !== "TEAM" &&
+      !Array.isArray(studentIds)
+    ) {
+      return errorResponse(400, "Invalid student list");
+    }
+
+    const normalizedStudentIds = Array.isArray(studentIds)
+      ? studentIds.map((id) => String(id))
+      : [];
+
+    if (event.registrationMode !== "THROUGH_SCHOOL") {
+      return errorResponse(
+        403,
+        "This event uses direct student registration. School team updates are not available here."
+      );
+    }
+
+    const lockMessage = getRegistrationLockMessage(event, "update participation");
+    if (lockMessage) {
+      return errorResponse(400, lockMessage);
     }
 
     const invitationBlocker = await getPlatformInvitationBlocker(
@@ -594,17 +1046,78 @@ export async function PUT(req, { params }) {
       return errorResponse(403, invitationBlocker);
     }
 
+    if (normalizeParticipationFormat(event) === "TEAM") {
+      const schoolRecord = await User.findById(schoolId).select("schoolName name").lean();
+      const schoolName =
+        schoolRecord?.schoolName || schoolRecord?.name || session.user.schoolName || session.user.name || "";
+      const resolvedTeams = applyDefaultTeamNames(normalizedTeams, schoolName);
+      const multiTeamValidationMessage = validateMultiTeamPayload(
+        event,
+        resolvedTeams
+      );
+      if (multiTeamValidationMessage) {
+        return errorResponse(400, multiTeamValidationMessage);
+      }
+
+      const replacementResult = await replaceTeamParticipation({
+        event,
+        eventId,
+        schoolId,
+        sessionUserId: session.user.id,
+        teams: resolvedTeams,
+      });
+
+      if (replacementResult?.error) {
+        return errorResponse(400, replacementResult.error);
+      }
+
+      return successResponse(200, "Team participation updated successfully", replacementResult);
+    }
+
+    const teamValidationMessage = validateTeamSelection(
+      event,
+      normalizedStudentIds,
+      teamName,
+      captainStudentId
+    );
+    if (teamValidationMessage) {
+      return errorResponse(400, teamValidationMessage);
+    }
+
     // Check Max Participants Per School
     if (
+      normalizeParticipationFormat(event) !== "TEAM" &&
       event.maxParticipantsPerSchool &&
-      studentIds.length > event.maxParticipantsPerSchool
+      normalizedStudentIds.length > event.maxParticipantsPerSchool
     ) {
-      console.log(
-        `[PUT Participate] Limit exceeded. Count: ${studentIds.length}, Limit: ${event.maxParticipantsPerSchool}`
-      );
       return errorResponse(
         400,
-        `Cannot update: You selected ${studentIds.length} students, but the limit is ${event.maxParticipantsPerSchool}.`
+        `Cannot update: You selected ${normalizedStudentIds.length} students, but the limit is ${event.maxParticipantsPerSchool}.`
+      );
+    }
+
+    const selectedStudents = await Student.find({
+      _id: { $in: normalizedStudentIds },
+      school: schoolId,
+    }).select("name grade");
+
+    if (selectedStudents.length !== normalizedStudentIds.length) {
+      return errorResponse(
+        400,
+        "One or more selected students were not found in your school."
+      );
+    }
+
+    const ineligibleStudents = selectedStudents.filter(
+      (student) => !gradeListContains(event.eligibleGrades, student.grade)
+    );
+
+    if (ineligibleStudents.length > 0) {
+      return errorResponse(
+        400,
+        `Some selected students are not eligible for this event: ${ineligibleStudents
+          .map((student) => `${student.name} (${student.grade})`)
+          .join(", ")}`
       );
     }
 
@@ -619,25 +1132,27 @@ export async function PUT(req, { params }) {
     );
 
     // Determine to Add and to Remove
-    const toAdd = studentIds.filter((id) => !existingStudentIds.includes(id));
+    const toAdd = normalizedStudentIds.filter(
+      (id) => !existingStudentIds.includes(id)
+    );
     const toRemove = existingStudentIds.filter(
-      (id) => !studentIds.includes(id)
+      (id) => !normalizedStudentIds.includes(id)
     );
 
-    if (event.maxParticipants) {
+    if (event.maxParticipants && normalizeParticipationFormat(event) !== "TEAM") {
       const globalActiveCount = await ParticipationRequest.countDocuments({
         event: eventId,
-        status: { $in: ACTIVE_REQUEST_STATUSES },
+        status: { $in: ACTIVE_PARTICIPATION_REQUEST_STATUSES },
       });
       const toRemoveActiveCount = existingRequests.filter(
         (request) =>
           toRemove.includes(request.student.toString()) &&
-          ACTIVE_REQUEST_STATUSES.includes(request.status)
+          ACTIVE_PARTICIPATION_REQUEST_STATUSES.includes(request.status)
       ).length;
       const reactivatedCount = existingRequests.filter(
         (request) =>
-          studentIds.includes(request.student.toString()) &&
-          !ACTIVE_REQUEST_STATUSES.includes(request.status)
+          normalizedStudentIds.includes(request.student.toString()) &&
+          !ACTIVE_PARTICIPATION_REQUEST_STATUSES.includes(request.status)
       ).length;
       const projectedCount =
         globalActiveCount - toRemoveActiveCount + toAdd.length + reactivatedCount;
@@ -680,13 +1195,17 @@ export async function PUT(req, { params }) {
           studentNotifiedAt: now,
           contactPerson: contactPerson || undefined,
           contactPhone: phone || undefined,
+          teamName: teamName || undefined,
+          captainStudent: captainStudentId || undefined,
           notes: notes || undefined,
         });
       }
     }
 
     // Update contact info and keep selected students approved
-    const toKeep = studentIds.filter((id) => existingStudentIds.includes(id));
+    const toKeep = normalizedStudentIds.filter((id) =>
+      existingStudentIds.includes(id)
+    );
     if (toKeep.length > 0) {
       const updateData = {
         status: "APPROVED",
@@ -698,6 +1217,8 @@ export async function PUT(req, { params }) {
 
       if (contactPerson) updateData.contactPerson = contactPerson;
       if (phone) updateData.contactPhone = phone;
+      updateData.teamName = teamName || "";
+      updateData.captainStudent = captainStudentId || null;
       if (notes !== undefined) updateData.notes = notes;
       updateData.enrollmentConfirmedAt = now;
       updateData.studentNotifiedAt = now;
@@ -714,12 +1235,18 @@ export async function PUT(req, { params }) {
       );
     }
 
-    syncSchoolParticipants(event, schoolId, studentIds, {
-      contactPerson,
-      contactPhone: phone,
-      notes,
-    });
+    const updatedRequests = await ParticipationRequest.find({
+      event: eventId,
+      school: schoolId,
+    }).select(
+      "status contactPerson contactPhone teamName captainStudent notes student requestedAt approvedAt enrollmentConfirmedAt"
+    );
+    applySchoolParticipationProjection(event, schoolId, updatedRequests);
     await event.save();
+    await syncApprovedRequestsToRoundOne({
+      eventId,
+      createdBy: session.user.id,
+    });
 
     return successResponse(200, "Participation updated successfully");
   } catch (error) {

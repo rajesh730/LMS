@@ -6,6 +6,8 @@ import Student from '@/models/Student';
 import User from '@/models/User';
 import bcrypt from 'bcryptjs';
 import { generateStudentPassword } from '@/lib/passwordGenerator';
+import { generateUniqueStudentUsername } from '@/lib/studentIdentity';
+import { normalizeGradeValue } from '@/lib/schoolGrades';
 
 export async function PUT(req, { params }) {
     try {
@@ -33,18 +35,27 @@ export async function PUT(req, { params }) {
             return NextResponse.json({ message: 'Student not found' }, { status: 404 });
         }
 
+        const normalizedGrade =
+            grade !== undefined ? normalizeGradeValue(grade) : existingStudent.grade;
+        const normalizedRollNumber =
+            rollNumber !== undefined ? String(rollNumber).trim() : existingStudent.rollNumber;
+
         // 2. Check for Roll Number Uniqueness (if changed)
-        if (rollNumber && (rollNumber !== existingStudent.rollNumber || grade !== existingStudent.grade)) {
+        if (
+            normalizedRollNumber &&
+            (normalizedRollNumber !== existingStudent.rollNumber ||
+                normalizedGrade !== existingStudent.grade)
+        ) {
             const rollCheck = await Student.findOne({
                 school: session.user.id,
-                grade: grade || existingStudent.grade,
-                rollNumber: rollNumber,
+                grade: normalizedGrade,
+                rollNumber: normalizedRollNumber,
                 _id: { $ne: id } // Exclude current student
             });
 
             if (rollCheck) {
                 return NextResponse.json({ 
-                    message: `Roll number ${rollNumber} is already assigned in Grade ${grade || existingStudent.grade}` 
+                    message: `Roll number ${normalizedRollNumber} is already assigned in ${normalizedGrade}` 
                 }, { status: 400 });
             }
         }
@@ -64,24 +75,29 @@ export async function PUT(req, { params }) {
         // 4. Prepare Update Object
         const updateData = {
             name,
-            grade,
+            grade: normalizedGrade,
             section,
-            rollNumber,
+            rollNumber: normalizedRollNumber,
             phone,
             address,
             gender,
-            dob,
+            dateOfBirth: dob,
             bloodGroup,
             parentName,
             parentEmail,
-            parentPhone,
-            emergencyContact,
+            parentContactNumber: parentPhone,
+            parentAlternativeContact: emergencyContact,
             status // Added status
         };
 
         // Name Parsing for Update
-        if (name) {
-            const nameParts = name.trim().split(/\s+/);
+        if (
+            name ||
+            normalizedRollNumber !== existingStudent.rollNumber ||
+            normalizedGrade !== existingStudent.grade
+        ) {
+            const effectiveName = name || existingStudent.name;
+            const nameParts = effectiveName.trim().split(/\s+/);
             let firstName = nameParts[0];
             let middleName = "";
             let lastName = "";
@@ -102,15 +118,27 @@ export async function PUT(req, { params }) {
             // Update Credentials if Name or Roll Number changes
             // Note: This changes the student's login. Admin should be aware.
             const cleanFirstName = firstName.replace(/[^a-zA-Z0-9]/g, "") || "Student";
-            const newRollNumber = rollNumber || existingStudent.rollNumber;
-            
-            updateData.username = `${cleanFirstName.toLowerCase()}${newRollNumber}`;
+            updateData.username = await generateUniqueStudentUsername(Student, {
+                firstName,
+                grade: normalizedGrade,
+                rollNumber: normalizedRollNumber,
+                school: session.user.id,
+                excludeId: id,
+            });
             updateData.visiblePassword = `${cleanFirstName}@123`;
             updateData.password = await bcrypt.hash(updateData.visiblePassword, 10);
         }
 
-        // Only update email if provided (it might be optional/empty)
-        if (email !== undefined) updateData.email = email;
+        Object.keys(updateData).forEach((key) => {
+            if (updateData[key] === undefined) {
+                delete updateData[key];
+            }
+        });
+
+        // Student email is optional and separate from guardian email.
+        if (email !== undefined && String(email).trim()) {
+            updateData.email = String(email).trim();
+        }
 
         // 5. Perform Update
         const updatedStudent = await Student.findByIdAndUpdate(

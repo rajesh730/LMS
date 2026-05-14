@@ -32,14 +32,21 @@ const StudentSchema = new mongoose.Schema(
     email: {
       type: String,
       required: false,
-      unique: true,
+      trim: true,
+      lowercase: true,
       sparse: true,
+    },
+    platformStudentId: {
+      type: String,
+      trim: true,
     },
     
     // Login Credentials (Auto-generated)
     username: {
       type: String,
       required: [true, "Please provide username"],
+      trim: true,
+      lowercase: true,
       sparse: true, // Allow nulls for existing records
     },
     password: {
@@ -89,6 +96,7 @@ const StudentSchema = new mongoose.Schema(
     rollNumber: {
       type: String,
       required: [true, "Please provide a roll number"],
+      trim: true,
     },
     address: {
       type: String,
@@ -117,6 +125,8 @@ const StudentSchema = new mongoose.Schema(
     parentEmail: {
       type: String,
       required: false,
+      trim: true,
+      lowercase: true,
     },
     parentAlternativeContact: {
       type: String,
@@ -149,9 +159,9 @@ const StudentSchema = new mongoose.Schema(
       ],
     },
     
-    // Legacy field - kept for backward compatibility
+    // Legacy field - kept for credential-reset compatibility; do not expose in list APIs.
     visiblePassword: {
-      type: String, // Stored for admin visibility as requested
+      type: String,
     },
     
     // School Reference
@@ -198,6 +208,7 @@ const StudentSchema = new mongoose.Schema(
 
 // Create compound unique index for username per school
 StudentSchema.index({ username: 1, school: 1 }, { unique: true, sparse: true });
+StudentSchema.index({ platformStudentId: 1 }, { unique: true, sparse: true });
 
 // Compound index: Roll Number must be unique within a specific Grade in a specific School
 StudentSchema.index({ school: 1, grade: 1, rollNumber: 1 }, { unique: true });

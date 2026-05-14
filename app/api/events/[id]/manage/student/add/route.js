@@ -5,6 +5,7 @@ import dbConnect from "@/lib/db";
 import Event from "@/models/Event";
 import Student from "@/models/Student";
 import ParticipationRequest from "@/models/ParticipationRequest";
+import { syncApprovedRequestsToRoundOne } from "@/lib/competitionFlow";
 
 /**
  * POST /api/events/[id]/manage/student/add
@@ -167,6 +168,10 @@ export async function POST(req, { params }) {
     // Save event
     if (added.length > 0) {
       await event.save();
+      await syncApprovedRequestsToRoundOne({
+        eventId,
+        createdBy: session.user.id,
+      });
     }
 
     return NextResponse.json(

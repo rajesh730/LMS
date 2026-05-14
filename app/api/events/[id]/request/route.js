@@ -6,6 +6,8 @@ import Event from "@/models/Event";
 import EventSchoolInvitation from "@/models/EventSchoolInvitation";
 import Student from "@/models/Student";
 import ParticipationRequest from "@/models/ParticipationRequest";
+import { isAfterEndOfDay, isBeforeToday } from "@/lib/eventDates";
+import { gradeListContains } from "@/lib/schoolGrades";
 
 /**
  * POST /api/events/[id]/request
@@ -48,6 +50,7 @@ export async function POST(req, { params }) {
     await dbConnect();
 
     const { id: eventId } = params;
+    const now = new Date();
 
     // ===== VALIDATION 1: Event exists and is approved =====
     const event = await Event.findById(eventId);
@@ -63,10 +66,33 @@ export async function POST(req, { params }) {
       );
     }
 
+    if (event.registrationMode !== "DIRECT") {
+      return NextResponse.json(
+        {
+          message:
+            "This event is managed through the school. Please contact your school admin for registration.",
+          code: "SCHOOL_MANAGED_REGISTRATION",
+        },
+        { status: 403 }
+      );
+    }
+
+    if (isBeforeToday(event.date)) {
+      return NextResponse.json(
+        { message: "This event has already ended", code: "EVENT_ENDED" },
+        { status: 400 }
+      );
+    }
+
     // ===== VALIDATION 2: Get student =====
-    const student = await Student.findOne({ userId: session.user.id }).populate(
-      "school"
-    );
+    const student = await Student.findOne({
+      $or: [
+        { _id: session.user.id },
+        { userId: session.user.id },
+        { email: session.user.email },
+        { username: session.user.email },
+      ],
+    }).populate("school");
 
     if (!student) {
       return NextResponse.json(
@@ -86,7 +112,7 @@ export async function POST(req, { params }) {
 
     // ===== VALIDATION 3: Check grade eligibility =====
     if (event.eligibleGrades.length > 0) {
-      if (!event.eligibleGrades.includes(student.grade)) {
+      if (!gradeListContains(event.eligibleGrades, student.grade)) {
         return NextResponse.json(
           {
             message: `Your grade (${student.grade}) is not eligible for this event`,
@@ -98,8 +124,10 @@ export async function POST(req, { params }) {
     }
 
     // ===== VALIDATION 4: Check registration deadline =====
-    const now = new Date();
-    if (event.registrationDeadline && event.registrationDeadline < now) {
+    if (
+      event.registrationDeadline &&
+      isAfterEndOfDay(event.registrationDeadline)
+    ) {
       return NextResponse.json(
         {
           message: "Registration deadline has passed",
@@ -262,7 +290,14 @@ export async function GET(req, { params }) {
 
     const { id: eventId } = params;
 
-    const student = await Student.findOne({ userId: session.user.id });
+    const student = await Student.findOne({
+      $or: [
+        { _id: session.user.id },
+        { userId: session.user.id },
+        { email: session.user.email },
+        { username: session.user.email },
+      ],
+    });
 
     if (!student) {
       return NextResponse.json(

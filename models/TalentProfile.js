@@ -50,12 +50,6 @@ const TalentProfileSchema = new mongoose.Schema(
       trim: true,
       maxlength: 2000,
     },
-    clubs: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Club",
-      },
-    ],
     skillLevel: {
       type: String,
       enum: ["BEGINNER", "EMERGING", "INTERMEDIATE", "ADVANCED", "EXPERT"],

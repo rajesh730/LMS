@@ -279,6 +279,7 @@ export async function GET(req) {
 
     // Fetch teachers
     const teachers = await Teacher.find(query)
+      .select("-password -visiblePassword")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);

@@ -5,6 +5,7 @@ import dbConnect from "@/lib/db";
 import Student from "@/models/Student";
 import ParticipationRequest from "@/models/ParticipationRequest";
 import Event from "@/models/Event";
+import { buildEventPresentationState } from "@/lib/eventPresentation";
 
 /**
  * GET /api/events/hub/my-requests
@@ -21,8 +22,15 @@ export async function GET(req) {
 
     await dbConnect();
 
-    // Get student
-    const student = await Student.findOne({ userId: session.user.id });
+    // Student sessions use the Student document id, with fallbacks for legacy data.
+    const student = await Student.findOne({
+      $or: [
+        { _id: session.user.id },
+        { userId: session.user.id },
+        { email: session.user.email },
+        { username: session.user.email },
+      ],
+    });
 
     if (!student) {
       return NextResponse.json(
@@ -38,7 +46,7 @@ export async function GET(req) {
       .populate({
         path: "event",
         select:
-          "title description date registrationDeadline maxParticipants participants createdBy",
+          "title description date registrationDeadline maxParticipants participants createdBy lifecycleStatus resultsPublished",
         populate: {
           path: "createdBy",
           select: "name email",
@@ -57,6 +65,11 @@ export async function GET(req) {
     };
 
     requests.forEach((request) => {
+      if (!request.event) return;
+      const eventPresentation = buildEventPresentationState(request.event, {
+        participationStatus: request.status,
+        studentCount: 1,
+      });
       organized[request.status].push({
         id: request._id,
         eventId: request.event._id,
@@ -70,6 +83,7 @@ export async function GET(req) {
         rejectedAt: request.rejectedAt,
         notes: request.notes,
         event: request.event,
+        presentation: eventPresentation,
       });
     });
 
@@ -94,7 +108,13 @@ export async function GET(req) {
 }
 
 function getEventStatus(event) {
+  const lifecycleStatus = String(event.lifecycleStatus || "").toUpperCase();
+  if (["COMPLETED", "ARCHIVED", "CANCELLED"].includes(lifecycleStatus)) {
+    return lifecycleStatus;
+  }
+
   const now = new Date();
+  const filled = getStudentEnrollmentCount(event);
 
   if (event.date < now) {
     return "ENDED";
@@ -106,10 +126,17 @@ function getEventStatus(event) {
 
   if (
     event.maxParticipants &&
-    event.participants.length >= event.maxParticipants
+    filled >= event.maxParticipants
   ) {
     return "FULL";
   }
 
   return "OPEN";
+}
+
+function getStudentEnrollmentCount(event) {
+  return (event.participants || []).reduce(
+    (total, participant) => total + (participant.students?.length || 0),
+    0
+  );
 }

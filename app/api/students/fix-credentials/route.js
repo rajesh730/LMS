@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import Student from "@/models/Student";
+import { generateUniqueStudentUsername } from "@/lib/studentIdentity";
 import bcrypt from "bcryptjs";
 
 export const dynamic = "force-dynamic";
@@ -41,16 +42,13 @@ export async function GET(req) {
 
         // 2. Generate Credentials
         const cleanFirstName = firstName.replace(/[^a-zA-Z0-9]/g, "") || "Student";
-        let username = `${cleanFirstName.toLowerCase()}${student.rollNumber}`;
-        
-        // Check for duplicate username (excluding self)
-        // If duplicate exists, we append a counter to ensure uniqueness while keeping the base format
-        let counter = 1;
-        let originalUsername = username;
-        while (await Student.findOne({ username, school: session.user.id, _id: { $ne: student._id } })) {
-            username = `${originalUsername}_${counter}`;
-            counter++;
-        }
+        const username = await generateUniqueStudentUsername(Student, {
+          firstName,
+          grade: student.grade,
+          rollNumber: student.rollNumber,
+          school: session.user.id,
+          excludeId: student._id,
+        });
 
         const password = `${cleanFirstName}@123`;
         const hashedPassword = await bcrypt.hash(password, 10);

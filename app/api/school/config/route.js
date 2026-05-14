@@ -4,6 +4,10 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import SchoolConfig from "@/models/SchoolConfig";
 import User from "@/models/User";
+import Student from "@/models/Student";
+import Teacher from "@/models/Teacher";
+import { buildGradeLabels } from "@/lib/schoolGrades";
+import { normalizeTeacherRoles } from "@/lib/teacherRoleDefaults";
 import {
   successResponse,
   errorResponse,
@@ -19,31 +23,51 @@ export async function GET(req) {
 
     await connectDB();
 
+    const user = await User.findById(session.user.id).select("schoolConfig");
+    const grades = buildGradeLabels(user?.schoolConfig);
+
     let config = await SchoolConfig.findOne({ school: session.user.id });
     if (!config) {
-      // Fetch user to get schoolLevel config
-      const user = await User.findById(session.user.id);
-      let grades = [];
-      
-      if (user && user.schoolConfig && user.schoolConfig.schoolLevel) {
-          const { minGrade, maxGrade } = user.schoolConfig.schoolLevel;
-          if (minGrade && maxGrade) {
-              for (let i = minGrade; i <= maxGrade; i++) {
-                  grades.push(`Grade ${i}`);
-              }
-          }
-      }
-      
-      // If no user config found, fallback to default (handled by schema default if we pass undefined, but let's be explicit if we have grades)
-      const createData = { school: session.user.id };
+      config = await SchoolConfig.create({
+        school: session.user.id,
+        grades,
+      });
+    } else {
+      let changed = false;
+
       if (grades.length > 0) {
-          createData.grades = grades;
+        const hasDifferentGrades =
+          JSON.stringify(config.grades || []) !== JSON.stringify(grades);
+        if (hasDifferentGrades) {
+          config.grades = grades;
+          changed = true;
+        }
       }
-      
-      config = await SchoolConfig.create(createData);
+
+      const normalizedRoles = normalizeTeacherRoles(config.teacherRoles || []);
+      if (
+        JSON.stringify(normalizedRoles) !== JSON.stringify(config.teacherRoles || [])
+      ) {
+        config.teacherRoles = normalizedRoles;
+        changed = true;
+      }
+
+      if (changed) {
+        await config.save();
+      }
     }
 
-    return successResponse(200, "Config retrieved", config);
+    const [totalStudents, totalTeachers] = await Promise.all([
+      Student.countDocuments({ school: session.user.id, isDeleted: { $ne: true } }),
+      Teacher.countDocuments({ school: session.user.id }),
+    ]);
+
+    const payload = config.toObject();
+    payload.totalStudents = totalStudents;
+    payload.totalTeachers = totalTeachers;
+    payload.teacherRoles = normalizeTeacherRoles(config.teacherRoles || []);
+
+    return successResponse(200, "Config retrieved", payload);
   } catch (error) {
     console.error("Get Config Error:", error);
     return errorResponse(500, "Error fetching config");
@@ -83,7 +107,10 @@ export async function PUT(req) {
     if (state !== undefined) updateData.state = state;
     if (pincode !== undefined) updateData.pincode = pincode;
     if (principalName !== undefined) updateData.principalName = principalName;
-    if (teacherRoles) updateData.teacherRoles = teacherRoles;
+    if (teacherRoles) {
+      updateData.teacherRoles = normalizeTeacherRoles(teacherRoles);
+      updateData.teacherRolesCustomized = true;
+    }
 
     const config = await SchoolConfig.findOneAndUpdate(
       { school: session.user.id },

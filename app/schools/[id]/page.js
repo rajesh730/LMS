@@ -3,9 +3,10 @@ import User from "@/models/User";
 import SchoolShowcaseProfile from "@/models/SchoolShowcaseProfile";
 import Event from "@/models/Event";
 import Achievement from "@/models/Achievement";
-import Club from "@/models/Club";
+import "@/models/Student";
 import Link from "next/link";
-import { FaArrowLeft, FaCalendarAlt, FaMapMarkerAlt, FaStar, FaUsers } from "react-icons/fa";
+import { FaCalendarAlt, FaMapMarkerAlt, FaStar } from "react-icons/fa";
+import PublicSiteNav from "@/components/public/PublicSiteNav";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +23,7 @@ async function getSchoolData(id) {
 
   if (!school) return null;
 
-  const [profile, events, achievements, clubs] = await Promise.all([
+  const [profile, events, achievements] = await Promise.all([
     SchoolShowcaseProfile.findOne({ school: id, visibility: "PUBLIC" })
       .populate("featuredEvents", "title date eventType visibility")
       .lean(),
@@ -35,20 +36,20 @@ async function getSchoolData(id) {
       .select("title date description eventType")
       .limit(6)
       .lean(),
-    Achievement.find({ school: id, isPublic: true })
+    Achievement.find({
+      school: id,
+      isPublic: true,
+      certificateIssuedAt: { $ne: null },
+    })
       .sort({ awardedAt: -1 })
       .select(
         "title placement level awardedAt totalScore scorePercentage certificateUrl"
       )
       .limit(8)
       .lean(),
-    Club.find({ school: id, status: "ACTIVE", isPubliclyListed: true })
-      .select("name clubType description")
-      .limit(8)
-      .lean(),
   ]);
 
-  return { school, profile, events, achievements, clubs };
+  return { school, profile, events, achievements };
 }
 
 export default async function PublicSchoolPage({ params }) {
@@ -57,29 +58,21 @@ export default async function PublicSchoolPage({ params }) {
 
   if (!data) {
     return (
-      <main className="min-h-screen bg-slate-950 text-white p-8">
-        <div className="max-w-5xl mx-auto">
+      <main className="min-h-screen bg-slate-950 text-white">
+        <PublicSiteNav active="schools" />
+        <div className="max-w-5xl mx-auto p-8">
           <p className="text-slate-400">School not found.</p>
         </div>
       </main>
     );
   }
 
-  const { school, profile, events, achievements, clubs } = data;
+  const { school, profile, events, achievements } = data;
   const metrics = profile?.highlightMetrics || {};
 
   return (
     <main className="min-h-screen bg-slate-950 text-white">
-      <section className="border-b border-slate-800 bg-slate-900/50">
-        <div className="max-w-6xl mx-auto px-6 py-6">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 text-slate-400 hover:text-white transition"
-          >
-            <FaArrowLeft /> Back to platform
-          </Link>
-        </div>
-      </section>
+      <PublicSiteNav active="schools" />
 
       <section className="max-w-6xl mx-auto px-6 py-12">
         <div className="grid gap-10 lg:grid-cols-[2fr_1fr]">
@@ -123,7 +116,7 @@ export default async function PublicSchoolPage({ params }) {
               <h2 className="text-2xl font-bold mb-4">School Story</h2>
               <p className="text-slate-300 leading-8">
                 {profile?.summary ||
-                  "This school has not added a public showcase summary yet. The profile will grow as the school shares more about its clubs, events, and achievements."}
+                  "This school has not added a public showcase summary yet. The profile will grow as verified events, results, and achievements are published."}
               </p>
             </section>
 
@@ -206,26 +199,6 @@ export default async function PublicSchoolPage({ params }) {
                   profile.publicHighlights.map((highlight, index) => (
                     <div key={`${highlight}-${index}`} className="rounded-2xl bg-slate-950/70 p-4 text-slate-300">
                       {highlight}
-                    </div>
-                  ))
-                )}
-              </div>
-            </section>
-
-            <section className="rounded-3xl border border-slate-800 bg-slate-900/50 p-6">
-              <h2 className="text-xl font-bold mb-4">Clubs & Activities</h2>
-              <div className="space-y-3">
-                {clubs.length === 0 ? (
-                  <p className="text-slate-400 text-sm">No public clubs listed yet.</p>
-                ) : (
-                  clubs.map((club) => (
-                    <div key={club._id} className="rounded-2xl bg-slate-950/70 p-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <FaUsers className="text-emerald-400" />
-                        <h3 className="font-semibold">{club.name}</h3>
-                      </div>
-                      <p className="text-xs text-slate-400 uppercase mb-2">{club.clubType}</p>
-                      <p className="text-sm text-slate-300">{club.description}</p>
                     </div>
                   ))
                 )}

@@ -12,11 +12,13 @@ import {
   FaGlobe,
   FaHistory,
   FaLock,
+  FaCog,
   FaUsers,
 } from "react-icons/fa";
 import { useSession } from "next-auth/react";
 import EventEditorForm from "./EventEditorForm";
 import EventParticipationForm from "./EventParticipationForm";
+import { getEventStage, getStageClasses, isDatePast } from "@/lib/eventUiStatus";
 
 function formatVisibility(value) {
   return String(value || "PRIVATE").replaceAll("_", " ");
@@ -27,7 +29,6 @@ function formatType(value) {
 }
 
 export default function SchoolOwnedEventsManager({
-  groups = [],
   teachers = [],
   refreshKey = 0,
   onChanged,
@@ -52,10 +53,11 @@ export default function SchoolOwnedEventsManager({
       const data = await res.json();
       const schoolId = session?.user?.schoolId || session?.user?.id;
       const schoolEvents = (data.events || []).filter((event) => {
+        const eventSchoolId = event.school?._id || event.school;
         return (
           event.eventScope === "SCHOOL" &&
-          event.school &&
-          String(event.school) === String(schoolId)
+          eventSchoolId &&
+          String(eventSchoolId) === String(schoolId)
         );
       });
 
@@ -134,9 +136,9 @@ export default function SchoolOwnedEventsManager({
     <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800 space-y-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold text-white">School Event Control</h2>
+          <h2 className="text-xl font-semibold text-white">My School Events</h2>
           <p className="text-sm text-slate-400 mt-1">
-            Manage active events, close registration, review history, and keep public visibility under school control.
+            Manage school-created events, student registration, rounds, results, and certificates.
           </p>
         </div>
 
@@ -168,7 +170,16 @@ export default function SchoolOwnedEventsManager({
         <div className="text-slate-400">Loading school events...</div>
       ) : filteredEvents.length === 0 ? (
         <div className="rounded-xl border border-slate-800 bg-slate-950/50 p-6 text-slate-400">
-          No {activeFilter.toLowerCase()} school events yet.
+          <p className="font-semibold text-slate-300">
+            No {activeFilter.toLowerCase()} school events yet.
+          </p>
+          <p className="mt-1 text-sm text-slate-500">
+            {activeFilter === "ACTIVE"
+              ? "Create a school event to start registration, rounds, results, and certificates."
+              : activeFilter === "COMPLETED"
+              ? "Completed events will appear here after you close them."
+              : "Archived events will appear here and can be restored if needed."}
+          </p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -177,6 +188,15 @@ export default function SchoolOwnedEventsManager({
             const mentorNames = (event.assignedMentors || []).map(
               (mentor) => mentor.name
             );
+            const stage = getEventStage(event);
+            const eventState = String(event.lifecycleStatus || "ACTIVE").toUpperCase();
+            const registrationDeadline = event.registrationDeadline || event.deadline;
+            const registrationClosed = Boolean(
+              registrationDeadline &&
+                isDatePast(registrationDeadline, { endOfDay: true })
+            );
+            const canQuickRegister =
+              eventState === "ACTIVE" && !registrationClosed;
 
             return (
               <div
@@ -206,6 +226,17 @@ export default function SchoolOwnedEventsManager({
                       </div>
 
                       <p className="text-sm text-slate-400 max-w-3xl">{event.description}</p>
+
+                      <div
+                        className={`max-w-3xl rounded-xl border px-3 py-2 text-sm ${getStageClasses(
+                          stage.tone
+                        )}`}
+                      >
+                        <div className="font-semibold">{stage.label}</div>
+                        <div className="text-xs opacity-90">
+                          {stage.nextAction}
+                        </div>
+                      </div>
 
                       <div className="flex flex-wrap gap-4 text-sm text-slate-300">
                         <span className="inline-flex items-center gap-2">
@@ -242,6 +273,13 @@ export default function SchoolOwnedEventsManager({
                           View Public Page
                         </Link>
                       )}
+                      <Link
+                        href={`/school/events/${event._id}/manage`}
+                        className="px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm transition inline-flex items-center gap-2"
+                      >
+                        <FaCog />
+                        Manage Event
+                      </Link>
                       <button
                         type="button"
                         onClick={() => setEditingEvent(event)}
@@ -283,11 +321,17 @@ export default function SchoolOwnedEventsManager({
                       )}
                       <button
                         type="button"
+                        disabled={!canQuickRegister}
                         onClick={() => setExpandedId(isExpanded ? null : event._id)}
-                        className="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-100 text-sm transition inline-flex items-center gap-2"
+                        className="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-100 text-sm transition inline-flex items-center gap-2 disabled:cursor-not-allowed disabled:bg-slate-800/50 disabled:text-slate-500"
+                        title={
+                          canQuickRegister
+                            ? "Quickly add or update registered students"
+                            : "Registration is locked for this event"
+                        }
                       >
                         {isExpanded ? <FaChevronUp /> : <FaChevronDown />}
-                        Manage Students
+                        {canQuickRegister ? "Quick Register" : "Registration Locked"}
                       </button>
                     </div>
                   </div>
@@ -316,7 +360,6 @@ export default function SchoolOwnedEventsManager({
           <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto bg-slate-900 rounded-2xl shadow-2xl border border-slate-700">
             <div className="p-1">
               <EventEditorForm
-                groups={groups}
                 teachers={teachers}
                 ownerMode="school"
                 showFeaturedOnLanding={false}

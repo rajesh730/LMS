@@ -1,13 +1,13 @@
 "use client";
 
 import UnifiedApprovalManager from "./UnifiedApprovalManager";
-import CapacityTab from "./CapacityTab";
-import { useState } from "react";
+import RoundsTab from "./RoundsTab";
+import EventOverviewTab from "./EventOverviewTab";
+import EventResultsManager from "@/components/EventResultsManager";
 
 export default function ManagementTabs({
   requests,
   capacityInfo,
-  perSchoolBreakdown,
   event,
   activeTab,
   setActiveTab,
@@ -23,23 +23,35 @@ export default function ManagementTabs({
 
   const tabs = [
     {
-      id: "manage",
-      label: "MANAGE REQUESTS",
-      count: allRequests.length,
-      color: "bg-blue-500",
+      id: "overview",
+      label: "OVERVIEW",
+      count: null,
+      color: "bg-[#0a2f66]",
     },
     {
-      id: "capacity",
-      label: "CAPACITY",
+      id: "manage",
+      label: "PARTICIPANTS",
+      count: allRequests.length,
+      color: "bg-[#1150a1]",
+    },
+    {
+      id: "rounds",
+      label: "ROUNDS",
       count: null,
-      color: "bg-indigo-500",
+      color: "bg-[#2f7fdb]",
+    },
+    {
+      id: "results",
+      label: "RESULTS & CERTIFICATES",
+      count: null,
+      color: "bg-[#ffb21c]",
     },
   ];
 
   return (
-    <div className="bg-white rounded-xl shadow-lg overflow-hidden mb-8">
+    <div className="mb-8 overflow-hidden rounded-2xl border border-[#1c4a8d] bg-[#f7fbff] shadow-xl shadow-black/10">
       {/* Tab Headers */}
-      <div className="flex flex-wrap gap-0 border-b border-slate-200">
+      <div className="flex flex-wrap gap-0 border-b border-[#d6e6fb] bg-white">
         {tabs.map((tab) => (
           <button
             key={tab.id}
@@ -47,12 +59,12 @@ export default function ManagementTabs({
             className={`flex-1 px-4 py-4 font-semibold text-sm md:text-base transition-all border-b-2 ${
               activeTab === tab.id
                 ? `${tab.color} text-white border-b-transparent`
-                : "text-slate-600 hover:text-slate-900 border-b-transparent"
+                : "border-b-transparent text-[#2f558a] hover:bg-[#eef5ff] hover:text-[#0a2f66]"
             }`}
           >
             {tab.label}
             {tab.count !== null && (
-              <span className="ml-2 inline-block bg-slate-200 text-slate-800 rounded-full px-2.5 py-0.5 text-xs font-bold">
+              <span className="ml-2 inline-block rounded-full bg-[#dce9ff] px-2.5 py-0.5 text-xs font-bold text-[#0a2f66]">
                 {tab.count}
               </span>
             )}
@@ -61,21 +73,40 @@ export default function ManagementTabs({
       </div>
 
       {/* Tab Content */}
-      <div className="p-6 md:p-8">
+      <div className="bg-[#f7fbff] p-6 md:p-8">
+        {activeTab === "overview" && (
+          <EventOverviewTab
+            event={event}
+            capacityInfo={capacityInfo}
+            requests={requests}
+            setActiveTab={setActiveTab}
+          />
+        )}
+
         {activeTab === "manage" && (
           <UnifiedApprovalManager
             requests={allRequests}
             event={event}
-            capacityInfo={capacityInfo}
             onDataChange={onDataChange}
           />
         )}
 
-        {activeTab === "capacity" && (
-          <CapacityTab
-            capacityInfo={capacityInfo}
-            perSchoolBreakdown={perSchoolBreakdown}
+        {activeTab === "rounds" && (
+          <RoundsTab
             event={event}
+            onCompetitionClosed={async () => {
+              await onDataChange?.();
+              setActiveTab("results");
+            }}
+          />
+        )}
+
+        {activeTab === "results" && (
+          <EventResultsManager
+            fixedEventId={event.id || event._id}
+            embedded
+            title="Event Results & Certificates"
+            description="Publish this event's final placements and generate school-issued digital certificates."
           />
         )}
       </div>

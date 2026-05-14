@@ -12,7 +12,12 @@ export async function GET(req) {
         }
 
         await connectDB();
-        const schools = await User.find({ role: 'SCHOOL_ADMIN' }).sort({ createdAt: -1 });
+        const schools = await User.find({ role: 'SCHOOL_ADMIN' })
+            .select(
+                "schoolName principalName email status schoolPhone schoolLocation website establishedYear createdAt updatedAt educationLevels"
+            )
+            .sort({ createdAt: -1 })
+            .lean();
 
         return NextResponse.json({ schools }, { status: 200 });
     } catch (error) {

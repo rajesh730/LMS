@@ -14,6 +14,7 @@ import {
   FaChalkboardTeacher,
   FaUserFriends,
 } from "react-icons/fa";
+import { buildGradeLabels, normalizeGradeValue } from "@/lib/schoolGrades";
 
 export default function NoticeManager() {
   const [notices, setNotices] = useState([]);
@@ -39,11 +40,11 @@ export default function NoticeManager() {
     grades: [],
     expiryDate: "",
   });
+  const [gradeOptions, setGradeOptions] = useState([]);
 
   const noticeTypes = [
     { value: "GENERAL", label: "General", color: "bg-blue-500" },
     { value: "URGENT", label: "Urgent", color: "bg-red-500" },
-    { value: "CLUB", label: "Club Update", color: "bg-green-500" },
     { value: "EVENT", label: "Event", color: "bg-purple-500" },
     { value: "HOLIDAY", label: "Holiday", color: "bg-yellow-500" },
     { value: "SHOWCASE", label: "Showcase", color: "bg-orange-500" },
@@ -54,19 +55,6 @@ export default function NoticeManager() {
     { value: "NORMAL", label: "Normal", color: "text-blue-400" },
     { value: "HIGH", label: "High", color: "text-orange-400" },
     { value: "URGENT", label: "Urgent", color: "text-red-400" },
-  ];
-
-  const gradeOptions = [
-    "Grade 1",
-    "Grade 2",
-    "Grade 3",
-    "Grade 4",
-    "Grade 5",
-    "Grade 6",
-    "Grade 7",
-    "Grade 8",
-    "Grade 9",
-    "Grade 10",
   ];
 
   const fetchNotices = useCallback(async () => {
@@ -90,6 +78,47 @@ export default function NoticeManager() {
   useEffect(() => {
     fetchNotices();
   }, [fetchNotices]);
+
+  useEffect(() => {
+    let isActive = true;
+
+    const fetchGradeOptions = async () => {
+      try {
+        const res = await fetch("/api/school/grade-structure", {
+          cache: "no-store",
+        });
+        if (!res.ok) throw new Error("Failed to load grade options");
+
+        const data = await res.json();
+        const grades = (data.grades || data.data?.grades || [])
+          .map((grade) => normalizeGradeValue(grade.name || grade._id || grade))
+          .filter(Boolean);
+
+        if (isActive) {
+          setGradeOptions(grades.length > 0 ? grades : buildGradeLabels());
+        }
+      } catch (error) {
+        if (isActive) {
+          setGradeOptions(buildGradeLabels());
+        }
+      }
+    };
+
+    fetchGradeOptions();
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    setNoticeForm((prev) => ({
+      ...prev,
+      grades: prev.grades.filter((grade) =>
+        gradeOptions.includes(normalizeGradeValue(grade))
+      ),
+    }));
+  }, [gradeOptions]);
 
   const createNotice = async (e) => {
     e.preventDefault();
@@ -486,20 +515,26 @@ export default function NoticeManager() {
                 Specific Grades (Leave empty for all grades)
               </label>
               <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
-                {gradeOptions.map((grade) => (
-                  <label
-                    key={grade}
-                    className="flex items-center gap-2 cursor-pointer"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={noticeForm.grades.includes(grade)}
-                      onChange={() => toggleGrade(grade)}
-                      className="rounded border-slate-600 bg-slate-700 text-emerald-600"
-                    />
-                    <span className="text-slate-300 text-sm">{grade}</span>
-                  </label>
-                ))}
+                {gradeOptions.length === 0 ? (
+                  <p className="col-span-full text-sm text-slate-400">
+                    Loading grades...
+                  </p>
+                ) : (
+                  gradeOptions.map((grade) => (
+                    <label
+                      key={grade}
+                      className="flex items-center gap-2 cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={noticeForm.grades.includes(grade)}
+                        onChange={() => toggleGrade(grade)}
+                        className="rounded border-slate-600 bg-slate-700 text-emerald-600"
+                      />
+                      <span className="text-slate-300 text-sm">{grade}</span>
+                    </label>
+                  ))
+                )}
               </div>
             </div>
 

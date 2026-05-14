@@ -25,6 +25,16 @@ const ParticipationRequestSchema = new mongoose.Schema(
     // Contact details for this specific request/group
     contactPerson: String,
     contactPhone: String,
+    teamName: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    captainStudent: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Student",
+      default: null,
+    },
     notes: String,
     requestedAt: {
       type: Date,

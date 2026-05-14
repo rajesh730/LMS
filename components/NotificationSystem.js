@@ -1,6 +1,12 @@
 "use client";
 
-import { useState, useCallback, createContext, useContext } from "react";
+import {
+  useState,
+  useCallback,
+  createContext,
+  useContext,
+  useSyncExternalStore,
+} from "react";
 import {
   FaCheckCircle,
   FaExclamationCircle,
@@ -22,6 +28,11 @@ export function useNotification() {
 
 export function NotificationProvider({ children }) {
   const [notifications, setNotifications] = useState([]);
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
 
   const addNotification = useCallback(
     (message, type = "info", duration = 4000) => {
@@ -75,10 +86,12 @@ export function NotificationProvider({ children }) {
   return (
     <NotificationContext.Provider value={value}>
       {children}
-      <NotificationContainer
-        notifications={notifications}
-        onRemove={removeNotification}
-      />
+      {mounted && (
+        <NotificationContainer
+          notifications={notifications}
+          onRemove={removeNotification}
+        />
+      )}
     </NotificationContext.Provider>
   );
 }

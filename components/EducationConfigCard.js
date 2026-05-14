@@ -18,10 +18,10 @@ export default function EducationConfigCard() {
         const data = await response.json();
         setEducationConfig(data);
       } else {
-        console.error("Failed to fetch education config");
+        setEducationConfig(null);
       }
     } catch (error) {
-      console.error("Error fetching education config:", error);
+      setEducationConfig(null);
     } finally {
       setLoading(false);
     }
@@ -44,12 +44,21 @@ export default function EducationConfigCard() {
 
     const levels = [];
     if (educationConfig.educationLevels?.school) {
+      const minGrade =
+        educationConfig.schoolConfig?.schoolLevel?.minGrade ||
+        educationConfig.schoolConfig?.minGrade ||
+        1;
+      const maxGrade =
+        educationConfig.schoolConfig?.schoolLevel?.maxGrade ||
+        educationConfig.schoolConfig?.maxGrade ||
+        10;
+
       levels.push({
         name: "School Level",
         icon: FaSchool,
         color: "text-blue-600",
         bg: "bg-blue-50",
-        details: `Grades 1-${educationConfig.schoolConfig?.maxGrade || 10}`,
+        details: `Grades ${minGrade}-${maxGrade}`,
       });
     }
     return levels;

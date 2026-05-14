@@ -33,7 +33,7 @@ const SchoolShowcaseProfileSchema = new mongoose.Schema(
     visibility: {
       type: String,
       enum: ["PRIVATE", "PUBLIC"],
-      default: "PUBLIC",
+      default: "PRIVATE",
     },
     highlightMetrics: {
       eventsHosted: {

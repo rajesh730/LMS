@@ -37,7 +37,7 @@ const TeacherSchema = new mongoose.Schema({
     enum: ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-", ""],
   },
   visiblePassword: {
-    type: String, // Stored for admin visibility as requested
+    type: String, // Legacy credential-reset compatibility; not exposed in list APIs.
   },
   password: {
     type: String, // Hashed password for authentication

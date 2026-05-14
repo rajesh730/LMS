@@ -2,8 +2,10 @@ import Link from "next/link";
 import connectDB from "@/lib/db";
 import ExternalOrganizer from "@/models/ExternalOrganizer";
 import Event from "@/models/Event";
+import EventProposal from "@/models/EventProposal";
 import Achievement from "@/models/Achievement";
 import ParticipationRequest from "@/models/ParticipationRequest";
+import PublicSiteNav from "@/components/public/PublicSiteNav";
 
 export const dynamic = "force-dynamic";
 
@@ -31,12 +33,18 @@ async function getPartnerData(slug) {
   })
     .sort({ date: -1 })
     .populate("school", "schoolName")
-    .populate("targetGroup", "name")
     .lean();
 
   const eventIds = events.map((event) => event._id);
 
-  const [requests, achievements] = await Promise.all([
+  const [announcedProposals, requests, achievements] = await Promise.all([
+    EventProposal.find({
+      organizer: partner._id,
+      status: "APPROVED",
+      linkedEvent: null,
+    })
+      .sort({ preferredDate: 1, createdAt: -1 })
+      .lean(),
     eventIds.length
       ? ParticipationRequest.find({
           event: { $in: eventIds },
@@ -70,6 +78,7 @@ async function getPartnerData(slug) {
   return {
     partner,
     events,
+    announcedProposals,
     achievements,
     metrics: {
       eventCount: events.length,
@@ -94,28 +103,12 @@ export default async function PartnerPortfolioPage({ params }) {
     );
   }
 
-  const { partner, events, achievements, metrics, schools } = data;
+  const { partner, events, announcedProposals, achievements, metrics, schools } =
+    data;
 
   return (
     <main className="min-h-screen bg-slate-950 text-white">
-      <section className="border-b border-slate-800 bg-slate-900/50">
-        <div className="max-w-6xl mx-auto px-6 py-6 flex items-center justify-between gap-4">
-          <Link
-            href="/partners"
-            className="text-slate-400 hover:text-white transition"
-          >
-            Back to partners
-          </Link>
-          {partner.website && (
-            <a
-              href={partner.website}
-              className="rounded-full bg-slate-800 hover:bg-slate-700 px-5 py-2 text-sm font-bold"
-            >
-              Visit website
-            </a>
-          )}
-        </div>
-      </section>
+      <PublicSiteNav active="partners" />
 
       <section className="max-w-6xl mx-auto px-6 py-14">
         <div className="grid lg:grid-cols-[1.4fr_0.8fr] gap-10 items-start">
@@ -150,6 +143,14 @@ export default async function PartnerPortfolioPage({ params }) {
                 <p className="text-slate-400 mt-3">
                   {(partner.partnerRoles || []).map(label).join(", ")}
                 </p>
+                {partner.website && (
+                  <a
+                    href={partner.website}
+                    className="mt-5 inline-flex rounded-full bg-slate-800 px-5 py-2 text-sm font-bold text-white transition hover:bg-slate-700"
+                  >
+                    Visit website
+                  </a>
+                )}
               </div>
             </div>
 
@@ -163,12 +164,39 @@ export default async function PartnerPortfolioPage({ params }) {
 
             <section className="rounded-3xl border border-slate-800 bg-slate-900/70 p-8 mb-10">
               <h2 className="text-2xl font-bold mb-6">Partner Events</h2>
-              {events.length === 0 ? (
+              {events.length === 0 && announcedProposals.length === 0 ? (
                 <p className="text-slate-400">
                   Public partner events will appear here after publishing.
                 </p>
               ) : (
                 <div className="grid gap-4">
+                  {announcedProposals.map((proposal) => (
+                    <article
+                      key={String(proposal._id)}
+                      className="rounded-2xl border border-sky-400/20 bg-sky-400/[0.06] p-5"
+                    >
+                      <div className="flex items-center justify-between gap-4 mb-2">
+                        <h3 className="text-xl font-semibold">
+                          {proposal.eventTitle}
+                        </h3>
+                        <span className="text-xs text-sky-300 uppercase">
+                          Announced
+                        </span>
+                      </div>
+                      <p className="text-slate-400 line-clamp-2">
+                        {proposal.eventDescription}
+                      </p>
+                      <div className="mt-4 flex flex-wrap gap-3 text-sm text-slate-300">
+                        <span>
+                          {proposal.preferredDate
+                            ? new Date(proposal.preferredDate).toLocaleDateString()
+                            : "Date to be announced"}
+                        </span>
+                        <span>{label(proposal.eventMode)}</span>
+                      </div>
+                    </article>
+                  ))}
+
                   {events.map((event) => (
                     <Link
                       key={String(event._id)}

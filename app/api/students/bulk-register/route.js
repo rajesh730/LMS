@@ -1,6 +1,11 @@
 import connectDB from "../../../../lib/db.js";
 import Student from "../../../../models/Student.js";
 import { successResponse, errorResponse } from "../../../../lib/apiResponse.js";
+import {
+  generatePlatformStudentId,
+  generateUniqueStudentUsername,
+} from "../../../../lib/studentIdentity.js";
+import { normalizeGradeValue } from "../../../../lib/schoolGrades.js";
 import bcrypt from "bcryptjs";
 
 export async function POST(req) {
@@ -16,6 +21,7 @@ export async function POST(req) {
       success: [],
       failed: [],
     };
+    const reservedUsernames = new Set();
 
     for (const studentData of students) {
       try {
@@ -26,7 +32,15 @@ export async function POST(req) {
 
         // Generate credentials
         const cleanFirstName = studentData.firstName.replace(/[^a-zA-Z0-9]/g, "") || "Student";
-        const username = `${cleanFirstName.toLowerCase()}${studentData.rollNumber}`;
+        const normalizedGrade = normalizeGradeValue(studentData.grade);
+        const normalizedRollNumber = String(studentData.rollNumber).trim();
+        const username = await generateUniqueStudentUsername(Student, {
+          firstName: studentData.firstName,
+          grade: normalizedGrade,
+          rollNumber: normalizedRollNumber,
+          school: schoolId,
+          reserved: reservedUsernames,
+        });
         
         // Password: FirstName@123
         const plainPassword = `${cleanFirstName}@123`;
@@ -35,12 +49,14 @@ export async function POST(req) {
         // Check for duplicate roll number in the same grade
         const existingRollNumber = await Student.findOne({
           school: schoolId,
-          grade: studentData.grade,
-          rollNumber: studentData.rollNumber,
+          grade: normalizedGrade,
+          rollNumber: normalizedRollNumber,
         });
 
         if (existingRollNumber) {
-          throw new Error(`Roll number ${studentData.rollNumber} already exists in grade ${studentData.grade}`);
+          throw new Error(
+            `Roll number ${normalizedRollNumber} already exists in ${normalizedGrade}`
+          );
         }
 
         // Check for duplicate email (if provided)
@@ -53,18 +69,21 @@ export async function POST(req) {
 
         const newStudent = new Student({
           ...studentData,
+          platformStudentId: await generatePlatformStudentId(Student),
           name: `${studentData.firstName} ${studentData.lastName}`,
           username,
           password: hashedPassword,
           visiblePassword: plainPassword,
           school: schoolId,
+          grade: normalizedGrade,
+          rollNumber: normalizedRollNumber,
           status: "ACTIVE",
           email: studentData.email || undefined,
           // Set defaults for optional fields if missing
           guardianRelationship: studentData.guardianRelationship || "FATHER",
           parentName: studentData.parentName || "To be added",
           parentContactNumber: studentData.parentContactNumber || "To be added",
-          parentEmail: studentData.parentEmail || `${username}@school.local`,
+          parentEmail: studentData.parentEmail || undefined,
         });
 
         await newStudent.save();

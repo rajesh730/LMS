@@ -5,6 +5,27 @@ import dbConnect from "@/lib/db";
 import Event from "@/models/Event";
 import ParticipationRequest from "@/models/ParticipationRequest";
 import Student from "@/models/Student";
+import {
+  removeStudentsFromCompetition,
+  syncApprovedRequestsToRoundOne,
+} from "@/lib/competitionFlow";
+
+function canManageEventApprovals(session, event) {
+  if (!session?.user || !event) return false;
+
+  if (session.user.role === "SUPER_ADMIN") {
+    return event.eventScope === "PLATFORM";
+  }
+
+  if (session.user.role === "SCHOOL_ADMIN") {
+    return (
+      event.eventScope === "SCHOOL" &&
+      String(event.school || "") === String(session.user.id)
+    );
+  }
+
+  return false;
+}
 
 /**
  * PUT /api/events/[id]/approve
@@ -51,6 +72,10 @@ export async function PUT(req, { params }) {
 
     if (!event) {
       return NextResponse.json({ message: "Event not found" }, { status: 404 });
+    }
+
+    if (!canManageEventApprovals(session, event)) {
+      return NextResponse.json({ message: "Forbidden" }, { status: 403 });
     }
 
     // Handle case where we want to reject a school but have no request IDs (e.g. manual entry)
@@ -122,6 +147,8 @@ export async function PUT(req, { params }) {
       rejected: [],
       failed: [],
     };
+    const approvedRequestIds = [];
+    const removedStudentIds = [];
 
     // ===== Process each request =====
     for (const request of requests) {
@@ -212,6 +239,7 @@ export async function PUT(req, { params }) {
 
           await request.save();
           results.approved.push(request._id);
+          approvedRequestIds.push(request._id);
         } else if (action === "reject") {
           // Remove from event participants if they were previously approved
           removeStudentFromEvent();
@@ -227,6 +255,7 @@ export async function PUT(req, { params }) {
 
           await request.save();
           results.rejected.push(request._id);
+          removedStudentIds.push(request.student._id);
         } else if (action === "pending") {
           // Remove from event participants if they were previously approved
           removeStudentFromEvent();
@@ -242,6 +271,7 @@ export async function PUT(req, { params }) {
           await request.save();
           // We can track pending resets in 'approved' or a new array, but let's put in approved for now as "success"
           results.approved.push(request._id);
+          removedStudentIds.push(request.student._id);
         }
       } catch (error) {
         console.error("Error processing request:", request._id, error);
@@ -260,6 +290,21 @@ export async function PUT(req, { params }) {
       );
 
       await event.save();
+    }
+
+    if (approvedRequestIds.length > 0) {
+      await syncApprovedRequestsToRoundOne({
+        eventId,
+        createdBy: session.user.id,
+        requestIds: approvedRequestIds,
+      });
+    }
+
+    if (removedStudentIds.length > 0) {
+      await removeStudentsFromCompetition({
+        eventId,
+        studentIds: removedStudentIds,
+      });
     }
 
     return NextResponse.json(
@@ -305,6 +350,10 @@ export async function GET(req, { params }) {
 
     if (!event) {
       return NextResponse.json({ message: "Event not found" }, { status: 404 });
+    }
+
+    if (!canManageEventApprovals(session, event)) {
+      return NextResponse.json({ message: "Forbidden" }, { status: 403 });
     }
 
     // Get all pending requests

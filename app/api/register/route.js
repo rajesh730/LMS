@@ -4,6 +4,7 @@ import connectDB from "@/lib/db";
 import { applyRateLimit } from "@/lib/rateLimit";
 import User from "@/models/User";
 import SchoolConfig from "@/models/SchoolConfig";
+import { buildGradeLabels, normalizeSchoolLevelConfig } from "@/lib/schoolGrades";
 
 export async function POST(req) {
   try {
@@ -17,8 +18,7 @@ export async function POST(req) {
       schoolPhone,
       website,
       establishedYear,
-      educationLevels,
-      schoolConfig,
+      schoolConfig: submittedSchoolConfig,
     } = await req.json();
 
     const ip =
@@ -71,6 +71,9 @@ export async function POST(req) {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
+    const educationLevels = { school: true };
+    const schoolConfig = normalizeSchoolLevelConfig(submittedSchoolConfig);
+    const grades = buildGradeLabels(schoolConfig);
 
     const newUser = await User.create({
       email,
@@ -92,7 +95,9 @@ export async function POST(req) {
       { school: newUser._id },
       {
         school: newUser._id,
-        teacherRoles: ["Mentor", "Club Lead", "Events Coordinator"],
+        teacherRoles: [],
+        teacherRolesCustomized: false,
+        grades,
         educationLevels,
         schoolConfig,
       },

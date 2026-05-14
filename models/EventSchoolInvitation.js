@@ -39,11 +39,6 @@ const EventSchoolInvitationSchema = new mongoose.Schema(
       default: "",
       trim: true,
     },
-    targetGroup: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Group",
-      default: null,
-    },
     eventTitleSnapshot: {
       type: String,
       default: "",

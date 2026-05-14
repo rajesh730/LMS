@@ -77,8 +77,19 @@ Status: in progress
 
 - Remove attendance modules
 - Remove exam/marks/grading modules
-- Remove report-card and academic LMS leftovers
+- Remove academic report-card/transcript and LMS leftovers
 - Remove dead APIs and unused models
+
+Current concrete targets:
+
+- keep all top-level docs consistently positioned as a talent/extracurricular platform
+- remove remaining grade-centric copy where it is not product-critical
+- continue shifting teacher `subject` wording toward mentoring/focus-area language
+- replace static grade lists in forms with school-config-driven options where possible
+
+Execution reference:
+
+- `SHOW_TALENT_MATURE_MVP_CODE_CLEANUP_AND_PUBLIC_SHOWCASE_BLUEPRINT.md`
 
 ## Deferred: External Organizer Intake
 

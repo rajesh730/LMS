@@ -13,6 +13,7 @@ import {
   notFoundError,
   internalServerError,
 } from "@/lib/apiResponse";
+import { gradeListContains } from "@/lib/schoolGrades";
 
 // GET: Fetch all participation requests for admin
 export async function GET(req) {
@@ -125,7 +126,12 @@ export async function PATCH(req) {
         request.event.eligibleGrades &&
         request.event.eligibleGrades.length > 0
       ) {
-        if (!request.event.eligibleGrades.includes(request.student.grade)) {
+        if (
+          !gradeListContains(
+            request.event.eligibleGrades,
+            request.student.grade
+          )
+        ) {
           validationErrors.push(
             `Student grade "${
               request.student.grade

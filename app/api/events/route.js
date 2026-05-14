@@ -3,7 +3,6 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import Event from "@/models/Event";
-import Group from "@/models/Group";
 import Student from "@/models/Student";
 import ParticipationRequest from "@/models/ParticipationRequest";
 import EventProposal from "@/models/EventProposal";
@@ -12,6 +11,12 @@ import {
   ensureSchoolInvitationsForPublishedEvents,
   syncEventSchoolInvitations,
 } from "@/lib/eventInvitations";
+import { validateEventDates } from "@/lib/eventDates";
+import { validateEventCapacity } from "@/lib/eventCapacity";
+import { normalizeGradeValue } from "@/lib/schoolGrades";
+import { buildEventPresentationState } from "@/lib/eventPresentation";
+import { buildSchoolParticipationPresentation } from "@/lib/participationPresentation";
+import { isTeamEventLike, resolveParticipationFormat as resolveParticipationFormatFromRecord } from "@/lib/eventParticipationFormat";
 import "@/models/ExternalOrganizer";
 
 export const dynamic = "force-dynamic";
@@ -44,6 +49,74 @@ function normalizeEventPartners(partners) {
     }));
 }
 
+function buildEventPartnerFromProposal(proposal) {
+  const organizer = proposal?.organizer;
+  if (!organizer) return null;
+
+  return {
+    organizer: organizer._id || organizer,
+    role: proposal.proposedRoles?.[0] || "ORGANIZER_PARTNER",
+    displayName: organizer.organizationName || proposal.organizationName || "",
+    logoUrl: organizer.logoUrl || "",
+    website: organizer.website || proposal.website || "",
+    isPrimary: true,
+  };
+}
+
+function buildTeamKey(request) {
+  const schoolId = String(request.school?._id || request.school || "");
+  const teamName = String(request.teamName || "").trim().toLowerCase();
+  return `${schoolId}::${teamName || "default-team"}`;
+}
+
+function resolveParticipationFormat(value, minTeamSize, maxTeamSize) {
+  if (
+    value === "TEAM" ||
+    minTeamSize !== undefined && minTeamSize !== null && minTeamSize !== "" ||
+    maxTeamSize !== undefined && maxTeamSize !== null && maxTeamSize !== ""
+  ) {
+    return "TEAM";
+  }
+  return "INDIVIDUAL";
+}
+
+function validateTeamRules({ participationFormat, minTeamSize, maxTeamSize }) {
+  if (participationFormat !== "TEAM") {
+    return null;
+  }
+
+  const min = minTeamSize === "" || minTeamSize === undefined || minTeamSize === null
+    ? null
+    : Number(minTeamSize);
+  const max = maxTeamSize === "" || maxTeamSize === undefined || maxTeamSize === null
+    ? null
+    : Number(maxTeamSize);
+
+  if (min !== null && (!Number.isFinite(min) || min < 1)) {
+    return "Minimum team size must be at least 1.";
+  }
+
+  if (max !== null && (!Number.isFinite(max) || max < 1)) {
+    return "Maximum team size must be at least 1.";
+  }
+
+  if (min !== null && max !== null && min > max) {
+    return "Minimum team size cannot exceed maximum team size.";
+  }
+
+  return null;
+}
+
+function groupRequestsByEvent(requests = []) {
+  const grouped = new Map();
+  requests.forEach((request) => {
+    const eventId = String(request.event || "");
+    if (!eventId) return;
+    grouped.set(eventId, [...(grouped.get(eventId) || []), request]);
+  });
+  return grouped;
+}
+
 export async function POST(req) {
   try {
     const session = await getServerSession(authOptions);
@@ -59,11 +132,12 @@ export async function POST(req) {
       title,
       description,
       date,
-      targetGroup,
+      schoolId,
       eventScope,
       eventType,
       visibility,
       registrationMode,
+      participationFormat,
       featuredOnLanding,
       publicHighlightsEnabled,
       partnerBrandingEnabled,
@@ -72,6 +146,8 @@ export async function POST(req) {
       registrationDeadline,
       maxParticipants,
       maxParticipantsPerSchool,
+      minTeamSize,
+      maxTeamSize,
       eligibleGrades,
       assignedMentors,
     } = await req.json();
@@ -83,51 +159,146 @@ export async function POST(req) {
       );
     }
 
+    const dateValidationMessage = validateEventDates({
+      date,
+      registrationDeadline,
+    });
+    if (dateValidationMessage) {
+      return NextResponse.json(
+        { message: dateValidationMessage },
+        { status: 400 }
+      );
+    }
+
+    const capacityValidation = validateEventCapacity({
+      maxParticipants,
+      maxParticipantsPerSchool,
+    });
+    if (capacityValidation.message) {
+      return NextResponse.json(
+        { message: capacityValidation.message },
+        { status: 400 }
+      );
+    }
+
+    const resolvedParticipationFormat = resolveParticipationFormat(
+      participationFormat,
+      minTeamSize,
+      maxTeamSize
+    );
+    const teamValidationMessage = validateTeamRules({
+      participationFormat: resolvedParticipationFormat,
+      minTeamSize,
+      maxTeamSize,
+    });
+    if (teamValidationMessage) {
+      return NextResponse.json(
+        { message: teamValidationMessage },
+        { status: 400 }
+      );
+    }
+
     await connectDB();
 
     const status = session.user.role === "TEACHER" ? "PENDING" : "APPROVED";
 
-    // For non-super-admin, tag the school for scoping
-    const school = ["SCHOOL_ADMIN", "TEACHER"].includes(session.user.role)
-      ? session.user.schoolId || null
-      : null;
     const normalizedScope =
       session.user.role === "SUPER_ADMIN"
         ? eventScope || "PLATFORM"
         : "SCHOOL";
+
+    let school = null;
+    if (normalizedScope === "SCHOOL") {
+      school =
+        session.user.role === "SUPER_ADMIN"
+          ? schoolId || null
+          : session.user.schoolId || null;
+
+      if (!school) {
+        return NextResponse.json(
+          { message: "SCHOOL events require a valid school" },
+          { status: 400 }
+        );
+      }
+    }
+
+    let resolvedVisibility =
+      visibility || (normalizedScope === "PLATFORM" ? "PUBLIC" : "INVITED");
+    if (status !== "APPROVED" && resolvedVisibility === "PUBLIC") {
+      resolvedVisibility = "INVITED";
+    }
+
+    const canFeatureOnLanding =
+      session.user.role === "SUPER_ADMIN" &&
+      normalizedScope === "PLATFORM" &&
+      status === "APPROVED" &&
+      resolvedVisibility === "PUBLIC";
+
     const ownerId = normalizedScope === "SCHOOL" ? school : session.user.id;
     const ownerType = normalizedScope === "SCHOOL" ? "SCHOOL" : "PLATFORM";
-    const normalizedPartners =
+    let normalizedPartners =
       session.user.role === "SUPER_ADMIN" ? normalizeEventPartners(partners) : [];
     const normalizedSourceProposal =
       session.user.role === "SUPER_ADMIN" ? sourceProposal || null : null;
+
+    if (normalizedSourceProposal) {
+      const proposal = await EventProposal.findById(normalizedSourceProposal)
+        .populate("organizer", "organizationName logoUrl website")
+        .lean();
+      const proposalPartner = buildEventPartnerFromProposal(proposal);
+      if (
+        proposalPartner &&
+        !normalizedPartners.some(
+          (partner) => String(partner.organizer) === String(proposalPartner.organizer)
+        )
+      ) {
+        normalizedPartners = [proposalPartner, ...normalizedPartners];
+      }
+    }
 
     const newEvent = await Event.create({
       title,
       description,
       date,
       createdBy: session.user.id,
-      targetGroup: targetGroup || null,
       school,
       eventScope: normalizedScope,
       ownerType,
       ownerId,
       eventType: eventType || "COMPETITION",
-      visibility: visibility || (normalizedScope === "PLATFORM" ? "PUBLIC" : "INVITED"),
-      registrationMode: registrationMode || "THROUGH_SCHOOL",
-      featuredOnLanding: Boolean(featuredOnLanding),
+      visibility: resolvedVisibility,
+      registrationMode:
+        resolvedParticipationFormat === "TEAM"
+          ? "THROUGH_SCHOOL"
+          : registrationMode || "THROUGH_SCHOOL",
+      participationFormat: resolvedParticipationFormat,
+      featuredOnLanding: canFeatureOnLanding ? Boolean(featuredOnLanding) : false,
       publicHighlightsEnabled:
-        publicHighlightsEnabled === undefined ? true : Boolean(publicHighlightsEnabled),
+        status === "APPROVED"
+          ? publicHighlightsEnabled === undefined
+            ? true
+            : Boolean(publicHighlightsEnabled)
+          : false,
       partnerBrandingEnabled:
         session.user.role === "SUPER_ADMIN" &&
-        Boolean(partnerBrandingEnabled) &&
+        (Boolean(partnerBrandingEnabled) || Boolean(normalizedSourceProposal)) &&
         normalizedPartners.length > 0,
       partners: normalizedPartners,
       sourceProposal: normalizedSourceProposal,
       registrationDeadline: registrationDeadline || null,
-      maxParticipants: maxParticipants || null,
-      maxParticipantsPerSchool: maxParticipantsPerSchool || null,
-      eligibleGrades: eligibleGrades || [],
+      maxParticipants: capacityValidation.totalStudentCapacity,
+      maxParticipantsPerSchool: capacityValidation.maxStudentsPerSchool,
+      minTeamSize:
+        resolvedParticipationFormat === "TEAM" && minTeamSize !== ""
+          ? Number(minTeamSize) || null
+          : null,
+      maxTeamSize:
+        resolvedParticipationFormat === "TEAM" && maxTeamSize !== ""
+          ? Number(maxTeamSize) || null
+          : null,
+      eligibleGrades: Array.isArray(eligibleGrades)
+        ? eligibleGrades.map(normalizeGradeValue).filter(Boolean)
+        : [],
       assignedMentors: Array.isArray(assignedMentors) ? assignedMentors : [],
       status,
     });
@@ -182,6 +353,7 @@ export async function GET(req) {
     }
 
     await connectDB();
+    const summaryMode = req.nextUrl.searchParams.get("summary") === "1";
 
     let query = {};
     let currentSchoolId = null;
@@ -190,12 +362,6 @@ export async function GET(req) {
       session.user.role === "SCHOOL_ADMIN" ||
       session.user.role === "TEACHER"
     ) {
-      // Find groups this school belongs to (if applicable) - For now assuming Teachers belong to same context
-      // Ideally we need to filter by School. But Event model doesn't have School.
-      // We are relying on 'targetGroup' which is Global or Group-based.
-      // If we want to support School-specific events without Groups, we need 'school' field in Event.
-      // For now, let's keep existing logic but add Status filter.
-
       const mongoose = (await import("mongoose")).default;
 
       // Resolve schoolId from session (SCHOOL_ADMIN uses own id; TEACHER was hydrated in auth callbacks)
@@ -208,39 +374,23 @@ export async function GET(req) {
         await ensureSchoolInvitationsForPublishedEvents(schoolObjectId);
       }
 
-      let groupIds = [];
-      if (schoolObjectId) {
-        const schoolGroups = await Group.find({
-          schools: schoolObjectId,
-        }).select("_id");
-        groupIds = schoolGroups.map((g) => g._id);
-      }
-
       // A school's internal feed should include:
       // - its own school-owned events
       // - approved platform-wide events
-      // - approved group-targeted events for any network the school belongs to
       const schoolOwnedCondition = schoolObjectId ? { school: schoolObjectId } : null;
       const visibleConditions = [
-        { eventScope: "PLATFORM", targetGroup: null, status: "APPROVED" },
+        { eventScope: "PLATFORM", status: "APPROVED" },
       ];
 
       if (schoolOwnedCondition) {
         visibleConditions.push(schoolOwnedCondition);
       }
 
-      if (groupIds.length > 0) {
-        visibleConditions.push({
-          targetGroup: { $in: groupIds },
-          status: "APPROVED",
-        });
-      }
-
       query = { $or: visibleConditions };
 
       if (session.user.role === "TEACHER") {
         const teacherConditions = [
-          { eventScope: "PLATFORM", targetGroup: null, status: "APPROVED" },
+          { eventScope: "PLATFORM", status: "APPROVED" },
         ];
 
         if (schoolOwnedCondition) {
@@ -251,13 +401,6 @@ export async function GET(req) {
           teacherConditions.push({
             school: schoolObjectId,
             createdBy: session.user.id,
-          });
-        }
-
-        if (groupIds.length > 0) {
-          teacherConditions.push({
-            targetGroup: { $in: groupIds },
-            status: "APPROVED",
           });
         }
 
@@ -273,24 +416,17 @@ export async function GET(req) {
       if (session.user.role === "SUPER_ADMIN") {
         events = await Event.find(query)
           .sort({ date: 1 })
-          .populate("targetGroup", "name")
           .populate("assignedMentors", "name subject roles")
           .populate("sourceProposal", "eventTitle organizationName status")
           .populate(
             "partners.organizer",
             "organizationName slug logoUrl website verificationStatus profileVisibility"
           )
-          .populate(
-            "participants.school",
-            "schoolName email principalName principalPhone schoolPhone"
-          )
-          .populate("participants.students", "name grade")
           .lean();
       } else {
         // For schools/teachers, just get basic data
         events = await Event.find(query)
           .sort({ date: 1 })
-          .populate("targetGroup", "name")
           .populate("assignedMentors", "name subject roles")
           .populate(
             "partners.organizer",
@@ -317,14 +453,52 @@ export async function GET(req) {
       });
     }
 
+    const eventIds = events.map((event) => event._id);
+    const activeStatusFilter = { $in: ["PENDING", "APPROVED", "ENROLLED"] };
+
+    const [summaryRequests, detailedRequests, schoolRequests] = await Promise.all([
+      ParticipationRequest.find({
+        event: { $in: eventIds },
+        status: { $in: ["PENDING", "APPROVED", "ENROLLED", "REJECTED"] },
+      })
+        .select("event school status teamName")
+        .lean(),
+      session.user.role === "SUPER_ADMIN" && !summaryMode
+        ? ParticipationRequest.find({
+            event: { $in: eventIds },
+          })
+            .populate(
+              "school",
+              "schoolName email principalName principalPhone schoolPhone"
+            )
+            .populate("student", "name grade")
+            .populate("captainStudent", "name")
+            .lean()
+        : Promise.resolve([]),
+      session.user.role === "SCHOOL_ADMIN"
+        ? ParticipationRequest.find({
+            event: { $in: eventIds },
+            school: session.user.id,
+          })
+            .select(
+              "event status contactPerson contactPhone teamName captainStudent notes student requestedAt approvedAt enrollmentConfirmedAt"
+            )
+            .lean()
+        : Promise.resolve([]),
+    ]);
+
+    const summaryRequestsByEvent = groupRequestsByEvent(summaryRequests);
+    const detailedRequestsByEvent = groupRequestsByEvent(detailedRequests);
+    const schoolRequestsByEvent = groupRequestsByEvent(schoolRequests);
+
     // Add computed fields for frontend compatibility
-    const eventsWithParticipation = await Promise.all(
-      events.map(async (event) => {
+    const eventsWithParticipation = events.map((event) => {
         const eventObj = { ...event };
 
         // Map fields to frontend expectations
         eventObj.deadline = event.registrationDeadline;
         eventObj.capacity = event.maxParticipants;
+        eventObj.totalStudentCapacity = event.maxParticipants;
         eventObj.isPlatformEvent = event.eventScope === "PLATFORM";
         eventObj.isSchoolEvent = event.eventScope === "SCHOOL";
         if (session.user.role === "SCHOOL_ADMIN") {
@@ -335,54 +509,84 @@ export async function GET(req) {
 
         // Calculate real-time counts from ParticipationRequest
         // This ensures Super Admin sees all activity (Pending + Approved)
-        const allRequests = await ParticipationRequest.find({
-          event: event._id,
-        }).select("school status");
+        const allRequests = summaryRequestsByEvent.get(String(event._id)) || [];
+
+        const isTeamEvent = isTeamEventLike(event);
+        eventObj.participationFormat = resolveParticipationFormatFromRecord(
+          event.participationFormat,
+          event.minTeamSize,
+          event.maxTeamSize
+        );
+        const requestEntryKey = (request) =>
+          isTeamEvent
+            ? buildTeamKey(request)
+            : String(request.school?._id || request.school || "");
 
         const uniqueSchools = new Set(
-          allRequests.map((r) => r.school.toString())
+          allRequests
+            .filter((r) => ["PENDING", "APPROVED", "ENROLLED"].includes(String(r.status || "").toUpperCase()))
+            .map((r) => (r.school ? String(r.school) : ""))
+            .filter(Boolean)
         );
+        const activeRequestsOnly = allRequests.filter((r) =>
+          ["PENDING", "APPROVED", "ENROLLED"].includes(String(r.status || "").toUpperCase())
+        );
+        const uniqueTeams = new Set(activeRequestsOnly.map(buildTeamKey));
+        const pendingEntries = new Set(
+          allRequests
+            .filter((r) => String(r.status || "").toUpperCase() === "PENDING")
+            .map(requestEntryKey)
+            .filter(Boolean)
+        );
+        const approvedEntries = new Set(
+          allRequests
+            .filter((r) => ["APPROVED", "ENROLLED"].includes(String(r.status || "").toUpperCase()))
+            .map(requestEntryKey)
+            .filter(Boolean)
+        );
+        const rejectedEntries = new Set(
+          allRequests
+            .filter((r) => String(r.status || "").toUpperCase() === "REJECTED")
+            .map(requestEntryKey)
+            .filter(Boolean)
+        );
+
         eventObj.schoolCount = uniqueSchools.size;
-        eventObj.studentCount = allRequests.length;
+        eventObj.studentCount = activeRequestsOnly.length;
+        eventObj.teamCount = uniqueTeams.size;
+        eventObj.memberCount = activeRequestsOnly.length;
+        eventObj.pendingEntryCount = pendingEntries.size;
+        eventObj.approvedEntryCount = approvedEntries.size;
+        eventObj.rejectedEntryCount = rejectedEntries.size;
 
         // Keep legacy fields for compatibility if needed, but prefer new ones
-        eventObj.enrolled = eventObj.studentCount;
+        eventObj.enrolled = isTeamEvent ? eventObj.teamCount : eventObj.studentCount;
         eventObj.participantCount = eventObj.schoolCount;
+        eventObj.studentCapacityCount = isTeamEvent
+          ? eventObj.teamCount
+          : eventObj.studentCount;
+        eventObj.capacity = event.maxParticipants;
+        eventObj.totalStudentCapacity = isTeamEvent ? null : event.maxParticipants;
+        eventObj.totalTeamCapacity = isTeamEvent ? event.maxParticipants : null;
 
         // For Super Admin: Construct detailed participants list from requests
-        if (session.user.role === "SUPER_ADMIN") {
-          const detailedRequests = await ParticipationRequest.find({
-            event: event._id,
-          })
-            .populate(
-              "school",
-              "schoolName email principalName principalPhone schoolPhone"
-            )
-            .populate("student", "name grade")
-            .lean();
+        if (session.user.role === "SUPER_ADMIN" && !summaryMode) {
+          const detailedRequestsForEvent =
+            detailedRequestsByEvent.get(String(event._id)) || [];
 
-          // Group by school
+          // Group by school from ParticipationRequest, the registration source of truth.
           const schoolMap = new Map();
 
-          // Initialize with existing participants (to keep notes/contact info)
-          if (event.participants) {
-            event.participants.forEach((p) => {
-              if (p.school) {
-                schoolMap.set(p.school._id.toString(), {
-                  ...p,
-                  students: [], // We will rebuild student list from requests to be accurate
-                });
-              }
-            });
-          }
-
-          // Merge/Add from requests
-          detailedRequests.forEach((req) => {
+          detailedRequestsForEvent.forEach((req) => {
             if (!req.school) return;
             const schoolId = req.school._id.toString();
+            const teamKey =
+              isTeamEvent
+                ? `${schoolId}::${String(req.teamName || "").trim().toLowerCase() || "default-team"}`
+                : schoolId;
 
-            if (!schoolMap.has(schoolId)) {
-              schoolMap.set(schoolId, {
+            if (!schoolMap.has(teamKey)) {
+              schoolMap.set(teamKey, {
                 school: req.school,
                 contactPerson:
                   req.contactPerson || req.school.principalName || "N/A",
@@ -392,13 +596,17 @@ export async function GET(req) {
                 students: [],
                 notes: req.notes || "Pending Registration",
                 status: req.status, // Added status
+                teamName: req.teamName || "",
+                captainStudent: req.captainStudent || null,
               });
             } else {
               // Update contact info if available in request
-              const entry = schoolMap.get(schoolId);
+              const entry = schoolMap.get(teamKey);
               if (req.contactPerson) entry.contactPerson = req.contactPerson;
               if (req.contactPhone) entry.contactPhone = req.contactPhone;
               if (req.notes) entry.notes = req.notes;
+              if (req.teamName) entry.teamName = req.teamName;
+              if (req.captainStudent) entry.captainStudent = req.captainStudent;
 
               // Ensure status is set if it was missing (from initial population)
               if (!entry.status) entry.status = req.status;
@@ -406,7 +614,7 @@ export async function GET(req) {
               else if (req.status === "PENDING") entry.status = "PENDING";
             }
 
-            const schoolEntry = schoolMap.get(schoolId);
+            const schoolEntry = schoolMap.get(teamKey);
             // Add student if not already there
             if (
               req.student &&
@@ -424,48 +632,21 @@ export async function GET(req) {
         }
 
         if (session.user.role === "SCHOOL_ADMIN") {
-          // Check ParticipationRequest collection for status
-          // Priority: APPROVED > PENDING > REJECTED
-          const requests = await ParticipationRequest.find({
-            event: event._id,
-            school: session.user.id,
-          }).select("status contactPerson contactPhone notes student");
-
-          const statuses = requests.map((r) => r.status);
-
-          if (statuses.includes("APPROVED")) {
-            eventObj.participationStatus = "APPROVED";
-            eventObj.isParticipating = true;
-          } else if (statuses.includes("PENDING")) {
-            eventObj.participationStatus = "PENDING";
-            eventObj.isParticipating = true;
-          } else if (statuses.includes("REJECTED")) {
-            eventObj.participationStatus = "REJECTED";
-            eventObj.isParticipating = true; // Show in "My Participated" even if rejected
-          } else {
-            eventObj.participationStatus = null;
-            eventObj.isParticipating = false;
-          }
-
-          // Populate myParticipation for frontend editing
-          if (requests.length > 0) {
-            // Use the first request for contact info (assuming consistency)
-            // Find one with contact info if possible
-            const reqWithContact =
-              requests.find((r) => r.contactPerson) || requests[0];
-
-            eventObj.myParticipation = {
-              contactPerson: reqWithContact.contactPerson || "",
-              contactPhone: reqWithContact.contactPhone || "",
-              notes: reqWithContact.notes || "",
-              students: requests.map((r) => r.student),
-            };
-          }
+          const requests = schoolRequestsByEvent.get(String(event._id)) || [];
+          Object.assign(eventObj, buildSchoolParticipationPresentation(requests));
         }
 
+        Object.assign(
+          eventObj,
+          buildEventPresentationState(eventObj, {
+            participationStatus: eventObj.participationStatus,
+            studentCount: eventObj.myParticipation?.studentCount || 0,
+            schoolInvitationStatus: eventObj.schoolInvitationStatus,
+          })
+        );
+
         return eventObj;
-      })
-    );
+      });
 
     return NextResponse.json(
       { events: eventsWithParticipation },

@@ -3,6 +3,11 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import Student from "@/models/Student";
+import {
+  generatePlatformStudentId,
+  generateUniqueStudentUsername,
+} from "@/lib/studentIdentity";
+import { normalizeGradeValue } from "@/lib/schoolGrades";
 import bcrypt from "bcryptjs";
 
 export const dynamic = "force-dynamic";
@@ -22,6 +27,7 @@ export async function POST(req) {
       // Bulk Import
       const studentsToCreate = [];
       const createdCredentials = [];
+      const reservedUsernames = new Set();
 
       for (const s of body) {
         // Name Parsing
@@ -46,14 +52,24 @@ export async function POST(req) {
         const password = `${cleanFirstName}@123`;
         const hashedPassword = await bcrypt.hash(password, 10);
         
-        // Username: firstname + rollnumber
-        const username = `${cleanFirstName.toLowerCase()}${s.rollNumber}`;
+        const normalizedGrade = normalizeGradeValue(s.grade);
+        const normalizedRollNumber = String(s.rollNumber || "").trim();
+        const username = await generateUniqueStudentUsername(Student, {
+          firstName,
+          grade: normalizedGrade,
+          rollNumber: normalizedRollNumber,
+          school: session.user.id,
+          reserved: reservedUsernames,
+        });
 
         studentsToCreate.push({
           ...s,
+          platformStudentId: await generatePlatformStudentId(Student),
           firstName,
           middleName,
           lastName,
+          grade: normalizedGrade,
+          rollNumber: normalizedRollNumber,
           school: session.user.id,
           username,
           password: hashedPassword,
@@ -93,9 +109,9 @@ export async function POST(req) {
       // Single Creation
       const { name, email, grade, parentEmail, rollNumber, ...otherData } = body;
 
-      if (!name || !email || !grade || !parentEmail || !rollNumber) {
+      if (!name || !grade || !rollNumber) {
         return NextResponse.json(
-          { message: "All fields are required" },
+          { message: "Name, grade, and roll number are required" },
           { status: 400 }
         );
       }
@@ -122,18 +138,39 @@ export async function POST(req) {
       const generatedPassword = `${cleanFirstName}@123`;
       const hashedPassword = await bcrypt.hash(generatedPassword, 10);
       
-      // Username: firstname + rollnumber
-      const username = `${cleanFirstName.toLowerCase()}${rollNumber}`;
+      const normalizedGrade = normalizeGradeValue(grade);
+      const normalizedRollNumber = String(rollNumber).trim();
+      const duplicateRoll = await Student.exists({
+        school: session.user.id,
+        grade: normalizedGrade,
+        rollNumber: normalizedRollNumber,
+      });
+      if (duplicateRoll) {
+        return NextResponse.json(
+          {
+            message: `Roll number ${normalizedRollNumber} already exists in ${normalizedGrade}`,
+          },
+          { status: 409 }
+        );
+      }
+
+      const username = await generateUniqueStudentUsername(Student, {
+        firstName,
+        grade: normalizedGrade,
+        rollNumber: normalizedRollNumber,
+        school: session.user.id,
+      });
 
       const newStudent = await Student.create({
         name,
+        platformStudentId: await generatePlatformStudentId(Student),
         firstName,
         middleName,
         lastName,
-        email,
-        grade,
+        email: email || undefined,
+        grade: normalizedGrade,
         parentEmail,
-        rollNumber,
+        rollNumber: normalizedRollNumber,
         username,
         password: hashedPassword,
         visiblePassword: generatedPassword,
@@ -233,14 +270,12 @@ export async function GET(req) {
 
     const query = andConditions.length > 0 ? { $and: andConditions } : {};
 
-    console.log("DEBUG: Fetching students with query:", JSON.stringify(query));
-
     const totalStudents = await Student.countDocuments(query);
-    console.log("DEBUG: Found total students:", totalStudents);
 
     const totalPages = Math.ceil(totalStudents / limit);
 
     const students = await Student.find(query)
+      .select("-password -visiblePassword -parentAccessPin")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);

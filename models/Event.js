@@ -36,11 +36,6 @@ const EventSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-    targetGroup: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Group",
-      default: null, // null means Global
-    },
     school: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -60,14 +55,14 @@ const EventSchema = new mongoose.Schema(
       type: String,
       enum: ["SCHOOL", "PLATFORM"],
       default: function () {
-        return this.school ? "SCHOOL" : "PLATFORM";
+        return this?.school ? "SCHOOL" : "PLATFORM";
       },
     },
     ownerType: {
       type: String,
       enum: ["SCHOOL", "PLATFORM"],
       default: function () {
-        return this.school ? "SCHOOL" : "PLATFORM";
+        return this?.school ? "SCHOOL" : "PLATFORM";
       },
     },
     ownerId: {
@@ -82,7 +77,6 @@ const EventSchema = new mongoose.Schema(
         "SHOWCASE",
         "AUDITION",
         "WORKSHOP",
-        "CLUB_ACTIVITY",
         "EXHIBITION",
         "FESTIVAL",
         "OTHER",
@@ -98,6 +92,11 @@ const EventSchema = new mongoose.Schema(
       type: String,
       enum: ["DIRECT", "THROUGH_SCHOOL"],
       default: "THROUGH_SCHOOL",
+    },
+    participationFormat: {
+      type: String,
+      enum: ["INDIVIDUAL", "TEAM"],
+      default: "INDIVIDUAL",
     },
     featuredOnLanding: {
       type: Boolean,
@@ -187,6 +186,16 @@ const EventSchema = new mongoose.Schema(
       type: Number,
       default: null, // null = unlimited
     },
+    minTeamSize: {
+      type: Number,
+      default: null,
+      min: 1,
+    },
+    maxTeamSize: {
+      type: Number,
+      default: null,
+      min: 1,
+    },
     eligibleGrades: {
       type: [String], // e.g. ["Class 9", "Class 10"]
       default: [], // empty = all grades
@@ -205,6 +214,12 @@ const EventSchema = new mongoose.Schema(
         contactPhone: String,
         expectedStudents: Number,
         notes: String,
+        teamName: String,
+        captainStudent: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Student",
+          default: null,
+        },
         students: [
           {
             type: mongoose.Schema.Types.ObjectId,
@@ -222,6 +237,64 @@ const EventSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+EventSchema.pre("validate", function () {
+  if (this.eventType === "CLUB_ACTIVITY") {
+    this.eventType = "OTHER";
+  }
+
+  if (this.eventScope === "SCHOOL") {
+    if (!this.school) {
+      throw new Error("SCHOOL events must include a school reference");
+    }
+    this.ownerType = "SCHOOL";
+    this.ownerId = this.school;
+  } else {
+    this.school = null;
+    this.ownerType = "PLATFORM";
+    if (!this.ownerId) {
+      this.ownerId = this.createdBy || null;
+    }
+  }
+
+  if (this.visibility === "PUBLIC" && this.status !== "APPROVED") {
+    this.visibility = "INVITED";
+  }
+
+  if (
+    this.featuredOnLanding &&
+    (this.eventScope !== "PLATFORM" ||
+      this.visibility !== "PUBLIC" ||
+      this.status !== "APPROVED")
+  ) {
+    this.featuredOnLanding = false;
+  }
+
+  if (this.resultsPublished && this.status !== "APPROVED") {
+    this.resultsPublished = false;
+  }
+
+  if (
+    this.participationFormat === "TEAM" ||
+    this.minTeamSize ||
+    this.maxTeamSize
+  ) {
+    this.participationFormat = "TEAM";
+    this.registrationMode = "THROUGH_SCHOOL";
+
+    if (
+      this.minTeamSize &&
+      this.maxTeamSize &&
+      Number(this.minTeamSize) > Number(this.maxTeamSize)
+    ) {
+      throw new Error("Minimum team size cannot exceed maximum team size");
+    }
+  } else {
+    this.minTeamSize = null;
+    this.maxTeamSize = null;
+  }
+
+});
 
 EventSchema.index({ eventScope: 1, visibility: 1, lifecycleStatus: 1, date: 1 });
 EventSchema.index({ "partners.organizer": 1, visibility: 1, lifecycleStatus: 1 });

@@ -1,8 +1,10 @@
 import connectDB from "@/lib/db";
 import SchoolConfig from "@/models/SchoolConfig";
+import User from "@/models/User";
 import { successResponse, errorResponse } from "@/lib/apiResponse";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { buildGradeLabels } from "@/lib/schoolGrades";
 
 export async function GET(req) {
   try {
@@ -16,19 +18,24 @@ export async function GET(req) {
 
     await connectDB();
 
-    // Fetch school config with grades
-    const schoolConfig = await SchoolConfig.findOne({ school: schoolId });
+    const [school, schoolConfig] = await Promise.all([
+      User.findById(schoolId).select("schoolConfig"),
+      SchoolConfig.findOne({ school: schoolId }),
+    ]);
 
-    if (!schoolConfig) {
-      return successResponse(200, "No grades configured", {
-        grades: [],
-      });
+    const grades = buildGradeLabels(school?.schoolConfig);
+
+    if (
+      schoolConfig &&
+      JSON.stringify(schoolConfig.grades || []) !== JSON.stringify(grades)
+    ) {
+      schoolConfig.grades = grades;
+      await schoolConfig.save();
     }
 
     return successResponse(200, "Grades fetched successfully", {
-      grades: schoolConfig.grades || [],
-      teacherRoles: schoolConfig.teacherRoles || [],
-      subjects: schoolConfig.subjects || [],
+      grades,
+      teacherRoles: schoolConfig?.teacherRoles || [],
     });
   } catch (error) {
     console.error("Error fetching grades:", error);

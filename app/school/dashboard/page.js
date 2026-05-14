@@ -4,8 +4,8 @@ import { Suspense, useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import Sidebar from "@/components/Sidebar";
-import EventFeed from "./EventFeed";
 import CredentialsModal from "@/components/CredentialsModal";
 
 const StudentManager = dynamic(
@@ -80,9 +80,6 @@ const ShowcaseProfileManager = dynamic(
     ),
   }
 );
-const ClubManager = dynamic(() => import("@/components/ClubManager"), {
-  loading: () => <div className="p-4 text-slate-400">Loading clubs...</div>,
-});
 const SubmissionReviewManager = dynamic(
   () => import("@/components/SubmissionReviewManager"),
   {
@@ -91,18 +88,12 @@ const SubmissionReviewManager = dynamic(
     ),
   }
 );
-const EventResultsManager = dynamic(
-  () => import("@/components/EventResultsManager"),
-  {
-    loading: () => <div className="p-4 text-slate-400">Loading results...</div>,
-  }
-);
-
 import {
   FaCalendarCheck,
   FaSignOutAlt,
   FaBullhorn,
   FaClock,
+  FaSchool,
 } from "react-icons/fa";
 import SchoolEventWorkspace from "@/components/events/SchoolEventWorkspace";
 import NoticeManager from "@/components/NoticeManager";
@@ -116,7 +107,9 @@ function SchoolDashboardContent() {
   useEffect(() => {
     const tab = searchParams.get("tab");
     if (tab) {
-      setActiveTab(tab === "judging" ? "results" : tab);
+      setActiveTab(
+        ["judging", "events"].includes(tab) ? "platform-events" : tab
+      );
     }
   }, [searchParams]);
 
@@ -331,7 +324,7 @@ function SchoolDashboardContent() {
         <header className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold text-white tracking-tight">
-              School Talent Hub
+              Pratyo School Hub
             </h1>
             <p className="text-slate-400 mt-1">
               Run activities, mentor talent, and promote your school publicly
@@ -377,11 +370,10 @@ function SchoolDashboardContent() {
             "overview",
             "students",
             "teachers",
-            "clubs",
-            "reviews",
-            "results",
-            "communication",
-            "events"
+            "platform-events",
+            "school-events",
+            "showcase",
+            "settings",
           ].map((tab) => (
             <button
               key={tab}
@@ -393,18 +385,16 @@ function SchoolDashboardContent() {
                   : "text-slate-400 hover:text-slate-200"
               } ${isRestricted && tab !== 'settings' ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
-              {tab === "events"
-                ? "Talent Events"
+              {tab === "platform-events"
+                ? "Platform Events"
+                : tab === "school-events"
+                ? "School Events"
                 : tab === "notices"
                 ? "Notice Board"
                 : tab === "teachers"
-                ? "Mentors"
-                : tab === "clubs"
-                ? "Clubs"
+                ? "Teachers"
                 : tab === "reviews"
                 ? "Submission Review"
-                : tab === "results"
-                ? "Results"
                 : tab === "showcase"
                 ? "Public Showcase"
                 : tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -423,13 +413,37 @@ function SchoolDashboardContent() {
         {activeTab === "overview" && (
           <>
             <DashboardOverview />
-            {/* Events Section */}
             <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800 mt-8">
               <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
                 <FaCalendarCheck className="text-emerald-400" />
-                Upcoming Talent Events
+                Event Workspaces
               </h2>
-              <EventFeed />
+              <div className="grid gap-4 md:grid-cols-2">
+                <Link
+                  href="/school/dashboard?tab=platform-events"
+                  className="rounded-xl border border-slate-700 bg-slate-800/60 p-5 transition hover:border-emerald-500/50 hover:bg-slate-800"
+                >
+                  <div className="mb-3 flex items-center gap-3 text-emerald-300">
+                    <FaCalendarCheck />
+                    <span className="font-semibold">Platform Events</span>
+                  </div>
+                  <p className="text-sm text-slate-400">
+                    Review platform invitations, approve participation, and manage registered teams.
+                  </p>
+                </Link>
+                <Link
+                  href="/school/dashboard?tab=school-events"
+                  className="rounded-xl border border-slate-700 bg-slate-800/60 p-5 transition hover:border-blue-500/50 hover:bg-slate-800"
+                >
+                  <div className="mb-3 flex items-center gap-3 text-blue-300">
+                    <FaSchool />
+                    <span className="font-semibold">School Events</span>
+                  </div>
+                  <p className="text-sm text-slate-400">
+                    Create internal events, manage student registrations, rounds, results, and certificates.
+                  </p>
+                </Link>
+              </div>
             </div>
             <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800 mt-8">
               <h2 className="text-xl font-semibold text-white mb-2 flex items-center gap-2">
@@ -446,14 +460,7 @@ function SchoolDashboardContent() {
         {activeTab === "students" && <StudentManager />}
 
         {activeTab === "teachers" && <TeacherManager />}
-        {activeTab === "clubs" && <ClubManager />}
         {activeTab === "reviews" && <SubmissionReviewManager />}
-        {activeTab === "results" && (
-          <EventResultsManager
-            title="School Event Results"
-            description="Finalize placements, keep participant history, and choose whether winners appear publicly."
-          />
-        )}
         {activeTab === "showcase" && <ShowcaseProfileManager />}
         {activeTab === "support" && <SupportTicketManager />}
         {activeTab === "communication" && <ParentCommunicationManager />}
@@ -471,7 +478,10 @@ function SchoolDashboardContent() {
         )}
         {activeTab === "settings" && <SchoolSettingsManager />}
 
-        {activeTab === "events" && <SchoolEventWorkspace />}
+        {activeTab === "platform-events" && (
+          <SchoolEventWorkspace mode="platform" />
+        )}
+        {activeTab === "school-events" && <SchoolEventWorkspace mode="school" />}
 
         {activeTab === "notices" && <NoticeManager />}
             </>

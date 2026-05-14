@@ -4,22 +4,94 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import Event from "@/models/Event";
-import TalentSubmission from "@/models/TalentSubmission";
-import ParticipationRequest from "@/models/ParticipationRequest";
 import Achievement from "@/models/Achievement";
+import EventRound from "@/models/EventRound";
+import RoundParticipant from "@/models/RoundParticipant";
+import ParticipationRequest from "@/models/ParticipationRequest";
+import AuditLog from "@/models/AuditLog";
 import {
   buildCertificateCode,
   buildCertificatePath,
-  buildScorecard,
-  formatPlacementLabel,
-  getScoreTotals,
-  RESULT_PLACEMENTS,
   sanitizeScorecardCriteria,
 } from "@/lib/results";
+import { CERTIFICATE_BLOCKED_STATUSES } from "@/lib/competitionFlow";
 
 export const dynamic = "force-dynamic";
+const FINAL_STATUS_TO_PLACEMENT = {
+  WINNER: "WINNER",
+  RUNNER_UP: "RUNNER_UP",
+  FINALIST: "FINALIST",
+  SELECTED: "FINALIST",
+  PARTICIPATED: "PARTICIPANT",
+  DISQUALIFIED: "PARTICIPANT",
+};
 
-const ACTIVE_REQUEST_STATUSES = ["PENDING", "APPROVED", "ENROLLED"];
+const STATUS_PRIORITY = {
+  WINNER: 1,
+  RUNNER_UP: 2,
+  FINALIST: 3,
+  SELECTED: 4,
+  PARTICIPATED: 5,
+  DISQUALIFIED: 6,
+};
+
+function isTeamEvent(event) {
+  return String(event?.participationFormat || "INDIVIDUAL").toUpperCase() === "TEAM";
+}
+
+function getBetterStatus(current, next) {
+  const currentPriority = STATUS_PRIORITY[current] || 99;
+  const nextPriority = STATUS_PRIORITY[next] || 99;
+  return nextPriority < currentPriority ? next : current;
+}
+
+async function getTeamRosterContext(eventId) {
+  const requests = await ParticipationRequest.find({
+    event: eventId,
+    status: { $in: ["APPROVED", "ENROLLED"] },
+  })
+    .populate("student", "name grade")
+    .populate("captainStudent", "name grade")
+    .lean();
+
+  const studentTeamMap = new Map();
+  const teamMetaMap = new Map();
+
+  for (const request of requests) {
+    const schoolId = String(request.school || "");
+    const studentId = String(request.student?._id || request.student || "");
+    if (!schoolId || !studentId) continue;
+
+    const normalizedTeamName = String(request.teamName || "").trim();
+    const teamKey = `${schoolId}::${normalizedTeamName.toLowerCase() || "default-team"}`;
+
+    studentTeamMap.set(studentId, {
+      teamKey,
+      teamName: normalizedTeamName || "School Team",
+      captainStudent: request.captainStudent || null,
+    });
+
+    if (!teamMetaMap.has(teamKey)) {
+      teamMetaMap.set(teamKey, {
+        teamName: normalizedTeamName || "School Team",
+        captainStudent: request.captainStudent || null,
+        members: [],
+      });
+    }
+
+    const teamEntry = teamMetaMap.get(teamKey);
+    if (request.student) {
+      const exists = teamEntry.members.some(
+        (member) => String(member._id || member) === studentId
+      );
+      if (!exists) {
+        teamEntry.members.push(request.student);
+      }
+    }
+  }
+
+  return { studentTeamMap, teamMetaMap };
+}
 
 function canManageResults(session, event) {
   if (session.user.role === "SUPER_ADMIN") {
@@ -34,144 +106,288 @@ function canManageResults(session, event) {
 }
 
 function buildLevel(event) {
-  if (event.eventScope === "PLATFORM") return "PLATFORM";
-  if (event.targetGroup) return "INTER_SCHOOL";
-  return "SCHOOL";
+  return event.eventScope === "PLATFORM" ? "PLATFORM" : "SCHOOL";
 }
 
-function buildParticipants({ requests, submissions, achievements }) {
+function placementLabel(placement) {
+  if (placement === "RUNNER_UP") return "Runner Up";
+  return String(placement || "").replaceAll("_", " ");
+}
+
+function displayStatus(status) {
+  if (status === "RUNNER_UP") return "Runner Up";
+  if (status === "NOT_ATTEMPTED") return "Not Attempted";
+  return String(status || "").replaceAll("_", " ");
+}
+
+async function getRoundResultContext(event) {
+  const eventId = event._id || event;
+  const rounds = await EventRound.find({ event: eventId })
+    .sort({ roundNumber: 1 })
+    .lean();
+
+  if (rounds.length === 0) {
+    return {
+      hasRounds: false,
+      rounds: [],
+      finalRound: null,
+      participants: [],
+      certificateEntries: [],
+    };
+  }
+
+  const finalRound =
+    rounds.find((round) => round.isFinal) || rounds[rounds.length - 1] || null;
+
+  const participants = await RoundParticipant.find({ event: eventId })
+    .populate("student", "name grade")
+    .populate("school", "schoolName")
+    .sort({ roundNumber: 1, createdAt: 1 })
+    .lean();
+
+  const roundMap = new Map(rounds.map((round) => [String(round._id), round]));
   const participantMap = new Map();
+  const teamEvent = isTeamEvent(event);
+  const { studentTeamMap, teamMetaMap } = teamEvent
+    ? await getTeamRosterContext(eventId)
+    : { studentTeamMap: new Map(), teamMetaMap: new Map() };
 
-  for (const request of requests) {
-    const studentId = String(request.student?._id || request.student || "");
+  for (const participant of participants) {
+    const studentId = String(participant.student?._id || participant.student || "");
     if (!studentId) continue;
+    const teamInfo = studentTeamMap.get(studentId);
+    const participantKey = teamEvent
+      ? teamInfo?.teamKey ||
+        `${String(participant.school?._id || participant.school || "")}::default-team`
+      : studentId;
 
-    const existing = participantMap.get(studentId);
-    const next = existing || {
-      studentId,
-      student: request.student || null,
-      school: request.school || null,
-      participationStatus: request.status,
-      submissionTitles: [],
-      submissionIds: [],
-      submissionCount: 0,
-      currentPlacement: "",
-      resultNote: "",
-      scorecard: [],
-      totalScore: 0,
-      scorePercentage: 0,
-      certificateUrl: "",
-      certificateCode: "",
-      isPublicResult: false,
-    };
-
-    next.student = next.student || request.student || null;
-    next.school = next.school || request.school || null;
-    next.participationStatus = request.status;
-    participantMap.set(studentId, next);
-  }
-
-  for (const submission of submissions) {
-    const studentId = String(submission.student?._id || submission.student || "");
-    if (!studentId) continue;
-
-    const existing = participantMap.get(studentId) || {
-      studentId,
-      student: submission.student || null,
-      school: submission.school || null,
-      participationStatus: "SUBMITTED",
-      submissionTitles: [],
-      submissionIds: [],
-      submissionCount: 0,
-      currentPlacement: "",
-      resultNote: "",
-      scorecard: [],
-      totalScore: 0,
-      scorePercentage: 0,
-      certificateUrl: "",
-      certificateCode: "",
-      isPublicResult: false,
-    };
-
-    existing.student = existing.student || submission.student || null;
-    existing.school = existing.school || submission.school || null;
-
-    if (!existing.submissionIds.includes(String(submission._id))) {
-      existing.submissionIds.push(String(submission._id));
+    if (!participantMap.has(participantKey)) {
+      participantMap.set(participantKey, {
+        studentId: teamEvent ? "" : studentId,
+        teamKey: teamEvent ? participantKey : "",
+        teamName: teamEvent ? teamInfo?.teamName || "School Team" : "",
+        captainStudent: teamEvent ? teamInfo?.captainStudent || null : null,
+        members: teamEvent ? [...(teamMetaMap.get(participantKey)?.members || [])] : [],
+        student: teamEvent ? null : participant.student || null,
+        school: participant.school || null,
+        highestRoundReached: 0,
+        latestStatus: "",
+        finalStatus: "",
+        history: [],
+        latestRoundNumber: 0,
+      });
     }
 
-    if (
-      submission.title &&
-      !existing.submissionTitles.includes(submission.title)
-    ) {
-      existing.submissionTitles.push(submission.title);
-    }
-
-    existing.submissionCount = existing.submissionIds.length;
-
-    if (submission.resultPlacement) {
-      existing.currentPlacement = submission.resultPlacement;
-    }
-    if (submission.resultNote) {
-      existing.resultNote = submission.resultNote;
-    }
-    if (Array.isArray(submission.scorecard) && submission.scorecard.length > 0) {
-      existing.scorecard = submission.scorecard;
-      existing.totalScore = Number(submission.totalScore || 0);
-      existing.scorePercentage = Number(submission.scorePercentage || 0);
-    }
-    if (submission.certificateUrl) {
-      existing.certificateUrl = submission.certificateUrl;
-    }
-
-    participantMap.set(studentId, existing);
-  }
-
-  for (const achievement of achievements) {
-    const studentId = String(achievement.student?._id || achievement.student || "");
-    if (!studentId) continue;
-
-    const existing = participantMap.get(studentId) || {
-      studentId,
-      student: achievement.student || null,
-      school: achievement.school || null,
-      participationStatus: "RESULT_ONLY",
-      submissionTitles: [],
-      submissionIds: [],
-      submissionCount: 0,
-      currentPlacement: "",
-      resultNote: "",
-      scorecard: [],
-      totalScore: 0,
-      scorePercentage: 0,
-      certificateUrl: "",
-      certificateCode: "",
-      isPublicResult: false,
-    };
-
-    existing.currentPlacement = achievement.placement || "";
-    existing.resultNote = achievement.description || "";
-    existing.isPublicResult = Boolean(achievement.isPublic);
-    existing.certificateUrl = achievement.certificateUrl || existing.certificateUrl;
-    existing.certificateCode =
-      achievement.certificateCode || existing.certificateCode;
-    if (Array.isArray(achievement.scorecard) && achievement.scorecard.length > 0) {
-      existing.scorecard = achievement.scorecard;
-      existing.totalScore = Number(achievement.totalScore || 0);
-      existing.scorePercentage = Number(achievement.scorePercentage || 0);
-    }
-    participantMap.set(studentId, existing);
-  }
-
-  return Array.from(participantMap.values()).sort((a, b) => {
-    if ((b.totalScore || 0) !== (a.totalScore || 0)) {
-      return (b.totalScore || 0) - (a.totalScore || 0);
-    }
-
-    return String(a.student?.name || "").localeCompare(
-      String(b.student?.name || "")
+    const entry = participantMap.get(participantKey);
+    const round = roundMap.get(String(participant.round)) || null;
+    entry.student = entry.student || (teamEvent ? null : participant.student || null);
+    entry.school = entry.school || participant.school || null;
+    entry.highestRoundReached = Math.max(
+      entry.highestRoundReached,
+      Number(participant.roundNumber || 0)
     );
+    entry.latestRoundNumber = Math.max(
+      entry.latestRoundNumber,
+      Number(participant.roundNumber || 0)
+    );
+    entry.latestStatus = entry.latestStatus
+      ? getBetterStatus(entry.latestStatus, participant.status)
+      : participant.status;
+
+    if (String(participant.round) === String(finalRound?._id)) {
+      entry.finalStatus = entry.finalStatus
+        ? getBetterStatus(entry.finalStatus, participant.status)
+        : participant.status;
+    }
+
+    entry.history.push({
+      roundId: String(participant.round),
+      roundNumber: participant.roundNumber,
+      roundTitle: round?.title || `Round ${participant.roundNumber}`,
+      isFinal: Boolean(round?.isFinal),
+      status: participant.status,
+      advancedToRoundNumber: participant.advancedToRoundNumber || null,
+    });
+  }
+
+  const certificateEntries = Array.from(participantMap.values())
+    .filter((entry) => !CERTIFICATE_BLOCKED_STATUSES.includes(entry.latestStatus))
+    .map((entry) => {
+      const status = entry.finalStatus || entry.latestStatus || "PARTICIPATED";
+      const normalizedStatus =
+        finalRound && entry.highestRoundReached === finalRound.roundNumber
+          ? status
+          : status === "DISQUALIFIED"
+          ? "DISQUALIFIED"
+          : "PARTICIPATED";
+
+      return {
+        ...entry,
+        finalStatus: normalizedStatus,
+        placement:
+          FINAL_STATUS_TO_PLACEMENT[normalizedStatus] || "PARTICIPANT",
+      };
+    })
+    .sort((a, b) => {
+      const statusDelta =
+        (STATUS_PRIORITY[a.finalStatus] || 99) - (STATUS_PRIORITY[b.finalStatus] || 99);
+      if (statusDelta !== 0) return statusDelta;
+      if (b.highestRoundReached !== a.highestRoundReached) {
+        return b.highestRoundReached - a.highestRoundReached;
+      }
+      return String(a.teamName || a.student?.name || "").localeCompare(
+        String(b.teamName || b.student?.name || "")
+      );
+    });
+
+  return {
+    hasRounds: true,
+    rounds,
+    finalRound,
+    participants: Array.from(participantMap.values()),
+    certificateEntries,
+  };
+}
+
+function mergeAchievements(entries, achievements) {
+  const achievementMap = new Map(
+    achievements.map((achievement) => [
+      achievement.recipientType === "TEAM"
+        ? `TEAM::${String(achievement.school?._id || achievement.school)}::${String(
+            achievement.teamName || ""
+          )
+            .trim()
+            .toLowerCase()}`
+        : `STUDENT::${String(achievement.student)}`,
+      achievement,
+    ])
+  );
+
+  return entries.map((entry) => {
+    const achievement = achievementMap.get(
+      entry.teamName
+        ? `TEAM::${String(entry.school?._id || entry.school)}::${String(entry.teamName || "")
+            .trim()
+            .toLowerCase()}`
+        : `STUDENT::${entry.studentId}`
+    );
+    return {
+      ...entry,
+      currentPlacement: achievement?.placement || entry.placement || "PARTICIPANT",
+      certificateUrl: achievement?.certificateUrl || "",
+      certificateCode: achievement?.certificateCode || "",
+      certificateRecipientName:
+        achievement?.certificateRecipientName ||
+        entry.teamName ||
+        entry.student?.name ||
+        "Student",
+      isPublicResult: Boolean(achievement?.isPublic),
+      resultId: achievement?._id || null,
+      certificateIssuedAt: achievement?.certificateIssuedAt || null,
+    };
   });
+}
+
+async function ensureTeamMemberAchievements({ event, achievements }) {
+  if (!isTeamEvent(event) || !Array.isArray(achievements) || achievements.length === 0) {
+    return false;
+  }
+
+  const teamAchievements = achievements.filter(
+    (achievement) =>
+      String(achievement.recipientType || "STUDENT").toUpperCase() === "TEAM"
+  );
+
+  if (teamAchievements.length === 0) {
+    return false;
+  }
+
+  const { teamMetaMap } = await getTeamRosterContext(event._id || event);
+  const existingMemberKeys = new Set(
+    achievements
+      .filter(
+        (achievement) =>
+          String(achievement.recipientType || "STUDENT").toUpperCase() !== "TEAM"
+      )
+      .map((achievement) => {
+        const parentId = String(
+          achievement.parentAchievement?._id || achievement.parentAchievement || ""
+        );
+        const studentId = String(achievement.student?._id || achievement.student || "");
+        return `${parentId}::${studentId}`;
+      })
+  );
+
+  const missingAchievements = [];
+  const now = new Date();
+
+  for (const teamAchievement of teamAchievements) {
+    const teamKey = `${String(
+      teamAchievement.school?._id || teamAchievement.school || ""
+    )}::${String(teamAchievement.teamName || "")
+      .trim()
+      .toLowerCase() || "default-team"}`;
+    const teamMeta = teamMetaMap.get(teamKey);
+    const roster = Array.isArray(teamMeta?.members) ? teamMeta.members : [];
+
+    for (const member of roster) {
+      const studentId = String(member?._id || member || "");
+      if (!studentId) continue;
+
+      const memberKey = `${String(teamAchievement._id)}::${studentId}`;
+      if (existingMemberKeys.has(memberKey)) continue;
+
+      const memberAchievementId = new mongoose.Types.ObjectId();
+      missingAchievements.push({
+        _id: memberAchievementId,
+        school: teamAchievement.school?._id || teamAchievement.school || null,
+        student: member._id || member,
+        recipientType: "STUDENT",
+        teamName: teamAchievement.teamName || "",
+        captainStudent:
+          teamAchievement.captainStudent?._id ||
+          teamAchievement.captainStudent ||
+          teamMeta?.captainStudent?._id ||
+          teamMeta?.captainStudent ||
+          null,
+        parentAchievement: teamAchievement._id,
+        event: event._id,
+        submission: null,
+        title: `${placementLabel(teamAchievement.placement)} - ${member?.name || "Student"}`,
+        description:
+          teamAchievement.placement === "PARTICIPANT"
+            ? `${member?.name || "Student"} participated in ${event.title} as part of ${
+                teamAchievement.teamName || "School Team"
+              }.`
+            : `${member?.name || "Student"} achieved ${placementLabel(
+                teamAchievement.placement
+              ).toLowerCase()} in ${event.title} as part of ${
+                teamAchievement.teamName || "School Team"
+              }.`,
+        level: teamAchievement.level || buildLevel(event),
+        placement: teamAchievement.placement || "PARTICIPANT",
+        finalStatus: teamAchievement.finalStatus || "PARTICIPATED",
+        highestRoundReached: teamAchievement.highestRoundReached || 0,
+        certificateRecipientName: member?.name || "Student",
+        certificateCode: buildCertificateCode(memberAchievementId, now),
+        certificateIssuedAt: teamAchievement.certificateIssuedAt || null,
+        schoolSharedAt: teamAchievement.schoolSharedAt || null,
+        certificateUrl: teamAchievement.certificateIssuedAt
+          ? buildCertificatePath(memberAchievementId)
+          : "",
+        isPublic: Boolean(teamAchievement.isPublic),
+        awardedAt: teamAchievement.awardedAt || now,
+      });
+      existingMemberKeys.add(memberKey);
+    }
+  }
+
+  if (missingAchievements.length === 0) {
+    return false;
+  }
+
+  await Achievement.insertMany(missingAchievements);
+  return true;
 }
 
 export async function GET(req, props) {
@@ -189,7 +405,6 @@ export async function GET(req, props) {
 
     const event = await Event.findById(params.id)
       .populate("school", "schoolName")
-      .populate("targetGroup", "name")
       .lean();
 
     if (!event) {
@@ -206,35 +421,25 @@ export async function GET(req, props) {
       );
     }
 
-    const [requests, submissions, achievements] = await Promise.all([
-      ParticipationRequest.find({
-        event: params.id,
-        status: { $in: ACTIVE_REQUEST_STATUSES },
-      })
-        .populate("student", "name grade")
-        .populate("school", "schoolName")
-        .sort({ createdAt: 1 })
-        .lean(),
-      TalentSubmission.find({
-        event: params.id,
-        status: { $in: ["SUBMITTED", "SHORTLISTED", "PUBLISHED"] },
-      })
-        .populate("student", "name grade")
-        .populate("school", "schoolName")
-        .sort({ updatedAt: -1 })
-        .lean(),
-      Achievement.find({ event: params.id })
-        .populate("student", "name grade")
-        .populate("school", "schoolName")
-        .sort({ awardedAt: -1 })
-        .lean(),
+    const [initialAchievements, roundContext] = await Promise.all([
+      Achievement.find({ event: params.id }).lean(),
+      getRoundResultContext(event),
     ]);
+    const insertedMissingMembers = await ensureTeamMemberAchievements({
+      event,
+      achievements: initialAchievements,
+    });
+    const achievements = await Achievement.find({ event: params.id })
+      .populate("parentAchievement", "certificateRecipientName teamName recipientType")
+      .populate("student", "name grade")
+      .populate("captainStudent", "name grade")
+      .populate("school", "schoolName")
+      .sort({ awardedAt: -1 })
+      .lean();
 
-    const participants = buildParticipants({ requests, submissions, achievements });
-    const publishPublicly =
-      Boolean(event.publicResultsEnabled) ||
-      (Boolean(event.resultsPublished) &&
-        achievements.some((achievement) => achievement.isPublic));
+    const participants = roundContext.hasRounds
+      ? mergeAchievements(roundContext.certificateEntries, achievements)
+      : [];
 
     return NextResponse.json(
       {
@@ -245,17 +450,21 @@ export async function GET(req, props) {
             title: event.title,
             date: event.date,
             eventType: event.eventType,
+            participationFormat: event.participationFormat || "INDIVIDUAL",
             eventScope: event.eventScope,
             visibility: event.visibility,
             lifecycleStatus: event.lifecycleStatus,
             resultsPublished: Boolean(event.resultsPublished),
             school: event.school || null,
-            targetGroup: event.targetGroup || null,
           },
-          publishPublicly,
+          publishPublicly: Boolean(event.publicResultsEnabled),
           scorecardCriteria: event.scorecardCriteria || [],
           participants,
-          results: achievements,
+          resultSource: roundContext.hasRounds ? "ROUND_HISTORY" : "ROUND_HISTORY",
+          finalRound: roundContext.finalRound,
+          rounds: roundContext.rounds,
+          results: roundContext.hasRounds ? achievements : [],
+          backfilledMemberCertificates: insertedMissingMembers,
         },
       },
       { status: 200 }
@@ -263,7 +472,13 @@ export async function GET(req, props) {
   } catch (error) {
     console.error("Results GET error:", error);
     return NextResponse.json(
-      { success: false, message: "Failed to load event results" },
+      {
+        success: false,
+        message:
+          process.env.NODE_ENV === "development"
+            ? error?.message || "Failed to load event results"
+            : "Failed to load event results",
+      },
       { status: 500 }
     );
   }
@@ -297,186 +512,220 @@ async function upsertResults(req, props) {
       );
     }
 
-    const body = await req.json();
-    const rawPlacements = Array.isArray(body.placements) ? body.placements : [];
+    const body = await req.json().catch(() => ({}));
     const publishPublicly = Boolean(body.publishPublicly);
     const resultsPublished = Boolean(body.resultsPublished);
+    const correctionReason = String(body.correctionReason || "").trim();
     const scorecardCriteria = sanitizeScorecardCriteria(
       body.scorecardCriteria ?? event.scorecardCriteria
     );
     const now = new Date();
 
-    const [requests, submissions, existingAchievements] = await Promise.all([
-      ParticipationRequest.find({
-        event: params.id,
-        status: { $in: ACTIVE_REQUEST_STATUSES },
-      })
-        .populate("student", "name")
-        .lean(),
-      TalentSubmission.find({ event: params.id })
-        .populate("student", "name")
-        .lean(),
-      Achievement.find({ event: params.id })
-        .select("_id student certificateCode")
-        .lean(),
-    ]);
-
-    const participantMeta = new Map();
-
-    for (const request of requests) {
-      const studentId = String(request.student?._id || request.student || "");
-      if (!studentId) continue;
-      participantMeta.set(studentId, {
-        school: request.school,
-        studentName: request.student?.name || "Student",
-        submissionIds: [],
-      });
+    if (event.resultsPublished && resultsPublished && !correctionReason) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Results are already published. Please provide a correction reason before republishing.",
+        },
+        { status: 400 }
+      );
     }
 
-    for (const submission of submissions) {
-      const studentId = String(submission.student?._id || submission.student || "");
-      if (!studentId) continue;
+    const [existingAchievements, roundContext] = await Promise.all([
+      Achievement.find({ event: params.id })
+        .select("_id student school teamName captainStudent certificateCode certificateRecipientName recipientType parentAchievement")
+        .lean(),
+      getRoundResultContext(event),
+    ]);
 
-      const existing = participantMeta.get(studentId) || {
-        school: submission.school,
-        studentName: submission.student?.name || "Student",
-        submissionIds: [],
-      };
+    const previousAuditState = {
+      resultsPublished: Boolean(event.resultsPublished),
+      publicResultsEnabled: Boolean(event.publicResultsEnabled),
+      scorecardCriteria: event.scorecardCriteria || [],
+      achievementCount: existingAchievements.length,
+    };
 
-      existing.school = existing.school || submission.school;
-      existing.studentName =
-        existing.studentName || submission.student?.name || "Student";
-      existing.submissionIds.push(submission._id);
-      participantMeta.set(studentId, existing);
+    let entries = [];
+
+    if (roundContext.hasRounds) {
+      entries = roundContext.certificateEntries.map((entry) => ({
+        studentId: entry.studentId,
+        teamKey: entry.teamKey || "",
+        teamName: entry.teamName || "",
+        captainStudent: entry.captainStudent?._id || entry.captainStudent || null,
+        members: Array.isArray(entry.members) ? entry.members : [],
+        school: entry.school?._id || entry.school,
+        studentName: entry.student?.name || "Student",
+        teamDisplayName: entry.teamName || "School Team",
+        placement: entry.placement,
+        finalStatus: entry.finalStatus,
+        highestRoundReached: entry.highestRoundReached,
+      }));
     }
 
     const existingAchievementMap = new Map(
       existingAchievements.map((achievement) => [
-        String(achievement.student),
+        achievement.recipientType === "TEAM"
+          ? `TEAM::${String(achievement.school)}::${String(achievement.teamName || "")
+              .trim()
+              .toLowerCase()}`
+          : `STUDENT::${String(achievement.student)}`,
         achievement,
       ])
     );
 
-    const normalizedEntries = [];
-    const seenStudentIds = new Set();
+    const nextAchievements = [];
 
-    for (const entry of rawPlacements) {
-      const studentId = String(entry?.studentId || "");
-      if (!studentId || seenStudentIds.has(studentId)) continue;
-      seenStudentIds.add(studentId);
+    for (const entry of entries) {
+      if (entry.teamName) {
+        const teamKey = `TEAM::${String(entry.school)}::${String(entry.teamName || "")
+          .trim()
+          .toLowerCase()}`;
+        const existingTeamAchievement = existingAchievementMap.get(teamKey);
+        const teamAchievementId =
+          existingTeamAchievement?._id || new mongoose.Types.ObjectId();
+        const teamCertificateCode =
+          existingTeamAchievement?.certificateCode ||
+          buildCertificateCode(teamAchievementId, now);
+        const teamCertificateIssuedAt = resultsPublished ? now : null;
 
-      const placement = RESULT_PLACEMENTS.includes(entry?.placement)
-        ? entry.placement
-        : "NONE";
-      const scorecard = buildScorecard(scorecardCriteria, entry?.scores);
-      const { totalScore, scorePercentage } = getScoreTotals(scorecard);
+        nextAchievements.push({
+          _id: teamAchievementId,
+          school: entry.school,
+          student: null,
+          recipientType: "TEAM",
+          teamName: entry.teamName || "",
+          captainStudent: entry.captainStudent || null,
+          parentAchievement: null,
+          event: event._id,
+          submission: null,
+          title: `${placementLabel(entry.placement)} - ${entry.teamName || event.title}`,
+          description:
+            entry.placement === "PARTICIPANT"
+              ? `${entry.teamName || entry.teamDisplayName} participated in ${event.title}.`
+              : `${entry.teamName || entry.teamDisplayName} achieved ${placementLabel(entry.placement).toLowerCase()} in ${event.title}.`,
+          level: buildLevel(event),
+          placement: entry.placement,
+          finalStatus: entry.finalStatus,
+          highestRoundReached: entry.highestRoundReached,
+          certificateRecipientName:
+            existingTeamAchievement?.certificateRecipientName ||
+            entry.teamName ||
+            entry.teamDisplayName,
+          certificateCode: teamCertificateCode,
+          certificateIssuedAt: teamCertificateIssuedAt,
+          schoolSharedAt: resultsPublished ? now : null,
+          certificateUrl: resultsPublished ? buildCertificatePath(teamAchievementId) : "",
+          isPublic: resultsPublished && publishPublicly,
+          awardedAt: now,
+        });
 
-      normalizedEntries.push({
-        studentId,
-        placement,
-        note: String(entry?.note || "").trim(),
-        scorecard,
-        totalScore,
-        scorePercentage,
-      });
-    }
+        const teamRoster = Array.isArray(entry.members) ? entry.members : [];
+        for (const member of teamRoster) {
+          const memberId = String(member?._id || member || "");
+          if (!memberId) continue;
 
-    const nextAchievements = normalizedEntries
-      .filter(
-        (entry) =>
-          entry.placement !== "NONE" && participantMeta.get(entry.studentId)?.school
-      )
-      .map((entry) => {
-        const meta = participantMeta.get(entry.studentId);
-        const existingAchievement = existingAchievementMap.get(entry.studentId);
+          const existingMemberAchievement = existingAchievementMap.get(
+            `STUDENT::${memberId}`
+          );
+          const memberAchievementId =
+            existingMemberAchievement?._id || new mongoose.Types.ObjectId();
+          const memberCertificateCode =
+            existingMemberAchievement?.certificateCode ||
+            buildCertificateCode(memberAchievementId, now);
+          const memberCertificateIssuedAt = resultsPublished ? now : null;
+
+          nextAchievements.push({
+            _id: memberAchievementId,
+            school: entry.school,
+            student: member._id || member,
+            recipientType: "STUDENT",
+            teamName: entry.teamName || "",
+            captainStudent: entry.captainStudent || null,
+            parentAchievement: teamAchievementId,
+            event: event._id,
+            submission: null,
+            title: `${placementLabel(entry.placement)} - ${member.name || "Student"}`,
+            description:
+              entry.placement === "PARTICIPANT"
+                ? `${member.name || "Student"} participated in ${event.title} as part of ${entry.teamName || entry.teamDisplayName}.`
+                : `${member.name || "Student"} achieved ${placementLabel(entry.placement).toLowerCase()} in ${event.title} as part of ${entry.teamName || entry.teamDisplayName}.`,
+            level: buildLevel(event),
+            placement: entry.placement,
+            finalStatus: entry.finalStatus,
+            highestRoundReached: entry.highestRoundReached,
+            certificateRecipientName:
+              existingMemberAchievement?.certificateRecipientName ||
+              member.name ||
+              "Student",
+            certificateCode: memberCertificateCode,
+            certificateIssuedAt: memberCertificateIssuedAt,
+            schoolSharedAt: resultsPublished ? now : null,
+            certificateUrl: resultsPublished
+              ? buildCertificatePath(memberAchievementId)
+              : "",
+            isPublic: resultsPublished && publishPublicly,
+            awardedAt: now,
+          });
+        }
+      } else {
+        const existingAchievement = existingAchievementMap.get(
+          `STUDENT::${entry.studentId}`
+        );
         const achievementId =
           existingAchievement?._id || new mongoose.Types.ObjectId();
         const certificateCode =
           existingAchievement?.certificateCode ||
           buildCertificateCode(achievementId, now);
-        const certificateUrl = resultsPublished
-          ? buildCertificatePath(achievementId)
-          : "";
+        const certificateIssuedAt = resultsPublished ? now : null;
 
-        return {
+        nextAchievements.push({
           _id: achievementId,
-          school: meta.school,
+          school: entry.school,
           student: entry.studentId,
+          recipientType: "STUDENT",
+          teamName: "",
+          captainStudent: null,
+          parentAchievement: null,
           event: event._id,
-          submission: meta.submissionIds?.[0] || null,
-          title: `${formatPlacementLabel(entry.placement)} - ${event.title}`,
+          submission: null,
+          title: `${placementLabel(entry.placement)} - ${entry.studentName || event.title}`,
           description:
-            entry.note ||
-            `${meta.studentName} earned ${formatPlacementLabel(
-              entry.placement
-            ).toLowerCase()} in ${event.title}.`,
+            entry.placement === "PARTICIPANT"
+              ? `${entry.studentName} participated in ${event.title}.`
+              : `${entry.studentName} achieved ${placementLabel(entry.placement).toLowerCase()} in ${event.title}.`,
           level: buildLevel(event),
           placement: entry.placement,
-          scorecard: entry.scorecard,
-          totalScore: entry.totalScore,
-          scorePercentage: entry.scorePercentage,
+          finalStatus: entry.finalStatus,
+          highestRoundReached: entry.highestRoundReached,
+          certificateRecipientName:
+            existingAchievement?.certificateRecipientName ||
+            entry.studentName,
           certificateCode,
-          certificateIssuedAt: resultsPublished ? now : null,
-          certificateUrl,
+          certificateIssuedAt,
+          schoolSharedAt: resultsPublished ? now : null,
+          certificateUrl: resultsPublished ? buildCertificatePath(achievementId) : "",
           isPublic: resultsPublished && publishPublicly,
           awardedAt: now,
-        };
-      });
+        });
+      }
+    }
 
     await Achievement.deleteMany({ event: event._id });
     if (nextAchievements.length > 0) {
       await Achievement.insertMany(nextAchievements);
     }
 
-    const achievementMap = new Map(
-      nextAchievements.map((achievement) => [String(achievement.student), achievement])
-    );
-
-    await TalentSubmission.updateMany(
-      { event: params.id },
-      {
-        $set: {
-          resultPlacement: "",
-          resultNote: "",
-          scorecard: [],
-          totalScore: 0,
-          scorePercentage: 0,
-          scorecardReviewedAt: null,
-          resultPublishedAt: resultsPublished ? now : null,
-          certificateUrl: "",
-        },
-      }
-    );
-
-    const submissionWrites = normalizedEntries
-      .map((entry) => {
-        const meta = participantMeta.get(entry.studentId);
-        if (!meta?.submissionIds?.length) return null;
-
-        const linkedAchievement = achievementMap.get(entry.studentId);
-
-        return {
-          updateMany: {
-            filter: { _id: { $in: meta.submissionIds } },
-            update: {
-              $set: {
-                resultPlacement: entry.placement === "NONE" ? "" : entry.placement,
-                resultNote: entry.note || "",
-                scorecard: entry.scorecard,
-                totalScore: entry.totalScore,
-                scorePercentage: entry.scorePercentage,
-                scorecardReviewedAt: now,
-                resultPublishedAt: resultsPublished ? now : null,
-                certificateUrl: linkedAchievement?.certificateUrl || "",
-              },
-            },
+    if (resultsPublished) {
+      await EventRound.updateMany(
+        { event: params.id },
+        {
+          $set: {
+            status: "COMPLETED",
           },
-        };
-      })
-      .filter(Boolean);
-
-    if (submissionWrites.length > 0) {
-      await TalentSubmission.bulkWrite(submissionWrites);
+        }
+      );
     }
 
     event.scorecardCriteria = scorecardCriteria;
@@ -486,6 +735,28 @@ async function upsertResults(req, props) {
       event.lifecycleStatus = "COMPLETED";
     }
     await event.save();
+
+    if (resultsPublished) {
+      await AuditLog.create({
+        entityType: "Event",
+        entityId: event._id,
+        action: previousAuditState.resultsPublished
+          ? "RESULTS_REPUBLISHED"
+          : "RESULTS_PUBLISHED",
+        performedBy: session.user.id,
+        role: session.user.role,
+        reason: previousAuditState.resultsPublished
+          ? correctionReason
+          : "Competition closed and final results published",
+        before: previousAuditState,
+        after: {
+          resultsPublished: event.resultsPublished,
+          publicResultsEnabled: event.publicResultsEnabled,
+          scorecardCriteria,
+          achievementCount: nextAchievements.length,
+        },
+      });
+    }
 
     return NextResponse.json(
       {
@@ -502,7 +773,13 @@ async function upsertResults(req, props) {
   } catch (error) {
     console.error("Results save error:", error);
     return NextResponse.json(
-      { success: false, message: "Failed to save event results" },
+      {
+        success: false,
+        message:
+          process.env.NODE_ENV === "development"
+            ? error?.message || "Failed to save event results"
+            : "Failed to save event results",
+      },
       { status: 500 }
     );
   }

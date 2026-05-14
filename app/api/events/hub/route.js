@@ -6,6 +6,8 @@ import Event from "@/models/Event";
 import EventSchoolInvitation from "@/models/EventSchoolInvitation";
 import Student from "@/models/Student";
 import User from "@/models/User";
+import ParticipationRequest from "@/models/ParticipationRequest";
+import { getEquivalentGradeValues } from "@/lib/schoolGrades";
 
 /**
  * GET /api/events/hub
@@ -66,8 +68,15 @@ export async function GET(req) {
             status: "APPROVED",
           }).distinct("event")
         : [];
+      const eligibleGradeValues = getEquivalentGradeValues(student.grade);
+
+      const requestedEventIds = await ParticipationRequest.find({
+        student: student._id,
+      }).distinct("event");
 
       // Find eligible events. Platform/partner events need school approval first.
+      // Direct discovery is controlled by registrationMode; already registered
+      // events stay visible even when the school registered the student.
       const baseQuery = {
         ...searchQuery,
         status: "APPROVED",
@@ -76,13 +85,19 @@ export async function GET(req) {
           {
             $or: [
               { eligibleGrades: { $size: 0 } }, // No grade restrictions
-              { eligibleGrades: student.grade },
+              { eligibleGrades: { $in: eligibleGradeValues } },
             ],
           },
           {
             $or: [
-              { eventScope: "SCHOOL", school: student.school },
+              { _id: { $in: requestedEventIds } },
               {
+                registrationMode: "DIRECT",
+                eventScope: "SCHOOL",
+                school: student.school,
+              },
+              {
+                registrationMode: "DIRECT",
                 eventScope: "PLATFORM",
                 _id: { $in: approvedPlatformEventIds },
               },
@@ -100,13 +115,29 @@ export async function GET(req) {
 
       const total = await Event.countDocuments(baseQuery);
 
+      const requests = await ParticipationRequest.find({
+        student: student._id,
+        event: { $in: events.map((event) => event._id) },
+      }).lean();
+      const requestMap = new Map(
+        requests.map((request) => [String(request.event), request])
+      );
+
       response = {
-        events: events.map((event) => ({
-          ...event,
-          status: getEventStatus(event),
-          capacityInfo: getCapacityInfo(event),
-          eligible: true,
-        })),
+        events: events.map((event) => {
+          const request = requestMap.get(String(event._id));
+          return {
+            ...event,
+            status: getEventStatus(event),
+            userStatus: request?.status || null,
+            participationStatus: request?.status || null,
+            isParticipating: Boolean(request),
+            deadline: event.registrationDeadline,
+            capacity: event.maxParticipants,
+            capacityInfo: getCapacityInfo(event),
+            eligible: true,
+          };
+        }),
         pagination: {
           current: page,
           total: Math.ceil(total / limit),
@@ -191,6 +222,7 @@ export async function GET(req) {
  */
 function getEventStatus(event) {
   const now = new Date();
+  const filled = getStudentEnrollmentCount(event);
 
   if (event.date < now) {
     return "ENDED";
@@ -202,14 +234,14 @@ function getEventStatus(event) {
 
   if (
     event.maxParticipants &&
-    event.participants.length >= event.maxParticipants
+    filled >= event.maxParticipants
   ) {
     return "FULL";
   }
 
   if (
     event.maxParticipants &&
-    event.participants.length > event.maxParticipants * 0.8
+    filled > event.maxParticipants * 0.8
   ) {
     return "FILLING";
   }
@@ -221,17 +253,18 @@ function getEventStatus(event) {
  * Calculate capacity info for display
  */
 function getCapacityInfo(event) {
+  const filled = getStudentEnrollmentCount(event);
+
   if (!event.maxParticipants) {
     return {
       unlimited: true,
       total: null,
-      filled: event.participants.length,
+      filled,
       available: null,
       percentage: 0,
     };
   }
 
-  const filled = event.participants.length;
   const total = event.maxParticipants;
   const available = Math.max(0, total - filled);
   const percentage = Math.round((filled / total) * 100);
@@ -243,4 +276,11 @@ function getCapacityInfo(event) {
     available,
     percentage,
   };
+}
+
+function getStudentEnrollmentCount(event) {
+  return (event.participants || []).reduce(
+    (total, participant) => total + (participant.students?.length || 0),
+    0
+  );
 }

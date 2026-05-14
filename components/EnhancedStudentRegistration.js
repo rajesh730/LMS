@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Download, List, Edit, Trash2, Search, RefreshCw } from "lucide-react";
 import CSVUploader from "./CSVUploader";
 
@@ -39,37 +39,28 @@ const EnhancedStudentRegistration = ({ schoolId, onSuccess }) => {
   useEffect(() => {
     const fetchGrades = async () => {
       if (!schoolId) {
-        console.log("No schoolId provided to EnhancedStudentRegistration");
         return;
       }
-      console.log("Fetching grades for schoolId:", schoolId);
       try {
         const response = await fetch(`/api/schools/${schoolId}/config`);
-        console.log("Grade fetch response status:", response.status);
-        
+
         if (!response.ok) {
-            const errorText = await response.text();
-            console.error("Grade fetch failed:", errorText);
-            return;
+          return;
         }
 
         const data = await response.json();
-        console.log("Grade data received:", data);
 
         if (data.data?.grades) {
           setGrades(data.data.grades);
-        } else {
-            console.warn("No grades found in data:", data);
         }
-
       } catch (err) {
-        console.error("Failed to fetch grades:", err);
+        setGrades([]);
       }
     };
     fetchGrades();
   }, [schoolId]);
 
-  const fetchStudents = async () => {
+  const fetchStudents = useCallback(async () => {
     setLoading(true);
     try {
       const response = await fetch(`/api/students?limit=100&search=${searchTerm}`);
@@ -84,13 +75,13 @@ const EnhancedStudentRegistration = ({ schoolId, onSuccess }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [searchTerm]);
 
   useEffect(() => {
     if (activeTab === 'list') {
       fetchStudents();
     }
-  }, [activeTab, searchTerm]);
+  }, [activeTab, fetchStudents]);
 
   const handleEdit = (student) => {
     setEditingId(student._id);
@@ -130,17 +121,12 @@ const EnhancedStudentRegistration = ({ schoolId, onSuccess }) => {
       const firstName = nameParts[0];
       const lastName = nameParts.slice(1).join(" ") || "."; // Default if no last name
 
-      // Auto-generate Credentials
-      // Username = firstName + rollNumber (lowercase, no spaces) to ensure uniqueness with different roll numbers
+      // Password is shown once after registration; username is generated server-side
+      // so duplicate names/roll numbers across grades can be handled safely.
       const cleanFirstName = firstName.toLowerCase().replace(/[^a-z0-9]/g, '');
-      const username = `${cleanFirstName}${formData.rollNumber}`;
-      
-      // Password = firstName + rollNumber + @123
       const password = `${cleanFirstName}${formData.rollNumber}@123`;
 
       const payload = {
-        // Credentials (Auto-generated)
-        username,
         password,
         
         // Student
@@ -163,7 +149,6 @@ const EnhancedStudentRegistration = ({ schoolId, onSuccess }) => {
         parentAlternativeContact: formData.parentAlternativeContact,
         
         school: schoolId,
-        email: formData.parentEmail,
       };
 
       let response;
@@ -216,7 +201,12 @@ const EnhancedStudentRegistration = ({ schoolId, onSuccess }) => {
             });
         }, 1500);
       } else {
-        setSuccess(`Student registered successfully! Credentials: Username: ${username}, Password: ${password}`);
+        const credentials = data.data || {};
+        setSuccess(
+          `Student registered successfully! Credentials: Username: ${
+            credentials.username || "Generated"
+          }, Password: ${credentials.password || password}`
+        );
         
         // Reset form after delay
         setTimeout(() => {

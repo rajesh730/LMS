@@ -16,7 +16,6 @@ import {
   FaSchool,
   FaMapMarkerAlt,
   FaUserTie,
-  FaGraduationCap,
   FaPalette,
   FaLock,
 } from "react-icons/fa";
@@ -26,7 +25,6 @@ const STEPS = [
   { id: "location", title: "Location", icon: FaMapMarkerAlt },
   { id: "principal", title: "Principal", icon: FaUserTie },
   { id: "login", title: "Login Info", icon: FaLock },
-  { id: "education", title: "Education", icon: FaGraduationCap },
   { id: "theme", title: "Theme", icon: FaPalette },
 ];
 
@@ -135,6 +133,13 @@ export default function RegisterPage() {
           errors.schoolEmail = "School email is required";
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.schoolEmail))
           errors.schoolEmail = "Valid email is required";
+        if (
+          !formData.schoolConfig.schoolLevel?.maxGrade ||
+          formData.schoolConfig.schoolLevel.maxGrade < 1 ||
+          formData.schoolConfig.schoolLevel.maxGrade > 10
+        ) {
+          errors.maxGrade = "Select the highest grade your school offers";
+        }
         break;
 
       case 1: // Location
@@ -168,9 +173,7 @@ export default function RegisterPage() {
         }
         break;
 
-      case 4: // Education
-        if (!formData.educationLevels.school)
-          errors.educationLevels = "Select at least one education level";
+      case 4: // Theme
         break;
     }
 
@@ -204,29 +207,6 @@ export default function RegisterPage() {
     }
   };
 
-  const handleEducationLevelChange = (level) => {
-    const newEducationLevels = {
-      ...formData.educationLevels,
-      [level]: !formData.educationLevels[level],
-    };
-
-    // Build schoolConfig dynamically based on selected education levels
-    const newSchoolConfig = {};
-
-    // If SCHOOL is selected, add schoolLevel with grades 1-10
-    if (newEducationLevels.school) {
-      newSchoolConfig.schoolLevel = {
-        minGrade: 1,
-        maxGrade: 10,
-      };
-    }
-
-    updateFormData({
-      educationLevels: newEducationLevels,
-      schoolConfig: newSchoolConfig,
-    });
-  };
-
   const handleLocationChange = (field, value) => {
     const updates = { [field]: value };
 
@@ -252,24 +232,23 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      // Build schoolConfig dynamically (same logic as handleEducationLevelChange)
-      const cleanedSchoolConfig = {};
-
-      // If SCHOOL is selected, add schoolLevel with grades 1-10
-      if (formData.educationLevels.school) {
-        cleanedSchoolConfig.schoolLevel = formData.schoolConfig.schoolLevel;
-      }
+      const educationLevels = { school: true };
+      const schoolConfig = {
+        schoolLevel: {
+          minGrade: 1,
+          maxGrade: formData.schoolConfig.schoolLevel?.maxGrade || 10,
+        },
+      };
 
       // Prepare final form data
       const submitData = {
         ...formData,
+        educationLevels,
         email: formData.schoolEmail, // Use school email for login
         establishedYear: parseInt(formData.establishedYear), // Convert to number
         schoolLocation: `${formData.municipality}, Ward ${formData.ward}, ${formData.district}, ${formData.province}`,
-        schoolConfig: cleanedSchoolConfig, // Use cleaned config
+        schoolConfig,
       };
-
-      console.log("Submitting registration data:", JSON.stringify(submitData, null, 2));
 
       const res = await fetch("/api/register", {
         method: "POST",
@@ -278,7 +257,6 @@ export default function RegisterPage() {
       });
 
       const data = await res.json();
-      console.log("Registration response:", data, "Status:", res.status);
 
       if (res.ok) {
         alert("School registered successfully! Please wait for approval.");
@@ -499,6 +477,42 @@ export default function RegisterPage() {
               <p className="text-red-500 text-sm mt-1">{errors.schoolEmail}</p>
             )}
           </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-white mb-2">
+            Highest Grade Offered <span className="text-red-400">*</span>
+          </label>
+          <select
+            className={`w-full border rounded-lg p-3 bg-slate-700 text-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 ${
+              errors.maxGrade ? "border-red-400" : "border-slate-600"
+            }`}
+            value={formData.schoolConfig.schoolLevel?.maxGrade || 10}
+            onChange={(e) =>
+              updateFormData({
+                schoolConfig: {
+                  ...formData.schoolConfig,
+                  schoolLevel: {
+                    minGrade: 1,
+                    maxGrade: Number.parseInt(e.target.value, 10),
+                  },
+                },
+              })
+            }
+          >
+            {[5, 6, 7, 8, 9, 10].map((grade) => (
+              <option key={grade} value={grade}>
+                Grade {grade}
+              </option>
+            ))}
+          </select>
+          <p className="text-slate-400 text-sm mt-2">
+            Student groups and grade filters will be created from Grade 1 up to
+            this grade.
+          </p>
+          {errors.maxGrade && (
+            <p className="text-red-500 text-sm mt-1">{errors.maxGrade}</p>
+          )}
         </div>
       </div>
     );
@@ -795,140 +809,6 @@ export default function RegisterPage() {
     );
   };
 
-  const renderEducationStep = () => {
-    const errors = stepErrors[4] || {};
-
-    return (
-      <div className="space-y-8">
-        <div>
-          <h3 className="text-lg font-semibold text-white mb-4">
-            Education Levels Offered
-          </h3>
-          {errors.educationLevels && (
-            <p className="text-red-400 text-sm mb-4">
-              {errors.educationLevels}
-            </p>
-          )}
-          <p className="text-slate-300 mb-6">
-            Select the education levels your school provides (you can select
-            multiple)
-          </p>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {[
-              {
-                key: "school",
-                label: "School Level",
-                desc: "Primary & Secondary",
-                color: "blue",
-              }
-            ].map((level) => (
-              <div
-                key={level.key}
-                className={`border-2 rounded-lg p-4 transition-all ${
-                  formData.educationLevels[level.key]
-                    ? level.color === "blue"
-                      ? "border-blue-400 bg-blue-500/20 text-blue-200"
-                      : "border-slate-600 bg-slate-800 hover:border-slate-500"
-                    : "border-slate-600 bg-slate-800 hover:border-slate-500"
-                }`}
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <div>
-                    <h4 className="font-medium text-white">{level.label}</h4>
-                    <p className="text-sm text-slate-300">{level.desc}</p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => handleEducationLevelChange(level.key)}
-                  className={`w-full py-2 px-4 rounded-lg font-medium transition-all ${
-                    formData.educationLevels[level.key]
-                      ? level.color === "blue"
-                        ? "bg-blue-500 text-white hover:bg-blue-600"
-                        : "bg-slate-700 text-white hover:bg-slate-600"
-                      : "bg-slate-700 text-white hover:bg-slate-600"
-                  }`}
-                >
-                  {formData.educationLevels[level.key] ? "Selected" : "Choose"}
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {formData.educationLevels.school && (
-          <div className="bg-blue-500/20 border border-blue-400 rounded-lg p-6">
-            <h4 className="text-md font-medium text-white mb-4">
-              School Level Configuration
-            </h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-white mb-2">
-                  Lower Grade <span className="text-red-400">*</span>
-                </label>
-                <select
-                  className="w-full border border-slate-600 bg-slate-700 text-white rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  value={formData.schoolConfig.schoolLevel?.minGrade || 1}
-                  onChange={(e) =>
-                    updateFormData({
-                      schoolConfig: {
-                        ...formData.schoolConfig,
-                        schoolLevel: {
-                          ...formData.schoolConfig.schoolLevel,
-                          minGrade: parseInt(e.target.value),
-                        },
-                      },
-                    })
-                  }
-                >
-                  <option value={1}>Grade 1</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-white mb-2">
-                  Upper Grade <span className="text-red-400">*</span>
-                </label>
-                <select
-                  className="w-full border border-slate-600 bg-slate-700 text-white rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  value={formData.schoolConfig.schoolLevel?.maxGrade || 10}
-                  onChange={(e) =>
-                    updateFormData({
-                      schoolConfig: {
-                        ...formData.schoolConfig,
-                        schoolLevel: {
-                          ...formData.schoolConfig.schoolLevel,
-                          maxGrade: parseInt(e.target.value),
-                        },
-                      },
-                    })
-                  }
-                >
-                  {[5, 6, 7, 8, 9, 10].map((grade) => (
-                    <option key={grade} value={grade}>
-                      Grade {grade}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <p className="text-sm text-blue-200 mt-2">
-              Your school will offer classes from{" "}
-              {formData.schoolConfig.schoolLevel?.minGrade || 1} to{" "}
-              {formData.schoolConfig.schoolLevel?.maxGrade || 10}
-            </p>
-          </div>
-        )}
-
-
-
-
-
-
-      </div>
-    );
-  };
-
   const renderThemeStep = () => {
     return (
       <div className="space-y-6">
@@ -1084,8 +964,6 @@ export default function RegisterPage() {
       case 3:
         return renderLoginStep();
       case 4:
-        return renderEducationStep();
-      case 5:
         return renderThemeStep();
       default:
         return null;
@@ -1132,9 +1010,7 @@ export default function RegisterPage() {
                     "Provide your school's location details"}
                   {currentStep === 2 && "Enter principal information"}
                   {currentStep === 3 && "Set up login password"}
-                  {currentStep === 4 &&
-                    "Configure education levels and grade ranges"}
-                  {currentStep === 5 && "Customize your school's theme colors"}
+                  {currentStep === 4 && "Customize your school's theme colors"}
                 </p>
               </div>
             </div>

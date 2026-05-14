@@ -99,13 +99,13 @@ export default function DashboardOverview() {
           />
           <StatisticsCard
             icon={FaLayerGroup}
-            label="Student Groups"
+            label="Active Grades"
             value={stats.students?.byGrade?.length || 0}
             color="purple"
           />
           <StatisticsCard
             icon={FaCalendarAlt}
-            label="Talent Events"
+            label="School Events"
             value={stats.overview?.totalEvents || 0}
             color="amber"
           />
@@ -131,7 +131,7 @@ export default function DashboardOverview() {
       {stats.students?.byGrade && stats.students.byGrade.length > 0 && (
         <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800">
           <h3 className="text-xl font-bold text-white mb-4">
-            Students by Group
+            Students by Grade
           </h3>
           <div className="space-y-2">
             {stats.students.byGrade.map((group) => (
@@ -169,7 +169,7 @@ export default function DashboardOverview() {
             </p>
           </div>
           <div className="bg-slate-800/50 p-4 rounded-lg border border-slate-700">
-            <p className="text-slate-400 text-sm mb-1">Events in Motion</p>
+            <p className="text-slate-400 text-sm mb-1">School Events in Motion</p>
             <div className="flex items-end gap-2">
               <p className="text-2xl font-bold text-white">
                 {stats.overview?.totalEvents || 0}
@@ -181,7 +181,7 @@ export default function DashboardOverview() {
       </div>
 
       <div className="bg-blue-900/20 border border-blue-500/30 p-6 rounded-xl">
-        <h4 className="text-white font-semibold mb-2">Platform Snapshot</h4>
+        <h4 className="text-white font-semibold mb-2">School Snapshot</h4>
         <ul className="text-blue-200 text-sm space-y-1">
           <li>
             You currently have{" "}

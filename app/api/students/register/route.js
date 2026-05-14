@@ -2,6 +2,11 @@ import connectDB from "../../../../lib/db.js";
 import Student from "../../../../models/Student.js";
 import { hashPassword } from "../../../../lib/credentialGenerator.js";
 import { successResponse, errorResponse } from "../../../../lib/apiResponse.js";
+import {
+  generatePlatformStudentId,
+  generateUniqueStudentUsername,
+} from "../../../../lib/studentIdentity.js";
+import { normalizeGradeValue } from "../../../../lib/schoolGrades.js";
 
 export async function POST(req) {
   try {
@@ -9,7 +14,6 @@ export async function POST(req) {
 
     const {
       // Login credentials
-      username,
       password,
 
       // Student details
@@ -37,7 +41,6 @@ export async function POST(req) {
 
     // Validate only required fields (parent details are now optional)
     const requiredFields = [
-      { value: username, name: "username" },
       { value: password, name: "password" },
       { value: firstName, name: "firstName" },
       { value: lastName, name: "lastName" },
@@ -52,31 +55,27 @@ export async function POST(req) {
       }
     }
 
+    const normalizedGrade = normalizeGradeValue(grade);
+    const normalizedRollNumber = String(rollNumber).trim();
+
     // Hash password
     const hashedPassword = await hashPassword(password);
-
-    // Check if student already exists
-    const existingStudent = await Student.findOne({
-      username,
-      school,
-    });
-
-    if (existingStudent) {
-      return errorResponse(409, "Student with this username already exists");
-    }
 
     // Check if roll number already exists in the same grade
     const existingRollNumber = await Student.findOne({
       school,
-      grade,
-      rollNumber,
+      grade: normalizedGrade,
+      rollNumber: normalizedRollNumber,
     });
 
     if (existingRollNumber) {
-      return errorResponse(409, `Roll number ${rollNumber} already exists in grade ${grade}`);
+      return errorResponse(
+        409,
+        `Roll number ${normalizedRollNumber} already exists in ${normalizedGrade}`
+      );
     }
 
-    // Check if email already exists (if provided)
+    // Student email is optional and distinct from guardian email.
     if (email) {
       const existingEmail = await Student.findOne({ email });
       if (existingEmail) {
@@ -84,23 +83,31 @@ export async function POST(req) {
       }
     }
 
+    const generatedUsername = await generateUniqueStudentUsername(Student, {
+      firstName,
+      grade: normalizedGrade,
+      rollNumber: normalizedRollNumber,
+      school,
+    });
+
     // Create new student
     const newStudent = new Student({
       // Login credentials
-      username,
+      platformStudentId: await generatePlatformStudentId(Student),
+      username: generatedUsername,
       password: hashedPassword,
-      visiblePassword: password, // Store plain text for admin visibility
+      visiblePassword: password,
 
       // Student details
       firstName,
       lastName,
       name: `${firstName} ${lastName}`,
-      email: parentEmail || undefined, // Using parent email as primary contact, undefined if empty
+      email: email || undefined,
       dateOfBirth: new Date(dateOfBirth),
       gender,
       phone,
-      grade,
-      rollNumber,
+      grade: normalizedGrade,
+      rollNumber: normalizedRollNumber,
       address,
       bloodGroup,
 
@@ -125,7 +132,9 @@ export async function POST(req) {
       "Student registered successfully",
       {
         id: newStudent._id,
+        platformStudentId: newStudent.platformStudentId,
         username: newStudent.username,
+        password,
         name: newStudent.name,
         grade: newStudent.grade,
         parentName: newStudent.parentName,

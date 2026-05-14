@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import EventProposal, { EVENT_PROPOSAL_ROLES } from "@/models/EventProposal";
+import { normalizeGradeValue } from "@/lib/schoolGrades";
+import { isBeforeToday } from "@/lib/eventDates";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +20,6 @@ function sanitizeRoles(roles) {
 
 export async function POST(req) {
   try {
-    await connectDB();
     const body = await req.json();
 
     const requiredFields = [
@@ -39,6 +38,15 @@ export async function POST(req) {
       );
     }
 
+    if (body.preferredDate && isBeforeToday(body.preferredDate)) {
+      return NextResponse.json(
+        { success: false, message: "Preferred date cannot be in the past." },
+        { status: 400 }
+      );
+    }
+
+    await connectDB();
+
     const proposal = await EventProposal.create({
       organizationName: body.organizationName,
       organizationType: body.organizationType || "COMPANY",
@@ -50,7 +58,9 @@ export async function POST(req) {
       eventTitle: body.eventTitle,
       eventDescription: body.eventDescription,
       proposedRoles: sanitizeRoles(body.proposedRoles),
-      targetGrades: Array.isArray(body.targetGrades) ? body.targetGrades : [],
+      targetGrades: Array.isArray(body.targetGrades)
+        ? body.targetGrades.map(normalizeGradeValue).filter(Boolean)
+        : [],
       expectedSchools: parseOptionalNumber(body.expectedSchools),
       expectedStudents: parseOptionalNumber(body.expectedStudents),
       preferredDate: body.preferredDate || null,
@@ -73,7 +83,13 @@ export async function POST(req) {
   } catch (error) {
     console.error("Create event proposal error:", error);
     return NextResponse.json(
-      { success: false, message: "Failed to submit event proposal" },
+      {
+        success: false,
+        message:
+          process.env.NODE_ENV === "production"
+            ? "Failed to submit event proposal"
+            : error?.message || "Failed to submit event proposal",
+      },
       { status: 500 }
     );
   }
@@ -81,6 +97,8 @@ export async function POST(req) {
 
 export async function GET() {
   try {
+    const { getServerSession } = await import("next-auth");
+    const { authOptions } = await import("@/app/api/auth/[...nextauth]/route");
     const session = await getServerSession(authOptions);
     if (!session || session.user.role !== "SUPER_ADMIN") {
       return NextResponse.json(

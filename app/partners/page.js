@@ -3,6 +3,7 @@ import connectDB from "@/lib/db";
 import ExternalOrganizer from "@/models/ExternalOrganizer";
 import Event from "@/models/Event";
 import ParticipationRequest from "@/models/ParticipationRequest";
+import PublicSiteNav from "@/components/public/PublicSiteNav";
 
 export const dynamic = "force-dynamic";
 
@@ -61,19 +62,7 @@ export default async function PartnersPage() {
 
   return (
     <main className="min-h-screen bg-slate-950 text-white">
-      <section className="border-b border-slate-800 bg-slate-900/50">
-        <div className="max-w-6xl mx-auto px-6 py-6 flex items-center justify-between gap-4">
-          <Link href="/" className="text-slate-400 hover:text-white transition">
-            Back to platform
-          </Link>
-          <Link
-            href="/organize-event"
-            className="rounded-full bg-blue-600 hover:bg-blue-500 px-5 py-2 text-sm font-bold"
-          >
-            Propose an event
-          </Link>
-        </div>
-      </section>
+      <PublicSiteNav active="partners" />
 
       <section className="max-w-6xl mx-auto px-6 py-14">
         <div className="max-w-3xl mb-12">
@@ -87,6 +76,12 @@ export default async function PartnersPage() {
             These are platform-approved partners connected to public student
             events, competitions, sponsorships, and published outcomes.
           </p>
+          <Link
+            href="/organize-event"
+            className="soft-heartbeat mt-7 inline-flex items-center rounded-full bg-emerald-500 px-6 py-3 text-sm font-black text-slate-950 shadow-lg shadow-emerald-500/20 transition hover:bg-emerald-400"
+          >
+            Propose an event
+          </Link>
         </div>
 
         {partners.length === 0 ? (

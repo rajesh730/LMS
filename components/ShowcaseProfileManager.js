@@ -8,7 +8,7 @@ const EMPTY_FORM = {
   summary: "",
   coverImageUrl: "",
   websiteUrl: "",
-  visibility: "PUBLIC",
+  visibility: "PRIVATE",
   featuredEvents: [],
   publicHighlights: [""],
 };
@@ -49,7 +49,7 @@ export default function ShowcaseProfileManager() {
           summary: nextProfile.summary || "",
           coverImageUrl: nextProfile.coverImageUrl || "",
           websiteUrl: nextProfile.websiteUrl || "",
-          visibility: nextProfile.visibility || "PUBLIC",
+          visibility: nextProfile.visibility || "PRIVATE",
           featuredEvents: (nextProfile.featuredEvents || []).map((item) =>
             typeof item === "string" ? item : item._id
           ),
@@ -210,10 +210,12 @@ export default function ShowcaseProfileManager() {
                 }
                 className="w-full bg-slate-800 text-white rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="PUBLIC">Public</option>
-                <option value="INVITED">Invited / limited</option>
                 <option value="PRIVATE">Private</option>
+                <option value="PUBLIC">Public</option>
               </select>
+              <p className="text-xs text-slate-500 mt-2">
+                Only approved public achievements appear on your public profile.
+              </p>
             </div>
           </div>
 
@@ -308,7 +310,7 @@ export default function ShowcaseProfileManager() {
                     value={highlight}
                     onChange={(e) => updateHighlight(index, e.target.value)}
                     className="flex-1 bg-slate-800 text-white rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Top 3 in district debate, annual arts festival host, 6 active clubs..."
+                    placeholder="Top 3 in district debate, annual arts festival host, strong student participation..."
                   />
                   <button
                     type="button"
@@ -341,12 +343,11 @@ export default function ShowcaseProfileManager() {
           <FaStar className="text-yellow-400" />
           Public Activity Metrics
         </h3>
-          <div className="grid md:grid-cols-3 lg:grid-cols-5 gap-4">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
             ["Events Hosted", profile.highlightMetrics?.eventsHosted || 0],
             ["Joined Events", profile.highlightMetrics?.eventsParticipated || 0],
             ["Awards", profile.highlightMetrics?.awardsCount || 0],
-            ["Active Clubs", profile.highlightMetrics?.clubsCount || 0],
             [
               "Participation Rate",
               `${profile.highlightMetrics?.studentParticipationRate || 0}%`,

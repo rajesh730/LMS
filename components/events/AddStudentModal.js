@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { FaSearch, FaSpinner } from "react-icons/fa";
 
 export default function AddStudentModal({ event, onClose, onSuccess }) {
@@ -10,14 +10,9 @@ export default function AddStudentModal({ event, onClose, onSuccess }) {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    fetchStudents();
-  }, [event.id]);
-
-  const fetchStudents = async () => {
+  const fetchStudents = useCallback(async () => {
     try {
       setLoading(true);
-      // You'll need to create this API endpoint
       const res = await fetch(`/api/students/available?eventId=${event.id}`);
       if (res.ok) {
         const data = await res.json();
@@ -30,7 +25,11 @@ export default function AddStudentModal({ event, onClose, onSuccess }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [event.id]);
+
+  useEffect(() => {
+    fetchStudents();
+  }, [fetchStudents]);
 
   const filteredStudents = students.filter((student) => {
     const matchesSearch = student.name
@@ -67,7 +66,6 @@ export default function AddStudentModal({ event, onClose, onSuccess }) {
       });
 
       if (res.ok) {
-        const data = await res.json();
         onSuccess();
       } else {
         const error = await res.json();

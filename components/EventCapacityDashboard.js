@@ -85,14 +85,14 @@ export default function EventCapacityDashboard() {
               </div>
             </div>
 
-            {/* Global Capacity */}
+            {/* Total Student Capacity */}
             {event.maxParticipants && (
               <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <FaUsers className="text-blue-500" />
                     <span className="font-semibold text-gray-900">
-                      Global Capacity
+                      Total Student Capacity
                     </span>
                   </div>
                   <span className="text-sm font-semibold text-gray-700">
@@ -125,11 +125,11 @@ export default function EventCapacityDashboard() {
               </div>
             )}
 
-            {/* Per-School Capacity */}
+            {/* Per-School Student Capacity */}
             {event.maxParticipantsPerSchool && event.schoolCapacity && (
               <div className="space-y-3">
                 <h4 className="font-semibold text-gray-900 text-sm">
-                  Per-School Capacity
+                  Max Students Per School
                 </h4>
                 {event.schoolCapacity.map((school, idx) => (
                   <div

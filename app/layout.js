@@ -2,8 +2,8 @@ import './globals.css';
 import { Providers } from './providers';
 
 export const metadata = {
-  title: 'E-Grantha Talent',
-  description: 'Multi-school talent, extracurricular, and showcase platform',
+  title: "Pratyo",
+  description: "School events, results, showcases, and certificates in one connected platform",
 };
 
 export default function RootLayout({ children }) {

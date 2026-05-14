@@ -1,10 +1,24 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { buildGradeLabels, normalizeGradeValue } from "@/lib/schoolGrades";
+import { validateEventCapacity } from "@/lib/eventCapacity";
+
+function getTodayInputValue() {
+  const today = new Date();
+  today.setMinutes(today.getMinutes() - today.getTimezoneOffset());
+  return today.toISOString().split("T")[0];
+}
 
 function buildInitialFormData(initialData, ownerMode) {
   const defaultScope = ownerMode === "school" ? "SCHOOL" : "PLATFORM";
   const defaultVisibility = ownerMode === "school" ? "INVITED" : "PUBLIC";
+  const resolvedParticipationFormat =
+    initialData?.participationFormat === "TEAM" ||
+    initialData?.minTeamSize ||
+    initialData?.maxTeamSize
+      ? "TEAM"
+      : "INDIVIDUAL";
 
   return {
     title: initialData?.title || "",
@@ -12,13 +26,17 @@ function buildInitialFormData(initialData, ownerMode) {
     date: initialData?.date
       ? new Date(initialData.date).toISOString().split("T")[0]
       : "",
-    targetGroup: initialData?.targetGroup?._id || initialData?.targetGroup || "",
     registrationDeadline: initialData?.registrationDeadline
       ? new Date(initialData.registrationDeadline).toISOString().split("T")[0]
       : "",
     maxParticipants: initialData?.maxParticipants || "",
     maxParticipantsPerSchool: initialData?.maxParticipantsPerSchool || "",
-    eligibleGrades: initialData?.eligibleGrades || [],
+    participationFormat: resolvedParticipationFormat,
+    minTeamSize: initialData?.minTeamSize || "",
+    maxTeamSize: initialData?.maxTeamSize || "",
+    eligibleGrades: (initialData?.eligibleGrades || [])
+      .map(normalizeGradeValue)
+      .filter(Boolean),
     eventScope: initialData?.eventScope || defaultScope,
     eventType: initialData?.eventType || "COMPETITION",
     visibility: initialData?.visibility || defaultVisibility,
@@ -47,7 +65,6 @@ function buildInitialFormData(initialData, ownerMode) {
 }
 
 export default function EventEditorForm({
-  groups = [],
   teachers = [],
   partners = [],
   proposals = [],
@@ -68,21 +85,22 @@ export default function EventEditorForm({
   const canFeatureOnLanding =
     showFeaturedOnLanding ?? resolvedOwnerMode === "platform";
   const defaultScope = resolvedOwnerMode === "school" ? "SCHOOL" : "PLATFORM";
-  const targetGroupLabel =
-    resolvedOwnerMode === "school" ? "Own school only" : "Global (All Schools)";
 
   const [formData, setFormData] = useState(() =>
     buildInitialFormData(initialData, resolvedOwnerMode)
   );
   const [status, setStatus] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+  const [schoolGrades, setSchoolGrades] = useState(() =>
+    resolvedOwnerMode === "school" ? [] : buildGradeLabels()
+  );
+  const [activeStep, setActiveStep] = useState("basic");
 
-  const schoolGrades = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"];
   const eventTypes = [
     "COMPETITION",
     "SHOWCASE",
     "AUDITION",
     "WORKSHOP",
-    "CLUB_ACTIVITY",
     "EXHIBITION",
     "FESTIVAL",
     "OTHER",
@@ -108,7 +126,65 @@ export default function EventEditorForm({
     setFormData(buildInitialFormData(initialData, resolvedOwnerMode));
   }, [initialData, resolvedOwnerMode]);
 
-  const getGradeLabel = (grade) => `Grade ${grade}`;
+  useEffect(() => {
+    let isActive = true;
+
+    const loadGrades = async () => {
+      if (resolvedOwnerMode !== "school") {
+        setSchoolGrades(buildGradeLabels());
+        return;
+      }
+
+      try {
+        const res = await fetch("/api/school/grade-structure", {
+          cache: "no-store",
+        });
+        if (!res.ok) throw new Error("Failed to load school grades");
+
+        const data = await res.json();
+        const grades = (data.grades || data.data?.grades || [])
+          .map((grade) => normalizeGradeValue(grade.name || grade._id || grade))
+          .filter(Boolean);
+
+        if (isActive) {
+          setSchoolGrades(grades.length > 0 ? grades : buildGradeLabels());
+        }
+      } catch (error) {
+        if (isActive) {
+          setSchoolGrades(buildGradeLabels());
+        }
+      }
+    };
+
+    loadGrades();
+
+    return () => {
+      isActive = false;
+    };
+  }, [resolvedOwnerMode]);
+
+  useEffect(() => {
+    if (resolvedOwnerMode !== "school" || schoolGrades.length === 0) return;
+
+    setFormData((prev) => ({
+      ...prev,
+      eligibleGrades: prev.eligibleGrades.filter((grade) =>
+        schoolGrades.includes(normalizeGradeValue(grade))
+      ),
+    }));
+  }, [resolvedOwnerMode, schoolGrades]);
+
+  const getGradeRangeLabel = () => {
+    const gradeNumbers = schoolGrades
+      .map((grade) => Number.parseInt(String(grade).match(/\d+/)?.[0], 10))
+      .filter(Number.isFinite);
+
+    if (gradeNumbers.length === 0) return "School Level";
+
+    return `School Level (Grade ${Math.min(...gradeNumbers)}-${Math.max(
+      ...gradeNumbers
+    )})`;
+  };
 
   const handleGradeChange = (grade) => {
     setFormData((prev) => {
@@ -203,25 +279,55 @@ export default function EventEditorForm({
   const handleSubmit = async (e) => {
     e.preventDefault();
     setStatus("sending");
+    setErrorMessage("");
 
     try {
+      if (
+        !formData.title.trim() ||
+        !formData.date ||
+        !formData.description.trim()
+      ) {
+        setErrorMessage("Event title, event date, and description are required.");
+        setStatus("error");
+        setActiveStep("basic");
+        return;
+      }
+
+      const capacityValidation = validateEventCapacity({
+        maxParticipants: formData.maxParticipants,
+        maxParticipantsPerSchool: formData.maxParticipantsPerSchool,
+      });
+
+      if (capacityValidation.message) {
+        setErrorMessage(capacityValidation.message);
+        setStatus("error");
+        return;
+      }
+
       const url = initialData ? `/api/events/${initialData._id}` : "/api/events";
       const method = initialData ? "PUT" : "POST";
 
       const payload = {
         ...formData,
         eventScope: canChooseScope ? formData.eventScope : defaultScope,
+        registrationMode:
+          formData.participationFormat === "TEAM"
+            ? "THROUGH_SCHOOL"
+            : formData.registrationMode,
         featuredOnLanding: canFeatureOnLanding
           ? formData.featuredOnLanding
           : false,
-        targetGroup: formData.targetGroup || null,
         registrationDeadline: formData.registrationDeadline || null,
-        maxParticipants: formData.maxParticipants
-          ? parseInt(formData.maxParticipants, 10)
-          : null,
-        maxParticipantsPerSchool: formData.maxParticipantsPerSchool
-          ? parseInt(formData.maxParticipantsPerSchool, 10)
-          : null,
+        maxParticipants: capacityValidation.totalStudentCapacity,
+        maxParticipantsPerSchool: capacityValidation.maxStudentsPerSchool,
+        minTeamSize:
+          formData.participationFormat === "TEAM" && formData.minTeamSize !== ""
+            ? Number(formData.minTeamSize)
+            : null,
+        maxTeamSize:
+          formData.participationFormat === "TEAM" && formData.maxTeamSize !== ""
+            ? Number(formData.maxTeamSize)
+            : null,
         assignedMentors: formData.assignedMentors || [],
         sourceProposal: formData.sourceProposal || null,
         partnerBrandingEnabled:
@@ -245,13 +351,43 @@ export default function EventEditorForm({
         onEventCreated?.();
         setTimeout(() => setStatus(""), 3000);
       } else {
+        const data = await res.json().catch(() => ({}));
+        setErrorMessage(data.message || "Failed to save event.");
         setStatus("error");
       }
     } catch (error) {
       console.error("Failed to save event", error);
+      setErrorMessage("Failed to save event.");
       setStatus("error");
     }
   };
+
+  const steps = [
+    { id: "basic", label: "Basic Details" },
+    { id: "audience", label: "Audience" },
+    { id: "registration", label: "Registration Rules" },
+    {
+      id: "partners",
+      label:
+        resolvedOwnerMode === "platform"
+          ? "Partners & Publicity"
+          : "Mentors & Publicity",
+    },
+    { id: "review", label: "Review & Create" },
+  ];
+  const activeStepIndex = steps.findIndex((step) => step.id === activeStep);
+  const goToNextStep = () => {
+    const nextStep = steps[Math.min(activeStepIndex + 1, steps.length - 1)];
+    setActiveStep(nextStep.id);
+  };
+  const goToPreviousStep = () => {
+    const previousStep = steps[Math.max(activeStepIndex - 1, 0)];
+    setActiveStep(previousStep.id);
+  };
+  const selectedGradesLabel =
+    formData.eligibleGrades.length > 0
+      ? formData.eligibleGrades.join(", ")
+      : "All eligible grades";
 
   return (
     <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800">
@@ -281,67 +417,253 @@ export default function EventEditorForm({
           </button>
         )}
       </div>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid md:grid-cols-4 gap-4">
-          <div>
-            <label className="block text-slate-300 mb-1 text-sm">
-              Event Scope
-            </label>
-            <select
-              value={formData.eventScope}
-              onChange={(e) =>
-                setFormData({ ...formData, eventScope: e.target.value })
-              }
-              disabled={!canChooseScope}
-              className="w-full bg-slate-800 text-white rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-70"
-            >
-              <option value="PLATFORM">Platform event</option>
-              {(canChooseScope || resolvedOwnerMode === "school") && (
-                <option value="SCHOOL">School event</option>
-              )}
-            </select>
-            {!canChooseScope && (
-              <p className="text-xs text-slate-500 mt-1">
-                {resolvedOwnerMode === "school"
-                  ? "Events from this workspace are owned by your school."
-                  : "New events from this workspace are platform-owned flagship events."}
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <div className="rounded-2xl border border-slate-800 bg-slate-950/50 p-2">
+          <div className="grid gap-2 md:grid-cols-5">
+            {steps.map((step, index) => (
+              <button
+                key={step.id}
+                type="button"
+                onClick={() => setActiveStep(step.id)}
+                className={`rounded-xl px-3 py-3 text-left text-sm transition ${
+                  activeStep === step.id
+                    ? "bg-blue-600 text-white"
+                    : index < activeStepIndex
+                    ? "bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/20"
+                    : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                }`}
+              >
+                <span className="block text-xs opacity-75">Step {index + 1}</span>
+                <span className="font-semibold">{step.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {activeStep === "basic" && (
+          <section className="space-y-4 rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
+            <div>
+              <h3 className="text-lg font-semibold text-white">Basic Details</h3>
+              <p className="mt-1 text-sm text-slate-400">
+                Name the event, choose the type, and set the main public details.
               </p>
-            )}
-          </div>
-          <div>
-            <label className="block text-slate-300 mb-1 text-sm">
-              Event Type
-            </label>
-            <select
-              value={formData.eventType}
-              onChange={(e) =>
-                setFormData({ ...formData, eventType: e.target.value })
-              }
-              className="w-full bg-slate-800 text-white rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              {eventTypes.map((type) => (
-                <option key={type} value={type}>
-                  {type.replaceAll("_", " ")}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-slate-300 mb-1 text-sm">
-              Visibility
-            </label>
-            <select
-              value={formData.visibility}
-              onChange={(e) =>
-                setFormData({ ...formData, visibility: e.target.value })
-              }
-              className="w-full bg-slate-800 text-white rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="PUBLIC">Public</option>
-              <option value="INVITED">Invited</option>
-              <option value="PRIVATE">Private</option>
-            </select>
-          </div>
+            </div>
+
+            <div className="grid md:grid-cols-4 gap-4">
+              <div className="md:col-span-2">
+                <label className="block text-slate-300 mb-1 text-sm">
+                  Event Title *
+                </label>
+                <input
+                  type="text"
+                  value={formData.title}
+                  onChange={(e) =>
+                    setFormData({ ...formData, title: e.target.value })
+                  }
+                  className="w-full bg-slate-800 text-white rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-slate-300 mb-1 text-sm">
+                  Event Date *
+                </label>
+                <input
+                  type="date"
+                  value={formData.date}
+                  min={getTodayInputValue()}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      date: e.target.value,
+                      registrationDeadline:
+                        prev.registrationDeadline &&
+                        e.target.value &&
+                        prev.registrationDeadline > e.target.value
+                          ? e.target.value
+                          : prev.registrationDeadline,
+                    }))
+                  }
+                  className="w-full bg-slate-800 text-white rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-slate-300 mb-1 text-sm">
+                  Event Type
+                </label>
+                <select
+                  value={formData.eventType}
+                  onChange={(e) =>
+                    setFormData({ ...formData, eventType: e.target.value })
+                  }
+                  className="w-full bg-slate-800 text-white rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  {eventTypes.map((type) => (
+                    <option key={type} value={type}>
+                      {type.replaceAll("_", " ")}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-slate-300 mb-1 text-sm">
+                  Visibility
+                </label>
+                <select
+                  value={formData.visibility}
+                  onChange={(e) =>
+                    setFormData({ ...formData, visibility: e.target.value })
+                  }
+                  className="w-full bg-slate-800 text-white rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="PUBLIC">Public</option>
+                  <option value="INVITED">Invited</option>
+                  <option value="PRIVATE">Private</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-slate-300 mb-1 text-sm">
+                  Event Scope
+                </label>
+                <select
+                  value={formData.eventScope}
+                  onChange={(e) =>
+                    setFormData({ ...formData, eventScope: e.target.value })
+                  }
+                  disabled={!canChooseScope}
+                  className="w-full bg-slate-800 text-white rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-70"
+                >
+                  <option value="PLATFORM">Platform event</option>
+                  {(canChooseScope || resolvedOwnerMode === "school") && (
+                    <option value="SCHOOL">School event</option>
+                  )}
+                </select>
+                {!canChooseScope && (
+                  <p className="text-xs text-slate-500 mt-1">
+                    {resolvedOwnerMode === "school"
+                      ? "Events from this workspace are owned by your school."
+                      : "New events from this workspace are platform-owned flagship events."}
+                  </p>
+                )}
+              </div>
+              <div>
+                <label className="block text-slate-300 mb-1 text-sm">
+                  Participation Format
+                </label>
+                <select
+                  value={formData.participationFormat}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      participationFormat: e.target.value,
+                      registrationMode:
+                        e.target.value === "TEAM"
+                          ? "THROUGH_SCHOOL"
+                          : prev.registrationMode,
+                      minTeamSize:
+                        e.target.value === "TEAM" ? prev.minTeamSize : "",
+                      maxTeamSize:
+                        e.target.value === "TEAM" ? prev.maxTeamSize : "",
+                    }))
+                  }
+                  className="w-full bg-slate-800 text-white rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="INDIVIDUAL">Individual participants</option>
+                  <option value="TEAM">School team</option>
+                </select>
+                <p className="mt-1 text-xs text-slate-500">
+                  Use team format for football, basketball, group dance, debate teams, and similar roster-based events.
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-slate-300 mb-1 text-sm">
+                Description *
+              </label>
+              <textarea
+                value={formData.description}
+                onChange={(e) =>
+                  setFormData({ ...formData, description: e.target.value })
+                }
+                className="w-full bg-slate-800 text-white rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 h-28"
+                required
+              />
+            </div>
+          </section>
+        )}
+
+        {activeStep === "audience" && (
+          <section className="space-y-4 rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
+            <div>
+              <h3 className="text-lg font-semibold text-white">Audience</h3>
+              <p className="mt-1 text-sm text-slate-400">
+                Choose who can see or participate in this event.
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-slate-300 mb-2 text-sm">
+                Target Audience (Select Eligible Grades/Years)
+              </label>
+              <div className="mb-3">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-slate-500 uppercase font-bold tracking-wider">
+                    {getGradeRangeLabel()}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => toggleGroup(schoolGrades)}
+                    className="text-xs text-blue-400 hover:text-blue-300 transition"
+                  >
+                    {schoolGrades.every((g) => formData.eligibleGrades.includes(g))
+                      ? "Deselect All"
+                      : "Select All"}
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-2 bg-slate-800 p-3 rounded border border-slate-700">
+                  {schoolGrades.length === 0 ? (
+                    <p className="col-span-full text-sm text-slate-400">
+                      Loading grades...
+                    </p>
+                  ) : (
+                    schoolGrades.map((grade) => (
+                      <label
+                        key={grade}
+                        className="flex items-center gap-2 cursor-pointer hover:bg-slate-700/50 p-1 rounded transition select-none"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={formData.eligibleGrades.includes(grade)}
+                          onChange={() => handleGradeChange(grade)}
+                          className="rounded border-slate-600 bg-slate-700 text-blue-600 focus:ring-blue-500"
+                        />
+                        <span className="text-white text-sm">{grade}</span>
+                      </label>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {activeStep === "registration" && (
+          <section className="space-y-4 rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
+            <div>
+              <h3 className="text-lg font-semibold text-white">
+                Registration Rules
+              </h3>
+              <p className="mt-1 text-sm text-slate-400">
+                Set deadline, capacity, and how participants join.
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-4 gap-4">
           <div>
             <label className="block text-slate-300 mb-1 text-sm">
               Registration Mode
@@ -351,65 +673,18 @@ export default function EventEditorForm({
               onChange={(e) =>
                 setFormData({ ...formData, registrationMode: e.target.value })
               }
+              disabled={formData.participationFormat === "TEAM"}
               className="w-full bg-slate-800 text-white rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="THROUGH_SCHOOL">Through school</option>
               <option value="DIRECT">Direct participant registration</option>
             </select>
+            {formData.participationFormat === "TEAM" && (
+              <p className="mt-1 text-xs text-slate-500">
+                Team events are managed through schools only.
+              </p>
+            )}
           </div>
-        </div>
-
-        <div className="grid md:grid-cols-3 gap-4">
-          <div>
-            <label className="block text-slate-300 mb-1 text-sm">
-              Event Title *
-            </label>
-            <input
-              type="text"
-              value={formData.title}
-              onChange={(e) =>
-                setFormData({ ...formData, title: e.target.value })
-              }
-              className="w-full bg-slate-800 text-white rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-slate-300 mb-1 text-sm">
-              Event Date *
-            </label>
-            <input
-              type="date"
-              value={formData.date}
-              onChange={(e) =>
-                setFormData({ ...formData, date: e.target.value })
-              }
-              className="w-full bg-slate-800 text-white rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-slate-300 mb-1 text-sm">
-              Target Group
-            </label>
-            <select
-              value={formData.targetGroup}
-              onChange={(e) =>
-                setFormData({ ...formData, targetGroup: e.target.value })
-              }
-              className="w-full bg-slate-800 text-white rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">{targetGroupLabel}</option>
-              {groups.map((group) => (
-                <option key={group._id} value={group._id}>
-                  {group.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div className="grid md:grid-cols-3 gap-4">
           <div>
             <label className="block text-slate-300 mb-1 text-sm">
               Reg. Deadline (optional)
@@ -417,6 +692,8 @@ export default function EventEditorForm({
             <input
               type="date"
               value={formData.registrationDeadline}
+              min={getTodayInputValue()}
+              max={formData.date || undefined}
               onChange={(e) =>
                 setFormData({
                   ...formData,
@@ -428,7 +705,9 @@ export default function EventEditorForm({
           </div>
           <div>
             <label className="block text-slate-300 mb-1 text-sm">
-              Total Max Participants
+              {formData.participationFormat === "TEAM"
+                ? "Total Team Capacity"
+                : "Total Student Capacity"}
             </label>
             <input
               type="number"
@@ -440,10 +719,17 @@ export default function EventEditorForm({
               placeholder="Unlimited"
               min="1"
             />
+            <p className="mt-1 text-xs text-slate-500">
+              {formData.participationFormat === "TEAM"
+                ? "Maximum teams allowed across the full event."
+                : "Maximum students allowed across all schools."}
+            </p>
           </div>
           <div>
             <label className="block text-slate-300 mb-1 text-sm">
-              Max Per School
+              {formData.participationFormat === "TEAM"
+                ? "Max Teams Per School"
+                : "Max Students Per School"}
             </label>
             <input
               type="number"
@@ -457,9 +743,74 @@ export default function EventEditorForm({
               className="w-full bg-slate-800 text-white rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Unlimited"
               min="1"
+              max={formData.maxParticipants || undefined}
             />
+            <p className="mt-1 text-xs text-slate-500">
+              {formData.participationFormat === "TEAM"
+                ? "Maximum number of team entries a school can submit."
+                : "Maximum students one school can register."}
+            </p>
+            {formData.maxParticipants &&
+              formData.maxParticipantsPerSchool &&
+              Number(formData.maxParticipantsPerSchool) >
+                Number(formData.maxParticipants) && (
+              <p className="mt-1 text-xs text-red-400">
+                Max students per school cannot exceed total student capacity.
+              </p>
+            )}
           </div>
-        </div>
+            </div>
+            {formData.participationFormat === "TEAM" && (
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="block text-slate-300 mb-1 text-sm">
+                    Minimum Members Per Team
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.minTeamSize}
+                    onChange={(e) =>
+                      setFormData({ ...formData, minTeamSize: e.target.value })
+                    }
+                    className="w-full bg-slate-800 text-white rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Optional"
+                    min="1"
+                    max={formData.maxTeamSize || undefined}
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-300 mb-1 text-sm">
+                    Maximum Members Per Team
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.maxTeamSize}
+                    onChange={(e) =>
+                      setFormData({ ...formData, maxTeamSize: e.target.value })
+                    }
+                    className="w-full bg-slate-800 text-white rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Optional"
+                    min={formData.minTeamSize || 1}
+                    max={formData.maxParticipantsPerSchool || formData.maxParticipants || undefined}
+                  />
+                </div>
+              </div>
+            )}
+          </section>
+        )}
+
+        {activeStep === "partners" && (
+          <section className="space-y-4 rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
+            <div>
+              <h3 className="text-lg font-semibold text-white">
+                {resolvedOwnerMode === "platform"
+                  ? "Partners & Publicity"
+                  : "Mentors & Publicity"}
+              </h3>
+              <p className="mt-1 text-sm text-slate-400">
+                Configure public highlights, landing visibility, partners, and mentors.
+              </p>
+            </div>
 
         <div className={`grid gap-4 ${canFeatureOnLanding ? "md:grid-cols-2" : ""}`}>
           {canFeatureOnLanding && (
@@ -648,75 +999,110 @@ export default function EventEditorForm({
             </div>
           </div>
         )}
+          </section>
+        )}
 
-        <div>
-          <label className="block text-slate-300 mb-2 text-sm">
-            Target Audience (Select Eligible Grades/Years)
-          </label>
-          <div className="mb-3">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-slate-500 uppercase font-bold tracking-wider">
-                School Level (Grade 1-10)
-              </span>
-              <button
-                type="button"
-                onClick={() => toggleGroup(schoolGrades)}
-                className="text-xs text-blue-400 hover:text-blue-300 transition"
-              >
-                {schoolGrades.every((g) => formData.eligibleGrades.includes(g))
-                  ? "Deselect All"
-                  : "Select All"}
-              </button>
+        {activeStep === "review" && (
+          <section className="space-y-4 rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
+            <div>
+              <h3 className="text-lg font-semibold text-white">
+                Review & Create
+              </h3>
+              <p className="mt-1 text-sm text-slate-400">
+                Confirm the important settings before saving this event.
+              </p>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-2 bg-slate-800 p-3 rounded border border-slate-700">
-              {schoolGrades.map((grade) => (
-                <label
-                  key={grade}
-                  className="flex items-center gap-2 cursor-pointer hover:bg-slate-700/50 p-1 rounded transition select-none"
+            <div className="grid gap-3 md:grid-cols-2">
+              {[
+                ["Title", formData.title || "Missing"],
+                ["Date", formData.date || "Missing"],
+                ["Scope", formData.eventScope.replaceAll("_", " ")],
+                ["Type", formData.eventType.replaceAll("_", " ")],
+                [
+                  "Format",
+                  formData.participationFormat === "TEAM"
+                    ? "School team"
+                    : "Individual participants",
+                ],
+                ["Visibility", formData.visibility],
+                ["Registration", formData.registrationMode.replaceAll("_", " ")],
+                ["Deadline", formData.registrationDeadline || "No deadline"],
+                ["Eligible Grades", selectedGradesLabel],
+                [
+                  "Capacity",
+                  formData.maxParticipants
+                    ? `${
+                        formData.maxParticipants
+                      } total ${
+                        formData.participationFormat === "TEAM" ? "teams" : "students"
+                      }`
+                    : "Unlimited total capacity",
+                ],
+                [
+                  "Per School Limit",
+                  formData.maxParticipantsPerSchool
+                    ? `${
+                        formData.maxParticipantsPerSchool
+                      } ${formData.participationFormat === "TEAM" ? "teams" : "students"}`
+                    : "Unlimited per school",
+                ],
+                [
+                  "Team Size",
+                  formData.participationFormat === "TEAM"
+                    ? `${
+                        formData.minTeamSize || "No minimum"
+                      } to ${formData.maxTeamSize || "No maximum"} members per team`
+                    : "Not applicable",
+                ],
+              ].map(([name, value]) => (
+                <div
+                  key={name}
+                  className="rounded-xl border border-slate-800 bg-slate-900/70 p-3"
                 >
-                  <input
-                    type="checkbox"
-                    checked={formData.eligibleGrades.includes(grade)}
-                    onChange={() => handleGradeChange(grade)}
-                    className="rounded border-slate-600 bg-slate-700 text-blue-600 focus:ring-blue-500"
-                  />
-                  <span className="text-white text-sm">
-                    {getGradeLabel(grade)}
-                  </span>
-                </label>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    {name}
+                  </p>
+                  <p className="mt-1 text-sm text-white">{value}</p>
+                </div>
               ))}
             </div>
+          </section>
+        )}
+
+        <div className="flex flex-col gap-3 border-t border-slate-800 pt-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={goToPreviousStep}
+              disabled={activeStepIndex === 0}
+              className="rounded-lg bg-slate-800 px-4 py-2 text-sm font-semibold text-slate-200 hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Back
+            </button>
+            {activeStep !== "review" ? (
+              <button
+                type="button"
+                onClick={goToNextStep}
+                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500"
+              >
+                Continue
+              </button>
+            ) : (
+              <button
+                type="submit"
+                disabled={status === "sending"}
+                className="rounded-lg bg-blue-600 px-5 py-2 text-sm font-bold text-white transition hover:bg-blue-500 disabled:opacity-50"
+              >
+                {status === "sending"
+                  ? initialData
+                    ? "Updating..."
+                    : "Creating..."
+                  : initialData
+                  ? "Update Event"
+                  : "Create Event"}
+              </button>
+            )}
           </div>
-        </div>
-
-        <div>
-          <label className="block text-slate-300 mb-1 text-sm">
-            Description *
-          </label>
-          <textarea
-            value={formData.description}
-            onChange={(e) =>
-              setFormData({ ...formData, description: e.target.value })
-            }
-            className="w-full bg-slate-800 text-white rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 h-24"
-            required
-          />
-        </div>
-
-        <div className="flex items-center justify-between">
-          <button
-            type="submit"
-            disabled={status === "sending"}
-            className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-6 rounded transition disabled:opacity-50"
-          >
-            {status === "sending"
-              ? initialData
-                ? "Updating..."
-                : "Sending..."
-              : initialData
-              ? "Update Event"
-              : "Create Event"}
-          </button>
 
           {status === "success" && (
             <span className="text-emerald-400 text-sm">
@@ -724,7 +1110,9 @@ export default function EventEditorForm({
             </span>
           )}
           {status === "error" && (
-            <span className="text-red-400 text-sm">Failed to save event.</span>
+            <span className="text-red-400 text-sm">
+              {errorMessage || "Failed to save event."}
+            </span>
           )}
         </div>
       </form>

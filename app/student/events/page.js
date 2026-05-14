@@ -1,7 +1,8 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { redirect } from "next/navigation";
-import EventHub from "@/components/events/EventHub";
+import DashboardLayout from "@/components/DashboardLayout";
+import StudentEventWorkspace from "@/components/student/StudentEventWorkspace";
 
 export const metadata = {
   title: "Event Hub - Participate in School Events",
@@ -19,5 +20,9 @@ export default async function StudentEventsPage() {
     redirect("/");
   }
 
-  return <EventHub />;
+  return (
+    <DashboardLayout>
+      <StudentEventWorkspace />
+    </DashboardLayout>
+  );
 }

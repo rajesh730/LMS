@@ -5,6 +5,7 @@ import connectDB from "@/lib/db";
 import Student from "@/models/Student";
 import TalentProfile from "@/models/TalentProfile";
 import Achievement from "@/models/Achievement";
+import ParticipationRequest from "@/models/ParticipationRequest";
 import TalentSubmission from "@/models/TalentSubmission";
 
 export const dynamic = "force-dynamic";
@@ -15,14 +16,25 @@ async function buildStats(studentId) {
     Achievement.countDocuments({ student: studentId }),
   ]);
 
-  const participatedEventIds = await TalentSubmission.distinct("event", {
-    student: studentId,
-  });
+  const [submissionEventIds, requestEventIds, achievementEventIds] =
+    await Promise.all([
+      TalentSubmission.distinct("event", { student: studentId }),
+      ParticipationRequest.distinct("event", {
+        student: studentId,
+        status: { $in: ["APPROVED", "ENROLLED"] },
+      }),
+      Achievement.distinct("event", { student: studentId }),
+    ]);
+  const participatedEventIds = new Set(
+    [...submissionEventIds, ...requestEventIds, ...achievementEventIds]
+      .filter(Boolean)
+      .map((eventId) => String(eventId))
+  );
 
   return {
     submissionsCount,
     awardsCount,
-    eventsParticipated: participatedEventIds.length,
+    eventsParticipated: participatedEventIds.size,
   };
 }
 

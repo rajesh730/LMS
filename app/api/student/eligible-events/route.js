@@ -6,6 +6,8 @@ import Event from "@/models/Event";
 import EventSchoolInvitation from "@/models/EventSchoolInvitation";
 import Student from "@/models/Student";
 import ParticipationRequest from "@/models/ParticipationRequest";
+import { gradeListContains } from "@/lib/schoolGrades";
+import { buildEventPresentationState } from "@/lib/eventPresentation";
 
 /**
  * GET /api/student/eligible-events
@@ -60,7 +62,6 @@ export async function GET(req) {
         { eventScope: "PLATFORM", _id: { $in: approvedPlatformEventIds } },
       ],
     })
-      .populate("targetGroup", "name grades")
       .populate("participants.school", "schoolName _id")
       .populate("participants.students", "_id")
       .sort({ date: 1 })
@@ -73,7 +74,7 @@ export async function GET(req) {
         const isEligible =
           !event.eligibleGrades ||
           event.eligibleGrades.length === 0 ||
-          event.eligibleGrades.includes(studentGrade);
+          gradeListContains(event.eligibleGrades, studentGrade);
 
         if (!isEligible) {
           return null; // Filter out ineligible events
@@ -191,6 +192,10 @@ export async function GET(req) {
     // Add participation status to events
     const eventsWithStatus = eligibleEvents.map((event) => {
       const request = requestMap[event._id.toString()];
+      const presentation = buildEventPresentationState(event, {
+        participationStatus: request?.status || null,
+        studentCount: request ? 1 : 0,
+      });
       if (request) {
         return {
           ...event,
@@ -201,9 +206,13 @@ export async function GET(req) {
             approvedAt: request.approvedAt,
             rejectionReason: request.rejectionReason || null,
           },
+          presentation,
         };
       }
-      return event;
+      return {
+        ...event,
+        presentation,
+      };
     });
 
     return NextResponse.json(

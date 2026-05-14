@@ -5,27 +5,29 @@ import connectDB from "@/lib/db";
 import SchoolShowcaseProfile from "@/models/SchoolShowcaseProfile";
 import Event from "@/models/Event";
 import Achievement from "@/models/Achievement";
-import Club from "@/models/Club";
+import ParticipationRequest from "@/models/ParticipationRequest";
 
 export const dynamic = "force-dynamic";
 
 async function buildMetrics(schoolId) {
-  const [eventsHosted, eventsParticipated, awardsCount, clubsCount] =
+  const [eventsHosted, participatedEventIds, awardsCount] =
     await Promise.all([
       Event.countDocuments({ school: schoolId, lifecycleStatus: { $ne: "ARCHIVED" } }),
-      Event.countDocuments({
-        "participants.school": schoolId,
-        lifecycleStatus: { $ne: "ARCHIVED" },
+      ParticipationRequest.distinct("event", {
+        school: schoolId,
+        status: { $in: ["APPROVED", "ENROLLED"] },
       }),
-      Achievement.countDocuments({ school: schoolId }),
-      Club.countDocuments({ school: schoolId, status: "ACTIVE" }),
+      Achievement.countDocuments({
+        school: schoolId,
+        isPublic: true,
+        certificateIssuedAt: { $ne: null },
+      }),
     ]);
 
   return {
     eventsHosted,
-    eventsParticipated,
+    eventsParticipated: participatedEventIds.length,
     awardsCount,
-    clubsCount,
     studentParticipationRate: 0,
   };
 }
@@ -52,7 +54,7 @@ export async function GET() {
         summary: "",
         coverImageUrl: "",
         websiteUrl: "",
-        visibility: "PUBLIC",
+        visibility: "PRIVATE",
         highlightMetrics: metrics,
         featuredEvents: [],
         publicHighlights: [],
@@ -94,7 +96,9 @@ export async function PUT(req) {
           summary: body.summary || "",
           coverImageUrl: body.coverImageUrl || "",
           websiteUrl: body.websiteUrl || "",
-          visibility: body.visibility || "PUBLIC",
+          visibility: ["PRIVATE", "PUBLIC"].includes(body.visibility)
+            ? body.visibility
+            : "PRIVATE",
           featuredEvents: body.featuredEvents || [],
           publicHighlights: body.publicHighlights || [],
           highlightMetrics: metrics,

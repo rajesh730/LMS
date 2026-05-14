@@ -4,6 +4,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import Student from "@/models/Student";
 import ParticipationRequest from "@/models/ParticipationRequest";
+import { buildEventPresentationState } from "@/lib/eventPresentation";
 
 export async function GET(req) {
   try {
@@ -18,8 +19,14 @@ export async function GET(req) {
 
     await connectDB();
 
-    // Get student by email
-    const student = await Student.findOne({ email: session.user.email });
+    const student = await Student.findOne({
+      $or: [
+        { _id: session.user.id },
+        { userId: session.user.id },
+        { email: session.user.email },
+        { username: session.user.email },
+      ],
+    });
     if (!student) {
       return NextResponse.json(
         { success: false, message: "Student not found" },
@@ -39,11 +46,21 @@ export async function GET(req) {
       .sort({ requestedAt: -1 })
       .lean();
 
+    const presentedRequests = requests.map((request) => ({
+      ...request,
+      presentation: request.event
+        ? buildEventPresentationState(request.event, {
+            participationStatus: request.status,
+            studentCount: 1,
+          })
+        : null,
+    }));
+
     return NextResponse.json(
       {
         success: true,
         message: "Participation status fetched",
-        data: requests,
+        data: presentedRequests,
       },
       { status: 200 }
     );

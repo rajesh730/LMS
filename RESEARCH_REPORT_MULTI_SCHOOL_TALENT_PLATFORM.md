@@ -50,7 +50,7 @@ Freeze or remove as strategic priorities:
 - exams
 - marks
 - grading scales
-- report cards/results
+- report cards and academic transcript workflows
 - curriculum-heavy LMS flows
 
 Build next:
@@ -64,7 +64,7 @@ Build next:
 - public event landing pages
 - flagship platform-run events
 
-## 2. Question This Report Answers
+## 2. Questions This Report Answers
 
 This report answers:
 
@@ -90,7 +90,7 @@ Important note:
 
 ## 4. Current Codebase Assessment
 
-The existing project is a large multi-role Next.js platform with:
+The existing project is a large, multi-role Next.js platform with:
 
 - `SUPER_ADMIN`
 - `SCHOOL_ADMIN`
@@ -130,7 +130,7 @@ If you continue toward ERP, you are choosing a crowded category while carrying t
 
 If you pivot toward talent/extracurriculars, you can keep the strongest reusable foundations and stop investing in low-differentiation modules.
 
-## 5. Market Reality: Why Not Continue As A General School ERP
+## 5. Market Reality: Why Not Continue as a General School ERP
 
 The broad school ERP/SIS market is already well served.
 
@@ -183,13 +183,13 @@ CDC also reports that students who feel connected to school are more likely to h
 
 This matters because extracurriculars, clubs, performances, exhibitions, competitions, and service activities are some of the clearest ways schools create visible belonging beyond academics.
 
-### 6.3 Families need usable school information
+### 6.3 Families Need Usable School Information
 
 IES/NCEE found that parents preferred richer school information displays and liked pages with graphs plus numbers.
 
-That is directly relevant to your idea of public school activity pages:
+That is directly relevant to your idea of public school activity pages.
 
-parents and students do not just need schools to say "we support talent."
+Parents and students do not just need schools to say "we support talent."
 They need visible evidence:
 
 - events held
@@ -245,11 +245,11 @@ This is the right middle ground:
 - broader than a one-day talent show
 - much more focused than ERP
 
-## 8. Competitive Landscape In The Chosen Niche
+## 8. Competitive Landscape in the Chosen Niche
 
 The market around your likely niche is fragmented, not fully consolidated.
 
-### 8.1 School ERP vendors
+### 8.1 School ERP Vendors
 
 These products are broad and operations-heavy:
 
@@ -269,7 +269,7 @@ Their weakness for your opportunity:
 
 - they are not primarily positioned around talent identity, school showcase culture, and inter-school recognition
 
-### 8.2 Extracurricular/event operations tools
+### 8.2 Extracurricular/Event Operations Tools
 
 Examples:
 
@@ -287,7 +287,7 @@ Their weakness:
 - they are usually not talent identity systems
 - they do not necessarily create school reputation pages, achievement history, public school activity profiles, or platform-run competitions
 
-### 8.3 Clubs/engagement platforms
+### 8.3 Clubs/Engagement Platforms
 
 Examples:
 
@@ -302,7 +302,7 @@ Their weakness:
 
 - they are not necessarily optimized for multi-school competition networks and public school promotion
 
-### 8.4 Judging/competition tools
+### 8.4 Judging/Competition Tools
 
 Examples:
 
@@ -356,7 +356,7 @@ With public visibility, the platform becomes:
 
 ### Recommended public-facing model
 
-#### A. Public landing page
+#### A. Public Landing Page
 
 Show before login/signup:
 
@@ -367,7 +367,7 @@ Show before login/signup:
 - platform-run flagship events
 - "most active schools" or "featured schools" in a careful, fair format
 
-#### B. Public school profile pages
+#### B. Public School Profile Pages
 
 Each school should have a public page showing:
 
@@ -381,7 +381,7 @@ Each school should have a public page showing:
 - gallery/highlights
 - activity metrics
 
-#### C. Public event pages
+#### C. Public Event Pages
 
 Each public event should show:
 
@@ -501,7 +501,7 @@ That is strategically strong.
 
 ### 12.1 What the product should become
 
-The product should answer:
+The product should answer this question:
 
 **How active, creative, competitive, and vibrant is this school beyond academics?**
 
@@ -646,7 +646,7 @@ Platform-run competitions are powerful, but they also create:
 
 So platform events should be limited and intentional.
 
-## 16. Recommendation For This Codebase
+## 16. Recommendation for This Codebase
 
 ### Keep and adapt
 
@@ -665,7 +665,7 @@ So platform events should be limited and intentional.
 - exams
 - marks
 - grading scales
-- report cards/results
+- report cards and academic transcript workflows
 - curriculum-heavy subject flows
 - teacher academic content systems unless repurposed for coaching
 

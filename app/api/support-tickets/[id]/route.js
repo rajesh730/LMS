@@ -6,20 +6,14 @@ import { successResponse, errorResponse } from "@/lib/apiResponse";
 
 export async function GET(req, { params }) {
   try {
-    // Await params in Next.js 16
     const { id } = await params;
-    console.log("=== GET /api/support-tickets/[id] ===");
-    console.log("Ticket ID:", id);
-    
+
     await connectDB();
     const session = await getServerSession(authOptions);
 
     if (!session) {
-      console.log("No session found");
       return errorResponse(401, "Unauthorized");
     }
-
-    console.log("Session user:", session.user.id, "Role:", session.user.role);
 
     const ticket = await SupportTicket.findById(id)
       .populate("school", "name email")
@@ -29,30 +23,20 @@ export async function GET(req, { params }) {
       .lean();
 
     if (!ticket) {
-      console.log("Ticket not found for ID:", id);
       return errorResponse(404, "Ticket not found");
     }
 
-    console.log("Found ticket, checking authorization");
-    console.log("User role:", session.user.role);
-    console.log("Ticket school:", ticket.school);
-
-    // Check authorization - SUPER_ADMIN can see all
     if (session.user.role === "SUPER_ADMIN") {
-      console.log("Super admin access granted");
       return successResponse(200, "Ticket fetched successfully", { ticket });
     }
 
-    // SCHOOL_ADMIN can only see their own tickets
     if (
       session.user.role === "SCHOOL_ADMIN" &&
       ticket.school._id.toString() !== session.user.id
     ) {
-      console.log("Access denied: school admin can't view other schools' tickets");
       return errorResponse(403, "Forbidden");
     }
 
-    console.log("Ticket access granted, returning:", ticket._id);
     return successResponse(200, "Ticket fetched successfully", { ticket });
   } catch (error) {
     console.error("Error fetching ticket:", error);
@@ -62,11 +46,8 @@ export async function GET(req, { params }) {
 
 export async function PATCH(req, { params }) {
   try {
-    // Await params in Next.js 16
     const { id } = await params;
-    console.log("=== PATCH /api/support-tickets/[id] ===");
-    console.log("Ticket ID:", id);
-    
+
     await connectDB();
     const session = await getServerSession(authOptions);
 
@@ -185,9 +166,7 @@ Best regards,
 E-Grantha Support Team
         `;
 
-        console.log(`[EMAIL] Would send to ${schoolEmail}:`, emailBody);
         // TODO: Integrate actual email service (SendGrid, Mailgun, etc.)
-        // For now, just log it
       } catch (emailError) {
         console.error("Error sending notification email:", emailError);
         // Don't fail the request if email fails
@@ -207,11 +186,8 @@ E-Grantha Support Team
 
 export async function DELETE(req, { params }) {
   try {
-    // Await params in Next.js 16
     const { id } = await params;
-    console.log("=== DELETE /api/support-tickets/[id] ===");
-    console.log("Ticket ID:", id);
-    
+
     await connectDB();
     const session = await getServerSession(authOptions);
 

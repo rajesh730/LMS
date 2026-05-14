@@ -51,6 +51,11 @@ const UserSchema = new mongoose.Schema(
       enum: ["PENDING", "APPROVED", "REJECTED", "SUBSCRIBED", "UNSUBSCRIBED"],
       default: "PENDING",
     },
+    authVersion: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
     // Education configuration for schools
     educationLevels: {
       school: { type: Boolean, default: false },

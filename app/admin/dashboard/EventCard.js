@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import Link from "next/link";
 import {
   FaUsers,
   FaChevronDown,
@@ -18,7 +18,9 @@ import {
   FaTimes,
   FaUndo,
   FaArchive,
+  FaCog,
 } from "react-icons/fa";
+import { getEventStage, getStageClasses } from "@/lib/eventUiStatus";
 
 export default function EventCard({
   event,
@@ -28,7 +30,10 @@ export default function EventCard({
   filterContext,
   onViewParticipants,
   onUpdateStatus,
+  actionMode = "manage",
 }) {
+  const isTeamEvent =
+    String(event?.participationFormat || "INDIVIDUAL").toUpperCase() === "TEAM";
   // Filter participants based on context
   const displayedParticipants = event.participants?.filter((p) => {
     if (!filterContext || filterContext === "ALL") return true;
@@ -42,19 +47,24 @@ export default function EventCard({
 
   // Calculate detailed stats
   const allParticipants = event.participants || [];
+  const pendingEntries = event.pendingEntryCount ?? allParticipants.filter((p) => p.status === "PENDING").length;
+  const approvedEntries = event.approvedEntryCount ?? allParticipants.filter((p) => p.status === "APPROVED").length;
+  const rejectedEntries = event.rejectedEntryCount ?? allParticipants.filter((p) => p.status === "REJECTED").length;
   const stats = {
-    totalSchools: allParticipants.length,
-    pendingSchools: allParticipants.filter((p) => p.status === "PENDING")
-      .length,
-    approvedSchools: allParticipants.filter((p) => p.status === "APPROVED")
-      .length,
-    rejectedSchools: allParticipants.filter((p) => p.status === "REJECTED")
-      .length,
-    totalStudents: allParticipants.reduce(
-      (sum, p) => sum + (p.expectedStudents || p.students?.length || 0),
-      0
-    ),
-    approvedStudents: allParticipants
+    totalSchools: event.schoolCount ?? allParticipants.length,
+    pendingSchools: pendingEntries,
+    approvedSchools: approvedEntries,
+    rejectedSchools: rejectedEntries,
+    totalStudents: isTeamEvent
+      ? event.teamCount ??
+        allParticipants.length
+      : allParticipants.reduce(
+          (sum, p) => sum + (p.expectedStudents || p.students?.length || 0),
+          0
+        ),
+    approvedStudents: isTeamEvent
+      ? approvedEntries
+      : allParticipants
       .filter((p) => p.status === "APPROVED")
       .reduce(
         (sum, p) => sum + (p.expectedStudents || p.students?.length || 0),
@@ -118,10 +128,17 @@ export default function EventCard({
     document.body.removeChild(link);
   };
 
-  // Progress percentage for max participants
+  const studentCapacityCount =
+    event.studentCapacityCount ?? event.studentCount ?? totalExpectedStudents;
+
+  // Progress percentage for total student capacity
   const progressPercent = event.maxParticipants
-    ? Math.min((participantCount / event.maxParticipants) * 100, 100)
+    ? Math.min((studentCapacityCount / event.maxParticipants) * 100, 100)
     : 0;
+  const stage = getEventStage(event);
+  const isManageMode = actionMode === "manage";
+  const isCompletedMode = actionMode === "completed";
+  const isArchivedMode = actionMode === "archived";
 
   return (
     <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
@@ -141,19 +158,30 @@ export default function EventCard({
                 })}
               </span>
               <span className="bg-slate-700 px-2 py-0.5 rounded text-xs">
-                {event.targetGroup?.name || "Global"}
+                {event.eventScope === "PLATFORM" ? "Platform" : "School"}
               </span>
+            </div>
+
+            <div
+              className={`mt-3 rounded-xl border px-3 py-2 text-sm ${getStageClasses(
+                stage.tone
+              )}`}
+            >
+              <div className="font-semibold">{stage.label}</div>
+              <div className="text-xs opacity-90">{stage.nextAction}</div>
             </div>
 
             {/* Limits Badges */}
             <div className="flex flex-wrap gap-2 mt-2">
               {(() => {
                 const pendingCount =
-                  event.participants?.filter((p) => p.status === "PENDING")
-                    .length || 0;
+                  event.pendingEntryCount ??
+                  (event.participants?.filter((p) => p.status === "PENDING")
+                    .length || 0);
                 const rejectedCount =
-                  event.participants?.filter((p) => p.status === "REJECTED")
-                    .length || 0;
+                  event.rejectedEntryCount ??
+                  (event.participants?.filter((p) => p.status === "REJECTED")
+                    .length || 0);
 
                 // Context-based display (Priority)
                 if (filterContext === "PENDING") {
@@ -191,7 +219,7 @@ export default function EventCard({
               })()}
               {event.maxParticipantsPerSchool && (
                 <span className="text-xs bg-slate-800 border border-slate-600 px-2 py-1 rounded text-slate-300">
-                  Max {event.maxParticipantsPerSchool} Students/School
+                  Max {event.maxParticipantsPerSchool} {isTeamEvent ? "Teams" : "Students"}/School
                 </span>
               )}
               {event.eligibleGrades && event.eligibleGrades.length > 0 && (
@@ -250,7 +278,7 @@ export default function EventCard({
           <div className="bg-slate-900/50 p-3 rounded-lg flex items-center justify-between px-4 border border-slate-800">
             <div>
               <div className="text-xs text-slate-400 uppercase tracking-wider mb-1">
-                Total Students
+                {isTeamEvent ? "Total Teams" : "Total Students"}
               </div>
               <div className="text-xl font-bold text-blue-400">
                 {stats.totalStudents}
@@ -292,9 +320,9 @@ export default function EventCard({
         {event.maxParticipants && (
           <div className="mb-4">
             <div className="flex justify-between text-xs text-slate-400 mb-1">
-              <span>Slots Filled</span>
+              <span>{isTeamEvent ? "Team Capacity Filled" : "Student Capacity Filled"}</span>
               <span>
-                {participantCount} / {event.maxParticipants}
+                {studentCapacityCount} / {event.maxParticipants}
               </span>
             </div>
             <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
@@ -316,8 +344,26 @@ export default function EventCard({
 
         {/* Actions */}
         <div className="flex flex-wrap gap-2 mt-4">
-          {/* Edit - Only if not archived */}
-          {event.lifecycleStatus !== "ARCHIVED" && (
+          {isManageMode && (
+            <Link
+              href={`/admin/events/${event._id}/manage`}
+              className="py-2 px-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition flex items-center justify-center gap-2 font-semibold"
+            >
+              <FaCog /> Manage Event
+            </Link>
+          )}
+
+          {isCompletedMode && (
+            <Link
+              href={`/admin/events/${event._id}/manage`}
+              className="py-2 px-4 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition flex items-center justify-center gap-2 font-semibold"
+            >
+              <FaCog /> View Event
+            </Link>
+          )}
+
+          {/* Edit - Only for active management */}
+          {isManageMode && event.lifecycleStatus !== "ARCHIVED" && (
             <button
               onClick={() => onEdit && onEdit(event)}
               className="bg-blue-600 hover:bg-blue-500 text-white p-3 rounded-lg flex items-center justify-center transition shadow-lg hover:shadow-blue-500/20"
@@ -328,7 +374,7 @@ export default function EventCard({
           )}
 
           {/* Mark Complete - Only if ACTIVE */}
-          {(event.lifecycleStatus === "ACTIVE" || !event.lifecycleStatus) && (
+          {isManageMode && (event.lifecycleStatus === "ACTIVE" || !event.lifecycleStatus) && (
             <button
               onClick={() => onUpdateStatus && onUpdateStatus(event._id, "COMPLETED")}
               className="bg-emerald-600 hover:bg-emerald-500 text-white p-3 rounded-lg flex items-center justify-center transition shadow-lg hover:shadow-emerald-500/20"
@@ -339,19 +385,20 @@ export default function EventCard({
           )}
 
           {/* Archive (Soft Delete) - If not already archived */}
-          {event.lifecycleStatus !== "ARCHIVED" && (
+          {(isManageMode || isCompletedMode) && event.lifecycleStatus !== "ARCHIVED" && (
             <button
               onClick={() => onDelete(event._id, false)} // false = soft delete
               disabled={isDeleting}
-              className="bg-orange-600 hover:bg-orange-500 text-white p-3 rounded-lg flex items-center justify-center transition shadow-lg hover:shadow-orange-500/20"
+              className="bg-orange-600 hover:bg-orange-500 text-white px-4 py-3 rounded-lg flex items-center justify-center gap-2 transition shadow-lg hover:shadow-orange-500/20"
               title="Archive Event"
             >
               <FaArchive size={18} />
+              <span className="font-semibold">Archive Event</span>
             </button>
           )}
 
           {/* Restore - If ARCHIVED */}
-          {event.lifecycleStatus === "ARCHIVED" && (
+          {isArchivedMode && event.lifecycleStatus === "ARCHIVED" && (
             <button
               onClick={() => onUpdateStatus && onUpdateStatus(event._id, "ACTIVE")}
               className="bg-blue-600 hover:bg-blue-500 text-white p-3 rounded-lg flex items-center justify-center transition shadow-lg hover:shadow-blue-500/20"
@@ -362,7 +409,7 @@ export default function EventCard({
           )}
 
           {/* Permanent Delete - Only if ARCHIVED */}
-          {event.lifecycleStatus === "ARCHIVED" && (
+          {isArchivedMode && event.lifecycleStatus === "ARCHIVED" && (
             <button
               onClick={() => onDelete(event._id, true)} // true = permanent
               disabled={isDeleting}
@@ -381,14 +428,6 @@ export default function EventCard({
             </button>
           )}
 
-          {event.participants?.length > 0 && (
-            <button
-              onClick={() => onViewParticipants && onViewParticipants(event)}
-              className="flex-1 py-2 bg-blue-500/10 text-blue-400 rounded-lg hover:bg-blue-500/20 transition flex items-center justify-center gap-2"
-            >
-              <FaUsers /> Manage Participants
-            </button>
-          )}
           {event.participants?.length > 0 && (
             <button
               onClick={exportToCSV}

@@ -1,22 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { useParams } from "next/navigation";
-import {
-  FaCalendarAlt,
-  FaClock,
-  FaUsers,
-  FaCheckCircle,
-  FaTimesCircle,
-  FaEdit,
-  FaTrash,
-  FaFileExport,
-  FaDownload,
-} from "react-icons/fa";
 import EventInfoHeader from "./EventInfoHeader";
 import ManagementTabs from "./ManagementTabs";
-import QuickActionsSection from "./QuickActionsSection";
 import { useSession } from "next-auth/react";
+import { FaArrowLeft } from "react-icons/fa";
 
 export default function EventDetailDashboard() {
   const params = useParams();
@@ -25,33 +15,37 @@ export default function EventDetailDashboard() {
 
   const [eventData, setEventData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("pending");
+  const [activeTab, setActiveTab] = useState("overview");
+  const [loadError, setLoadError] = useState("");
 
-  useEffect(() => {
-    fetchEventData();
-  }, [eventId]);
-
-  const fetchEventData = async () => {
+  const fetchEventData = useCallback(async () => {
     try {
       setLoading(true);
+      setLoadError("");
       const res = await fetch(`/api/events/${eventId}/manage`);
+      const data = await res.json().catch(() => ({}));
 
       if (res.ok) {
-        const data = await res.json();
         setEventData(data);
       } else {
-        console.error("Failed to fetch event data");
+        setEventData(null);
+        setLoadError(data.message || "Failed to load event data.");
       }
     } catch (error) {
-      console.error("Error fetching event:", error);
+      setEventData(null);
+      setLoadError(error.message || "Failed to load event data.");
     } finally {
       setLoading(false);
     }
-  };
+  }, [eventId]);
+
+  useEffect(() => {
+    fetchEventData();
+  }, [fetchEventData]);
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 p-8 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-[#071833] to-[#0a2145] p-8 flex items-center justify-center">
         <div className="text-white text-xl">Loading event details...</div>
       </div>
     );
@@ -59,21 +53,50 @@ export default function EventDetailDashboard() {
 
   if (!eventData) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 p-8">
-        <div className="text-white text-center text-xl">Event not found</div>
+      <div className="min-h-screen bg-gradient-to-br from-[#071833] to-[#0a2145] p-8">
+        <div className="mx-auto max-w-2xl rounded-2xl border border-[#ffb21c]/30 bg-[#ffb21c]/10 p-6 text-center">
+          <h1 className="text-xl font-bold text-white">Event could not load</h1>
+          <p className="mt-2 text-[#fff0c9]">
+            {loadError || "Event not found or you do not have access."}
+          </p>
+          <button
+            type="button"
+            onClick={fetchEventData}
+            className="mt-4 rounded-lg bg-[#ffb21c] px-4 py-2 text-sm font-semibold text-[#0a2f66] hover:bg-[#ffc44d]"
+          >
+            Try Again
+          </button>
+        </div>
       </div>
     );
   }
 
   const { event, requests, capacityInfo, perSchoolBreakdown } = eventData;
+  const backHref =
+    session?.user?.role === "SUPER_ADMIN"
+      ? "/admin/dashboard?tab=events"
+      : "/school/dashboard?tab=school-events";
+  const backLabel =
+    session?.user?.role === "SUPER_ADMIN"
+      ? "Back to Dashboard"
+      : "Back to Dashboard";
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800">
+    <div className="min-h-screen bg-gradient-to-br from-[#071833] to-[#0a2145]">
       {/* Header */}
       <EventInfoHeader event={event} capacityInfo={capacityInfo} />
 
       {/* Main Content */}
       <div className="p-6 md:p-8 max-w-7xl mx-auto">
+        <div className="mb-4">
+          <Link
+            href={backHref}
+            className="inline-flex items-center gap-2 rounded-lg border border-[#1c4a8d] bg-[#081b39]/70 px-4 py-2 text-sm font-semibold text-[#dce9ff] hover:bg-[#0f2953]"
+          >
+            <FaArrowLeft />
+            {backLabel}
+          </Link>
+        </div>
         {/* Management Tabs */}
         <ManagementTabs
           requests={requests}
@@ -84,9 +107,6 @@ export default function EventDetailDashboard() {
           setActiveTab={setActiveTab}
           onDataChange={fetchEventData}
         />
-
-        {/* Quick Actions */}
-        <QuickActionsSection event={event} />
       </div>
     </div>
   );

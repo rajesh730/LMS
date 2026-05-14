@@ -19,14 +19,34 @@ import {
 } from "react-icons/fa";
 import EventParticipationForm from "./EventParticipationForm";
 import { useSession } from "next-auth/react";
+import SchoolRoundPanel from "@/app/school/dashboard/SchoolRoundPanel";
+import EventCertificatesPanel from "./EventCertificatesPanel";
+import { getEventStage, getStageClasses, isDatePast } from "@/lib/eventUiStatus";
+import { isTeamEventLike } from "@/lib/eventParticipationFormat";
 
-export default function EventHub({ refreshKey = 0 }) {
+export default function EventHub({
+  refreshKey = 0,
+  eventScope = null,
+  title = "Upcoming Events",
+  description = "Explore and participate in upcoming school events",
+  defaultFilter = "all",
+  lifecycleFilter = null,
+  completedView = false,
+  filters = [
+    { id: "all", label: "All Events" },
+    { id: "pending", label: "Pending Requests" },
+    { id: "approved", label: "My Events" },
+    { id: "rejected", label: "Declined" },
+  ],
+}) {
   const { data: session } = useSession();
+  const isStudentView = session?.user?.role === "STUDENT";
+  const isSchoolView = session?.user?.role === "SCHOOL_ADMIN";
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expandedEventId, setExpandedEventId] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterStatus, setFilterStatus] = useState("all"); // all, participated, pending, approved, rejected
+  const [filterStatus, setFilterStatus] = useState(defaultFilter); // all, participated, pending, approved, rejected
 
   const fetchEvents = useCallback(async () => {
     try {
@@ -40,20 +60,80 @@ export default function EventHub({ refreshKey = 0 }) {
       const res = await fetch(endpoint);
       if (res.ok) {
         const data = await res.json();
-        setEvents(data.events || data || []);
+        const rawEvents = data.events || data || [];
+        const loadedEvents = rawEvents.map((event) => ({
+          ...event,
+          participationStatus: event.participationStatus || event.userStatus || null,
+          isParticipating:
+            event.isParticipating || Boolean(event.participationStatus || event.userStatus),
+          deadline: event.deadline || event.registrationDeadline || null,
+          capacity:
+            event.capacity === undefined ? event.maxParticipants : event.capacity,
+        }));
+        setEvents(
+          loadedEvents.filter((event) => {
+            const scopeMatch = eventScope ? event.eventScope === eventScope : true;
+            if (!scopeMatch) return false;
+
+            if (completedView) {
+              const hasSchoolParticipation =
+                Boolean(event.hasSchoolParticipation) ||
+                Number(event.myParticipation?.studentCount || 0) > 0;
+              return hasSchoolParticipation && Boolean(event.finalOutcomeReady);
+            }
+
+            if (lifecycleFilter === "ACTIVE" && event.finalOutcomeReady) {
+              return false;
+            }
+
+            if (
+              lifecycleFilter &&
+              lifecycleFilter !== "ACTIVE" &&
+              String(event.lifecycleStatus || "ACTIVE").toUpperCase() !== lifecycleFilter
+            ) {
+              return false;
+            }
+
+            return true;
+          })
+        );
       }
     } catch (error) {
       console.error("Error fetching events:", error);
     } finally {
       setLoading(false);
     }
-  }, [session?.user?.role]);
+  }, [completedView, eventScope, lifecycleFilter, session?.user?.role]);
 
   useEffect(() => {
     fetchEvents();
   }, [fetchEvents, refreshKey]);
 
+  const isRegistrationClosed = (event) => {
+    if (typeof event.registrationLocked === "boolean") {
+      return event.registrationLocked;
+    }
+    const deadline = event.registrationDeadline || event.deadline;
+    const lifecycleStatus = String(event.lifecycleStatus || "ACTIVE").toUpperCase();
+    return (
+      ["COMPLETED", "ARCHIVED"].includes(lifecycleStatus) ||
+      Boolean(deadline && isDatePast(deadline, { endOfDay: true }))
+    );
+  };
+  const getRegisteredStudentCount = (event) =>
+    isTeamEventLike(event)
+      ? event.myParticipation?.teamCount || 0
+      : event.myParticipation?.studentCount ||
+        event.myParticipation?.students?.length ||
+        0;
+
   const handleWithdraw = async (eventId) => {
+    const event = events.find((item) => item._id === eventId);
+    if (event && isRegistrationClosed(event)) {
+      alert("Registration is closed, so this team can no longer be withdrawn.");
+      return;
+    }
+
     if (
       !confirm(
         "Are you sure you want to withdraw from this event? This will remove all students."
@@ -80,20 +160,12 @@ export default function EventHub({ refreshKey = 0 }) {
   };
 
   const filteredEvents = events.filter((event) => {
-    if (
-      session?.user?.role === "SCHOOL_ADMIN" &&
-      event.eventScope === "PLATFORM" &&
-      event.schoolInvitationStatus !== "APPROVED" &&
-      !event.participationStatus
-    ) {
-      return false;
-    }
-
     const matchesSearch = event.title
       .toLowerCase()
       .includes(searchQuery.toLowerCase());
 
     if (filterStatus === "all") return matchesSearch;
+    if (filterStatus === "completed") return matchesSearch;
     if (filterStatus === "participated")
       return matchesSearch && event.participationStatus;
     if (filterStatus === "pending")
@@ -112,11 +184,13 @@ export default function EventHub({ refreshKey = 0 }) {
       PENDING: "bg-yellow-900/40 text-yellow-200 border-yellow-700",
       APPROVED: "bg-green-900/40 text-green-200 border-green-700",
       REJECTED: "bg-red-900/40 text-red-200 border-red-700",
+      COMPLETED: "bg-blue-900/40 text-blue-200 border-blue-700",
     };
     const icons = {
       PENDING: <FaClock2 className="inline mr-2" />,
       APPROVED: <FaCheckCircle className="inline mr-2" />,
       REJECTED: <FaTimesCircle className="inline mr-2" />,
+      COMPLETED: <FaCheckCircle className="inline mr-2" />,
     };
     return (
       <span
@@ -129,6 +203,7 @@ export default function EventHub({ refreshKey = 0 }) {
   };
 
   const getCapacityColor = (current, max) => {
+    if (!max) return "text-slate-300";
     const percentage = (current / max) * 100;
     if (percentage >= 90) return "text-red-400";
     if (percentage >= 70) return "text-yellow-400";
@@ -152,11 +227,9 @@ export default function EventHub({ refreshKey = 0 }) {
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-4">
             <FaCalendarAlt className="text-3xl text-emerald-400" />
-            <h1 className="text-4xl font-bold text-white">Upcoming Events</h1>
+            <h1 className="text-4xl font-bold text-white">{title}</h1>
           </div>
-          <p className="text-slate-400">
-            Explore and participate in upcoming school events
-          </p>
+          <p className="text-slate-400">{description}</p>
         </div>
 
         {/* Search & Filter */}
@@ -183,12 +256,7 @@ export default function EventHub({ refreshKey = 0 }) {
 
           {/* Filter Tabs */}
           <div className="flex flex-wrap gap-3">
-            {[
-              { id: "all", label: "All Events" },
-              { id: "pending", label: "Pending Requests" },
-              { id: "approved", label: "My Events" },
-              { id: "rejected", label: "Declined" },
-            ].map((filter) => (
+            {filters.map((filter) => (
               <button
                 key={filter.id}
                 onClick={() => setFilterStatus(filter.id)}
@@ -209,13 +277,35 @@ export default function EventHub({ refreshKey = 0 }) {
           {filteredEvents.length === 0 ? (
             <div className="bg-slate-800/50 rounded-xl p-12 text-center border border-slate-700">
               <FaCalendarAlt className="text-4xl text-slate-600 mb-4 mx-auto" />
-              <p className="text-slate-400 text-lg">No events found</p>
+              <p className="text-slate-300 text-lg font-semibold">
+                {filterStatus === "participated"
+                  ? "No registered events yet"
+                  : eventScope === "PLATFORM"
+                  ? "No platform competitions available"
+                  : eventScope === "SCHOOL"
+                  ? "No school events available"
+                  : "No events found"}
+              </p>
               <p className="text-slate-500 text-sm mt-2">
-                Try adjusting your search or filters
+                {searchQuery
+                  ? "Clear the search or adjust filters to see more events."
+                  : filterStatus === "participated"
+                  ? "Events you join or get registered for will appear here."
+                  : "Check again after your school or the platform publishes an event."}
               </p>
             </div>
           ) : (
             filteredEvents.map((event) => (
+              (() => {
+                const stage = getEventStage(event);
+                const isCompletedEvent = Boolean(event.finalOutcomeReady);
+                const registrationLocked = isRegistrationClosed(event);
+                const needsSchoolApproval =
+                  isSchoolView &&
+                  event.eventScope === "PLATFORM" &&
+                  event.schoolInvitationStatus !== "APPROVED" &&
+                  !event.participationStatus;
+                return (
               <div
                 key={event._id}
                 className="bg-slate-800/50 border border-slate-700 rounded-xl overflow-hidden transition-all hover:border-slate-600"
@@ -238,13 +328,52 @@ export default function EventHub({ refreshKey = 0 }) {
                         <h3 className="text-2xl font-bold text-white">
                           {event.title}
                         </h3>
+                        <span
+                          className={`rounded-full border px-3 py-1 text-xs font-bold ${
+                            event.eventScope === "PLATFORM"
+                              ? "border-purple-500/30 bg-purple-500/10 text-purple-200"
+                              : "border-blue-500/30 bg-blue-500/10 text-blue-200"
+                          }`}
+                        >
+                          {event.eventScope === "PLATFORM"
+                            ? "Platform Competition"
+                            : "School Event"}
+                        </span>
                         {event.participationStatus &&
-                          getStatusBadge(event.participationStatus)}
+                          getStatusBadge(
+                            isCompletedEvent && completedView
+                              ? "COMPLETED"
+                              : event.participationStatus
+                          )}
+                        {needsSchoolApproval && (
+                          <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-200">
+                            School approval needed
+                          </span>
+                        )}
+                        {event.participationStatus && (
+                          <span className="rounded-full border border-slate-600 px-3 py-1 text-sm text-slate-300">
+                            {getRegisteredStudentCount(event)}{" "}
+                            {isTeamEventLike(event)
+                              ? "teams registered"
+                              : "students registered"}
+                          </span>
+                        )}
                       </div>
 
                       <p className="text-slate-400 mb-4 line-clamp-2">
                         {event.description}
                       </p>
+
+                      <div
+                        className={`mb-4 rounded-xl border px-3 py-2 text-sm ${getStageClasses(
+                          stage.tone
+                        )}`}
+                      >
+                        <div className="font-semibold">{stage.label}</div>
+                        <div className="text-xs opacity-90">
+                          {stage.nextAction}
+                        </div>
+                      </div>
 
                       {/* Event Details Grid */}
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -277,18 +406,21 @@ export default function EventHub({ refreshKey = 0 }) {
                             </p>
                             <p
                               className={`font-medium ${
-                                new Date(event.deadline) < new Date()
+                                event.deadline &&
+                                isDatePast(event.deadline, { endOfDay: true })
                                   ? "text-red-400"
                                   : "text-emerald-400"
                               }`}
                             >
-                              {new Date(event.deadline).toLocaleDateString(
-                                "en-US",
-                                {
-                                  month: "short",
-                                  day: "numeric",
-                                }
-                              )}
+                              {event.deadline
+                                ? new Date(event.deadline).toLocaleDateString(
+                                    "en-US",
+                                    {
+                                      month: "short",
+                                      day: "numeric",
+                                    }
+                                  )
+                                : "No deadline"}
                             </p>
                           </div>
                         </div>
@@ -306,7 +438,9 @@ export default function EventHub({ refreshKey = 0 }) {
                                 event.capacity
                               )}`}
                             >
-                              {event.enrolled || 0}/{event.capacity}
+                              {event.capacity
+                                ? `${event.enrolled || 0}/${event.capacity}`
+                                : `${event.enrolled || 0}/Unlimited`}
                             </p>
                           </div>
                         </div>
@@ -338,29 +472,46 @@ export default function EventHub({ refreshKey = 0 }) {
 
                       {event.participationStatus ? (
                         <div className="flex gap-2">
-                          {event.visibility === "PUBLIC" && (
+                          {event.visibility === "PUBLIC" && completedView && event.resultsPublished && (
+                            <Link
+                              href={`/events/${event._id}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="bg-slate-700 hover:bg-slate-600 text-slate-100 px-3 py-2 rounded-lg transition-colors"
+                              title="View public overall result"
+                            >
+                              Open Public Result
+                            </Link>
+                          )}
+                          {event.visibility === "PUBLIC" && !completedView && (
                             <Link
                               href={`/events/${event._id}`}
                               onClick={(e) => e.stopPropagation()}
                               className="bg-slate-700 hover:bg-slate-600 text-slate-100 px-3 py-2 rounded-lg transition-colors"
                               title="View public event page"
                             >
-                              View Page
+                              Open Public Event
                             </Link>
                           )}
-                          {session?.user?.role === "SCHOOL_ADMIN" && (
+                          {isSchoolView && !completedView && (
                             <>
                               <button
+                                disabled={registrationLocked}
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   handleWithdraw(event._id);
                                 }}
-                                className="bg-red-600/20 hover:bg-red-600/40 text-red-400 p-2 rounded-lg transition-colors"
-                                title="Withdraw Participation"
+                                className="inline-flex items-center gap-2 bg-red-600/20 hover:bg-red-600/40 text-red-400 px-3 py-2 rounded-lg transition-colors disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-500"
+                                title={
+                                  registrationLocked
+                                    ? "Registration closed"
+                                    : "Withdraw Participation"
+                                }
                               >
                                 <FaTrash />
+                                Withdraw
                               </button>
                               <button
+                                disabled={false}
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setExpandedEventId(
@@ -369,12 +520,42 @@ export default function EventHub({ refreshKey = 0 }) {
                                       : event._id
                                   );
                                 }}
-                                className="bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 p-2 rounded-lg transition-colors"
-                                title="Change Participants"
+                                className="inline-flex items-center gap-2 bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 px-3 py-2 rounded-lg transition-colors"
+                                title={
+                                  registrationLocked
+                                    ? "Track rounds and team outcome"
+                                    : "Manage team registration"
+                                }
                               >
                                 <FaEdit />
+                                {registrationLocked ? "Track Rounds" : "Manage Team"}
                               </button>
                             </>
+                          )}
+                          {completedView && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setExpandedEventId(
+                                  expandedEventId === event._id ? null : event._id
+                                );
+                              }}
+                              className="inline-flex items-center gap-2 bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 px-3 py-2 rounded-lg transition-colors"
+                              title="View school result and certificates"
+                            >
+                              <FaEdit />
+                              View Results & Certificates
+                            </button>
+                          )}
+                          {isStudentView && event.visibility === "PUBLIC" && event.finalOutcomeReady && (
+                            <Link
+                              href={`/events/${event._id}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 px-3 py-2 rounded-lg transition-colors"
+                              title="View published result"
+                            >
+                              View Result
+                            </Link>
                           )}
                         </div>
                       ) : (
@@ -385,19 +566,28 @@ export default function EventHub({ refreshKey = 0 }) {
                               onClick={(e) => e.stopPropagation()}
                               className="bg-slate-700 hover:bg-slate-600 text-slate-100 px-3 py-2 rounded-lg transition-colors"
                             >
-                              View Page
+                              Open Public Event
                             </Link>
                           )}
                           <div
                             onClick={(e) => {
                               e.stopPropagation();
+                              if (registrationLocked || needsSchoolApproval) return;
                               setExpandedEventId(event._id);
                             }}
-                            className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap cursor-pointer"
+                            className={`px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap ${
+                              registrationLocked || needsSchoolApproval
+                                ? "bg-slate-700 text-slate-500 cursor-not-allowed"
+                                : "bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer"
+                            }`}
                           >
-                            {session?.user?.role === "STUDENT"
+                            {needsSchoolApproval
+                              ? "Approve First"
+                              : registrationLocked
+                              ? "Registration Locked"
+                              : isStudentView
                               ? "Join Event"
-                              : "Register Participants"}
+                              : "Register Team"}
                           </div>
                         </div>
                       )}
@@ -406,19 +596,133 @@ export default function EventHub({ refreshKey = 0 }) {
                 </div>
 
                 {/* Expanded Section - Participation Form */}
-                {expandedEventId === event._id && (
-                  <div className="border-t border-slate-700 bg-slate-900/50 p-6">
-                    <EventParticipationForm
-                      event={event}
-                      isEditing={!!event.participationStatus}
-                      onSuccess={() => {
-                        fetchEvents();
-                        setExpandedEventId(null);
-                      }}
-                    />
+                {expandedEventId === event._id && !needsSchoolApproval && (
+                  <div className="space-y-6 border-t border-slate-700 bg-slate-900/50 p-6">
+                    {!completedView && !registrationLocked && (
+                      <div className="rounded-xl border border-slate-700 bg-slate-950/40 p-4">
+                        <h4 className="mb-3 text-lg font-semibold text-white">
+                          {isStudentView
+                            ? event.participationStatus
+                              ? "Registration Status"
+                              : "Join Event"
+                            : event.participationStatus
+                            ? "Team Registration"
+                            : "Register Team"}
+                        </h4>
+                        <EventParticipationForm
+                          event={event}
+                          isEditing={!isStudentView && !!event.participationStatus}
+                          onSuccess={() => {
+                            fetchEvents();
+                            setExpandedEventId(null);
+                          }}
+                        />
+                      </div>
+                    )}
+
+                    {event.participationStatus && !completedView && isSchoolView && (
+                      <>
+                        {registrationLocked && (
+                          <div className="rounded-xl border border-blue-500/20 bg-blue-500/10 p-4">
+                            <h4 className="text-lg font-semibold text-white">
+                              {event.finalOutcomeReady
+                                ? "Competition Outcome Ready"
+                                : "Team Registration Locked"}
+                            </h4>
+                            <p className="mt-2 text-sm text-blue-100/85">
+                              {event.finalOutcomeReady
+                                ? "This event has moved into final-outcome mode. Use this area to review your school's result summary, public visibility, and certificates."
+                                : "Registration is closed for this competition. Your team is now in tracking mode, so this area focuses on rounds, results, and certificates instead of editing the roster."}
+                            </p>
+                            <div className="mt-3 inline-flex rounded-full border border-slate-700 bg-slate-950/70 px-3 py-1 text-xs font-semibold text-slate-200">
+                              Registered{" "}
+                              {isTeamEventLike(event)
+                                ? "teams"
+                                : "team"}: {getRegisteredStudentCount(event)}{" "}
+                              {isTeamEventLike(event)
+                                ? getRegisteredStudentCount(event) === 1
+                                  ? "entry"
+                                  : "entries"
+                                : getRegisteredStudentCount(event) === 1
+                                ? "student"
+                                : "students"}
+                            </div>
+                          </div>
+                        )}
+                        <div>
+                          <h4 className="mb-3 text-lg font-semibold text-white">
+                            {event.finalOutcomeReady
+                              ? "School Results & Certificates"
+                              : registrationLocked
+                              ? "Rounds & Competition Progress"
+                              : "Competition Rounds"}
+                          </h4>
+                          {!event.finalOutcomeReady && <SchoolRoundPanel eventId={event._id} />}
+                        </div>
+                        <EventCertificatesPanel eventId={event._id} />
+                      </>
+                    )}
+
+                    {event.participationStatus && completedView && isSchoolView && (
+                      <EventCertificatesPanel eventId={event._id} />
+                    )}
+
+                    {isStudentView && event.participationStatus && (
+                      <div className="rounded-xl border border-slate-700 bg-slate-950/40 p-4">
+                        <h4 className="mb-3 text-lg font-semibold text-white">
+                          Your Event Status
+                        </h4>
+                        <div className={`rounded-xl border px-4 py-3 text-sm ${getStageClasses(stage.tone)}`}>
+                          <div className="font-semibold">{stage.label}</div>
+                          <div className="mt-1 text-xs opacity-90">{stage.nextAction}</div>
+                        </div>
+                        <div className="mt-4 grid gap-3 md:grid-cols-3">
+                          <div className="rounded-lg border border-slate-700 bg-slate-900/80 px-4 py-3">
+                            <div className="text-xs uppercase tracking-wide text-slate-500">
+                              Registration
+                            </div>
+                            <div className="mt-1 text-sm font-semibold text-white">
+                              {event.participationStatus}
+                            </div>
+                          </div>
+                          <div className="rounded-lg border border-slate-700 bg-slate-900/80 px-4 py-3">
+                            <div className="text-xs uppercase tracking-wide text-slate-500">
+                              Event Mode
+                            </div>
+                            <div className="mt-1 text-sm font-semibold text-white">
+                              {event.schoolViewMode === "results"
+                                ? "Final Outcome"
+                                : event.schoolViewMode === "tracking"
+                                ? "In Progress"
+                                : "Registered"}
+                            </div>
+                          </div>
+                          <div className="rounded-lg border border-slate-700 bg-slate-900/80 px-4 py-3">
+                            <div className="text-xs uppercase tracking-wide text-slate-500">
+                              Public Result
+                            </div>
+                            <div className="mt-1 text-sm font-semibold text-white">
+                              {event.isPublicResultAvailable ? "Available" : "Not public yet"}
+                            </div>
+                          </div>
+                        </div>
+                        {event.visibility === "PUBLIC" && (
+                          <div className="mt-4">
+                            <Link
+                              href={`/events/${event._id}`}
+                              className="inline-flex items-center gap-2 rounded-lg bg-slate-800 px-3 py-2 text-sm font-semibold text-slate-100 hover:bg-slate-700"
+                            >
+                              Open Public Event
+                            </Link>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
+                );
+              })()
             ))
           )}
         </div>

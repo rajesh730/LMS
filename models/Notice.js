@@ -16,7 +16,7 @@ const noticeSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ["GENERAL", "URGENT", "ACADEMIC", "EVENT", "HOLIDAY", "EXAM"],
+      enum: ["GENERAL", "URGENT", "EVENT", "HOLIDAY", "SHOWCASE"],
       default: "GENERAL",
     },
     priority: {
@@ -94,6 +94,12 @@ const noticeSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+noticeSchema.pre("validate", function () {
+  if (this.type === "CLUB") {
+    this.type = "GENERAL";
+  }
+});
 
 // Index for better performance
 noticeSchema.index({ school: 1, publishedAt: -1 });

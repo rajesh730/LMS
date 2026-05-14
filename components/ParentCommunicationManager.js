@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useState, useEffect } from "react";
 import {
   FaEnvelope,
   FaCheckCircle,
@@ -21,11 +21,7 @@ export default function ParentCommunicationManager() {
   const [replyMessage, setReplyMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
-    fetchCommunications();
-  }, [filter]);
-
-  const fetchCommunications = async () => {
+  const fetchCommunications = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
@@ -42,7 +38,11 @@ export default function ParentCommunicationManager() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filter]);
+
+  useEffect(() => {
+    fetchCommunications();
+  }, [fetchCommunications]);
 
   const handleReply = async (e) => {
     e.preventDefault();

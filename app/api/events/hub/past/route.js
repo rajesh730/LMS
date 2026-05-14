@@ -4,6 +4,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import dbConnect from "@/lib/db";
 import Student from "@/models/Student";
 import ParticipationRequest from "@/models/ParticipationRequest";
+import { buildEventPresentationState } from "@/lib/eventPresentation";
 
 /**
  * GET /api/events/hub/past
@@ -20,8 +21,15 @@ export async function GET(req) {
 
     await dbConnect();
 
-    // Get student
-    const student = await Student.findOne({ userId: session.user.id });
+    // Student sessions use the Student document id, with fallbacks for legacy data.
+    const student = await Student.findOne({
+      $or: [
+        { _id: session.user.id },
+        { userId: session.user.id },
+        { email: session.user.email },
+        { username: session.user.email },
+      ],
+    });
 
     if (!student) {
       return NextResponse.json(
@@ -39,8 +47,15 @@ export async function GET(req) {
     })
       .populate({
         path: "event",
-        match: { date: { $lt: now } }, // Only past events
-        select: "title description date createdBy maxParticipants participants",
+        match: {
+          $or: [
+            { date: { $lt: now } },
+            { lifecycleStatus: "COMPLETED" },
+            { resultsPublished: true },
+          ],
+        },
+        select:
+          "title description date createdBy maxParticipants participants lifecycleStatus resultsPublished",
         populate: {
           path: "createdBy",
           select: "name email",
@@ -52,17 +67,25 @@ export async function GET(req) {
     // Filter out requests where event is null (didn't match the date filter)
     const pastEvents = requests
       .filter((r) => r.event !== null)
-      .map((request) => ({
-        id: request._id,
-        eventId: request.event._id,
-        eventTitle: request.event.title,
-        eventDescription: request.event.description,
-        eventDate: request.event.date,
-        status: request.status,
-        enrolledAt: request.enrollmentConfirmedAt || request.approvedAt,
-        createdBy: request.event.createdBy,
-        participantCount: request.event.participants.length,
-      }));
+      .map((request) => {
+        const presentation = buildEventPresentationState(request.event, {
+          participationStatus: request.status,
+          studentCount: 1,
+        });
+
+        return {
+          id: request._id,
+          eventId: request.event._id,
+          eventTitle: request.event.title,
+          eventDescription: request.event.description,
+          eventDate: request.event.date,
+          status: request.status,
+          enrolledAt: request.enrollmentConfirmedAt || request.approvedAt,
+          createdBy: request.event.createdBy,
+          participantCount: getStudentEnrollmentCount(request.event),
+          presentation,
+        };
+      });
 
     return NextResponse.json(
       {
@@ -78,4 +101,11 @@ export async function GET(req) {
       { status: 500 }
     );
   }
+}
+
+function getStudentEnrollmentCount(event) {
+  return (event.participants || []).reduce(
+    (total, participant) => total + (participant.students?.length || 0),
+    0
+  );
 }

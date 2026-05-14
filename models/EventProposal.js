@@ -20,7 +20,7 @@ const EventProposalSchema = new mongoose.Schema(
     },
     organizationType: {
       type: String,
-      enum: ["COMPANY", "ACADEMY", "NGO", "CLUB", "INDIVIDUAL", "OTHER"],
+      enum: ["COMPANY", "ACADEMY", "NGO", "INDIVIDUAL", "OTHER"],
       default: "COMPANY",
     },
     website: {
@@ -137,6 +137,12 @@ const EventProposalSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+EventProposalSchema.pre("validate", function () {
+  if (this.organizationType === "CLUB") {
+    this.organizationType = "OTHER";
+  }
+});
 
 EventProposalSchema.index({ status: 1, createdAt: -1 });
 EventProposalSchema.index({

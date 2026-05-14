@@ -13,7 +13,14 @@ export async function GET(request) {
     }
 
     // Get current student to find their class/grade
-    const currentStudent = await Student.findOne({ email: session.user.email });
+    const currentStudent = await Student.findOne({
+      $or: [
+        { _id: session.user.id },
+        { userId: session.user.id },
+        { email: session.user.email },
+        { username: session.user.email },
+      ],
+    });
     if (!currentStudent) {
       return Response.json({ error: "Student not found" }, { status: 404 });
     }

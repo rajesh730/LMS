@@ -1,42 +1,31 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { FaSearch, FaUserPlus, FaCheck, FaTimes } from 'react-icons/fa';
+import { FaSearch, FaCheck } from 'react-icons/fa';
 import { TableSkeleton } from '@/components/Skeletons';
-import PaginationControls from '@/components/PaginationControls';
+import { gradeListContains } from '@/lib/schoolGrades';
 
-export default function StudentSelector({ selectedIds = [], onChange }) {
+export default function StudentSelector({ selectedIds = [], onChange, eligibleGrades = [] }) {
     const [students, setStudents] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [pagination, setPagination] = useState({ page: 1, totalPages: 1, totalStudents: 0, limit: 10 });
 
     // Filters
     const [search, setSearch] = useState('');
 
     // Load Students
-    const fetchStudents = useCallback(async (page = 1) => {
+    const fetchStudents = useCallback(async () => {
         setLoading(true);
         try {
             const params = new URLSearchParams({
-                page,
-                limit: 8, // Smaller limit for modal
+                page: 1,
+                limit: 500,
                 ...(search && { search }),
             });
 
             const res = await fetch(`/api/students?${params}`);
             if (res.ok) {
                 const data = await res.json();
-                setStudents(data.students);
-                if (data.pagination) {
-                    setPagination({
-                        page: data.pagination.currentPage,
-                        totalPages: data.pagination.totalPages,
-                        totalStudents: data.pagination.totalStudents,
-                        limit: data.pagination.limit
-                    });
-                } else {
-                    setPagination({ page: 1, totalPages: 1, totalStudents: data.students.length, limit: data.students.length });
-                }
+                setStudents(Array.isArray(data.students) ? data.students : []);
             }
         } catch (error) {
             console.error('Error fetching students:', error);
@@ -47,10 +36,14 @@ export default function StudentSelector({ selectedIds = [], onChange }) {
 
     useEffect(() => {
         const timer = setTimeout(() => {
-            fetchStudents(1);
+            fetchStudents();
         }, 500);
         return () => clearTimeout(timer);
     }, [fetchStudents]);
+
+    const eligibleStudents = students.filter((student) =>
+        gradeListContains(eligibleGrades, student.grade)
+    );
 
     const toggleSelection = (id) => {
         if (selectedIds.includes(id)) {
@@ -62,7 +55,7 @@ export default function StudentSelector({ selectedIds = [], onChange }) {
 
     const selectPage = () => {
         const newIds = [...selectedIds];
-        students.forEach(s => {
+        eligibleStudents.forEach(s => {
             if (!newIds.includes(s._id)) newIds.push(s._id);
         });
         onChange(newIds);
@@ -93,7 +86,7 @@ export default function StudentSelector({ selectedIds = [], onChange }) {
             ) : (
                 <>
                     <div className="max-h-[300px] overflow-y-auto mb-4 custom-scrollbar">
-                        {students.length > 0 ? (
+                        {eligibleStudents.length > 0 ? (
                             <table className="w-full text-left text-sm text-slate-300">
                                 <thead className="bg-slate-900 text-xs uppercase sticky top-0 z-10">
                                     <tr>
@@ -101,10 +94,11 @@ export default function StudentSelector({ selectedIds = [], onChange }) {
                                             <button onClick={selectPage} className="text-xs bg-slate-700 px-1 rounded hover:bg-slate-600" title="Select All on Page">All</button>
                                         </th>
                                         <th className="p-2">Name</th>
+                                        <th className="p-2">Grade</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-700/50">
-                                    {students.map(student => {
+                                    {eligibleStudents.map(student => {
                                         const isSelected = selectedIds.includes(student._id);
                                         return (
                                             <tr
@@ -118,6 +112,7 @@ export default function StudentSelector({ selectedIds = [], onChange }) {
                                                     </div>
                                                 </td>
                                                 <td className="p-2 font-medium text-white">{student.name}</td>
+                                                <td className="p-2 text-slate-400">{student.grade}</td>
                                             </tr>
                                         );
                                     })}
@@ -127,11 +122,6 @@ export default function StudentSelector({ selectedIds = [], onChange }) {
                             <div className="text-center py-8 text-slate-500 text-sm">No students found</div>
                         )}
                     </div>
-                    <PaginationControls
-                        currentPage={pagination.page}
-                        totalPages={pagination.totalPages}
-                        onPageChange={(p) => fetchStudents(p)}
-                    />
                 </>
             )}
         </div>

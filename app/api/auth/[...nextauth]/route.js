@@ -5,15 +5,6 @@ import connectDB from "@/lib/db";
 import User from "@/models/User";
 import Teacher from "@/models/Teacher";
 import Student from "@/models/Student";
-import { ensureDefaultAdmin } from "@/lib/seed";
-
-let hasCheckedDefaultAdmin = false;
-
-async function ensureDefaultAdminOnce() {
-  if (hasCheckedDefaultAdmin) return;
-  await ensureDefaultAdmin();
-  hasCheckedDefaultAdmin = true;
-}
 
 export const authOptions = {
   providers: [
@@ -25,7 +16,6 @@ export const authOptions = {
       },
       async authorize(credentials) {
         await connectDB();
-        await ensureDefaultAdminOnce();
 
         // 1. Try Teacher collection FIRST (Clean Architecture)
         const teacher = await Teacher.findOne({ email: credentials.email });
@@ -107,15 +97,21 @@ export const authOptions = {
             };
           }
 
-          // SCHOOL_ADMIN and SUPER_ADMIN
-          schoolId = user._id.toString();
+          if (user.role === "SCHOOL_ADMIN") {
+            schoolId = user._id.toString();
+          }
+
           return {
             id: user._id.toString(),
             email: user.email,
             role: user.role,
-            name: user.schoolName || "Admin",
+            name:
+              user.role === "SUPER_ADMIN"
+                ? user.name || user.email
+                : user.schoolName || "Admin",
             status: user.status,
             schoolId,
+            authVersion: user.authVersion || 0,
           };
         }
 
@@ -157,6 +153,29 @@ export const authOptions = {
         token.id = user.id;
         token.status = user.status;
         token.schoolId = user.schoolId || null;
+        token.authVersion = user.authVersion || 0;
+        delete token.error;
+      } else if (
+        token?.id &&
+        ["SUPER_ADMIN", "SCHOOL_ADMIN"].includes(String(token.role || ""))
+      ) {
+        await connectDB();
+        const currentUser = await User.findById(token.id).select(
+          "authVersion status role"
+        );
+
+        if (!currentUser) {
+          token.error = "SessionRevoked";
+          delete token.role;
+          delete token.schoolId;
+        } else {
+          token.status = currentUser.status;
+          if ((currentUser.authVersion || 0) !== (token.authVersion || 0)) {
+            token.error = "SessionRevoked";
+            delete token.role;
+            delete token.schoolId;
+          }
+        }
       }
       return token;
     },
@@ -166,6 +185,10 @@ export const authOptions = {
         session.user.id = token.id;
         session.user.status = token.status;
         session.user.schoolId = token.schoolId || null;
+        session.user.authVersion = token.authVersion || 0;
+        if (token.error) {
+          session.error = token.error;
+        }
       }
       return session;
     },

@@ -27,7 +27,7 @@ const ExternalOrganizerSchema = new mongoose.Schema(
     },
     organizationType: {
       type: String,
-      enum: ["COMPANY", "ACADEMY", "NGO", "CLUB", "INDIVIDUAL", "OTHER"],
+      enum: ["COMPANY", "ACADEMY", "NGO", "INDIVIDUAL", "OTHER"],
       default: "COMPANY",
     },
     partnerRoles: {
@@ -100,10 +100,17 @@ const ExternalOrganizerSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+ExternalOrganizerSchema.pre("validate", function () {
+  if (this.organizationType === "CLUB") {
+    this.organizationType = "OTHER";
+  }
+});
+
 ExternalOrganizerSchema.index({
   organizationName: "text",
   description: "text",
 });
+ExternalOrganizerSchema.index({ contactEmail: 1 });
 ExternalOrganizerSchema.index({ verificationStatus: 1, profileVisibility: 1 });
 
 export { PARTNER_ROLES };
