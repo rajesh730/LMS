@@ -7,28 +7,28 @@ export default function PageHeader({
   meta,
 }) {
   return (
-    <section className="rounded-xl border border-slate-800 bg-slate-900/70 p-6 shadow-sm">
+    <section className="pratyo-card rounded-2xl p-6">
       <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
         <div className="min-w-0">
           <div className="flex items-center gap-3">
             {Icon && (
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-blue-500/10 text-blue-200">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#0a2f66] text-white">
                 <Icon className="text-xl" />
               </span>
             )}
             <div>
               {eyebrow && (
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-[#52657d]">
                   {eyebrow}
                 </p>
               )}
-              <h1 className="text-3xl font-bold tracking-tight text-white">
+              <h1 className="text-3xl font-black tracking-tight text-[#17120a]">
                 {title}
               </h1>
             </div>
           </div>
           {description && (
-            <p className="mt-4 max-w-3xl text-sm leading-6 text-slate-400">
+            <p className="mt-4 max-w-3xl text-sm leading-6 text-[#52657d]">
               {description}
             </p>
           )}

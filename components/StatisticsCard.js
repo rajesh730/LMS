@@ -21,14 +21,14 @@ export default function StatisticsCard({
   color = "blue",
 }) {
   const colorMap = {
-    blue: "bg-blue-500/10 text-blue-400 border-blue-500/20",
-    emerald: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-    amber: "bg-amber-500/10 text-amber-400 border-amber-500/20",
-    red: "bg-red-500/10 text-red-400 border-red-500/20",
-    purple: "bg-purple-500/10 text-purple-400 border-purple-500/20",
+    blue: "bg-[#eaf2ff] text-[#0a2f66] border-[#2f7fdb]/25",
+    emerald: "bg-emerald-50 text-emerald-800 border-emerald-500/25",
+    amber: "bg-[#eaf2ff] text-[#0a2f66] border-[#2f7fdb]/25",
+    red: "bg-red-50 text-red-800 border-red-500/25",
+    purple: "bg-[#f2f0ff] text-[#3730a3] border-indigo-500/25",
   };
 
-  const trendColor = trend && trend > 0 ? "text-emerald-400" : "text-red-400";
+  const trendColor = trend && trend > 0 ? "text-emerald-700" : "text-red-700";
   const trendIcon = trend && trend > 0 ? FaArrowUp : FaArrowDown;
   const TrendIcon = trendIcon;
 
@@ -37,7 +37,7 @@ export default function StatisticsCard({
       className={`${colorMap[color]} p-6 rounded-xl border backdrop-blur-sm hover:border-opacity-100 transition`}
     >
       <div className="flex items-start justify-between mb-4">
-        <div className="p-3 bg-slate-800/50 rounded-lg">
+        <div className="rounded-xl bg-white/75 p-3 shadow-sm">
           <Icon className="text-xl" />
         </div>
         {trend !== undefined && (
@@ -48,9 +48,9 @@ export default function StatisticsCard({
         )}
       </div>
 
-      <p className="text-slate-400 text-sm mb-1">{label}</p>
-      <p className="text-3xl font-bold text-white mb-2">{value}</p>
-      {subtext && <p className="text-xs text-slate-500">{subtext}</p>}
+      <p className="mb-1 text-sm font-semibold text-[#52657d]">{label}</p>
+      <p className="mb-2 text-3xl font-black text-[#17120a]">{value}</p>
+      {subtext && <p className="text-xs text-[#52657d]">{subtext}</p>}
     </div>
   );
 }

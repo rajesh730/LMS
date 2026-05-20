@@ -10,7 +10,9 @@
   --brand-cream: #f8fbff;
   --brand-paper: #ffffff;
   --brand-border: #d7cdbb;
-  --brand-muted: #5f6f86;
+  --brand-muted: #52657d;
+  --brand-ink: #17120a;
+  --brand-soft-blue: #eaf2ff;
 }
 
 @theme inline {
@@ -37,13 +39,18 @@ body {
     linear-gradient(135deg, #f8fbff 0%, #f5f1e8 52%, #eaf2ff 100%);
 }
 
+::selection {
+  background: rgba(47, 127, 219, 0.22);
+  color: var(--brand-navy);
+}
+
 /* Pulse-inspired app theme. These overrides keep layouts intact while moving
    legacy dark Tailwind surfaces into the warmer production palette. */
 [class*="bg-slate-950"],
 [class*="bg-slate-900"],
 [class*="bg-[#071833]"],
 [class*="bg-[#08111f]"] {
-  background-color: rgba(255, 255, 255, 0.78) !important;
+  background-color: rgba(255, 255, 255, 0.86) !important;
 }
 
 [class*="bg-slate-800"],
@@ -76,29 +83,51 @@ body {
 }
 
 [class*="text-white"] {
-  color: #17120a !important;
+  color: var(--brand-ink) !important;
 }
 
-[class*="bg-[#0a2f66]"],
-[class*="bg-blue-600"],
-[class*="bg-blue-700"],
-[class*="bg-emerald-600"],
-[class*="bg-emerald-700"] {
+[class~="bg-[#0a2f66]"],
+[class~="bg-[#2f7fdb]"],
+[class~="bg-blue-500"],
+[class~="bg-blue-600"],
+[class~="bg-blue-700"],
+[class~="bg-emerald-600"],
+[class~="bg-emerald-700"] {
   background-color: var(--brand-navy) !important;
+  color: #ffffff !important;
 }
 
-[class*="bg-[#0a2f66]"] *,
-[class*="bg-blue-600"] *,
-[class*="bg-blue-700"] *,
-[class*="bg-emerald-600"] *,
-[class*="bg-emerald-700"] *,
-button[class*="bg-blue"],
-a[class*="bg-blue"],
-button[class*="bg-emerald"],
-a[class*="bg-emerald"],
-button[class*="bg-[#0a2f66]"],
-a[class*="bg-[#0a2f66]"] {
+[class~="bg-[#0a2f66]"] *,
+[class~="bg-[#2f7fdb]"] *,
+[class~="bg-blue-500"] *,
+[class~="bg-blue-600"] *,
+[class~="bg-blue-700"] *,
+[class~="bg-emerald-600"] *,
+[class~="bg-emerald-700"] *,
+button[class~="bg-blue-500"],
+button[class~="bg-blue-600"],
+button[class~="bg-blue-700"],
+a[class~="bg-blue-500"],
+a[class~="bg-blue-600"],
+a[class~="bg-blue-700"],
+button[class~="bg-emerald-600"],
+button[class~="bg-emerald-700"],
+a[class~="bg-emerald-600"],
+a[class~="bg-emerald-700"],
+button[class~="bg-[#0a2f66]"],
+button[class~="bg-[#2f7fdb]"],
+a[class~="bg-[#0a2f66]"],
+a[class~="bg-[#2f7fdb]"] {
   color: #ffffff !important;
+}
+
+[class*="bg-blue-500/"],
+[class*="bg-blue-400/"],
+[class*="bg-emerald-500/"],
+[class*="bg-purple-500/"] {
+  background-color: rgba(47, 127, 219, 0.1) !important;
+  border-color: rgba(47, 127, 219, 0.24) !important;
+  color: var(--brand-navy) !important;
 }
 
 [class*="bg-[#ffb21c]"]:not([class*="selection:bg"]),
@@ -140,6 +169,59 @@ a[class*="bg-[#0a2f66]"] {
 [class*="bg-[#fffaf0]"],
 [class*="bg-[#fffdf8]"] {
   background-color: #f8fbff !important;
+}
+
+input,
+select,
+textarea {
+  color: var(--brand-ink);
+  background-color: rgba(255, 255, 255, 0.92);
+  border-color: rgba(10, 47, 102, 0.22);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #75869b;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--brand-blue) !important;
+  box-shadow: 0 0 0 3px rgba(47, 127, 219, 0.16);
+}
+
+button,
+a {
+  text-underline-offset: 3px;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid rgba(47, 127, 219, 0.35);
+  outline-offset: 2px;
+}
+
+table thead {
+  background-color: rgba(234, 242, 255, 0.8) !important;
+}
+
+table tbody tr:hover {
+  background-color: rgba(47, 127, 219, 0.06) !important;
+}
+
+.pratyo-card {
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid var(--brand-border);
+  box-shadow: 0 14px 40px rgba(10, 47, 102, 0.08);
+}
+
+.pratyo-soft-panel {
+  background: rgba(248, 251, 255, 0.84);
+  border: 1px solid rgba(10, 47, 102, 0.14);
 }
 
 [class*="shadow-black"] {

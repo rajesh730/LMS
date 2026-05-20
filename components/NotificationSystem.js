@@ -117,28 +117,28 @@ function NotificationItem({ notification, onClose }) {
     switch (type) {
       case "success":
         return {
-          bg: "bg-emerald-500/10 border-emerald-500/30",
-          text: "text-emerald-400",
-          icon: <FaCheckCircle className="text-emerald-400 text-lg" />,
+          bg: "bg-emerald-50 border-emerald-500/30",
+          text: "text-emerald-800",
+          icon: <FaCheckCircle className="text-emerald-700 text-lg" />,
         };
       case "error":
         return {
-          bg: "bg-red-500/10 border-red-500/30",
-          text: "text-red-400",
-          icon: <FaTimesCircle className="text-red-400 text-lg" />,
+          bg: "bg-red-50 border-red-500/30",
+          text: "text-red-800",
+          icon: <FaTimesCircle className="text-red-700 text-lg" />,
         };
       case "warning":
         return {
-          bg: "bg-yellow-500/10 border-yellow-500/30",
-          text: "text-yellow-400",
-          icon: <FaExclamationCircle className="text-yellow-400 text-lg" />,
+          bg: "bg-[#eaf2ff] border-[#2f7fdb]/30",
+          text: "text-[#0a2f66]",
+          icon: <FaExclamationCircle className="text-[#0a2f66] text-lg" />,
         };
       case "info":
       default:
         return {
-          bg: "bg-blue-500/10 border-blue-500/30",
-          text: "text-blue-400",
-          icon: <FaInfoCircle className="text-blue-400 text-lg" />,
+          bg: "bg-[#eaf2ff] border-[#2f7fdb]/30",
+          text: "text-[#0a2f66]",
+          icon: <FaInfoCircle className="text-[#0a2f66] text-lg" />,
         };
     }
   };
@@ -147,7 +147,7 @@ function NotificationItem({ notification, onClose }) {
 
   return (
     <div
-      className={`${styles.bg} border ${styles.text} px-4 py-3 rounded-lg flex items-start gap-3 backdrop-blur-sm`}
+      className={`${styles.bg} ${styles.text} flex items-start gap-3 rounded-xl border px-4 py-3 shadow-lg shadow-[#0a2f66]/10 backdrop-blur-sm`}
     >
       {styles.icon}
       <div className="flex-1">

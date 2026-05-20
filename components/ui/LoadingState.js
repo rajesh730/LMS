@@ -7,11 +7,11 @@ export default function LoadingState({
 }) {
   return (
     <div
-      className={`flex min-h-[220px] flex-col items-center justify-center rounded-2xl border border-slate-800 bg-slate-900/70 px-6 py-10 text-center ${className}`}
+      className={`pratyo-card flex min-h-[220px] flex-col items-center justify-center rounded-2xl px-6 py-10 text-center ${className}`}
     >
       <LoadingSpinner text="" size="md" />
-      <h3 className="mt-5 text-lg font-bold text-white">{title}</h3>
-      <p className="mt-2 max-w-md text-sm leading-6 text-slate-400">
+      <h3 className="mt-5 text-lg font-black text-[#17120a]">{title}</h3>
+      <p className="mt-2 max-w-md text-sm leading-6 text-[#52657d]">
         {message}
       </p>
     </div>

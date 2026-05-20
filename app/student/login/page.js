@@ -57,16 +57,16 @@ export default function StudentLogin() {
 
   if (status === "authenticated") {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-600 via-blue-500 to-blue-700 px-4 py-6">
+      <div className="min-h-screen bg-[#f5f1e8] px-4 py-6 text-[#17120a]">
         <div className="mx-auto mb-8 flex max-w-5xl flex-wrap items-center justify-between gap-3">
-          <Link href="/" className="text-sm font-semibold text-blue-50 hover:text-white">
+          <Link href="/" className="text-sm font-semibold text-[#0a2f66] hover:underline">
             Back to home
           </Link>
           <div className="flex flex-wrap gap-2 text-sm">
-            <Link href="/events" className="rounded-lg border border-white/30 px-3 py-2 text-blue-50 hover:bg-white/10">
+            <Link href="/events" className="rounded-lg border border-[#d7cdbb] bg-white/70 px-3 py-2 font-semibold text-[#27344a] hover:bg-[#eaf2ff]">
               Events
             </Link>
-            <Link href="/login" className="rounded-lg border border-white/30 px-3 py-2 text-blue-50 hover:bg-white/10">
+            <Link href="/login" className="rounded-lg border border-[#d7cdbb] bg-white/70 px-3 py-2 font-semibold text-[#27344a] hover:bg-[#eaf2ff]">
               School/Admin Login
             </Link>
           </div>
@@ -106,7 +106,7 @@ export default function StudentLogin() {
             <button
               type="button"
               onClick={handleContinue}
-              className="w-full rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white transition hover:bg-blue-700"
+              className="w-full rounded-lg bg-[#0a2f66] px-4 py-3 font-semibold text-white transition hover:bg-[#123f82]"
             >
               Continue with this account
             </button>
@@ -125,21 +125,21 @@ export default function StudentLogin() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 via-blue-500 to-blue-700 px-4 py-6">
+    <div className="min-h-screen bg-[#f5f1e8] px-4 py-6 text-[#17120a]">
       {/* Background decorative elements */}
-      <div className="absolute top-0 right-0 w-72 h-72 bg-blue-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob" />
-      <div className="absolute bottom-0 left-0 w-72 h-72 bg-blue-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000" />
-      <div className="absolute top-1/2 left-1/2 w-72 h-72 bg-blue-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000" />
+      <div className="absolute top-0 right-0 w-72 h-72 rounded-full bg-[#2f7fdb]/15 mix-blend-multiply blur-3xl animate-blob" />
+      <div className="absolute bottom-0 left-0 w-72 h-72 rounded-full bg-[#0a2f66]/10 mix-blend-multiply blur-3xl animate-blob animation-delay-2000" />
+      <div className="absolute top-1/2 left-1/2 w-72 h-72 rounded-full bg-white/70 mix-blend-multiply blur-3xl animate-blob animation-delay-4000" />
 
       <div className="relative z-10 mx-auto mb-8 flex max-w-5xl flex-wrap items-center justify-between gap-3">
-        <Link href="/" className="text-sm font-semibold text-blue-50 hover:text-white">
+        <Link href="/" className="text-sm font-semibold text-[#0a2f66] hover:underline">
           Back to home
         </Link>
         <div className="flex flex-wrap gap-2 text-sm">
-          <Link href="/events" className="rounded-lg border border-white/30 px-3 py-2 text-blue-50 hover:bg-white/10">
+          <Link href="/events" className="rounded-lg border border-[#d7cdbb] bg-white/70 px-3 py-2 font-semibold text-[#27344a] hover:bg-[#eaf2ff]">
             Events
           </Link>
-          <Link href="/login" className="rounded-lg border border-white/30 px-3 py-2 text-blue-50 hover:bg-white/10">
+          <Link href="/login" className="rounded-lg border border-[#d7cdbb] bg-white/70 px-3 py-2 font-semibold text-[#27344a] hover:bg-[#eaf2ff]">
             School/Admin Login
           </Link>
         </div>
@@ -151,8 +151,8 @@ export default function StudentLogin() {
           <div className="inline-block bg-white rounded-full p-4 mb-4">
             <User size={40} className="text-blue-600" />
           </div>
-          <h1 className="text-4xl font-bold text-white mb-2">Student Portal</h1>
-          <p className="text-blue-100">Log in to your account</p>
+          <h1 className="text-4xl font-black text-[#17120a] mb-2">Student Portal</h1>
+          <p className="text-[#52657d]">Log in to your account</p>
         </div>
 
         {/* Login Card */}
@@ -253,7 +253,7 @@ export default function StudentLogin() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-blue-400 transition flex items-center justify-center gap-2"
+              className="w-full rounded-lg bg-[#0a2f66] py-3 font-semibold text-white transition hover:bg-[#123f82] disabled:bg-[#8fa8c8] flex items-center justify-center gap-2"
             >
               {loading ? (
                 <>
@@ -300,9 +300,9 @@ export default function StudentLogin() {
         </div>
 
         {/* Footer */}
-        <p className="text-center text-blue-100">
+        <p className="text-center text-[#52657d]">
           Need help?{" "}
-          <a href="mailto:support@egrantha.com" className="text-white font-semibold hover:underline">
+          <a href="mailto:support@egrantha.com" className="font-semibold text-[#0a2f66] hover:underline">
             Contact support
           </a>
         </p>
