@@ -9,12 +9,16 @@ import EventRound from "@/models/EventRound";
 import RoundParticipant from "@/models/RoundParticipant";
 import ParticipationRequest from "@/models/ParticipationRequest";
 import AuditLog from "@/models/AuditLog";
+import { canManageEventRounds } from "@/lib/eventRoundAccess";
 import {
   buildCertificateCode,
   buildCertificatePath,
   sanitizeScorecardCriteria,
 } from "@/lib/results";
-import { CERTIFICATE_BLOCKED_STATUSES } from "@/lib/competitionFlow";
+import {
+  CERTIFICATE_BLOCKED_STATUSES,
+  normalizeRoundParticipantStatus,
+} from "@/lib/competitionFlow";
 
 export const dynamic = "force-dynamic";
 const FINAL_STATUS_TO_PLACEMENT = {
@@ -22,7 +26,6 @@ const FINAL_STATUS_TO_PLACEMENT = {
   RUNNER_UP: "RUNNER_UP",
   FINALIST: "FINALIST",
   SELECTED: "FINALIST",
-  PARTICIPATED: "PARTICIPANT",
   DISQUALIFIED: "PARTICIPANT",
 };
 
@@ -31,8 +34,7 @@ const STATUS_PRIORITY = {
   RUNNER_UP: 2,
   FINALIST: 3,
   SELECTED: 4,
-  PARTICIPATED: 5,
-  DISQUALIFIED: 6,
+  DISQUALIFIED: 5,
 };
 
 function isTeamEvent(event) {
@@ -40,9 +42,11 @@ function isTeamEvent(event) {
 }
 
 function getBetterStatus(current, next) {
-  const currentPriority = STATUS_PRIORITY[current] || 99;
-  const nextPriority = STATUS_PRIORITY[next] || 99;
-  return nextPriority < currentPriority ? next : current;
+  const normalizedCurrent = normalizeRoundParticipantStatus(current);
+  const normalizedNext = normalizeRoundParticipantStatus(next);
+  const currentPriority = STATUS_PRIORITY[normalizedCurrent] || 99;
+  const nextPriority = STATUS_PRIORITY[normalizedNext] || 99;
+  return nextPriority < currentPriority ? normalizedNext : normalizedCurrent;
 }
 
 async function getTeamRosterContext(eventId) {
@@ -93,18 +97,6 @@ async function getTeamRosterContext(eventId) {
   return { studentTeamMap, teamMetaMap };
 }
 
-function canManageResults(session, event) {
-  if (session.user.role === "SUPER_ADMIN") {
-    return event.eventScope === "PLATFORM";
-  }
-
-  if (session.user.role === "SCHOOL_ADMIN") {
-    return String(event.school) === session.user.id;
-  }
-
-  return false;
-}
-
 function buildLevel(event) {
   return event.eventScope === "PLATFORM" ? "PLATFORM" : "SCHOOL";
 }
@@ -153,6 +145,7 @@ async function getRoundResultContext(event) {
     : { studentTeamMap: new Map(), teamMetaMap: new Map() };
 
   for (const participant of participants) {
+    const participantStatus = normalizeRoundParticipantStatus(participant.status);
     const studentId = String(participant.student?._id || participant.student || "");
     if (!studentId) continue;
     const teamInfo = studentTeamMap.get(studentId);
@@ -191,13 +184,13 @@ async function getRoundResultContext(event) {
       Number(participant.roundNumber || 0)
     );
     entry.latestStatus = entry.latestStatus
-      ? getBetterStatus(entry.latestStatus, participant.status)
-      : participant.status;
+      ? getBetterStatus(entry.latestStatus, participantStatus)
+      : participantStatus;
 
     if (String(participant.round) === String(finalRound?._id)) {
       entry.finalStatus = entry.finalStatus
-        ? getBetterStatus(entry.finalStatus, participant.status)
-        : participant.status;
+        ? getBetterStatus(entry.finalStatus, participantStatus)
+        : participantStatus;
     }
 
     entry.history.push({
@@ -205,7 +198,7 @@ async function getRoundResultContext(event) {
       roundNumber: participant.roundNumber,
       roundTitle: round?.title || `Round ${participant.roundNumber}`,
       isFinal: Boolean(round?.isFinal),
-      status: participant.status,
+      status: participantStatus,
       advancedToRoundNumber: participant.advancedToRoundNumber || null,
     });
   }
@@ -213,13 +206,16 @@ async function getRoundResultContext(event) {
   const certificateEntries = Array.from(participantMap.values())
     .filter((entry) => !CERTIFICATE_BLOCKED_STATUSES.includes(entry.latestStatus))
     .map((entry) => {
-      const status = entry.finalStatus || entry.latestStatus || "PARTICIPATED";
+      const status =
+        normalizeRoundParticipantStatus(entry.finalStatus) ||
+        normalizeRoundParticipantStatus(entry.latestStatus) ||
+        "NOT_ATTEMPTED";
       const normalizedStatus =
         finalRound && entry.highestRoundReached === finalRound.roundNumber
           ? status
           : status === "DISQUALIFIED"
           ? "DISQUALIFIED"
-          : "PARTICIPATED";
+          : "SELECTED";
 
       return {
         ...entry,
@@ -366,7 +362,9 @@ async function ensureTeamMemberAchievements({ event, achievements }) {
               }.`,
         level: teamAchievement.level || buildLevel(event),
         placement: teamAchievement.placement || "PARTICIPANT",
-        finalStatus: teamAchievement.finalStatus || "PARTICIPATED",
+        finalStatus:
+          normalizeRoundParticipantStatus(teamAchievement.finalStatus) ||
+          "NOT_ATTEMPTED",
         highestRoundReached: teamAchievement.highestRoundReached || 0,
         certificateRecipientName: member?.name || "Student",
         certificateCode: buildCertificateCode(memberAchievementId, now),
@@ -393,7 +391,10 @@ async function ensureTeamMemberAchievements({ event, achievements }) {
 export async function GET(req, props) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || !["SUPER_ADMIN", "SCHOOL_ADMIN"].includes(session.user.role)) {
+    if (
+      !session ||
+      !["SUPER_ADMIN", "SCHOOL_ADMIN", "TEACHER"].includes(session.user.role)
+    ) {
       return NextResponse.json(
         { success: false, message: "Unauthorized" },
         { status: 401 }
@@ -414,7 +415,7 @@ export async function GET(req, props) {
       );
     }
 
-    if (!canManageResults(session, event)) {
+    if (!canManageEventRounds(session, event)) {
       return NextResponse.json(
         { success: false, message: "Forbidden" },
         { status: 403 }
@@ -487,7 +488,10 @@ export async function GET(req, props) {
 async function upsertResults(req, props) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || !["SUPER_ADMIN", "SCHOOL_ADMIN"].includes(session.user.role)) {
+    if (
+      !session ||
+      !["SUPER_ADMIN", "SCHOOL_ADMIN", "TEACHER"].includes(session.user.role)
+    ) {
       return NextResponse.json(
         { success: false, message: "Unauthorized" },
         { status: 401 }
@@ -505,7 +509,7 @@ async function upsertResults(req, props) {
       );
     }
 
-    if (!canManageResults(session, event)) {
+    if (!canManageEventRounds(session, event)) {
       return NextResponse.json(
         { success: false, message: "Forbidden" },
         { status: 403 }

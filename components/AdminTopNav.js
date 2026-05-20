@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useSearchParams, usePathname } from 'next/navigation';
-import { FaCheckCircle, FaSchool, FaCalendarAlt, FaHandshake } from 'react-icons/fa';
+import { FaCheckCircle, FaSchool, FaCalendarAlt, FaHandshake, FaBullhorn, FaFeatherAlt } from 'react-icons/fa';
 
 export default function AdminTopNav({ pendingCount = 0 }) {
   const searchParams = useSearchParams();
@@ -12,10 +12,10 @@ export default function AdminTopNav({ pendingCount = 0 }) {
   
   const isDashboard = pathname === '/admin/dashboard';
   return (
-    <div className="flex gap-4 mb-8 border-b border-slate-800 pb-1 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+    <div className="mt-8 flex gap-3 mb-8 rounded-2xl border border-slate-800 bg-slate-900/50 p-2 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
       <Link
         href="/admin/dashboard?tab=approvals"
-        className={`flex items-center gap-2 px-4 py-2 rounded-t-lg transition whitespace-nowrap ${
+        className={`flex items-center gap-2 px-4 py-2 rounded-xl transition whitespace-nowrap ${
           isDashboard && currentTab === 'approvals'
             ? "bg-blue-600 text-white"
             : "text-slate-400 hover:text-white"
@@ -31,7 +31,7 @@ export default function AdminTopNav({ pendingCount = 0 }) {
       
       <Link
         href="/admin/dashboard?tab=schools"
-        className={`flex items-center gap-2 px-4 py-2 rounded-t-lg transition whitespace-nowrap ${
+        className={`flex items-center gap-2 px-4 py-2 rounded-xl transition whitespace-nowrap ${
           isDashboard && currentTab === 'schools'
             ? "bg-blue-600 text-white"
             : "text-slate-400 hover:text-white"
@@ -42,7 +42,7 @@ export default function AdminTopNav({ pendingCount = 0 }) {
       
       <Link
         href="/admin/dashboard?tab=events"
-        className={`flex items-center gap-2 px-4 py-2 rounded-t-lg transition whitespace-nowrap ${
+        className={`flex items-center gap-2 px-4 py-2 rounded-xl transition whitespace-nowrap ${
           isDashboard && currentTab === 'events'
             ? "bg-blue-600 text-white"
             : "text-slate-400 hover:text-white"
@@ -53,13 +53,35 @@ export default function AdminTopNav({ pendingCount = 0 }) {
 
       <Link
         href="/admin/dashboard?tab=partners"
-        className={`flex items-center gap-2 px-4 py-2 rounded-t-lg transition whitespace-nowrap ${
+        className={`flex items-center gap-2 px-4 py-2 rounded-xl transition whitespace-nowrap ${
           isDashboard && currentTab === "partners"
             ? "bg-blue-600 text-white"
             : "text-slate-400 hover:text-white"
         }`}
       >
         <FaHandshake /> Partners
+      </Link>
+
+      <Link
+        href="/admin/dashboard?tab=notices"
+        className={`flex items-center gap-2 px-4 py-2 rounded-xl transition whitespace-nowrap ${
+          isDashboard && currentTab === "notices"
+            ? "bg-blue-600 text-white"
+            : "text-slate-400 hover:text-white"
+        }`}
+      >
+        <FaBullhorn /> Notices
+      </Link>
+
+      <Link
+        href="/admin/dashboard?tab=challenges"
+        className={`flex items-center gap-2 px-4 py-2 rounded-xl transition whitespace-nowrap ${
+          isDashboard && currentTab === "challenges"
+            ? "bg-blue-600 text-white"
+            : "text-slate-400 hover:text-white"
+        }`}
+      >
+        <FaFeatherAlt /> Student Challenges
       </Link>
     </div>
   );

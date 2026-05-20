@@ -4,6 +4,12 @@ import Event from "@/models/Event";
 import EventProposal from "@/models/EventProposal";
 import PublicSiteNav from "@/components/public/PublicSiteNav";
 import "@/models/ExternalOrganizer";
+import {
+  FaBullhorn,
+  FaCalendarAlt,
+  FaTrophy,
+  FaUsers,
+} from "react-icons/fa";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +39,34 @@ function getVisibleProposalPartnerName(proposal) {
   }
 
   return organizer.organizationName || proposal.organizationName || "";
+}
+
+function formatDate(value) {
+  if (!value) return "To be announced";
+  return new Date(value).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function EventBadge({ children, tone = "slate" }) {
+  const toneMap = {
+    blue: "border-blue-500/30 bg-blue-500/15 text-blue-200",
+    emerald: "border-emerald-500/30 bg-emerald-500/15 text-emerald-200",
+    amber: "border-amber-500/30 bg-amber-500/15 text-amber-200",
+    slate: "border-white/10 bg-white/10 text-slate-300",
+  };
+
+  return (
+    <span
+      className={`rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-wide ${
+        toneMap[tone] || toneMap.slate
+      }`}
+    >
+      {children}
+    </span>
+  );
 }
 
 export default async function PublicEventsPage() {
@@ -85,6 +119,7 @@ export default async function PublicEventsPage() {
       proposal.organizer?.verificationStatus === "VERIFIED" &&
       proposal.organizer?.profileVisibility === "PUBLIC"
   );
+  const resultCount = publicEvents.filter((event) => event.resultsPublished).length;
 
   return (
     <main className="min-h-screen bg-[#08111f] text-white">
@@ -103,6 +138,32 @@ export default async function PublicEventsPage() {
               Explore what schools and the platform are organizing across music,
               debate, arts, innovation, and more.
             </p>
+            <div className="mt-6 grid max-w-2xl gap-3 sm:grid-cols-3">
+              <div className="rounded-xl border border-white/10 bg-slate-950/60 p-4">
+                <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                  Public Events
+                </p>
+                <p className="mt-1 text-2xl font-black text-white">
+                  {publicEvents.length}
+                </p>
+              </div>
+              <div className="rounded-xl border border-white/10 bg-slate-950/60 p-4">
+                <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                  Featured
+                </p>
+                <p className="mt-1 text-2xl font-black text-white">
+                  {featuredEvents.length}
+                </p>
+              </div>
+              <div className="rounded-xl border border-white/10 bg-slate-950/60 p-4">
+                <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                  Results
+                </p>
+                <p className="mt-1 text-2xl font-black text-white">
+                  {resultCount}
+                </p>
+              </div>
+            </div>
           </div>
           <svg
             viewBox="0 0 360 260"
@@ -126,7 +187,17 @@ export default async function PublicEventsPage() {
       <div className="max-w-6xl mx-auto px-6 py-12 md:px-12">
         {featuredEvents.length > 0 && (
           <section className="mb-14">
-            <h2 className="text-2xl font-bold mb-6">Featured Events</h2>
+            <div className="mb-6 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.25em] text-sky-300">
+                  Recommended
+                </p>
+                <h2 className="mt-2 text-2xl font-bold">Featured Events</h2>
+              </div>
+              <p className="max-w-xl text-sm leading-6 text-slate-400">
+                Highlighted public competitions and school activity records.
+              </p>
+            </div>
             <div className="grid lg:grid-cols-2 gap-6">
               {featuredEvents.map((event) => (
                 <Link
@@ -139,18 +210,12 @@ export default async function PublicEventsPage() {
                     return (
                       <>
                   <div className="flex items-center justify-between gap-4 mb-3">
-                    <span className="px-3 py-1 rounded-full text-xs bg-blue-500/15 text-blue-300 border border-blue-500/30">
-                      Featured
-                    </span>
+                    <EventBadge tone="blue">Featured</EventBadge>
                     <div className="flex items-center gap-2">
                       {event.resultsPublished && (
-                        <span className="text-xs px-2 py-1 rounded-full bg-yellow-500/15 text-yellow-300 border border-yellow-500/30 uppercase">
-                          Results Published
-                        </span>
+                        <EventBadge tone="amber">Results Published</EventBadge>
                       )}
-                      <span className="text-xs text-slate-400 uppercase">
-                        {event.eventType}
-                      </span>
+                      <EventBadge>{event.eventType}</EventBadge>
                     </div>
                   </div>
                   <h3 className="text-2xl font-bold">{event.title}</h3>
@@ -158,7 +223,10 @@ export default async function PublicEventsPage() {
                     {event.description}
                   </p>
                   <div className="mt-5 text-sm text-slate-300 space-y-1">
-                    <div>Date: {new Date(event.date).toLocaleDateString()}</div>
+                    <div className="flex items-center gap-2">
+                      <FaCalendarAlt className="text-slate-500" />
+                      {formatDate(event.date)}
+                    </div>
                     {partnerName && (
                       <div>
                         Partner: {partnerName}
@@ -181,7 +249,18 @@ export default async function PublicEventsPage() {
         )}
 
         <section>
-          <h2 className="text-2xl font-bold mb-6">All Public Events</h2>
+          <div className="mb-6 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.25em] text-emerald-300">
+                Browse
+              </p>
+              <h2 className="mt-2 text-2xl font-bold">All Public Events</h2>
+            </div>
+            <p className="max-w-xl text-sm leading-6 text-slate-400">
+              Events here are visible before login so schools and visitors can
+              understand what is happening on the platform.
+            </p>
+          </div>
           {publicEvents.length === 0 && visibleAnnouncements.length === 0 ? (
             <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-8 text-slate-400">
               Public events will appear here after they are published or approved as partner announcements.
@@ -197,12 +276,13 @@ export default async function PublicEventsPage() {
                     className="rounded-2xl border border-sky-400/20 bg-sky-400/[0.06] p-6"
                   >
                     <div className="flex items-center justify-between gap-4 mb-3">
-                      <span className="text-xs uppercase text-sky-300">
-                        Announced
-                      </span>
-                      <span className="text-xs uppercase text-slate-400">
-                        {proposal.eventMode || "Event"}
-                      </span>
+                      <EventBadge tone="blue">
+                        <span className="inline-flex items-center gap-2">
+                          <FaBullhorn />
+                          Announced
+                        </span>
+                      </EventBadge>
+                      <EventBadge>{proposal.eventMode || "Event"}</EventBadge>
                     </div>
                     <h3 className="text-xl font-bold">{proposal.eventTitle}</h3>
                     <p className="text-slate-400 mt-3 line-clamp-3">
@@ -210,10 +290,7 @@ export default async function PublicEventsPage() {
                     </p>
                     <div className="mt-5 text-sm text-slate-300">
                       <div>
-                        Date:{" "}
-                        {proposal.preferredDate
-                          ? new Date(proposal.preferredDate).toLocaleDateString()
-                          : "To be announced"}
+                        Date: {formatDate(proposal.preferredDate)}
                       </div>
                       {partnerName && (
                         <div className="mt-1 text-emerald-300">
@@ -236,24 +313,34 @@ export default async function PublicEventsPage() {
                   return (
                     <>
                 <div className="flex items-center justify-between gap-4 mb-3">
-                  <span className="text-xs uppercase text-slate-400">
+                  <EventBadge tone={event.eventScope === "PLATFORM" ? "blue" : "emerald"}>
                     {event.eventScope}
-                  </span>
+                  </EventBadge>
                   <div className="flex items-center gap-2">
                     {event.resultsPublished && (
-                      <span className="text-xs px-2 py-1 rounded-full bg-yellow-500/15 text-yellow-300 border border-yellow-500/30 uppercase">
-                        Results
-                      </span>
+                      <EventBadge tone="amber">
+                        <span className="inline-flex items-center gap-2">
+                          <FaTrophy />
+                          Results
+                        </span>
+                      </EventBadge>
                     )}
-                    <span className="text-xs uppercase text-slate-400">
-                      {event.eventType}
-                    </span>
+                    <EventBadge>{event.eventType}</EventBadge>
                   </div>
                 </div>
                 <h3 className="text-xl font-bold">{event.title}</h3>
                 <p className="text-slate-400 mt-3 line-clamp-3">{event.description}</p>
                 <div className="mt-5 text-sm text-slate-300">
-                  <div>Date: {new Date(event.date).toLocaleDateString()}</div>
+                  <div className="flex items-center gap-2">
+                    <FaCalendarAlt className="text-slate-500" />
+                    {formatDate(event.date)}
+                  </div>
+                  {event.eligibleGrades?.length > 0 && (
+                    <div className="mt-2 flex items-center gap-2 text-slate-400">
+                      <FaUsers className="text-slate-500" />
+                      {event.eligibleGrades.join(", ")}
+                    </div>
+                  )}
                   {partnerName && (
                     <div className="mt-1 text-emerald-300">
                       In partnership with {partnerName}

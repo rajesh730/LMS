@@ -2,21 +2,32 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import EventInfoHeader from "./EventInfoHeader";
 import ManagementTabs from "./ManagementTabs";
 import { useSession } from "next-auth/react";
 import { FaArrowLeft } from "react-icons/fa";
+import LoadingState from "@/components/ui/LoadingState";
 
 export default function EventDetailDashboard() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const eventId = params.id;
   const { data: session } = useSession();
 
   const [eventData, setEventData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState(
+    searchParams.get("tab") || "overview"
+  );
   const [loadError, setLoadError] = useState("");
+
+  useEffect(() => {
+    const requestedTab = searchParams.get("tab");
+    if (requestedTab) {
+      setActiveTab(requestedTab);
+    }
+  }, [searchParams]);
 
   const fetchEventData = useCallback(async () => {
     try {
@@ -46,7 +57,10 @@ export default function EventDetailDashboard() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#071833] to-[#0a2145] p-8 flex items-center justify-center">
-        <div className="text-white text-xl">Loading event details...</div>
+        <LoadingState
+          title="Loading event details"
+          message="Preparing overview, participants, notices, rounds, and certificates."
+        />
       </div>
     );
   }

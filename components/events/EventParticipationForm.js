@@ -2,8 +2,6 @@
 
 import { useState, useEffect, memo, useCallback } from "react";
 import {
-  FaPhone,
-  FaUser,
   FaSchool,
   FaSearch,
   FaTimes,
@@ -62,9 +60,6 @@ const EventParticipationForm = memo(function EventParticipationForm({
 }) {
   const { data: session } = useSession();
   const [formData, setFormData] = useState({
-    contactPerson: "",
-    phone: "",
-    notes: "",
     teamName: "",
     captainStudentId: "",
     selectedStudents: [],
@@ -132,18 +127,6 @@ const EventParticipationForm = memo(function EventParticipationForm({
           captainStudentId:
             String(participation?.myParticipation?.captainStudent || "") ||
             prev.captainStudentId,
-          contactPerson:
-            participation?.myParticipation?.contactPerson ||
-            data.contactInfo?.contactPerson ||
-            prev.contactPerson,
-          phone:
-            participation?.myParticipation?.contactPhone ||
-            data.contactInfo?.contactPhone ||
-            prev.phone,
-          notes:
-            participation?.myParticipation?.notes ||
-            data.contactInfo?.notes ||
-            prev.notes,
           teams:
             Array.isArray(participation?.myParticipation?.teams) &&
             participation.myParticipation.teams.length > 0
@@ -371,6 +354,9 @@ const EventParticipationForm = memo(function EventParticipationForm({
     draftedTeams.length > 0 &&
     invalidTeamCount === 0 &&
     draftedTeams.length === validTeamCount;
+  const selectedParticipantCount = isTeamEvent
+    ? totalSelectedTeamMembers
+    : formData.selectedStudents.length;
 
   const handleStudentToggle = (studentId) => {
     if (isEventLocked) return;
@@ -461,14 +447,6 @@ const EventParticipationForm = memo(function EventParticipationForm({
       alert(lockReason || "Registration changes are locked for this event.");
       return;
     }
-    if (!formData.contactPerson.trim()) {
-      alert("Please enter contact person name");
-      return;
-    }
-    if (!formData.phone.trim()) {
-      alert("Please enter phone number");
-      return;
-    }
     if (!isTeamEvent && formData.selectedStudents.length === 0) {
       alert("Please select at least one student");
       return;
@@ -528,9 +506,6 @@ const EventParticipationForm = memo(function EventParticipationForm({
         method: method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          contactPerson: formData.contactPerson,
-          phone: formData.phone,
-          notes: formData.notes,
           teamName: formData.teamName,
           captainStudentId: formData.captainStudentId,
           studentIds: formData.selectedStudents,
@@ -539,9 +514,6 @@ const EventParticipationForm = memo(function EventParticipationForm({
                 teamName: team.teamName,
                 captainStudentId: team.captainStudentId,
                 studentIds: team.studentIds,
-                contactPerson: formData.contactPerson,
-                phone: formData.phone,
-                notes: formData.notes,
               }))
             : undefined,
         }),
@@ -578,6 +550,29 @@ const EventParticipationForm = memo(function EventParticipationForm({
           : "Register Students:"}{" "}
         <span className="text-emerald-400">{event.title}</span>
       </h2>
+
+      {session?.user?.role === "SCHOOL_ADMIN" && (
+        <div className="mb-6 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-5">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.25em] text-emerald-200/80">
+                School-managed registration
+              </p>
+              <h3 className="mt-2 text-xl font-bold text-white">
+                {isTeamEvent
+                  ? "Create teams, choose members, then submit the roster."
+                  : "Select students, then submit them as participants."}
+              </h3>
+              <p className="mt-1 text-sm text-slate-300">
+                Students can see the event, but Phase 1 registration is handled by the school.
+              </p>
+            </div>
+            <div className={`rounded-full border px-4 py-2 text-sm font-semibold ${registrationStateTone}`}>
+              {registrationStateLabel}
+            </div>
+          </div>
+        </div>
+      )}
 
       {session?.user?.role === "SCHOOL_ADMIN" && isTeamEvent && (
         <div className="mb-6 rounded-2xl border border-slate-700 bg-slate-900/70 p-5">
@@ -740,11 +735,12 @@ const EventParticipationForm = memo(function EventParticipationForm({
 
       {/* 2-Column Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* LEFT COLUMN: Contact Details */}
+        {/* LEFT COLUMN: Registration Setup */}
         <div>
           <div className="mb-8">
             <h3 className="text-lg font-bold text-emerald-400 mb-6 flex items-center gap-2">
-              <FaUser className="text-xl" /> Contact Details
+              <FaUsers className="text-xl" />{" "}
+              {isTeamEvent ? "Team Setup" : "Registration Setup"}
             </h3>
 
             {isTeamEvent && (
@@ -912,65 +908,30 @@ const EventParticipationForm = memo(function EventParticipationForm({
               </div>
             )}
 
-            {/* Contact Person */}
-            <div className="mb-6">
-              <label className="block text-slate-300 font-medium mb-2">
-                Contact Person *
-              </label>
-              <input
-                type="text"
-                placeholder="Enter name of contact person"
-                value={formData.contactPerson}
-                disabled={isEventLocked}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    contactPerson: e.target.value,
-                  }))
-                }
-                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition disabled:cursor-not-allowed disabled:opacity-60"
-              />
-              <p className="text-slate-500 text-xs mt-1">
-                Name of the person coordinating the participation
-              </p>
-            </div>
+            {!isTeamEvent && (
+              <div className="rounded-xl border border-blue-500/20 bg-blue-500/10 p-4">
+                <h4 className="text-sm font-semibold uppercase tracking-wide text-blue-200">
+                  Individual participant registration
+                </h4>
+                <div className="mt-4 grid gap-3">
+                  <div className="rounded-lg border border-slate-700 bg-slate-900/60 px-4 py-3">
+                    <div className="text-xs uppercase tracking-wide text-slate-500">
+                      Selected students
+                    </div>
+                    <div className="mt-1 text-2xl font-bold text-white">
+                      {formData.selectedStudents.length}
+                    </div>
+                    <p className="mt-1 text-xs text-slate-400">
+                      Choose students from the list on the right. This event does not need team names or captains.
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-slate-700 bg-slate-900/60 px-4 py-3 text-sm text-slate-300">
+                    After you submit, the registration is saved to this event and can be updated while registration is open.
+                  </div>
+                </div>
+              </div>
+            )}
 
-            {/* Phone */}
-            <div className="mb-6">
-              <label className="block text-slate-300 font-medium mb-2 flex items-center gap-2">
-                <FaPhone className="text-emerald-400" /> Contact Phone *
-              </label>
-              <input
-                type="tel"
-                placeholder="Enter contact phone number"
-                value={formData.phone}
-                disabled={isEventLocked}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, phone: e.target.value }))
-                }
-                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition disabled:cursor-not-allowed disabled:opacity-60"
-              />
-              <p className="text-slate-500 text-xs mt-1">
-                Phone number for event coordination
-              </p>
-            </div>
-
-            {/* Notes */}
-            <div>
-              <label className="block text-slate-300 font-medium mb-2">
-                Notes (Optional)
-              </label>
-              <textarea
-                placeholder="Any questions, special requirements, or additional notes..."
-                value={formData.notes}
-                disabled={isEventLocked}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, notes: e.target.value }))
-                }
-                rows="4"
-                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition resize-none disabled:cursor-not-allowed disabled:opacity-60"
-              />
-            </div>
           </div>
         </div>
 
@@ -1006,7 +967,7 @@ const EventParticipationForm = memo(function EventParticipationForm({
             </div>
             <div className="rounded-xl border border-slate-700 bg-slate-800/70 px-4 py-3">
               <div className="text-xs uppercase tracking-wide text-slate-400">
-                Visible Selected
+                Selected in View
               </div>
               <div className="mt-1 text-2xl font-bold text-white">
                 {visibleSelectedCount}
@@ -1244,9 +1205,6 @@ const EventParticipationForm = memo(function EventParticipationForm({
           disabled={isEventLocked}
           onClick={() => {
             setFormData({
-              contactPerson: "",
-              phone: "",
-              notes: "",
               teamName: "",
               captainStudentId: "",
               selectedStudents: [],
@@ -1287,7 +1245,7 @@ const EventParticipationForm = memo(function EventParticipationForm({
             : isTeamEvent
             ? "Submit Teams"
             : "Submit Students"}{" "}
-          ({isTeamEvent ? totalSelectedTeamMembers : formData.selectedStudents.length})
+          ({selectedParticipantCount})
         </button>
       </div>
     </form>

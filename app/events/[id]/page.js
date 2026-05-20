@@ -3,6 +3,7 @@ import connectDB from "@/lib/db";
 import Event from "@/models/Event";
 import Achievement from "@/models/Achievement";
 import ParticipationRequest from "@/models/ParticipationRequest";
+import EventNotice from "@/models/EventNotice";
 import PublicSiteNav from "@/components/public/PublicSiteNav";
 import "@/models/Student";
 import "@/models/User";
@@ -33,7 +34,7 @@ async function getEventData(id) {
 
   if (!event) return null;
 
-  const [participatingSchools, achievements] = await Promise.all([
+  const [participatingSchools, achievements, eventNotices] = await Promise.all([
     ParticipationRequest.find({
       event: id,
       status: { $in: ["APPROVED", "ENROLLED"] },
@@ -52,6 +53,14 @@ async function getEventData(id) {
           .populate("student", "name")
           .lean()
       : [],
+    EventNotice.find({
+      event: id,
+      round: null,
+      status: "PUBLISHED",
+      visibility: "PUBLIC",
+    })
+      .sort({ publishedAt: -1, createdAt: -1 })
+      .lean(),
   ]);
 
   const schoolMap = new Map();
@@ -61,7 +70,12 @@ async function getEventData(id) {
     }
   });
 
-  return { event, participatingSchools: Array.from(schoolMap.values()), achievements };
+  return {
+    event,
+    participatingSchools: Array.from(schoolMap.values()),
+    achievements,
+    eventNotices,
+  };
 }
 
 export default async function PublicEventPage({ params }) {
@@ -77,7 +91,7 @@ export default async function PublicEventPage({ params }) {
     );
   }
 
-  const { event, participatingSchools, achievements } = data;
+  const { event, participatingSchools, achievements, eventNotices } = data;
   const visiblePartners = event.partnerBrandingEnabled
     ? (event.partners || []).filter(
         (partner) =>
@@ -195,6 +209,42 @@ export default async function PublicEventPage({ params }) {
             <p className="text-xl font-bold mt-2">{event.visibility}</p>
           </div>
         </div>
+
+        {eventNotices.length > 0 && (
+          <section className="rounded-3xl border border-slate-800 bg-slate-900/60 p-8 mb-10">
+            <div className="mb-5">
+              <h2 className="text-2xl font-bold">Event Notices</h2>
+              <p className="mt-2 text-sm text-slate-400">
+                Public updates tied directly to this event.
+              </p>
+            </div>
+            <div className="space-y-4">
+              {eventNotices.map((notice) => (
+                <article
+                  key={String(notice._id)}
+                  className="rounded-2xl border border-slate-800 bg-slate-950/50 p-5"
+                >
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded-full bg-sky-500/10 px-3 py-1 text-xs font-semibold text-sky-300">
+                      {String(notice.type || "GENERAL").replaceAll("_", " ")}
+                    </span>
+                    {notice.publishedAt && (
+                      <span className="text-xs text-slate-500">
+                        {new Date(notice.publishedAt).toLocaleDateString()}
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="mt-3 text-xl font-bold text-white">
+                    {notice.title}
+                  </h3>
+                  <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-slate-300">
+                    {notice.message}
+                  </p>
+                </article>
+              ))}
+            </div>
+          </section>
+        )}
 
         <section className="rounded-3xl border border-slate-800 bg-slate-900/60 p-8 mb-10">
           <div className="flex items-center justify-between gap-4 mb-5">
@@ -334,16 +384,16 @@ export default async function PublicEventPage({ params }) {
           </section>
 
           <section className="rounded-3xl border border-slate-800 bg-slate-900/60 p-6">
-            <h2 className="text-xl font-bold mb-4">Want to participate?</h2>
+            <h2 className="text-xl font-bold mb-4">How registration works</h2>
             <p className="text-sm text-slate-400 leading-7">
-              Schools join through their event dashboard and register eligible students for school-managed participation.
+              Registration is managed by the school in phase 1. Teachers or school admins collect student names and submit eligible participants through the school dashboard.
             </p>
             <div className="mt-5 flex flex-col gap-3">
               <Link
                 href="/login"
                 className="rounded-xl bg-blue-600 hover:bg-blue-500 px-4 py-3 text-center font-medium"
               >
-                Login to participate
+                Login as a school
               </Link>
               <Link
                 href="/register"

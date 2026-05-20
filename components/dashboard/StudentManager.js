@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import {
   FaEdit,
+  FaKey,
   FaPlus,
   FaTrash,
 } from "react-icons/fa";
@@ -11,6 +12,7 @@ import { TableSkeleton } from "@/components/Skeletons";
 import PaginationControls from "@/components/PaginationControls";
 import EmptyState from "@/components/EmptyState";
 import Modal from "@/components/Modal";
+import CredentialsModal from "@/components/CredentialsModal";
 
 export default function StudentManager({ initialGrade, hideGradeFilter = false }) {
   // Data State
@@ -32,6 +34,10 @@ export default function StudentManager({ initialGrade, hideGradeFilter = false }
   const [editingStudent, setEditingStudent] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [credentialsModal, setCredentialsModal] = useState({
+    isOpen: false,
+    credentials: null,
+  });
   
   useEffect(() => {
     if (initialGrade) {
@@ -124,6 +130,39 @@ export default function StudentManager({ initialGrade, hideGradeFilter = false }
     }
   };
 
+  const handleResetPassword = async (student) => {
+    if (
+      !confirm(
+        `Reset password for ${student.name}? A new temporary password will be generated.`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/students/${student._id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to reset password");
+      }
+
+      if (data.credentials) {
+        setCredentialsModal({
+          isOpen: true,
+          credentials: data.credentials,
+        });
+      }
+    } catch (error) {
+      console.error("Error resetting student password:", error);
+      alert(error.message || "Failed to reset student password");
+    }
+  };
+
   const handleSaveEdit = async (e) => {
     e.preventDefault();
     setIsSaving(true);
@@ -201,6 +240,7 @@ export default function StudentManager({ initialGrade, hideGradeFilter = false }
               <tr>
                 <th className="p-4">Student</th>
                 <th className="p-4">Grade</th>
+                <th className="p-4">Login ID</th>
                 <th className="p-4">Contact</th>
                 <th className="p-4">Parent</th>
                 <th className="p-4 text-right">Actions</th>
@@ -209,13 +249,13 @@ export default function StudentManager({ initialGrade, hideGradeFilter = false }
             <tbody className="divide-y divide-slate-800">
               {loading ? (
                 <tr>
-                  <td colSpan="5" className="p-8 text-center text-slate-500">
+                  <td colSpan="6" className="p-8 text-center text-slate-500">
                     <TableSkeleton />
                   </td>
                 </tr>
               ) : students.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="p-8 text-center text-slate-500">
+                  <td colSpan="6" className="p-8 text-center text-slate-500">
                     <EmptyState message="No students found" />
                   </td>
                 </tr>
@@ -233,6 +273,12 @@ export default function StudentManager({ initialGrade, hideGradeFilter = false }
                       <div className="text-xs text-slate-500">Roll: {student.rollNumber}</div>
                     </td>
                     <td className="p-4">
+                      <div className="text-white">{student.username || "Username pending"}</div>
+                      <div className="text-xs text-slate-500">
+                        Share this as the student login ID
+                      </div>
+                    </td>
+                    <td className="p-4">
                       <div className="text-white">{student.email}</div>
                       <div className="text-xs text-slate-500">{student.phone}</div>
                     </td>
@@ -248,6 +294,13 @@ export default function StudentManager({ initialGrade, hideGradeFilter = false }
                           title="Edit Student"
                         >
                           <FaEdit />
+                        </button>
+                        <button
+                          onClick={() => handleResetPassword(student)}
+                          className="p-2 text-slate-400 hover:text-amber-400 hover:bg-amber-400/10 rounded-lg transition-colors"
+                          title="Reset Password"
+                        >
+                          <FaKey />
                         </button>
                         <button
                           onClick={() => handleDelete(student._id)}
@@ -403,6 +456,14 @@ export default function StudentManager({ initialGrade, hideGradeFilter = false }
           </form>
         )}
       </Modal>
+
+      <CredentialsModal
+        isOpen={credentialsModal.isOpen}
+        credentials={credentialsModal.credentials}
+        onClose={() =>
+          setCredentialsModal({ isOpen: false, credentials: null })
+        }
+      />
     </div>
   );
 }

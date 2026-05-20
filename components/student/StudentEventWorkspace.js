@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { FaCalendarAlt, FaCheckCircle, FaSchool } from "react-icons/fa";
 import EventHub from "@/components/events/EventHub";
+import StudentNotificationCenter from "@/components/student/StudentNotificationCenter";
 
 const REGISTERED_FILTERS = [
   { id: "participated", label: "All Registered" },
@@ -40,12 +41,15 @@ export default function StudentEventWorkspace() {
 
   return (
     <div className="space-y-6 text-slate-200">
-        <div>
-          <h1 className="text-4xl font-bold text-white">Student Events</h1>
-          <p className="mt-2 text-slate-400">
-            See what you are registered for, discover platform competitions, and
-            join school events from one clear place.
-          </p>
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h1 className="text-4xl font-bold text-white">Student Events</h1>
+            <p className="mt-2 text-slate-400">
+              See what you are registered for, discover upcoming events, and
+              follow notices, rounds, results, and certificates from one clear place.
+            </p>
+          </div>
+          <StudentNotificationCenter />
         </div>
 
         <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-2">
@@ -76,7 +80,7 @@ export default function StudentEventWorkspace() {
             defaultFilter="participated"
             filters={REGISTERED_FILTERS}
             title="My Registered Events"
-            description="Track your registrations, round notices, submissions, results, and certificates."
+            description="Track your registrations, event notices, rounds, results, and certificates."
           />
         )}
 
@@ -85,7 +89,7 @@ export default function StudentEventWorkspace() {
             eventScope="PLATFORM"
             filters={DISCOVERY_FILTERS}
             title="Platform Competitions"
-            description="Inter-school competitions organized by the platform or approved partners."
+            description="Inter-school competitions organized by the platform or approved partners. Your school handles registration for participating students."
           />
         )}
 
@@ -94,7 +98,7 @@ export default function StudentEventWorkspace() {
             eventScope="SCHOOL"
             filters={DISCOVERY_FILTERS}
             title="School Events"
-            description="Events created by your school for internal participation, auditions, showcases, and other school activities."
+            description="Events created by your school for internal participation, auditions, showcases, and other school activities. Teachers and school admins manage the final registrations."
           />
         )}
     </div>

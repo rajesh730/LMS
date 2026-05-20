@@ -1,13 +1,16 @@
 @import "tailwindcss";
 
 :root {
-  --background: #071833;
-  --foreground: #eef5ff;
+  --background: #f5f1e8;
+  --foreground: #17120a;
   --brand-navy: #0a2f66;
   --brand-navy-deep: #071833;
   --brand-blue: #2f7fdb;
-  --brand-gold: #ffb21c;
-  --brand-cream: #f6fbff;
+  --brand-gold: #2f7fdb;
+  --brand-cream: #f8fbff;
+  --brand-paper: #ffffff;
+  --brand-border: #d7cdbb;
+  --brand-muted: #5f6f86;
 }
 
 @theme inline {
@@ -19,8 +22,8 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #071833;
-    --foreground: #eef5ff;
+    --background: #f5f1e8;
+    --foreground: #17120a;
   }
 }
 
@@ -29,9 +32,145 @@ body {
   color: var(--foreground);
   font-family: "Segoe UI", "Trebuchet MS", sans-serif;
   background-image:
-    radial-gradient(circle at top, rgba(255, 178, 28, 0.12), transparent 26%),
-    radial-gradient(circle at 80% 20%, rgba(47, 127, 219, 0.16), transparent 24%),
-    linear-gradient(180deg, #0a2145 0%, #071833 100%);
+    radial-gradient(circle at 16% 8%, rgba(47, 127, 219, 0.14), transparent 28%),
+    radial-gradient(circle at 84% 14%, rgba(10, 47, 102, 0.12), transparent 26%),
+    linear-gradient(135deg, #f8fbff 0%, #f5f1e8 52%, #eaf2ff 100%);
+}
+
+/* Pulse-inspired app theme. These overrides keep layouts intact while moving
+   legacy dark Tailwind surfaces into the warmer production palette. */
+[class*="bg-slate-950"],
+[class*="bg-slate-900"],
+[class*="bg-[#071833]"],
+[class*="bg-[#08111f]"] {
+  background-color: rgba(255, 255, 255, 0.78) !important;
+}
+
+[class*="bg-slate-800"],
+[class*="bg-[#0f2953]"],
+[class*="bg-[#081b39]"] {
+  background-color: rgba(248, 251, 255, 0.9) !important;
+}
+
+[class*="border-slate-800"],
+[class*="border-slate-700"],
+[class*="border-[#16396d]"],
+[class*="border-white/10"] {
+  border-color: var(--brand-border) !important;
+}
+
+[class*="text-slate-100"],
+[class*="text-slate-200"],
+[class*="text-slate-300"],
+[class*="text-[#eef5ff]"],
+[class*="text-[#f6fbff]"] {
+  color: #27344a !important;
+}
+
+[class*="text-slate-400"],
+[class*="text-slate-500"],
+[class*="text-[#8fc4ff]"],
+[class*="text-[#bfd3f5]"],
+[class*="text-[#d2e3ff]"] {
+  color: var(--brand-muted) !important;
+}
+
+[class*="text-white"] {
+  color: #17120a !important;
+}
+
+[class*="bg-[#0a2f66]"],
+[class*="bg-blue-600"],
+[class*="bg-blue-700"],
+[class*="bg-emerald-600"],
+[class*="bg-emerald-700"] {
+  background-color: var(--brand-navy) !important;
+}
+
+[class*="bg-[#0a2f66]"] *,
+[class*="bg-blue-600"] *,
+[class*="bg-blue-700"] *,
+[class*="bg-emerald-600"] *,
+[class*="bg-emerald-700"] *,
+button[class*="bg-blue"],
+a[class*="bg-blue"],
+button[class*="bg-emerald"],
+a[class*="bg-emerald"],
+button[class*="bg-[#0a2f66]"],
+a[class*="bg-[#0a2f66]"] {
+  color: #ffffff !important;
+}
+
+[class*="bg-[#ffb21c]"]:not([class*="selection:bg"]),
+[class*="hover:bg-[#ffc44d]"],
+[class*="bg-amber"],
+[class*="bg-yellow"],
+[class*="bg-orange"] {
+  background-color: var(--brand-blue) !important;
+  color: #ffffff !important;
+}
+
+[class*="bg-[#ffb21c]/"]:not([class*="selection:bg"]),
+[class*="bg-amber-500/"],
+[class*="bg-yellow-500/"],
+[class*="bg-orange-500/"],
+[class*="bg-yellow-400/"],
+[class*="bg-yellow-600/"],
+[class*="bg-orange-600/"] {
+  background-color: rgba(47, 127, 219, 0.12) !important;
+  color: var(--brand-navy) !important;
+}
+
+[class*="border-[#ffb21c]"],
+[class*="border-amber"],
+[class*="border-yellow"],
+[class*="border-orange"] {
+  border-color: rgba(47, 127, 219, 0.3) !important;
+}
+
+[class*="text-[#ffb21c]"],
+[class*="text-[#ffc44d]"],
+[class*="text-[#ffe09a]"],
+[class*="text-amber"],
+[class*="text-yellow"],
+[class*="text-orange"] {
+  color: var(--brand-navy) !important;
+}
+
+[class*="bg-[#fffaf0]"],
+[class*="bg-[#fffdf8]"] {
+  background-color: #f8fbff !important;
+}
+
+[class*="shadow-black"] {
+  --tw-shadow-color: rgba(10, 47, 102, 0.14) !important;
+  --tw-shadow: var(--tw-shadow-colored) !important;
+}
+
+.pratyo-dark-shell {
+  background-color: rgba(8, 27, 57, 0.96) !important;
+  border-color: rgba(143, 196, 255, 0.2) !important;
+  color: #eef5ff !important;
+}
+
+.pratyo-dark-shell [class*="text-white"],
+.pratyo-dark-shell [class*="text-slate"],
+.pratyo-dark-shell [class*="text-[#"],
+.pratyo-dark-shell p,
+.pratyo-dark-shell span,
+.pratyo-dark-shell a,
+.pratyo-dark-shell button {
+  color: inherit !important;
+}
+
+.pratyo-dark-shell .pratyo-muted {
+  color: #9fc3ef !important;
+}
+
+.pratyo-dark-shell .pratyo-active {
+  background-color: rgba(47, 127, 219, 0.22) !important;
+  border-color: rgba(143, 196, 255, 0.44) !important;
+  color: #d7e9ff !important;
 }
 
 @keyframes softHeartbeat {

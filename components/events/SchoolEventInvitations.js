@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   FaBell,
@@ -62,6 +63,7 @@ export default function SchoolEventInvitations({ refreshKey = 0, onChanged }) {
   const [actioningId, setActioningId] = useState(null);
   const [message, setMessage] = useState("");
   const [participationEvent, setParticipationEvent] = useState(null);
+  const [openNoticeInvitationId, setOpenNoticeInvitationId] = useState(null);
 
   const fetchInvitations = useCallback(async () => {
     try {
@@ -272,6 +274,49 @@ export default function SchoolEventInvitations({ refreshKey = 0, onChanged }) {
                       {event.description}
                     </p>
 
+                    {invitation.latestEventNotice && (
+                      <div className="mt-4">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setOpenNoticeInvitationId((current) =>
+                              current === invitation._id ? null : invitation._id
+                            )
+                          }
+                          className="inline-flex items-center gap-2 rounded-full border border-sky-500/25 bg-sky-500/10 px-3 py-2 text-xs font-bold uppercase tracking-wide text-sky-200 transition hover:bg-sky-500/20"
+                        >
+                          <FaBell />
+                          {invitation.eventNoticeCount > 1
+                            ? `${invitation.eventNoticeCount} Notices`
+                            : "1 Notice"}
+                        </button>
+                        {openNoticeInvitationId === invitation._id && (
+                          <div className="mt-3 rounded-xl border border-sky-500/25 bg-sky-500/10 px-4 py-3">
+                            <p className="text-sm font-semibold text-white">
+                              {invitation.latestEventNotice.title}
+                            </p>
+                            <p className="mt-1 line-clamp-3 text-sm text-sky-100/85">
+                              {invitation.latestEventNotice.message}
+                            </p>
+                            <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-sky-100/80">
+                              {invitation.eventNoticeCount > 1 && (
+                                <span>
+                                  {invitation.eventNoticeCount - 1} older notice
+                                  {invitation.eventNoticeCount - 1 === 1 ? "" : "s"} available
+                                </span>
+                              )}
+                              <Link
+                                href={`/events/${event._id}`}
+                                className="font-semibold text-white underline underline-offset-2 hover:text-sky-100"
+                              >
+                                View all notices
+                              </Link>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     <div
                       className={`mt-4 rounded-xl border px-3 py-2 text-sm ${getStageClasses(
                         stage.tone
@@ -312,7 +357,7 @@ export default function SchoolEventInvitations({ refreshKey = 0, onChanged }) {
                         {isRegistrationClosed(event)
                           ? "Registration Closed"
                           : hasParticipation
-                          ? "Manage Team"
+                          ? (isTeamEventLike(event) ? "Manage Groups" : "Manage Participants")
                           : "Take Part"}
                       </button>
                     )}
@@ -356,7 +401,7 @@ export default function SchoolEventInvitations({ refreshKey = 0, onChanged }) {
                     (invitation) =>
                       invitation.event?._id === participationEvent._id
                   )?.participation?.hasParticipation
-                    ? "Manage Team"
+                    ? (isTeamEventLike(event) ? "Manage Groups" : "Manage Participants")
                     : "Take Part"}
                   : {participationEvent.title}
                 </h3>

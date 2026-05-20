@@ -29,6 +29,7 @@ function isPast(value) {
 export default function SchoolRoundPanel({ eventId }) {
   const [eventMeta, setEventMeta] = useState(null);
   const [rounds, setRounds] = useState([]);
+  const [eventNotices, setEventNotices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [drafts, setDrafts] = useState({});
@@ -47,6 +48,7 @@ export default function SchoolRoundPanel({ eventId }) {
       if (!res.ok) throw new Error(data.message || "Failed to load rounds");
       setEventMeta(data.event || null);
       setRounds(Array.isArray(data.rounds) ? data.rounds : []);
+      setEventNotices(Array.isArray(data.notices) ? data.notices : []);
 
       const nextDrafts = {};
       (data.rounds || []).forEach((round) => {
@@ -121,10 +123,10 @@ export default function SchoolRoundPanel({ eventId }) {
     );
   }
 
-  if (rounds.length === 0) {
+  if (rounds.length === 0 && eventNotices.length === 0) {
     return (
       <div className="rounded-xl border border-slate-700 bg-slate-900/50 p-4 text-sm text-slate-400">
-        No competition rounds have been opened for your school yet.
+        No event notices or competition rounds have been opened for your school yet.
       </div>
     );
   }
@@ -135,6 +137,30 @@ export default function SchoolRoundPanel({ eventId }) {
         <div className="rounded-xl border border-slate-700 bg-slate-900/70 px-4 py-3 text-sm text-slate-200">
           {message}
         </div>
+      )}
+
+      {eventNotices.length > 0 && (
+        <section className="rounded-xl border border-slate-700 bg-slate-900/50 p-4">
+          <h4 className="flex items-center gap-2 text-base font-semibold text-slate-100">
+            <FaBell /> Event Notices
+          </h4>
+          <div className="mt-3 space-y-3">
+            {eventNotices.map((notice) => (
+              <div
+                key={notice._id}
+                className="rounded-lg border border-slate-700 bg-slate-950/60 p-3"
+              >
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="font-semibold text-white">{notice.title}</p>
+                  <span className="rounded-full bg-slate-800 px-2 py-0.5 text-xs text-slate-300">
+                    {label(notice.type)}
+                  </span>
+                </div>
+                <p className="mt-1 text-sm text-slate-300">{notice.message}</p>
+              </div>
+            ))}
+          </div>
+        </section>
       )}
 
       {rounds.map((round) => {
@@ -195,30 +221,6 @@ export default function SchoolRoundPanel({ eventId }) {
               </div>
             </div>
 
-            {round.notices?.length > 0 && (
-              <div className="mt-4 space-y-2">
-                <h5 className="flex items-center gap-2 text-sm font-semibold text-slate-200">
-                  <FaBell /> Round Notices
-                </h5>
-                {round.notices.map((notice) => (
-                  <div
-                    key={notice._id}
-                    className="rounded-lg border border-slate-700 bg-slate-950/60 p-3"
-                  >
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="font-semibold text-white">{notice.title}</p>
-                      <span className="rounded-full bg-slate-800 px-2 py-0.5 text-xs text-slate-300">
-                        {label(notice.type)}
-                      </span>
-                    </div>
-                    <p className="mt-1 text-sm text-slate-300">
-                      {notice.message}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
-
             <div className="mt-4">
               <h5 className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-200">
                 <FaUserGraduate /> {isTeamEvent ? "Your Teams" : "Your Students"}
@@ -273,14 +275,14 @@ export default function SchoolRoundPanel({ eventId }) {
                               Selected for the next round
                             </p>
                           )}
-                          {participant.status === "PARTICIPATED" && (
-                            <p className="mt-1 text-xs font-semibold text-slate-400">
-                              Participated in this round
-                            </p>
-                          )}
                           {participant.status === "DISQUALIFIED" && (
                             <p className="mt-1 text-xs font-semibold text-red-300">
                               Disqualified from this round
+                            </p>
+                          )}
+                          {participant.status === "NOT_ATTEMPTED" && (
+                            <p className="mt-1 text-xs font-semibold text-slate-400">
+                              Awaiting round decision
                             </p>
                           )}
                         </div>

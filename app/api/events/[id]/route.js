@@ -193,6 +193,7 @@ export async function PUT(req, props) {
       session.user.role === "SUPER_ADMIN"
         ? eventScope || event.eventScope
         : event.eventScope;
+    const isSchoolOwnedEvent = requestedScope === "SCHOOL";
 
     let resolvedSchool = event.school;
     if (requestedScope === "SCHOOL") {
@@ -209,7 +210,9 @@ export async function PUT(req, props) {
       resolvedSchool = null;
     }
 
-    const resolvedVisibility = visibility || event.visibility;
+    const resolvedVisibility = isSchoolOwnedEvent
+      ? "INVITED"
+      : visibility || event.visibility;
     if (resolvedVisibility === "PUBLIC" && event.status !== "APPROVED") {
       return NextResponse.json(
         {
@@ -248,7 +251,9 @@ export async function PUT(req, props) {
       maxParticipants:
         maxParticipants !== undefined ? maxParticipants : event.maxParticipants,
       maxParticipantsPerSchool:
-        maxParticipantsPerSchool !== undefined
+        isSchoolOwnedEvent
+          ? null
+          : maxParticipantsPerSchool !== undefined
           ? maxParticipantsPerSchool
           : event.maxParticipantsPerSchool,
     });
@@ -287,7 +292,9 @@ export async function PUT(req, props) {
     event.school = resolvedSchool;
     event.ownerType = requestedScope === "SCHOOL" ? "SCHOOL" : "PLATFORM";
     event.ownerId = requestedScope === "SCHOOL" ? resolvedSchool : session.user.id;
-    event.eventType = eventType || event.eventType;
+    event.eventType = isSchoolOwnedEvent
+      ? "COMPETITION"
+      : eventType || event.eventType;
     event.visibility = resolvedVisibility;
     event.participationFormat = resolvedParticipationFormat;
     event.registrationMode =
@@ -298,7 +305,9 @@ export async function PUT(req, props) {
       event.featuredOnLanding = Boolean(featuredOnLanding);
     }
     if (publicHighlightsEnabled !== undefined) {
-      event.publicHighlightsEnabled = Boolean(publicHighlightsEnabled);
+      event.publicHighlightsEnabled = isSchoolOwnedEvent
+        ? false
+        : Boolean(publicHighlightsEnabled);
       if (!event.publicHighlightsEnabled) {
         event.featuredOnLanding = false;
       }
@@ -343,8 +352,11 @@ export async function PUT(req, props) {
       event.maxParticipants = capacityValidation.totalStudentCapacity;
     }
     if (maxParticipantsPerSchool !== undefined) {
-      event.maxParticipantsPerSchool =
-        capacityValidation.maxStudentsPerSchool;
+      event.maxParticipantsPerSchool = isSchoolOwnedEvent
+        ? null
+        : capacityValidation.maxStudentsPerSchool;
+    } else if (isSchoolOwnedEvent) {
+      event.maxParticipantsPerSchool = null;
     }
     if (resolvedParticipationFormat === "TEAM") {
       event.minTeamSize =
@@ -369,7 +381,8 @@ export async function PUT(req, props) {
         : [];
     }
     if (Array.isArray(assignedMentors)) {
-      event.assignedMentors = assignedMentors;
+      event.assignedMentors =
+        requestedScope === "SCHOOL" ? [] : assignedMentors;
     }
     if (lifecycleStatus) {
       event.lifecycleStatus = lifecycleStatus;

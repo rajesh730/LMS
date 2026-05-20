@@ -50,7 +50,7 @@ export async function GET(req, props) {
       .lean();
     const roundIds = rounds.map((round) => round._id);
 
-    const [participants, submissions, notices] = await Promise.all([
+    const [participants, submissions, eventNotices] = await Promise.all([
       RoundParticipant.find({
         event: params.id,
         round: { $in: roundIds },
@@ -67,7 +67,7 @@ export async function GET(req, props) {
       }).lean(),
       EventNotice.find({
         event: params.id,
-        round: { $in: roundIds },
+        round: null,
         status: "PUBLISHED",
         $or: [
           { visibility: "PUBLIC" },
@@ -105,28 +105,18 @@ export async function GET(req, props) {
       );
     });
 
-    const noticesByRound = new Map();
-    notices.forEach((notice) => {
-      const key = String(notice.round);
-      noticesByRound.set(key, [...(noticesByRound.get(key) || []), notice]);
-    });
-
     return NextResponse.json({
       event: {
         _id: event._id,
         title: event.title,
         participationFormat: event.participationFormat || "INDIVIDUAL",
       },
+      notices: eventNotices,
       rounds: rounds
-        .filter(
-          (round) =>
-            participantsByRound.has(String(round._id)) ||
-            noticesByRound.has(String(round._id))
-        )
+        .filter((round) => participantsByRound.has(String(round._id)))
         .map((round) => ({
           ...round,
           participants: participantsByRound.get(String(round._id)) || [],
-          notices: noticesByRound.get(String(round._id)) || [],
         })),
     });
   } catch (error) {

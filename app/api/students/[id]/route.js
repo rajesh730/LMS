@@ -225,7 +225,12 @@ export async function PATCH(req, { params }) {
         return NextResponse.json(
             {
                 message: 'Password reset successfully',
-                credentials: { email: studentDoc.email, password: newPassword },
+                credentials: {
+                    name: studentDoc.name,
+                    username: studentDoc.username,
+                    email: studentDoc.email,
+                    password: newPassword,
+                },
             },
             { status: 200 }
         );

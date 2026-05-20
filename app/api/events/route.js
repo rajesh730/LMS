@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import Event from "@/models/Event";
+import EventNotice from "@/models/EventNotice";
 import Student from "@/models/Student";
 import ParticipationRequest from "@/models/ParticipationRequest";
 import EventProposal from "@/models/EventProposal";
@@ -206,6 +207,7 @@ export async function POST(req) {
       session.user.role === "SUPER_ADMIN"
         ? eventScope || "PLATFORM"
         : "SCHOOL";
+    const isSchoolOwnedEvent = normalizedScope === "SCHOOL";
 
     let school = null;
     if (normalizedScope === "SCHOOL") {
@@ -222,8 +224,9 @@ export async function POST(req) {
       }
     }
 
-    let resolvedVisibility =
-      visibility || (normalizedScope === "PLATFORM" ? "PUBLIC" : "INVITED");
+    let resolvedVisibility = isSchoolOwnedEvent
+      ? "INVITED"
+      : visibility || "PUBLIC";
     if (status !== "APPROVED" && resolvedVisibility === "PUBLIC") {
       resolvedVisibility = "INVITED";
     }
@@ -265,7 +268,7 @@ export async function POST(req) {
       eventScope: normalizedScope,
       ownerType,
       ownerId,
-      eventType: eventType || "COMPETITION",
+      eventType: isSchoolOwnedEvent ? "COMPETITION" : eventType || "COMPETITION",
       visibility: resolvedVisibility,
       registrationMode:
         resolvedParticipationFormat === "TEAM"
@@ -274,7 +277,9 @@ export async function POST(req) {
       participationFormat: resolvedParticipationFormat,
       featuredOnLanding: canFeatureOnLanding ? Boolean(featuredOnLanding) : false,
       publicHighlightsEnabled:
-        status === "APPROVED"
+        isSchoolOwnedEvent
+          ? false
+          : status === "APPROVED"
           ? publicHighlightsEnabled === undefined
             ? true
             : Boolean(publicHighlightsEnabled)
@@ -287,7 +292,9 @@ export async function POST(req) {
       sourceProposal: normalizedSourceProposal,
       registrationDeadline: registrationDeadline || null,
       maxParticipants: capacityValidation.totalStudentCapacity,
-      maxParticipantsPerSchool: capacityValidation.maxStudentsPerSchool,
+      maxParticipantsPerSchool: isSchoolOwnedEvent
+        ? null
+        : capacityValidation.maxStudentsPerSchool,
       minTeamSize:
         resolvedParticipationFormat === "TEAM" && minTeamSize !== ""
           ? Number(minTeamSize) || null
@@ -299,7 +306,12 @@ export async function POST(req) {
       eligibleGrades: Array.isArray(eligibleGrades)
         ? eligibleGrades.map(normalizeGradeValue).filter(Boolean)
         : [],
-      assignedMentors: Array.isArray(assignedMentors) ? assignedMentors : [],
+      assignedMentors:
+        normalizedScope === "SCHOOL"
+          ? []
+          : Array.isArray(assignedMentors)
+          ? assignedMentors
+          : [],
       status,
     });
 
@@ -357,6 +369,7 @@ export async function GET(req) {
 
     let query = {};
     let currentSchoolId = null;
+    let schoolIdStrings = [];
 
     if (
       session.user.role === "SCHOOL_ADMIN" ||
@@ -365,10 +378,18 @@ export async function GET(req) {
       const mongoose = (await import("mongoose")).default;
 
       // Resolve schoolId from session (SCHOOL_ADMIN uses own id; TEACHER was hydrated in auth callbacks)
-      const schoolObjectId = session.user.schoolId
-        ? new mongoose.Types.ObjectId(session.user.schoolId)
+      const resolvedSchoolId = session.user.schoolId || session.user.id;
+      const schoolObjectId = resolvedSchoolId
+        ? new mongoose.Types.ObjectId(resolvedSchoolId)
         : null;
       currentSchoolId = schoolObjectId;
+      schoolIdStrings = Array.from(
+        new Set(
+          [session.user.schoolId, session.user.id]
+            .filter(Boolean)
+            .map((value) => String(value))
+        )
+      );
 
       if (session.user.role === "SCHOOL_ADMIN" && schoolObjectId) {
         await ensureSchoolInvitationsForPublishedEvents(schoolObjectId);
@@ -442,7 +463,7 @@ export async function GET(req) {
     const schoolInvitationMap = new Map();
     if (session.user.role === "SCHOOL_ADMIN" && currentSchoolId) {
       const invitations = await EventSchoolInvitation.find({
-        school: currentSchoolId,
+        school: { $in: schoolIdStrings },
         event: { $in: events.map((event) => event._id) },
       })
         .select("event status notifiedAt readAt decisionAt reason")
@@ -456,7 +477,7 @@ export async function GET(req) {
     const eventIds = events.map((event) => event._id);
     const activeStatusFilter = { $in: ["PENDING", "APPROVED", "ENROLLED"] };
 
-    const [summaryRequests, detailedRequests, schoolRequests] = await Promise.all([
+    const [summaryRequests, detailedRequests, schoolRequests, eventNotices] = await Promise.all([
       ParticipationRequest.find({
         event: { $in: eventIds },
         status: { $in: ["PENDING", "APPROVED", "ENROLLED", "REJECTED"] },
@@ -478,18 +499,37 @@ export async function GET(req) {
       session.user.role === "SCHOOL_ADMIN"
         ? ParticipationRequest.find({
             event: { $in: eventIds },
-            school: session.user.id,
+            school: { $in: schoolIdStrings },
           })
             .select(
               "event status contactPerson contactPhone teamName captainStudent notes student requestedAt approvedAt enrollmentConfirmedAt"
             )
             .lean()
         : Promise.resolve([]),
+      EventNotice.find({
+        event: { $in: eventIds },
+        round: null,
+        status: "PUBLISHED",
+        visibility: "PUBLIC",
+      })
+        .select("event title message type publishedAt createdAt")
+        .sort({ publishedAt: -1, createdAt: -1 })
+        .lean(),
     ]);
 
     const summaryRequestsByEvent = groupRequestsByEvent(summaryRequests);
     const detailedRequestsByEvent = groupRequestsByEvent(detailedRequests);
     const schoolRequestsByEvent = groupRequestsByEvent(schoolRequests);
+    const latestNoticeByEvent = new Map();
+    const noticeCountByEvent = new Map();
+    eventNotices.forEach((notice) => {
+      const key = String(notice.event || "");
+      if (!key) return;
+      noticeCountByEvent.set(key, (noticeCountByEvent.get(key) || 0) + 1);
+      if (!latestNoticeByEvent.has(key)) {
+        latestNoticeByEvent.set(key, notice);
+      }
+    });
 
     // Add computed fields for frontend compatibility
     const eventsWithParticipation = events.map((event) => {
@@ -644,6 +684,18 @@ export async function GET(req) {
             schoolInvitationStatus: eventObj.schoolInvitationStatus,
           })
         );
+
+        const latestNotice = latestNoticeByEvent.get(String(event._id));
+        if (latestNotice) {
+          eventObj.latestEventNotice = {
+            _id: latestNotice._id,
+            title: latestNotice.title,
+            message: latestNotice.message,
+            type: latestNotice.type,
+            publishedAt: latestNotice.publishedAt || latestNotice.createdAt,
+          };
+          eventObj.eventNoticeCount = noticeCountByEvent.get(String(event._id)) || 1;
+        }
 
         return eventObj;
       });

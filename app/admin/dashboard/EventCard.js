@@ -19,6 +19,7 @@ import {
   FaUndo,
   FaArchive,
   FaCog,
+  FaBell,
 } from "react-icons/fa";
 import { getEventStage, getStageClasses } from "@/lib/eventUiStatus";
 
@@ -141,13 +142,21 @@ export default function EventCard({
   const isArchivedMode = actionMode === "archived";
 
   return (
-    <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
+    <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/60 shadow-sm transition hover:border-slate-700">
       {/* Header */}
-      <div className="p-5">
-        <div className="flex justify-between items-start mb-4">
-          <div>
-            <h4 className="text-xl font-bold text-white mb-1">{event.title}</h4>
-            <div className="flex items-center gap-3 text-sm text-slate-400">
+      <div className="p-6">
+        <div className="mb-5 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h4 className="text-2xl font-bold text-white">{event.title}</h4>
+              <span className="rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-300">
+                {event.eventScope === "PLATFORM" ? "Platform" : "School"}
+              </span>
+              <span className="rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-300">
+                {isTeamEvent ? "Team" : "Individual"}
+              </span>
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-slate-400">
               <span className="flex items-center gap-1">
                 <FaCalendarAlt className="text-emerald-400" />
                 {new Date(event.date).toLocaleDateString("en-US", {
@@ -156,9 +165,6 @@ export default function EventCard({
                   day: "numeric",
                   year: "numeric",
                 })}
-              </span>
-              <span className="bg-slate-700 px-2 py-0.5 rounded text-xs">
-                {event.eventScope === "PLATFORM" ? "Platform" : "School"}
               </span>
             </div>
 
@@ -308,7 +314,7 @@ export default function EventCard({
                     daysUntilDeadline
                   )
                 ) : (
-                  <span className="text-slate-500">∞</span>
+                  <span className="text-slate-500">No deadline</span>
                 )}
               </div>
             </div>
@@ -340,17 +346,27 @@ export default function EventCard({
           </div>
         )}
 
-        <p className="text-slate-400 text-sm">{event.description}</p>
+        <p className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 text-sm leading-6 text-slate-300">
+          {event.description || "No event description added yet."}
+        </p>
 
         {/* Actions */}
         <div className="flex flex-wrap gap-2 mt-4">
           {isManageMode && (
-            <Link
-              href={`/admin/events/${event._id}/manage`}
-              className="py-2 px-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition flex items-center justify-center gap-2 font-semibold"
-            >
-              <FaCog /> Manage Event
-            </Link>
+            <>
+              <Link
+                href={`/admin/events/${event._id}/manage`}
+                className="py-2 px-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition flex items-center justify-center gap-2 font-semibold"
+              >
+                <FaCog /> Manage Event
+              </Link>
+              <Link
+                href={`/admin/events/${event._id}/manage?tab=notices`}
+                className="py-2 px-4 bg-[#0a2f66] hover:bg-[#1150a1] text-white rounded-lg transition flex items-center justify-center gap-2 font-semibold"
+              >
+                <FaBell /> Event Notices
+              </Link>
+            </>
           )}
 
           {isCompletedMode && (
@@ -441,3 +457,4 @@ export default function EventCard({
     </div>
   );
 }
+

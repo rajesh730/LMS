@@ -114,7 +114,6 @@ export async function POST(req, props) {
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
 
-    participant.status = "PARTICIPATED";
     participant.updatedBy = session.user.id;
     await participant.save();
 

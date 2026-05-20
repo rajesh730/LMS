@@ -7,14 +7,24 @@ import { useRouter, useSearchParams } from "next/navigation";
 import DashboardLayout from "@/components/DashboardLayout";
 import AdminTopNav from "@/components/AdminTopNav";
 import AdminPartnerWorkspace from "@/components/partners/AdminPartnerWorkspace";
+import AdminDailyOverview from "@/components/admin/AdminDailyOverview";
 import CredentialsModal from "@/components/CredentialsModal";
+import NoticeManager from "@/components/NoticeManager";
+import StudentChallengeManager from "@/components/admin/StudentChallengeManager";
+import PageHeader from "@/components/ui/PageHeader";
+import AlertBanner from "@/components/ui/AlertBanner";
+import LoadingState from "@/components/ui/LoadingState";
+import EmptyState from "@/components/EmptyState";
 import SendEventForm from "./SendEventForm";
 import EventCard from "./EventCard";
 
 // Lazy load the participants view component
 const EventParticipantsView = dynamic(() => import("./EventParticipantsView"), {
   loading: () => (
-    <div className="p-4 text-slate-400">Loading participants...</div>
+    <LoadingState
+      title="Loading participants"
+      message="Preparing registrations and approval details."
+    />
   ),
 });
 
@@ -29,6 +39,7 @@ import {
   FaTimesCircle,
   FaInfoCircle,
   FaKey,
+  FaLayerGroup,
 } from "react-icons/fa";
 
 const FETCH_TIMEOUT_MS = 10000;
@@ -190,7 +201,7 @@ function AdminDashboardContent() {
       console.log("Response data:", data);
       
       if (res.ok) {
-        console.log("✓ Status updated successfully");
+        console.log("Status updated successfully");
         setSchools(
           schools.map((s) =>
             s._id === schoolId ? { ...s, status: newStatus } : s
@@ -305,39 +316,78 @@ function AdminDashboardContent() {
   const platformEvents = events.filter(
     (event) => (event.eventScope || "PLATFORM") === "PLATFORM"
   );
+  const activeEvents = platformEvents.filter(
+    (event) => (event.lifecycleStatus || "ACTIVE") === "ACTIVE"
+  );
+  const completedEvents = platformEvents.filter(
+    (event) => (event.lifecycleStatus || "ACTIVE") === "COMPLETED"
+  );
+  const archivedEvents = platformEvents.filter(
+    (event) => (event.lifecycleStatus || "ACTIVE") === "ARCHIVED"
+  );
 
   return (
     <DashboardLayout>
-      <header className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-white">
-            Platform Admin Dashboard
-          </h1>
-          <p className="text-slate-400 mt-1">
-            Oversee schools, partners, and platform competitions
-          </p>
-          <p className="text-xs text-slate-500 mt-1 font-mono">
-            Logged in as:{" "}
-            <span className="text-yellow-400">
-              {session?.user?.role || "Unknown"}
-            </span>{" "}
-            | ID: {session?.user?.id}
-          </p>
-        </div>
-      </header>
+      <PageHeader
+        icon={FaLayerGroup}
+        eyebrow="Platform control room"
+        title="Super Admin Dashboard"
+        description="Approve schools, run platform events, publish notices, manage partners, and select student challenge responses for public showcase."
+        meta={
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4">
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
+                Pending Schools
+              </p>
+              <p className="mt-1 text-2xl font-black text-white">
+                {pendingSchools.length}
+              </p>
+            </div>
+            <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4">
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
+                Platform Events
+              </p>
+              <p className="mt-1 text-2xl font-black text-white">
+                {platformEvents.length}
+              </p>
+            </div>
+            <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4">
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
+                Schools
+              </p>
+              <p className="mt-1 text-2xl font-black text-white">
+                {schools.length}
+              </p>
+            </div>
+            <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4">
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
+                Partners
+              </p>
+              <p className="mt-1 text-2xl font-black text-white">
+                {partners.length}
+              </p>
+            </div>
+          </div>
+        }
+      />
 
       {/* Tabs */}
       <AdminTopNav pendingCount={pendingSchools.length} />
 
+      <AdminDailyOverview
+        pendingSchools={pendingSchools}
+        activeEvents={activeEvents}
+        partners={partners}
+        proposals={proposals}
+      />
+
       {(loading || loadError) && (
-        <div
-          className={`mb-6 rounded-2xl border p-4 text-sm ${
-            loadError
-              ? "border-yellow-500/30 bg-yellow-500/10 text-yellow-100"
-              : "border-blue-500/30 bg-blue-500/10 text-blue-100"
-          }`}
-        >
-          {loadError || "Loading dashboard data..."}
+        <div className="mb-6">
+          <AlertBanner
+            type={loadError ? "warning" : "info"}
+            title={loadError ? "Some data could not load" : "Loading dashboard"}
+            message={loadError || "Loading schools, events, partners, and proposals..."}
+          />
         </div>
       )}
 
@@ -345,17 +395,32 @@ function AdminDashboardContent() {
       {activeTab === "approvals" && (
         <div className="space-y-6">
           <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800">
-            <h2 className="text-xl font-semibold text-white mb-4">
-              Pending Approvals
-            </h2>
+            <div className="mb-6 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
+                  School onboarding
+                </p>
+                <h2 className="mt-2 text-2xl font-bold text-white">
+                  Pending Approvals
+                </h2>
+              </div>
+              <p className="max-w-xl text-sm leading-6 text-slate-400">
+                Review new school requests before they can manage students,
+                events, notices, and magazine publishing.
+              </p>
+            </div>
             {pendingSchools.length === 0 ? (
-              <p className="text-slate-500 italic">No pending registrations.</p>
+              <EmptyState
+                icon={FaCheckCircle}
+                title="No pending registrations"
+                description="New school requests will appear here for approval."
+              />
             ) : (
               <div className="grid gap-4">
                 {pendingSchools.map((school) => (
                   <div
                     key={school._id}
-                    className="bg-slate-800 p-6 rounded-xl border border-slate-700 flex flex-col md:flex-row justify-between gap-4"
+                    className="bg-slate-950/60 p-6 rounded-xl border border-slate-800 flex flex-col md:flex-row justify-between gap-4"
                   >
                     <div className="space-y-2">
                       <h3 className="text-xl font-bold text-white flex items-center gap-2">
@@ -415,9 +480,19 @@ function AdminDashboardContent() {
 
       {activeTab === "schools" && (
         <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800">
-          <h2 className="text-xl font-semibold text-white mb-4">
-            Registered Schools
-          </h2>
+          <div className="mb-6 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
+                Network
+              </p>
+              <h2 className="mt-2 text-2xl font-bold text-white">
+                Registered Schools
+              </h2>
+            </div>
+            <p className="text-sm text-slate-400">
+              Manage access and reset credentials for approved schools.
+            </p>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm text-slate-300">
               <thead className="text-xs uppercase bg-slate-800 text-slate-400">
@@ -499,6 +574,16 @@ function AdminDashboardContent() {
         <AdminPartnerWorkspace onChanged={fetchData} />
       )}
 
+      {activeTab === "notices" && (
+        <NoticeManager
+          scopeMode="platform"
+          title="Platform Notice Center"
+          subtitle="Publish platform-wide updates that appear inside school dashboards and notification panels."
+        />
+      )}
+
+      {activeTab === "challenges" && <StudentChallengeManager />}
+
       {activeTab === "events" && (
         <div className="space-y-6">
           {viewingEvent ? (
@@ -547,32 +632,31 @@ function AdminDashboardContent() {
               {eventWorkspaceTab === "manage" && (
                 <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800">
                 {lastError && (
-                  <div className="mb-4 p-4 bg-red-500/20 text-red-200 border border-red-500 rounded text-lg font-bold">
-                    {lastError}
+                  <div className="mb-4">
+                    <AlertBanner type="error" title="Event action failed" message={lastError} />
                   </div>
                 )}
 
                 <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-                  <h2 className="text-xl font-semibold text-white">
-                    Platform Events
-                  </h2>
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
+                      Active competitions
+                    </p>
+                    <h2 className="mt-2 text-2xl font-bold text-white">
+                      Platform Events
+                    </h2>
+                  </div>
                 </div>
 
-                {platformEvents.filter((e) => {
-                  const status = e.lifecycleStatus || "ACTIVE";
-                  return status === "ACTIVE";
-                }).length === 0 ? (
-                  <p className="text-slate-500 italic">
-                    No active events found.
-                  </p>
+                {activeEvents.length === 0 ? (
+                  <EmptyState
+                    icon={FaCalendarAlt}
+                    title="No active platform events"
+                    description="Create a platform event when you are ready to invite schools."
+                  />
                 ) : (
                   <div className="space-y-4">
-                    {platformEvents
-                      .filter((e) => {
-                        const status = e.lifecycleStatus || "ACTIVE";
-                        return status === "ACTIVE";
-                      })
-                      .map((event) => (
+                    {activeEvents.map((event) => (
                         <EventCard
                           key={event._id}
                           event={event}
@@ -585,7 +669,7 @@ function AdminDashboardContent() {
                           onViewParticipants={(e) => setViewingEvent(e)}
                           actionMode="manage"
                         />
-                      ))}
+                    ))}
                   </div>
                 )}
                 </div>
@@ -602,20 +686,15 @@ function AdminDashboardContent() {
                     </div>
                   </div>
 
-                  {platformEvents.filter(
-                    (event) => (event.lifecycleStatus || "ACTIVE") === "COMPLETED"
-                  ).length === 0 ? (
-                    <p className="text-slate-500 italic">
-                      No completed events found.
-                    </p>
+                  {completedEvents.length === 0 ? (
+                    <EmptyState
+                      icon={FaCheckCircle}
+                      title="No completed events yet"
+                      description="Completed platform events will appear here after competitions close."
+                    />
                   ) : (
                     <div className="space-y-4">
-                      {platformEvents
-                        .filter(
-                          (event) =>
-                            (event.lifecycleStatus || "ACTIVE") === "COMPLETED"
-                        )
-                        .map((event) => (
+                      {completedEvents.map((event) => (
                           <EventCard
                             key={event._id}
                             event={event}
@@ -625,7 +704,7 @@ function AdminDashboardContent() {
                             onViewParticipants={(e) => setViewingEvent(e)}
                             actionMode="completed"
                           />
-                        ))}
+                      ))}
                     </div>
                   )}
                 </div>
@@ -642,20 +721,15 @@ function AdminDashboardContent() {
                     </div>
                   </div>
 
-                  {platformEvents.filter(
-                    (event) => (event.lifecycleStatus || "ACTIVE") === "ARCHIVED"
-                  ).length === 0 ? (
-                    <p className="text-slate-500 italic">
-                      No archived events found.
-                    </p>
+                  {archivedEvents.length === 0 ? (
+                    <EmptyState
+                      icon={FaTrash}
+                      title="No archived events"
+                      description="Archived events will appear here for historical review or cleanup."
+                    />
                   ) : (
                     <div className="space-y-4">
-                      {platformEvents
-                        .filter(
-                          (event) =>
-                            (event.lifecycleStatus || "ACTIVE") === "ARCHIVED"
-                        )
-                        .map((event) => (
+                      {archivedEvents.map((event) => (
                           <EventCard
                             key={event._id}
                             event={event}
@@ -668,7 +742,7 @@ function AdminDashboardContent() {
                             onViewParticipants={(e) => setViewingEvent(e)}
                             actionMode="archived"
                           />
-                        ))}
+                      ))}
                     </div>
                   )}
                 </div>
@@ -724,7 +798,16 @@ function AdminDashboardContent() {
 
 export default function AdminDashboard() {
   return (
-    <Suspense fallback={<div className="p-8 text-white">Loading dashboard...</div>}>
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-slate-950 p-6 text-slate-200">
+          <LoadingState
+            title="Loading super admin dashboard"
+            message="Preparing schools, platform events, notices, and challenges."
+          />
+        </div>
+      }
+    >
       <AdminDashboardContent />
     </Suspense>
   );

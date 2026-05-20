@@ -66,6 +66,23 @@ const EventNoticeSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    readBy: [
+      {
+        user: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+        },
+        userType: {
+          type: String,
+          enum: ["SCHOOL_ADMIN", "SUPER_ADMIN", "TEACHER"],
+          default: "SCHOOL_ADMIN",
+        },
+        readAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
     publishedAt: {
       type: Date,
       default: null,
@@ -84,6 +101,7 @@ EventNoticeSchema.pre("validate", function () {
 });
 
 EventNoticeSchema.index({ event: 1, round: 1, createdAt: -1 });
+EventNoticeSchema.index({ event: 1, status: 1, visibility: 1, publishedAt: -1 });
 
 export default mongoose.models.EventNotice ||
   mongoose.model("EventNotice", EventNoticeSchema);

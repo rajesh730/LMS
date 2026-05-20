@@ -19,20 +19,40 @@ const noticeSchema = new mongoose.Schema(
       enum: ["GENERAL", "URGENT", "EVENT", "HOLIDAY", "SHOWCASE"],
       default: "GENERAL",
     },
+    scope: {
+      type: String,
+      enum: ["SCHOOL", "PLATFORM"],
+      default: "SCHOOL",
+    },
     priority: {
       type: String,
       enum: ["LOW", "NORMAL", "HIGH", "URGENT"],
       default: "NORMAL",
     },
+    status: {
+      type: String,
+      enum: ["DRAFT", "PUBLISHED"],
+      default: "PUBLISHED",
+    },
     school: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+      default: null,
     },
     author: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
+    },
+    event: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Event",
+      default: null,
+    },
+    visibility: {
+      type: String,
+      enum: ["PRIVATE", "PUBLIC"],
+      default: "PRIVATE",
     },
     targetAudience: {
       students: {
@@ -77,7 +97,7 @@ const noticeSchema = new mongoose.Schema(
         },
         userType: {
           type: String,
-          enum: ["STUDENT", "TEACHER", "PARENT"],
+          enum: ["STUDENT", "TEACHER", "PARENT", "SCHOOL_ADMIN"],
         },
         readAt: {
           type: Date,
@@ -99,11 +119,27 @@ noticeSchema.pre("validate", function () {
   if (this.type === "CLUB") {
     this.type = "GENERAL";
   }
+
+  if (this.scope === "PLATFORM") {
+    this.school = null;
+  }
+
+  if (this.visibility === "PUBLIC") {
+    this.isActive = true;
+  }
+
+  if (this.status === "DRAFT") {
+    this.publishedAt = null;
+  } else if (!this.publishedAt) {
+    this.publishedAt = new Date();
+  }
 });
 
 // Index for better performance
 noticeSchema.index({ school: 1, publishedAt: -1 });
 noticeSchema.index({ school: 1, type: 1, isActive: 1 });
+noticeSchema.index({ scope: 1, visibility: 1, publishedAt: -1 });
+noticeSchema.index({ event: 1, publishedAt: -1 });
 noticeSchema.index({ school: 1, "targetAudience.students": 1, isActive: 1 });
 noticeSchema.index({ school: 1, "targetAudience.teachers": 1, isActive: 1 });
 noticeSchema.index({ school: 1, "targetAudience.parents": 1, isActive: 1 });

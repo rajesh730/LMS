@@ -35,7 +35,7 @@ export async function PUT(req, { params }) {
             return NextResponse.json({ message: 'School not found' }, { status: 404 });
         }
 
-        console.log("✓ School updated successfully:", user._id, "New status:", user.status);
+        console.log("School updated successfully:", user._id, "New status:", user.status);
         return NextResponse.json({ message: 'Status updated', user }, { status: 200 });
     } catch (error) {
         console.error('❌ Error updating status:', error.message);

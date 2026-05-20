@@ -4,42 +4,13 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
-import ParentDashboard from "@/components/ParentDashboard";
-import ParentModeToggle from "@/components/ParentModeToggle";
-import { ParentModeProvider, useParentMode } from "@/context/ParentModeContext";
-import { FaGraduationCap } from "react-icons/fa";
-import StudentTalentWorkspace from "@/components/student/StudentTalentWorkspace";
-
-// Inner component to use the context
-function DashboardContent() {
-  const { isParentMode } = useParentMode();
-
-  return (
-    <div className="max-w-6xl mx-auto">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-        <h1 className="text-4xl font-bold text-white flex items-center gap-3">
-          {isParentMode ? (
-            <>
-              <span className="text-purple-400">Parent</span> Dashboard
-            </>
-          ) : (
-            <>
-              <FaGraduationCap className="text-blue-400" /> Student Dashboard
-            </>
-          )}
-        </h1>
-        
-        <ParentModeToggle />
-      </div>
-
-      {isParentMode ? (
-        <ParentDashboard />
-      ) : (
-        <StudentTalentWorkspace />
-      )}
-    </div>
-  );
-}
+import { FaBell, FaGraduationCap } from "react-icons/fa";
+import StudentActivityOverview from "@/components/student/StudentActivityOverview";
+import StudentDailyOverview from "@/components/student/StudentDailyOverview";
+import StudentNotificationCenter from "@/components/student/StudentNotificationCenter";
+import PageHeader from "@/components/ui/PageHeader";
+import LoadingState from "@/components/ui/LoadingState";
+import AlertBanner from "@/components/ui/AlertBanner";
 
 export default function StudentDashboard() {
   const { data: session, status } = useSession();
@@ -54,9 +25,11 @@ export default function StudentDashboard() {
   if (status === "loading") {
     return (
       <DashboardLayout>
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-slate-400">Loading...</div>
-        </div>
+        <LoadingState
+          title="Opening student dashboard"
+          message="Loading notices, events, writing tasks, and achievements."
+          className="min-h-[70vh]"
+        />
       </DashboardLayout>
     );
   }
@@ -64,18 +37,40 @@ export default function StudentDashboard() {
   if (session?.user?.role !== "STUDENT") {
     return (
       <DashboardLayout>
-        <div className="text-center py-12">
-          <p className="text-red-400">Unauthorized access</p>
-        </div>
+        <AlertBanner
+          type="error"
+          title="Student access required"
+          message="Please sign in with a student account to open this dashboard."
+        />
       </DashboardLayout>
     );
   }
 
   return (
     <DashboardLayout>
-      <ParentModeProvider>
-        <DashboardContent />
-      </ParentModeProvider>
+      <div className="max-w-6xl mx-auto">
+        <PageHeader
+          icon={FaGraduationCap}
+          eyebrow="Student home"
+          title="Your activity dashboard"
+          description="Start with today's updates, then explore achievements, certificates, school notices, writing tasks, and magazine articles from one simple place."
+          action={<StudentNotificationCenter />}
+          meta={
+            <div className="inline-flex items-center gap-2 rounded-full border border-slate-800 bg-slate-950/60 px-3 py-2 text-xs font-semibold text-slate-300">
+              <FaBell className="text-amber-300" />
+              Notices and event updates are kept in the left menu.
+            </div>
+          }
+        />
+
+        <div className="mt-8">
+          <StudentDailyOverview />
+        </div>
+
+        <div className="mt-8">
+          <StudentActivityOverview />
+        </div>
+      </div>
     </DashboardLayout>
   );
 }

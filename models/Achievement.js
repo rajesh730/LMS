@@ -63,11 +63,6 @@ const AchievementSchema = new mongoose.Schema(
       ref: "Event",
       default: null,
     },
-    submission: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "TalentSubmission",
-      default: null,
-    },
     title: {
       type: String,
       required: [true, "Please provide an achievement title"],

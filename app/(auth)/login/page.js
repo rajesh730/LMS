@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { signIn, useSession } from "next-auth/react";
+import { signIn, signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -11,17 +11,20 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const { status, data: session } = useSession();
   const router = useRouter();
+  const currentRole = session?.user?.role
+    ? String(session.user.role).replaceAll("_", " ")
+    : null;
+  const currentName = session?.user?.name || null;
+  const currentEmail = session?.user?.email || null;
 
-  useEffect(() => {
-    if (status === "authenticated") {
-      const role = session?.user?.role;
-      if (role === "SUPER_ADMIN") router.replace("/admin/dashboard");
-      else if (role === "SCHOOL_ADMIN") router.replace("/school/dashboard");
-      else if (role === "TEACHER") router.replace("/teacher/dashboard");
-      else if (role === "STUDENT") router.replace("/student/dashboard");
-      else router.replace("/");
-    }
-  }, [status, session, router]);
+  const handleContinue = () => {
+    const role = session?.user?.role;
+    if (role === "SUPER_ADMIN") router.push("/admin/dashboard");
+    else if (role === "SCHOOL_ADMIN") router.push("/school/dashboard");
+    else if (role === "TEACHER") router.push("/teacher/dashboard");
+    else if (role === "STUDENT") router.push("/student/dashboard");
+    else router.push("/");
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -58,8 +61,89 @@ export default function LoginPage() {
     }
   };
 
+  if (status === "authenticated") {
+    return (
+      <div className="min-h-screen bg-slate-900 p-4">
+        <div className="mx-auto mb-8 flex max-w-5xl flex-wrap items-center justify-between gap-3 pt-4">
+          <Link href="/" className="text-sm font-semibold text-slate-300 hover:text-white">
+            Back to home
+          </Link>
+          <div className="flex flex-wrap gap-2 text-sm">
+            <Link href="/events" className="rounded-lg border border-slate-700 px-3 py-2 text-slate-300 hover:bg-slate-800 hover:text-white">
+              Events
+            </Link>
+            <Link href="/schools" className="rounded-lg border border-slate-700 px-3 py-2 text-slate-300 hover:bg-slate-800 hover:text-white">
+              Schools
+            </Link>
+          </div>
+        </div>
+        <div className="flex items-center justify-center">
+        <div className="bg-slate-800 p-8 rounded-2xl shadow-xl w-full max-w-md border border-slate-700">
+          <h2 className="text-3xl font-bold text-white mb-4 text-center">
+            Already Signed In
+          </h2>
+          <p className="text-slate-300 text-center text-sm leading-6">
+            This browser already has an active session. To use another account
+            here, sign out first. If you need both accounts open at the same
+            time, use an incognito window or a different browser profile.
+          </p>
+
+          <div className="mt-5 rounded-xl border border-slate-700 bg-slate-900/60 p-4 text-left">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Current account
+            </p>
+            <p className="mt-2 text-sm font-semibold text-white">
+              {currentRole || "Signed-in account"}
+            </p>
+            {currentName && (
+              <p className="mt-1 text-sm text-slate-300">{currentName}</p>
+            )}
+            {currentEmail && (
+              <p className="mt-1 text-xs text-slate-500">{currentEmail}</p>
+            )}
+          </div>
+
+          <div className="mt-6 space-y-3">
+            <button
+              type="button"
+              onClick={handleContinue}
+              className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded transition"
+            >
+              Continue with this account
+            </button>
+            <button
+              type="button"
+              onClick={() => signOut({ callbackUrl: "/login" })}
+              className="w-full border border-slate-600 text-slate-200 font-bold py-3 rounded transition hover:bg-slate-700"
+            >
+              Sign out and use another account
+            </button>
+          </div>
+        </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-900 p-4">
+    <div className="min-h-screen bg-slate-900 p-4">
+      <div className="mx-auto mb-8 flex max-w-5xl flex-wrap items-center justify-between gap-3 pt-4">
+        <Link href="/" className="text-sm font-semibold text-slate-300 hover:text-white">
+          Back to home
+        </Link>
+        <div className="flex flex-wrap gap-2 text-sm">
+          <Link href="/events" className="rounded-lg border border-slate-700 px-3 py-2 text-slate-300 hover:bg-slate-800 hover:text-white">
+            Events
+          </Link>
+          <Link href="/schools" className="rounded-lg border border-slate-700 px-3 py-2 text-slate-300 hover:bg-slate-800 hover:text-white">
+            Schools
+          </Link>
+          <Link href="/student/login" className="rounded-lg border border-blue-500/30 px-3 py-2 text-blue-200 hover:bg-blue-500/10">
+            Student Login
+          </Link>
+        </div>
+      </div>
+      <div className="flex items-center justify-center">
       <div className="bg-slate-800 p-8 rounded-2xl shadow-xl w-full max-w-md border border-slate-700">
         <h2 className="text-3xl font-bold text-white mb-6 text-center">
           Login
@@ -108,6 +192,7 @@ export default function LoginPage() {
             Register School
           </Link>
         </p>
+      </div>
       </div>
     </div>
   );

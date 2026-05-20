@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  FaBell,
   FaEdit,
   FaPlus,
   FaSave,
@@ -18,7 +17,6 @@ const ROUND_STATUS_OPTIONS = [
 ];
 
 const NON_FINAL_STATUS_BUTTONS = [
-  { value: "PARTICIPATED", label: "Participated" },
   { value: "SELECTED", label: "Selected" },
   { value: "DISQUALIFIED", label: "Disqualified" },
   { value: "NOT_ATTEMPTED", label: "Not Attempted" },
@@ -41,12 +39,6 @@ const EMPTY_ROUND_FORM = {
   instructions: "",
   status: "SCHEDULED",
   isFinal: false,
-};
-
-const EMPTY_NOTICE_FORM = {
-  title: "",
-  message: "",
-  status: "DRAFT",
 };
 
 function label(value) {
@@ -108,11 +100,6 @@ function getStatusPillClass(status, active = false) {
       ? "border-slate-600 bg-slate-600 text-white"
       : "border-slate-200 bg-slate-100 text-slate-700";
   }
-  if (status === "PARTICIPATED") {
-    return active
-      ? "border-[#0a2f66] bg-[#0a2f66] text-white"
-      : "border-[#0a2f66]/20 bg-[#0a2f66]/10 text-[#0a2f66]";
-  }
   return active
     ? "border-[#1c4a8d] bg-[#1c4a8d] text-white"
     : "border-[#d6e6fb] bg-[#f7fbff] text-[#33598f]";
@@ -146,10 +133,6 @@ export default function RoundsTab({ event, onCompetitionClosed }) {
   const [roundModalOpen, setRoundModalOpen] = useState(false);
   const [editingRoundId, setEditingRoundId] = useState("");
   const [roundForm, setRoundForm] = useState(EMPTY_ROUND_FORM);
-  const [noticeModalOpen, setNoticeModalOpen] = useState(false);
-  const [noticeRoundId, setNoticeRoundId] = useState("");
-  const [editingNoticeId, setEditingNoticeId] = useState("");
-  const [noticeForm, setNoticeForm] = useState(EMPTY_NOTICE_FORM);
   const [busyKey, setBusyKey] = useState("");
 
   const fetchRounds = useCallback(async () => {
@@ -207,7 +190,7 @@ export default function RoundsTab({ event, onCompetitionClosed }) {
   const roundMetrics = useMemo(() => {
     const participants = selectedRound?.participants || [];
     const completedParticipants = participants.filter((participant) =>
-      ["WINNER", "RUNNER_UP", "FINALIST", "DISQUALIFIED", "PARTICIPATED"].includes(
+      ["WINNER", "RUNNER_UP", "FINALIST", "SELECTED", "DISQUALIFIED", "NOT_ATTEMPTED"].includes(
         participant.status
       )
     );
@@ -347,50 +330,6 @@ export default function RoundsTab({ event, onCompetitionClosed }) {
         setSelectedRoundId(String(data.roundId));
       }
       setMessage(data.message || "Participants moved.");
-      await fetchRounds();
-    } catch (error) {
-      setMessage(error.message);
-    } finally {
-      setBusyKey("");
-    }
-  };
-
-  const openNoticeModal = (round, notice = null) => {
-    if (competitionLocked) return;
-    setNoticeRoundId(round._id);
-    setEditingNoticeId(notice?._id || "");
-    setNoticeForm({
-      title: notice?.title || `${round.title} Notice`,
-      message: notice?.message || "",
-      status: notice?.status || "DRAFT",
-    });
-    setNoticeModalOpen(true);
-  };
-
-  const saveNotice = async (e) => {
-    e.preventDefault();
-    try {
-      setBusyKey("notice-save");
-      const url = editingNoticeId
-        ? `/api/events/${eventId}/rounds/${noticeRoundId}/notices/${editingNoticeId}`
-        : `/api/events/${eventId}/rounds/${noticeRoundId}/notices`;
-      const method = editingNoticeId ? "PATCH" : "POST";
-      const payload = {
-        ...noticeForm,
-        type: "ROUND_INSTRUCTIONS",
-        targetAudience: "REGISTERED_SCHOOLS",
-      };
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(data.message || "Failed to save notice.");
-      }
-      setNoticeModalOpen(false);
-      setMessage(data.message || "Notice saved.");
       await fetchRounds();
     } catch (error) {
       setMessage(error.message);
@@ -549,15 +488,6 @@ export default function RoundsTab({ event, onCompetitionClosed }) {
                             title="Edit round"
                           >
                             <FaEdit />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => openNoticeModal(round)}
-                            disabled={competitionLocked}
-                            className="rounded-lg bg-slate-100 p-2 text-slate-700 hover:bg-slate-200"
-                            title="Create notice"
-                          >
-                            <FaBell />
                           </button>
                           <button
                             type="button"
@@ -1022,74 +952,6 @@ export default function RoundsTab({ event, onCompetitionClosed }) {
         </div>
       )}
 
-      {noticeModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
-          <form
-            onSubmit={saveNotice}
-            className="w-full max-w-xl rounded-2xl bg-white p-6 shadow-xl"
-          >
-            <div className="mb-5 flex items-center justify-between">
-              <h3 className="text-lg font-bold text-slate-900">
-                {editingNoticeId ? "Edit Notice" : "Create Notice"}
-              </h3>
-              <button
-                type="button"
-                onClick={() => setNoticeModalOpen(false)}
-                className="text-sm text-slate-500 hover:text-slate-900"
-              >
-                Close
-              </button>
-            </div>
-            <div className="space-y-4">
-              <label>
-                <div className="mb-1 text-sm font-medium text-slate-700">Notice Title</div>
-                <input
-                  required
-                  value={noticeForm.title}
-                  onChange={(e) =>
-                    setNoticeForm((current) => ({ ...current, title: e.target.value }))
-                  }
-                  className="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-slate-900 outline-none focus:border-blue-500"
-                />
-              </label>
-              <label>
-                <div className="mb-1 text-sm font-medium text-slate-700">Message</div>
-                <textarea
-                  required
-                  value={noticeForm.message}
-                  onChange={(e) =>
-                    setNoticeForm((current) => ({ ...current, message: e.target.value }))
-                  }
-                  className="min-h-32 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-slate-900 outline-none focus:border-blue-500"
-                />
-              </label>
-              <label>
-                <div className="mb-1 text-sm font-medium text-slate-700">Save As</div>
-                <select
-                  value={noticeForm.status}
-                  onChange={(e) =>
-                    setNoticeForm((current) => ({ ...current, status: e.target.value }))
-                  }
-                  className="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-slate-900 outline-none focus:border-blue-500"
-                >
-                  <option value="DRAFT">Draft</option>
-                  <option value="PUBLISHED">Publish Notice</option>
-                </select>
-              </label>
-            </div>
-            <div className="mt-5 flex justify-end">
-              <button
-                type="submit"
-                disabled={busyKey === "notice-save"}
-                className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
-              >
-                <FaSave />
-                {busyKey === "notice-save" ? "Saving..." : "Save Notice"}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
     </div>
   );
 }

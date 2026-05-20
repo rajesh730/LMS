@@ -148,14 +148,14 @@ function TalentOrbitArtwork() {
     >
       <defs>
         <linearGradient id="orbitMain" x1="0" x2="1" y1="0" y2="1">
-          <stop offset="0%" stopColor="#ffb21c" />
+          <stop offset="0%" stopColor="#2f7fdb" />
           <stop offset="42%" stopColor="#2f7fdb" />
           <stop offset="78%" stopColor="#0a2f66" />
           <stop offset="100%" stopColor="#2f7fdb" />
         </linearGradient>
         <linearGradient id="orbitWarm" x1="0" x2="1" y1="0" y2="1">
-          <stop offset="0%" stopColor="#fff0c9" />
-          <stop offset="100%" stopColor="#ffb21c" />
+          <stop offset="0%" stopColor="#eaf2ff" />
+          <stop offset="100%" stopColor="#2f7fdb" />
         </linearGradient>
         <filter id="softGlow" x="-40%" y="-40%" width="180%" height="180%">
           <feGaussianBlur stdDeviation="12" result="blur" />
@@ -203,7 +203,7 @@ function TalentOrbitArtwork() {
           [148, 166, "#38bdf8"],
           [635, 185, "#a78bfa"],
           [161, 408, "#34d399"],
-          [595, 415, "#fbbf24"],
+          [595, 415, "#60a5fa"],
         ].map(([cx, cy, color], index) => (
           <g key={`${cx}-${cy}`}>
             <circle cx={cx} cy={cy} r="54" fill="#0b1526" stroke={color} strokeWidth="4" />
@@ -284,7 +284,7 @@ function ProofFlowArtwork() {
         <linearGradient id="proofAccent" x1="0" x2="1" y1="0" y2="1">
           <stop offset="0%" stopColor="#60a5fa" />
           <stop offset="50%" stopColor="#a78bfa" />
-          <stop offset="100%" stopColor="#fbbf24" />
+          <stop offset="100%" stopColor="#60a5fa" />
         </linearGradient>
       </defs>
       <rect width="520" height="300" rx="28" fill="#0f1b2d" />
@@ -293,7 +293,7 @@ function ProofFlowArtwork() {
         [92, "01", "#38bdf8"],
         [220, "02", "#34d399"],
         [348, "03", "#c084fc"],
-        [444, "OK", "#fbbf24"],
+        [444, "OK", "#60a5fa"],
       ].map(([cx, label, color]) => (
         <g key={label}>
           <circle cx={cx} cy="150" r="42" fill="#07111f" stroke={color} strokeWidth="5" />
@@ -330,7 +330,7 @@ function SchoolShowcaseArtwork() {
         {[0, 1, 2].map((index) => (
           <g key={index} transform={`translate(${index * 128} 0)`}>
             <rect width="98" height="42" rx="12" fill="#07111f" stroke="#334155" />
-            <circle cx="24" cy="21" r="8" fill={index === 0 ? "#a78bfa" : index === 1 ? "#34d399" : "#fbbf24"} />
+            <circle cx="24" cy="21" r="8" fill={index === 0 ? "#a78bfa" : index === 1 ? "#34d399" : "#60a5fa"} />
             <path d="M42 21h36" stroke="#94a3b8" strokeLinecap="round" strokeWidth="7" />
           </g>
         ))}
@@ -344,8 +344,8 @@ function CertificateRibbonArtwork() {
     <svg viewBox="0 0 520 320" aria-hidden="true" className="h-full w-full">
       <defs>
         <linearGradient id="certificateAccent" x1="0" x2="1" y1="0" y2="1">
-          <stop offset="0%" stopColor="#fbbf24" />
-          <stop offset="52%" stopColor="#fb7185" />
+          <stop offset="0%" stopColor="#60a5fa" />
+          <stop offset="52%" stopColor="#2f7fdb" />
           <stop offset="100%" stopColor="#a78bfa" />
         </linearGradient>
       </defs>
@@ -354,7 +354,7 @@ function CertificateRibbonArtwork() {
       <path d="M114 104h176M114 142h134M114 204h204" stroke="#94a3b8" strokeLinecap="round" strokeWidth="12" />
       <circle cx="388" cy="116" r="46" fill="url(#certificateAccent)" />
       <path d="M366 119l17 17 37-46" fill="none" stroke="#fff7ed" strokeLinecap="round" strokeLinejoin="round" strokeWidth="9" />
-      <path d="M365 154l-24 72 45-20 40 29-20-78" fill="#fb7185" opacity=".9" />
+      <path d="M365 154l-24 72 45-20 40 29-20-78" fill="#2f7fdb" opacity=".9" />
       <circle cx="123" cy="236" r="10" fill="#34d399" />
       <path d="M146 236h102" stroke="#0f172a" strokeLinecap="round" strokeWidth="8" />
     </svg>
@@ -362,7 +362,7 @@ function CertificateRibbonArtwork() {
 }
 
 function SectionGraphicDivider({ tone = "brand" }) {
-  const accent = tone === "light" ? "#0a2f66" : "#ffb21c";
+  const accent = tone === "light" ? "#0a2f66" : "#2f7fdb";
   const soft = tone === "light" ? "#bfdbfe" : "#1f4f8f";
 
   return (
@@ -389,18 +389,18 @@ export default async function Home() {
     await getHomepageData();
 
   return (
-    <main className="min-h-screen bg-[#071833] text-white selection:bg-[#ffb21c]/30">
+    <main className="min-h-screen bg-[#071833] text-white selection:bg-[#2f7fdb]/25">
       <PublicSiteNav active="home" />
 
       <section className="relative overflow-hidden border-b border-white/10">
         <div className="absolute inset-0 opacity-30">
           <div className="h-full w-full bg-[linear-gradient(90deg,rgba(255,255,255,.08)_1px,transparent_1px),linear-gradient(0deg,rgba(255,255,255,.06)_1px,transparent_1px)] bg-[size:72px_72px]" />
         </div>
-        <div className="absolute inset-x-0 top-0 h-72 bg-[radial-gradient(circle_at_20%_18%,rgba(255,178,28,.18),transparent_30%),radial-gradient(circle_at_58%_12%,rgba(47,127,219,.22),transparent_32%),radial-gradient(circle_at_82%_24%,rgba(10,47,102,.24),transparent_30%)]" />
+        <div className="absolute inset-x-0 top-0 h-72 bg-[radial-gradient(circle_at_20%_18%,rgba(47,127,219,.16),transparent_30%),radial-gradient(circle_at_58%_12%,rgba(47,127,219,.2),transparent_32%),radial-gradient(circle_at_82%_24%,rgba(10,47,102,.2),transparent_30%)]" />
         <div className="relative mx-auto grid max-w-7xl gap-10 px-4 py-14 sm:px-6 lg:grid-cols-[.95fr_1.05fr] lg:items-center lg:py-18">
           <div>
-            <div className="mb-6 inline-flex items-center gap-2 rounded-lg border border-[#ffb21c]/40 bg-[#ffb21c]/10 px-3 py-2 text-sm font-semibold text-[#ffe09a] shadow-lg shadow-[#ffb21c]/10">
-              <FaShieldAlt className="text-[#ffb21c]" />
+            <div className="mb-6 inline-flex items-center gap-2 rounded-lg border border-[#2f7fdb]/30 bg-[#2f7fdb]/10 px-3 py-2 text-sm font-semibold text-[#0a2f66] shadow-lg shadow-[#2f7fdb]/10">
+              <FaShieldAlt className="text-[#0a2f66]" />
               Verified school competitions, rounds, results, and certificates
             </div>
             <div className="mb-5">
@@ -422,7 +422,7 @@ export default async function Home() {
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Link
                 href="/register"
-                className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#ffb21c] px-6 py-3 font-bold text-[#0a2f66] shadow-lg shadow-[#ffb21c]/20 hover:bg-[#ffc44d]"
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#0a2f66] px-6 py-3 font-bold text-white shadow-lg shadow-[#0a2f66]/20 hover:bg-[#123f82]"
               >
                 Register school
                 <FaArrowRight />
@@ -451,7 +451,7 @@ export default async function Home() {
                     Registration to certificate, without leaving the event
                   </p>
                 </div>
-                <span className="rounded-lg bg-[#ffb21c]/10 px-3 py-1 text-xs font-bold uppercase text-[#ffe09a]">
+                <span className="rounded-lg bg-[#2f7fdb]/10 px-3 py-1 text-xs font-bold uppercase text-[#0a2f66]">
                   Active
                 </span>
               </div>
@@ -465,7 +465,7 @@ export default async function Home() {
                       className="rounded-lg border border-white/10 bg-white/[0.04] p-4"
                     >
                       <div className="mb-4 flex items-center justify-between">
-                        <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#ffb21c]/10 text-[#ffe09a]">
+                        <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#2f7fdb]/10 text-[#0a2f66]">
                           <Icon />
                         </span>
                         <span className="text-xs font-bold text-slate-500">
@@ -545,7 +545,7 @@ export default async function Home() {
               <Link
                 key={String(event._id)}
                 href={`/events/${event._id}`}
-                className="group rounded-lg border border-white/10 bg-white/[0.04] p-5 transition hover:border-[#ffb21c]/50 hover:bg-[#2f7fdb]/[0.07]"
+                className="group rounded-lg border border-white/10 bg-white/[0.04] p-5 transition hover:border-[#2f7fdb]/50 hover:bg-[#2f7fdb]/[0.07]"
               >
                 <div className="mb-4 flex flex-wrap gap-2">
                   <span className="rounded-md bg-[#2f7fdb]/10 px-2.5 py-1 text-xs font-bold uppercase text-[#d7e9ff]">
@@ -557,7 +557,7 @@ export default async function Home() {
                     {event.eventType}
                   </span>
                 </div>
-                <h3 className="text-xl font-black text-white group-hover:text-[#ffe09a]">
+                <h3 className="text-xl font-black text-white group-hover:text-[#0a2f66]">
                   {event.title}
                 </h3>
                 <p className="mt-3 line-clamp-2 text-sm leading-6 text-slate-400">
@@ -613,7 +613,7 @@ export default async function Home() {
                 key={title}
                 className="flex gap-4 rounded-lg border border-white/10 bg-white/[0.04] p-4"
               >
-                <FaCheckCircle className="mt-1 shrink-0 text-[#ffb21c]" />
+                <FaCheckCircle className="mt-1 shrink-0 text-[#0a2f66]" />
                 <div>
                   <h3 className="font-bold text-white">{title}</h3>
                   <p className="mt-1 text-sm leading-6 text-slate-400">
@@ -665,9 +665,9 @@ export default async function Home() {
               <Link
                 key={school._id.toString()}
                 href={`/schools/${school._id}`}
-                className="rounded-lg border border-white/10 bg-white/[0.04] p-5 transition hover:border-[#ffb21c]/50 hover:bg-white/[0.07]"
+                className="rounded-lg border border-white/10 bg-white/[0.04] p-5 transition hover:border-[#2f7fdb]/50 hover:bg-white/[0.07]"
               >
-                <FaSchool className="mb-4 text-2xl text-[#ffd89b]" />
+                <FaSchool className="mb-4 text-2xl text-[#0a2f66]" />
                 <h3 className="text-xl font-black text-white">
                   {school.schoolName}
                 </h3>
@@ -732,7 +732,7 @@ export default async function Home() {
               {recentResults.map((achievement) => (
                 <div
                   key={achievement._id.toString()}
-                  className="rounded-lg border border-white/10 bg-white/[0.04] p-5 transition hover:border-[#ffb21c]/50 hover:bg-[#2f7fdb]/[0.07]"
+                  className="rounded-lg border border-white/10 bg-white/[0.04] p-5 transition hover:border-[#2f7fdb]/50 hover:bg-[#2f7fdb]/[0.07]"
                 >
                   <div className="inline-flex items-center gap-2 rounded-md bg-amber-100 px-2.5 py-1 text-xs font-black uppercase text-amber-800">
                     <FaTrophy />

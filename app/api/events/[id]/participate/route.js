@@ -73,6 +73,18 @@ function buildDefaultTeamName(schoolName = "", index = 0) {
   return index > 0 ? `${base} ${index + 1}` : base;
 }
 
+async function resolveSchoolContactInfo(schoolId) {
+  const school = await User.findById(schoolId)
+    .select("name schoolName principalName principalPhone phone")
+    .lean();
+
+  return {
+    contactPerson:
+      school?.principalName || school?.name || school?.schoolName || "",
+    contactPhone: school?.principalPhone || school?.phone || "",
+  };
+}
+
 function validateTeamSelection(event, studentIds = [], teamName = "", captainStudentId = "") {
   if (normalizeParticipationFormat(event) !== "TEAM") {
     return null;
@@ -135,9 +147,6 @@ function normalizeTeamPayload(rawTeams = []) {
       studentIds: Array.from(
         new Set((team?.studentIds || team?.students || []).map((id) => String(id)))
       ),
-      contactPerson: String(team?.contactPerson || "").trim(),
-      phone: String(team?.phone || team?.contactPhone || "").trim(),
-      notes: String(team?.notes || "").trim(),
     }))
     .filter((team) => team.teamName || team.studentIds.length > 0);
 }
@@ -198,6 +207,7 @@ async function replaceTeamParticipation({
   schoolId,
   sessionUserId,
   teams,
+  schoolContactInfo = {},
 }) {
   const allStudentIds = Array.from(
     new Set(teams.flatMap((team) => team.studentIds))
@@ -276,11 +286,10 @@ async function replaceTeamParticipation({
         approvedBy: sessionUserId,
         enrollmentConfirmedAt: now,
         studentNotifiedAt: now,
-        contactPerson: team.contactPerson || undefined,
-        contactPhone: team.phone || undefined,
+        contactPerson: schoolContactInfo.contactPerson || undefined,
+        contactPhone: schoolContactInfo.contactPhone || undefined,
         teamName: team.teamName,
         captainStudent: team.captainStudentId || undefined,
-        notes: team.notes || undefined,
         requestedAt: now,
       };
     })
@@ -415,123 +424,9 @@ export async function POST(req, { params }) {
     // CASE 1: STUDENT SELF-REGISTRATION
     // ==========================================
     if (session.user.role === "STUDENT") {
-      if (event.registrationMode !== "DIRECT") {
-        return errorResponse(
-          403,
-          "This event is managed through the school. Please contact your school admin for registration."
-        );
-      }
-
-      const student = await Student.findOne(studentLookupQuery(session));
-      if (!student) {
-        return errorResponse(404, "Student not found");
-      }
-
-      // Get school from student's record
-      const schoolId = student.school || session.user.schoolId;
-      if (!schoolId) {
-        return errorResponse(400, "Student school information not found");
-      }
-
-      const invitationBlocker = await getPlatformInvitationBlocker(
-        event,
-        schoolId
-      );
-      if (invitationBlocker) {
-        return errorResponse(403, invitationBlocker);
-      }
-
-      // Check Grade Eligibility
-      if (event.eligibleGrades && event.eligibleGrades.length > 0) {
-        if (!gradeListContains(event.eligibleGrades, student.grade)) {
-          return errorResponse(
-            400,
-            `Student grade "${
-              student.grade
-            }" is not eligible for this event. Eligible grades: ${event.eligibleGrades.join(
-              ", "
-            )}`
-          );
-        }
-      }
-
-      // Check Max Participants Per School
-      if (event.maxParticipantsPerSchool) {
-        if (normalizeParticipationFormat(event) === "TEAM") {
-          const approvedTeamCount = await countActiveTeams(eventId, schoolId);
-          if (approvedTeamCount >= event.maxParticipantsPerSchool) {
-            return errorResponse(
-              400,
-              `This school has reached the maximum team limit (${event.maxParticipantsPerSchool}) for this event`
-            );
-          }
-        } else {
-        const approvedCount = await ParticipationRequest.countDocuments({
-          event: eventId,
-          school: schoolId,
-          status: { $in: ACTIVE_PARTICIPATION_REQUEST_STATUSES },
-        });
-
-        if (approvedCount >= event.maxParticipantsPerSchool) {
-          return errorResponse(
-            400,
-            `This school has reached the maximum participant limit (${event.maxParticipantsPerSchool}) for this event`
-          );
-        }
-        }
-      }
-
-      // Check Global Max Participants
-      if (event.maxParticipants) {
-        const totalApproved =
-          normalizeParticipationFormat(event) === "TEAM"
-            ? await countActiveTeams(eventId)
-            : await ParticipationRequest.countDocuments({
-                event: eventId,
-                status: { $in: ACTIVE_PARTICIPATION_REQUEST_STATUSES },
-              });
-
-        if (totalApproved >= event.maxParticipants) {
-          return errorResponse(
-            400,
-            `This event has reached the maximum ${normalizeParticipationFormat(event) === "TEAM" ? "team" : "participant"} limit (${event.maxParticipants})`
-          );
-        }
-      }
-
-      // Check if request already exists
-      const existingRequest = await ParticipationRequest.findOne({
-        student: student._id,
-        event: eventId,
-        school: schoolId,
-      });
-
-      if (existingRequest) {
-        return errorResponse(
-          400,
-          `You already have a ${existingRequest.status} request for this event`
-        );
-      }
-
-      // Create participation request
-      const request = new ParticipationRequest({
-        student: student._id,
-        event: eventId,
-        school: schoolId,
-        status: "PENDING",
-      });
-
-      await request.save();
-
-      const populatedRequest = await ParticipationRequest.findById(request._id)
-        .populate("student", "name enrollmentNumber")
-        .populate("event", "title description")
-        .lean();
-
-      return successResponse(
-        200,
-        "Participation request created",
-        populatedRequest
+      return errorResponse(
+        403,
+        "Student self-registration is disabled in phase 1. Please contact your teacher or school admin for registration."
       );
     }
 
@@ -550,9 +445,6 @@ export async function POST(req, { params }) {
       const normalizedTeams = normalizeTeamPayload(body.teams);
       // Allow both naming conventions
       const studentIds = body.studentIds || body.students;
-      const contactPerson = body.contactPerson;
-      const phone = body.phone || body.contactPhone;
-      const notes = body.notes;
       const teamName = String(body.teamName || "").trim();
       const captainStudentId = body.captainStudentId || null;
 
@@ -590,6 +482,7 @@ export async function POST(req, { params }) {
           : null;
       const schoolName =
         schoolRecord?.schoolName || schoolRecord?.name || session.user.schoolName || session.user.name || "";
+      const schoolContactInfo = await resolveSchoolContactInfo(schoolId);
       const resolvedTeams =
         normalizeParticipationFormat(event) === "TEAM"
           ? applyDefaultTeamNames(normalizedTeams, schoolName)
@@ -609,6 +502,7 @@ export async function POST(req, { params }) {
           schoolId,
           sessionUserId: session.user.id,
           teams: resolvedTeams,
+          schoolContactInfo,
         });
 
         if (replacementResult?.error) {
@@ -763,11 +657,10 @@ export async function POST(req, { params }) {
             approvedBy: session.user.id,
             enrollmentConfirmedAt: now,
             studentNotifiedAt: now,
-            contactPerson: contactPerson || undefined,
-            contactPhone: phone || undefined,
+            contactPerson: schoolContactInfo.contactPerson || undefined,
+            contactPhone: schoolContactInfo.contactPhone || undefined,
             teamName: teamName || undefined,
             captainStudent: captainStudentId || undefined,
-            notes: notes || undefined,
           });
 
           approvedStudentIds.push(studentId);
@@ -1003,9 +896,6 @@ export async function PUT(req, { params }) {
 
     // Allow both naming conventions (frontend sends 'students' and 'contactPhone')
     const studentIds = body.studentIds || body.students;
-    const contactPerson = body.contactPerson;
-    const phone = body.phone || body.contactPhone;
-    const notes = body.notes;
     const teamName = String(body.teamName || "").trim();
     const captainStudentId = body.captainStudentId || null;
 
@@ -1025,6 +915,7 @@ export async function PUT(req, { params }) {
     const normalizedStudentIds = Array.isArray(studentIds)
       ? studentIds.map((id) => String(id))
       : [];
+    const schoolContactInfo = await resolveSchoolContactInfo(schoolId);
 
     if (event.registrationMode !== "THROUGH_SCHOOL") {
       return errorResponse(
@@ -1050,6 +941,7 @@ export async function PUT(req, { params }) {
       const schoolRecord = await User.findById(schoolId).select("schoolName name").lean();
       const schoolName =
         schoolRecord?.schoolName || schoolRecord?.name || session.user.schoolName || session.user.name || "";
+      const schoolContactInfo = await resolveSchoolContactInfo(schoolId);
       const resolvedTeams = applyDefaultTeamNames(normalizedTeams, schoolName);
       const multiTeamValidationMessage = validateMultiTeamPayload(
         event,
@@ -1065,6 +957,7 @@ export async function PUT(req, { params }) {
         schoolId,
         sessionUserId: session.user.id,
         teams: resolvedTeams,
+        schoolContactInfo,
       });
 
       if (replacementResult?.error) {
@@ -1193,11 +1086,10 @@ export async function PUT(req, { params }) {
           approvedBy: session.user.id,
           enrollmentConfirmedAt: now,
           studentNotifiedAt: now,
-          contactPerson: contactPerson || undefined,
-          contactPhone: phone || undefined,
+          contactPerson: schoolContactInfo.contactPerson || undefined,
+          contactPhone: schoolContactInfo.contactPhone || undefined,
           teamName: teamName || undefined,
           captainStudent: captainStudentId || undefined,
-          notes: notes || undefined,
         });
       }
     }
@@ -1215,11 +1107,10 @@ export async function PUT(req, { params }) {
         rejectionReason: null,
       };
 
-      if (contactPerson) updateData.contactPerson = contactPerson;
-      if (phone) updateData.contactPhone = phone;
+      if (schoolContactInfo.contactPerson) updateData.contactPerson = schoolContactInfo.contactPerson;
+      if (schoolContactInfo.contactPhone) updateData.contactPhone = schoolContactInfo.contactPhone;
       updateData.teamName = teamName || "";
       updateData.captainStudent = captainStudentId || null;
-      if (notes !== undefined) updateData.notes = notes;
       updateData.enrollmentConfirmedAt = now;
       updateData.studentNotifiedAt = now;
 

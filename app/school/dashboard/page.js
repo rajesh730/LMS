@@ -7,12 +7,18 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Sidebar from "@/components/Sidebar";
 import CredentialsModal from "@/components/CredentialsModal";
+import SchoolNotificationCenter from "@/components/school/SchoolNotificationCenter";
+import SchoolNoticeBoard from "@/components/school/SchoolNoticeBoard";
+import SchoolDailyOverview from "@/components/school/SchoolDailyOverview";
+import PageHeader from "@/components/ui/PageHeader";
+import AlertBanner from "@/components/ui/AlertBanner";
+import LoadingState from "@/components/ui/LoadingState";
 
 const StudentManager = dynamic(
   () => import("@/components/dashboard/StudentManager"),
   {
     loading: () => (
-      <div className="p-4 text-slate-400">Loading students...</div>
+      <LoadingState title="Loading students" message="Preparing your student records." />
     ),
   }
 );
@@ -20,7 +26,7 @@ const TeacherManager = dynamic(
   () => import("@/components/dashboard/TeacherManager"),
   {
     loading: () => (
-      <div className="p-4 text-slate-400">Loading teachers...</div>
+      <LoadingState title="Loading teachers" message="Preparing teacher and mentor records." />
     ),
   }
 );
@@ -28,7 +34,7 @@ const DashboardOverview = dynamic(
   () => import("@/components/DashboardOverview"),
   {
     loading: () => (
-      <div className="p-4 text-slate-400">Loading overview...</div>
+      <LoadingState title="Loading overview" message="Preparing school dashboard statistics." />
     ),
   }
 );
@@ -36,15 +42,7 @@ const SupportTicketManager = dynamic(
   () => import("@/components/support/SupportTicketManager"),
   {
     loading: () => (
-      <div className="p-4 text-slate-400">Loading support...</div>
-    ),
-  }
-);
-const ParentCommunicationManager = dynamic(
-  () => import("@/components/ParentCommunicationManager"),
-  {
-    loading: () => (
-      <div className="p-4 text-slate-400">Loading communication...</div>
+      <LoadingState title="Loading support" message="Preparing support tickets." />
     ),
   }
 );
@@ -52,7 +50,7 @@ const EnhancedStudentRegistration = dynamic(
   () => import("@/components/EnhancedStudentRegistration"),
   {
     loading: () => (
-      <div className="p-4 text-slate-400">Loading student registration...</div>
+      <LoadingState title="Loading student registration" message="Preparing the student registration form." />
     ),
   }
 );
@@ -60,7 +58,7 @@ const EnhancedTeacherRegistration = dynamic(
   () => import("@/components/EnhancedTeacherRegistration"),
   {
     loading: () => (
-      <div className="p-4 text-slate-400">Loading teacher registration...</div>
+      <LoadingState title="Loading teacher registration" message="Preparing the teacher registration form." />
     ),
   }
 );
@@ -68,7 +66,7 @@ const SchoolSettingsManager = dynamic(
   () => import("@/components/SchoolSettingsManager"),
   {
     loading: () => (
-      <div className="p-4 text-slate-400">Loading settings...</div>
+      <LoadingState title="Loading settings" message="Preparing school configuration." />
     ),
   }
 );
@@ -76,33 +74,92 @@ const ShowcaseProfileManager = dynamic(
   () => import("@/components/ShowcaseProfileManager"),
   {
     loading: () => (
-      <div className="p-4 text-slate-400">Loading showcase profile...</div>
+      <LoadingState title="Loading showcase profile" message="Preparing your public school profile." />
     ),
   }
 );
-const SubmissionReviewManager = dynamic(
-  () => import("@/components/SubmissionReviewManager"),
+const StudentNoticeManager = dynamic(
+  () => import("@/components/school/StudentNoticeManager"),
   {
     loading: () => (
-      <div className="p-4 text-slate-400">Loading submission review...</div>
+      <LoadingState title="Loading student notices" message="Preparing your notice board tools." />
+    ),
+  }
+);
+const SchoolMagazineManager = dynamic(
+  () => import("@/components/school/SchoolMagazineManager"),
+  {
+    loading: () => (
+      <LoadingState title="Loading school magazine" message="Preparing review and publishing tools." />
+    ),
+  }
+);
+const DashboardChallengeShowcase = dynamic(
+  () => import("@/components/challenges/DashboardChallengeShowcase"),
+  {
+    loading: () => (
+      <LoadingState title="Loading challenge showcase" message="Preparing selected student responses." />
     ),
   }
 );
 import {
   FaCalendarCheck,
+  FaFeatherAlt,
   FaSignOutAlt,
   FaBullhorn,
   FaClock,
   FaSchool,
+  FaArrowRight,
+  FaBookReader,
+  FaTrophy,
+  FaUsers,
+  FaBars,
 } from "react-icons/fa";
 import SchoolEventWorkspace from "@/components/events/SchoolEventWorkspace";
-import NoticeManager from "@/components/NoticeManager";
+
+function QuickActionCard({
+  href,
+  icon: Icon,
+  title,
+  description,
+  tone = "blue",
+}) {
+  const toneMap = {
+    blue: "text-blue-200 bg-blue-500/10 border-blue-500/20 hover:border-blue-400/50",
+    emerald:
+      "text-emerald-200 bg-emerald-500/10 border-emerald-500/20 hover:border-emerald-400/50",
+    amber:
+      "text-amber-200 bg-amber-500/10 border-amber-500/20 hover:border-amber-400/50",
+    purple:
+      "text-purple-200 bg-purple-500/10 border-purple-500/20 hover:border-purple-400/50",
+    cyan: "text-cyan-200 bg-cyan-500/10 border-cyan-500/20 hover:border-cyan-400/50",
+  };
+
+  return (
+    <Link
+      href={href}
+      className={`group rounded-2xl border bg-slate-900/70 p-5 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-900 ${
+        toneMap[tone] || toneMap.blue
+      }`}
+    >
+      <div className="flex items-start justify-between gap-4">
+        <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-current/10">
+          <Icon className="text-xl" />
+        </span>
+        <FaArrowRight className="mt-2 text-slate-500 transition group-hover:translate-x-1 group-hover:text-white" />
+      </div>
+      <h3 className="mt-5 text-lg font-bold text-white">{title}</h3>
+      <p className="mt-2 text-sm leading-6 text-slate-400">{description}</p>
+    </Link>
+  );
+}
 
 function SchoolDashboardContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState("overview");
+  const [isNavOpen, setIsNavOpen] = useState(false);
 
   useEffect(() => {
     const tab = searchParams.get("tab");
@@ -314,15 +371,47 @@ function SchoolDashboardContent() {
     }
   };
 
-  if (loading) return <div className="p-8 text-white">Loading...</div>;
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-950 p-6 text-slate-200">
+        <LoadingState
+          title="Opening school dashboard"
+          message="Loading students, events, notices, and publishing tools."
+          className="min-h-[70vh]"
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-slate-950 text-slate-200 font-sans">
-      <Sidebar role={session?.user?.role} isRestricted={isRestricted} isPending={isPending} />
+      {isNavOpen && (
+        <button
+          type="button"
+          aria-label="Close navigation overlay"
+          onClick={() => setIsNavOpen(false)}
+          className="fixed inset-0 z-40 bg-black/55 backdrop-blur-sm lg:hidden"
+        />
+      )}
+      <Sidebar
+        role={session?.user?.role}
+        isRestricted={isRestricted}
+        isPending={isPending}
+        isMobileOpen={isNavOpen}
+        onNavigate={() => setIsNavOpen(false)}
+      />
 
-      <main className="flex-1 p-8 ml-64 overflow-y-auto h-screen">
-        <header className="flex justify-between items-center mb-8">
+      <main className="h-screen flex-1 overflow-y-auto p-4 sm:p-6 lg:ml-64 lg:p-8">
+        <header className="flex flex-col gap-4 mb-8 md:flex-row md:items-center md:justify-between">
           <div>
+            <button
+              type="button"
+              onClick={() => setIsNavOpen(true)}
+              className="mb-4 inline-flex items-center gap-2 rounded-lg border border-slate-700 px-3 py-2 text-sm font-semibold text-slate-200 transition hover:bg-slate-800 lg:hidden"
+            >
+              <FaBars />
+              Menu
+            </button>
             <h1 className="text-3xl font-bold text-white tracking-tight">
               Pratyo School Hub
             </h1>
@@ -331,6 +420,7 @@ function SchoolDashboardContent() {
             </p>
           </div>
           <div className="flex items-center gap-4">
+            <SchoolNotificationCenter />
             <div className="text-right hidden md:block">
               <div className="text-sm font-medium text-white">
                 {session?.user?.name}
@@ -372,6 +462,10 @@ function SchoolDashboardContent() {
             "teachers",
             "platform-events",
             "school-events",
+            "challenge-showcase",
+            "student-notices",
+            "notices",
+            "magazine",
             "showcase",
             "settings",
           ].map((tab) => (
@@ -389,12 +483,16 @@ function SchoolDashboardContent() {
                 ? "Platform Events"
                 : tab === "school-events"
                 ? "School Events"
+                : tab === "challenge-showcase"
+                ? "Challenge Showcase"
+                : tab === "student-notices"
+                ? "Student Notices"
                 : tab === "notices"
-                ? "Notice Board"
+                ? "Received Notices"
+                : tab === "magazine"
+                ? "School Magazine"
                 : tab === "teachers"
                 ? "Teachers"
-                : tab === "reviews"
-                ? "Submission Review"
                 : tab === "showcase"
                 ? "Public Showcase"
                 : tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -406,53 +504,134 @@ function SchoolDashboardContent() {
         {/* Content Area - Hide if Pending */}
         {isPending ? (
             <div className="text-center py-20">
-                <p className="text-slate-500">Please wait for administrator approval.</p>
+                <AlertBanner
+                  type="warning"
+                  title="Approval required"
+                  message="Your school dashboard will unlock after the Super Admin approves this account."
+                />
             </div>
         ) : (
             <>
         {activeTab === "overview" && (
           <>
-            <DashboardOverview />
-            <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800 mt-8">
-              <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
-                <FaCalendarCheck className="text-emerald-400" />
-                Event Workspaces
-              </h2>
-              <div className="grid gap-4 md:grid-cols-2">
-                <Link
-                  href="/school/dashboard?tab=platform-events"
-                  className="rounded-xl border border-slate-700 bg-slate-800/60 p-5 transition hover:border-emerald-500/50 hover:bg-slate-800"
-                >
-                  <div className="mb-3 flex items-center gap-3 text-emerald-300">
-                    <FaCalendarCheck />
-                    <span className="font-semibold">Platform Events</span>
+            <PageHeader
+              icon={FaSchool}
+              eyebrow="School command center"
+              title="Manage the work that students see every day"
+              description="Use this hub to register students, run events, send notices, publish magazine articles, and showcase selected achievements without jumping across separate tools."
+              meta={
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4">
+                    <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
+                      First
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-white">
+                      Add students and teachers
+                    </p>
                   </div>
-                  <p className="text-sm text-slate-400">
-                    Review platform invitations, approve participation, and manage registered teams.
-                  </p>
-                </Link>
-                <Link
-                  href="/school/dashboard?tab=school-events"
-                  className="rounded-xl border border-slate-700 bg-slate-800/60 p-5 transition hover:border-blue-500/50 hover:bg-slate-800"
-                >
-                  <div className="mb-3 flex items-center gap-3 text-blue-300">
-                    <FaSchool />
-                    <span className="font-semibold">School Events</span>
+                  <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4">
+                    <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
+                      Then
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-white">
+                      Run events and notices
+                    </p>
                   </div>
-                  <p className="text-sm text-slate-400">
-                    Create internal events, manage student registrations, rounds, results, and certificates.
-                  </p>
-                </Link>
-              </div>
+                  <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4">
+                    <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
+                      Finally
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-white">
+                      Publish results and writing
+                    </p>
+                  </div>
+                </div>
+              }
+            />
+            <div className="mt-8">
+              <SchoolDailyOverview />
             </div>
-            <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800 mt-8">
-              <h2 className="text-xl font-semibold text-white mb-2 flex items-center gap-2">
-                <FaBullhorn className="text-blue-400" />
-                Platform Direction
-              </h2>
-              <p className="text-slate-400">
-                This workspace is being reshaped around extracurricular activities, talent discovery, showcases, and inter-school competitions. Academic modules are being retired from the main product surface.
-              </p>
+            <div className="mt-8">
+            <DashboardOverview />
+            </div>
+
+            <section className="mt-8 rounded-2xl border border-slate-800 bg-slate-900/50 p-6">
+              <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
+                    Quick actions
+                  </p>
+                  <h2 className="mt-2 text-2xl font-bold text-white">
+                    Pick the work area you need
+                  </h2>
+                </div>
+                <p className="max-w-xl text-sm leading-6 text-slate-400">
+                  These shortcuts match the real school workflow: students,
+                  events, student notices, publishing, and promotion.
+                </p>
+              </div>
+
+              <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                <QuickActionCard
+                  href="/school/dashboard?tab=students"
+                  icon={FaUsers}
+                  title="Students"
+                  description="Add student accounts, view credentials, and keep profiles ready for events and writing."
+                  tone="blue"
+                />
+                <QuickActionCard
+                  href="/school/dashboard?tab=platform-events"
+                  icon={FaCalendarCheck}
+                  title="Platform Events"
+                  description="Accept platform invitations and manage the teams your school sends."
+                  tone="emerald"
+                />
+                <QuickActionCard
+                  href="/school/dashboard?tab=school-events"
+                  icon={FaSchool}
+                  title="School Events"
+                  description="Create internal competitions, register participants, run rounds, and prepare certificates."
+                  tone="cyan"
+                />
+                <QuickActionCard
+                  href="/school/dashboard?tab=student-notices"
+                  icon={FaBullhorn}
+                  title="Student Notices"
+                  description="Send announcements directly to every student in your school dashboard."
+                  tone="amber"
+                />
+                <QuickActionCard
+                  href="/school/dashboard?tab=magazine"
+                  icon={FaFeatherAlt}
+                  title="School Magazine"
+                  description="Review student writing and publish selected articles for the school community."
+                  tone="purple"
+                />
+                <QuickActionCard
+                  href="/school/dashboard?tab=challenge-showcase"
+                  icon={FaTrophy}
+                  title="Challenge Showcase"
+                  description="See platform-selected student challenge responses and promote strong work."
+                  tone="emerald"
+                />
+              </div>
+            </section>
+
+            <div className="mt-8">
+              <AlertBanner
+                type="info"
+                title="Production note"
+                message="Keep daily announcements inside Student Notices, use School Magazine only for approved writing, and use Public Showcase when you are ready to promote school achievements."
+                action={
+                  <Link
+                    href="/school/dashboard?tab=showcase"
+                    className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-500"
+                  >
+                    Open Showcase
+                    <FaBookReader />
+                  </Link>
+                }
+              />
             </div>
           </>
         )}
@@ -460,10 +639,8 @@ function SchoolDashboardContent() {
         {activeTab === "students" && <StudentManager />}
 
         {activeTab === "teachers" && <TeacherManager />}
-        {activeTab === "reviews" && <SubmissionReviewManager />}
         {activeTab === "showcase" && <ShowcaseProfileManager />}
         {activeTab === "support" && <SupportTicketManager />}
-        {activeTab === "communication" && <ParentCommunicationManager />}
         {activeTab === "register-student" && (
           <EnhancedStudentRegistration 
             schoolId={session?.user?.id} 
@@ -482,8 +659,11 @@ function SchoolDashboardContent() {
           <SchoolEventWorkspace mode="platform" />
         )}
         {activeTab === "school-events" && <SchoolEventWorkspace mode="school" />}
+        {activeTab === "challenge-showcase" && <DashboardChallengeShowcase />}
 
-        {activeTab === "notices" && <NoticeManager />}
+        {activeTab === "student-notices" && <StudentNoticeManager />}
+        {activeTab === "notices" && <SchoolNoticeBoard />}
+        {activeTab === "magazine" && <SchoolMagazineManager />}
             </>
         )}
 
@@ -592,7 +772,13 @@ function SchoolDashboardContent() {
 
 export default function SchoolDashboard() {
   return (
-    <Suspense fallback={<div className="p-8 text-white">Loading dashboard...</div>}>
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-slate-950 p-6 text-slate-200">
+          <LoadingState title="Loading dashboard" message="Preparing your school workspace." />
+        </div>
+      }
+    >
       <SchoolDashboardContent />
     </Suspense>
   );

@@ -6,6 +6,7 @@ import Event from "@/models/Event";
 import EventSchoolInvitation from "@/models/EventSchoolInvitation";
 import Student from "@/models/Student";
 import ParticipationRequest from "@/models/ParticipationRequest";
+import EventNotice from "@/models/EventNotice";
 import { isAfterEndOfDay, startOfToday } from "@/lib/eventDates";
 import { getEquivalentGradeValues } from "@/lib/schoolGrades";
 import { buildEventPresentationState } from "@/lib/eventPresentation";
@@ -70,9 +71,8 @@ export async function GET(req) {
       student: student._id,
     }).distinct("event");
 
-    // Find eligible events. Already registered events stay visible for tracking
-    // and history, even after completion. Discovery remains limited to active
-    // direct-registration events.
+    // Find eligible events. Students can discover active school and approved
+    // platform events even when registration is school-managed.
     const baseQuery = {
       ...searchQuery,
       status: "APPROVED",
@@ -91,12 +91,10 @@ export async function GET(req) {
               date: { $gte: startOfToday() },
               $or: [
                 {
-                  registrationMode: "DIRECT",
                   eventScope: "SCHOOL",
                   school: student.school,
                 },
                 {
-                  registrationMode: "DIRECT",
                   eventScope: "PLATFORM",
                   _id: { $in: approvedPlatformEventIds },
                 },
@@ -116,20 +114,42 @@ export async function GET(req) {
 
     const total = await Event.countDocuments(baseQuery);
 
-    // Get participation requests for this student
-    const requests = await ParticipationRequest.find({
-      student: student._id,
-      event: { $in: events.map((e) => e._id) },
-    });
+    // Get participation requests for this student plus latest event notices.
+    const [requests, eventNotices] = await Promise.all([
+      ParticipationRequest.find({
+        student: student._id,
+        event: { $in: events.map((e) => e._id) },
+      }),
+      EventNotice.find({
+        event: { $in: events.map((e) => e._id) },
+        round: null,
+        status: "PUBLISHED",
+        visibility: "PUBLIC",
+      })
+        .select("event title message type publishedAt createdAt")
+        .sort({ publishedAt: -1, createdAt: -1 })
+        .lean(),
+    ]);
 
     const requestMap = new Map();
     requests.forEach((req) => {
       requestMap.set(req.event.toString(), req);
     });
+    const latestNoticeByEvent = new Map();
+    const noticeCountByEvent = new Map();
+    eventNotices.forEach((notice) => {
+      const key = String(notice.event || "");
+      if (!key) return;
+      noticeCountByEvent.set(key, (noticeCountByEvent.get(key) || 0) + 1);
+      if (!latestNoticeByEvent.has(key)) {
+        latestNoticeByEvent.set(key, notice);
+      }
+    });
 
     // Enhance events with participation status
     const enrichedEvents = events.map((event) => {
       const request = requestMap.get(event._id.toString());
+      const latestNotice = latestNoticeByEvent.get(event._id.toString());
       const isDeadlinePassed =
         event.registrationDeadline && isAfterEndOfDay(event.registrationDeadline);
       const isFull =
@@ -146,11 +166,8 @@ export async function GET(req) {
 
       return {
         ...presentedEvent,
-        canRequest:
-          event.registrationMode === "DIRECT" &&
-          !request &&
-          !isDeadlinePassed &&
-          !isFull,
+        canRequest: false,
+        registrationSupportMode: "SCHOOL_MANAGED",
         capacityInfo: getCapacityInfo(event),
         daysUntilDeadline: event.registrationDeadline
           ? Math.ceil(
@@ -158,6 +175,18 @@ export async function GET(req) {
             )
           : null,
         eventStatus: getEventStatus(event),
+        latestEventNotice: latestNotice
+          ? {
+              _id: latestNotice._id,
+              title: latestNotice.title,
+              message: latestNotice.message,
+              type: latestNotice.type,
+              publishedAt: latestNotice.publishedAt || latestNotice.createdAt,
+            }
+          : null,
+        eventNoticeCount: latestNotice
+          ? noticeCountByEvent.get(event._id.toString()) || 1
+          : 0,
         ...buildEventPresentationState(presentedEvent, {
           participationStatus: request ? request.status : null,
           studentCount: Boolean(request) ? 1 : 0,

@@ -15,19 +15,29 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const type = searchParams.get("type");
     const priority = searchParams.get("priority");
+    const status = searchParams.get("status");
     const active = searchParams.get("active") !== "false";
     const audience = searchParams.get("audience"); // 'students', 'teachers', 'parents'
+    const scope = String(searchParams.get("scope") || "SCHOOL").toUpperCase();
     const page = parseInt(searchParams.get("page")) || 1;
     const limit = parseInt(searchParams.get("limit")) || 20;
 
-    const query = {
-      school: session.user.id,
-      isActive: active,
-    };
+    const query = { isActive: active };
+
+    if (scope === "PLATFORM") {
+      if (session.user.role !== "SUPER_ADMIN") {
+        return Response.json({ error: "Forbidden" }, { status: 403 });
+      }
+      query.scope = "PLATFORM";
+    } else {
+      query.scope = "SCHOOL";
+      query.school = session.user.schoolId || session.user.id;
+    }
 
     // Add filters
     if (type) query.type = type.toUpperCase();
     if (priority) query.priority = priority.toUpperCase();
+    if (status) query.status = status.toUpperCase();
 
     // Filter by audience
     if (audience) {
@@ -76,9 +86,13 @@ export async function POST(request) {
       content,
       type,
       priority,
+      scope,
+      status,
+      visibility,
       targetAudience,
       grades,
       expiryDate,
+      eventId,
     } = body;
 
     if (!title || !content) {
@@ -88,8 +102,24 @@ export async function POST(request) {
       );
     }
 
-    // Validate target audience
+    const normalizedScope =
+      String(scope || "").toUpperCase() === "PLATFORM" ? "PLATFORM" : "SCHOOL";
+    const normalizedVisibility =
+      normalizedScope === "PLATFORM"
+        ? "PRIVATE"
+        : String(visibility || "").toUpperCase() === "PUBLIC"
+        ? "PUBLIC"
+        : "PRIVATE";
+    const normalizedStatus =
+      String(status || "").toUpperCase() === "DRAFT" ? "DRAFT" : "PUBLISHED";
+
+    if (normalizedScope === "PLATFORM" && session.user.role !== "SUPER_ADMIN") {
+      return Response.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     if (
+      normalizedScope === "SCHOOL" &&
+      normalizedVisibility !== "PUBLIC" &&
       !targetAudience?.students &&
       !targetAudience?.teachers &&
       !targetAudience?.parents
@@ -104,14 +134,25 @@ export async function POST(request) {
       title: title.trim(),
       content: content.trim(),
       type: type?.toUpperCase() || "GENERAL",
+      scope: normalizedScope,
       priority: priority?.toUpperCase() || "NORMAL",
-      school: session.user.id,
+      status: normalizedStatus,
+      school:
+        normalizedScope === "PLATFORM"
+          ? null
+          : session.user.schoolId || session.user.id,
       author: session.user.id,
-      targetAudience,
+      event: eventId || null,
+      visibility: normalizedVisibility,
+      targetAudience:
+        normalizedScope === "PLATFORM"
+          ? { students: false, teachers: false, parents: false }
+          : targetAudience,
       grades: grades || [],
       expiryDate: expiryDate ? new Date(expiryDate) : null,
       attachments: [],
-      publishedAt: new Date(),
+      isActive: true,
+      publishedAt: normalizedStatus === "PUBLISHED" ? new Date() : null,
     });
 
     const savedNotice = await newNotice.save();

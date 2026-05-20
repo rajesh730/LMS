@@ -4,6 +4,7 @@ import UnifiedApprovalManager from "./UnifiedApprovalManager";
 import RoundsTab from "./RoundsTab";
 import EventOverviewTab from "./EventOverviewTab";
 import EventResultsManager from "@/components/EventResultsManager";
+import EventNoticeManager from "./EventNoticeManager";
 
 export default function ManagementTabs({
   requests,
@@ -39,6 +40,12 @@ export default function ManagementTabs({
       label: "ROUNDS",
       count: null,
       color: "bg-[#2f7fdb]",
+    },
+    {
+      id: "notices",
+      label: "NOTICES",
+      count: null,
+      color: "bg-[#1c4a8d]",
     },
     {
       id: "results",
@@ -98,6 +105,13 @@ export default function ManagementTabs({
               await onDataChange?.();
               setActiveTab("results");
             }}
+          />
+        )}
+
+        {activeTab === "notices" && (
+          <EventNoticeManager
+            eventId={event.id || event._id}
+            eventTitle={event.title}
           />
         )}
 

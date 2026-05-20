@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { buildGradeLabels, normalizeGradeValue } from "@/lib/schoolGrades";
 import { validateEventCapacity } from "@/lib/eventCapacity";
 
@@ -30,7 +30,8 @@ function buildInitialFormData(initialData, ownerMode) {
       ? new Date(initialData.registrationDeadline).toISOString().split("T")[0]
       : "",
     maxParticipants: initialData?.maxParticipants || "",
-    maxParticipantsPerSchool: initialData?.maxParticipantsPerSchool || "",
+    maxParticipantsPerSchool:
+      ownerMode === "school" ? "" : initialData?.maxParticipantsPerSchool || "",
     participationFormat: resolvedParticipationFormat,
     minTeamSize: initialData?.minTeamSize || "",
     maxTeamSize: initialData?.maxTeamSize || "",
@@ -38,12 +39,16 @@ function buildInitialFormData(initialData, ownerMode) {
       .map(normalizeGradeValue)
       .filter(Boolean),
     eventScope: initialData?.eventScope || defaultScope,
-    eventType: initialData?.eventType || "COMPETITION",
-    visibility: initialData?.visibility || defaultVisibility,
-    registrationMode: initialData?.registrationMode || "THROUGH_SCHOOL",
+    eventType:
+      ownerMode === "school" ? "COMPETITION" : initialData?.eventType || "COMPETITION",
+    visibility:
+      ownerMode === "school" ? "INVITED" : initialData?.visibility || defaultVisibility,
+    registrationMode: "THROUGH_SCHOOL",
     featuredOnLanding: Boolean(initialData?.featuredOnLanding),
     publicHighlightsEnabled:
-      initialData?.publicHighlightsEnabled === undefined
+      ownerMode === "school"
+        ? false
+        : initialData?.publicHighlightsEnabled === undefined
         ? true
         : Boolean(initialData?.publicHighlightsEnabled),
     partnerBrandingEnabled: Boolean(initialData?.partnerBrandingEnabled),
@@ -58,9 +63,10 @@ function buildInitialFormData(initialData, ownerMode) {
       website: partner?.website || partner?.organizer?.website || "",
       isPrimary: Boolean(partner?.isPrimary),
     })),
-    assignedMentors: (initialData?.assignedMentors || []).map((mentor) =>
-      mentor?._id || mentor
-    ),
+    assignedMentors:
+      ownerMode === "school"
+        ? []
+        : (initialData?.assignedMentors || []).map((mentor) => mentor?._id || mentor),
   };
 }
 
@@ -85,6 +91,7 @@ export default function EventEditorForm({
   const canFeatureOnLanding =
     showFeaturedOnLanding ?? resolvedOwnerMode === "platform";
   const defaultScope = resolvedOwnerMode === "school" ? "SCHOOL" : "PLATFORM";
+  const isSchoolOwnedFlow = resolvedOwnerMode === "school";
 
   const [formData, setFormData] = useState(() =>
     buildInitialFormData(initialData, resolvedOwnerMode)
@@ -310,16 +317,20 @@ export default function EventEditorForm({
       const payload = {
         ...formData,
         eventScope: canChooseScope ? formData.eventScope : defaultScope,
-        registrationMode:
-          formData.participationFormat === "TEAM"
-            ? "THROUGH_SCHOOL"
-            : formData.registrationMode,
+        eventType: isSchoolOwnedFlow ? "COMPETITION" : formData.eventType,
+        visibility: isSchoolOwnedFlow ? "INVITED" : formData.visibility,
+        registrationMode: "THROUGH_SCHOOL",
         featuredOnLanding: canFeatureOnLanding
           ? formData.featuredOnLanding
           : false,
+        publicHighlightsEnabled: isSchoolOwnedFlow
+          ? false
+          : formData.publicHighlightsEnabled,
         registrationDeadline: formData.registrationDeadline || null,
         maxParticipants: capacityValidation.totalStudentCapacity,
-        maxParticipantsPerSchool: capacityValidation.maxStudentsPerSchool,
+        maxParticipantsPerSchool: isSchoolOwnedFlow
+          ? null
+          : capacityValidation.maxStudentsPerSchool,
         minTeamSize:
           formData.participationFormat === "TEAM" && formData.minTeamSize !== ""
             ? Number(formData.minTeamSize)
@@ -328,7 +339,7 @@ export default function EventEditorForm({
           formData.participationFormat === "TEAM" && formData.maxTeamSize !== ""
             ? Number(formData.maxTeamSize)
             : null,
-        assignedMentors: formData.assignedMentors || [],
+        assignedMentors: isSchoolOwnedFlow ? [] : formData.assignedMentors || [],
         sourceProposal: formData.sourceProposal || null,
         partnerBrandingEnabled:
           resolvedOwnerMode === "platform" &&
@@ -362,20 +373,24 @@ export default function EventEditorForm({
     }
   };
 
-  const steps = [
-    { id: "basic", label: "Basic Details" },
-    { id: "audience", label: "Audience" },
-    { id: "registration", label: "Registration Rules" },
-    {
-      id: "partners",
-      label:
-        resolvedOwnerMode === "platform"
-          ? "Partners & Publicity"
-          : "Mentors & Publicity",
-    },
-    { id: "review", label: "Review & Create" },
-  ];
+  const steps = useMemo(
+    () => [
+      { id: "basic", label: "Basic Details" },
+      { id: "audience", label: "Student Audience" },
+      { id: "registration", label: "Registration Setup" },
+      ...(resolvedOwnerMode === "platform"
+        ? [{ id: "partners", label: "Partners & Publicity" }]
+        : []),
+      { id: "review", label: "Review & Create" },
+    ],
+    [resolvedOwnerMode]
+  );
   const activeStepIndex = steps.findIndex((step) => step.id === activeStep);
+  useEffect(() => {
+    if (!steps.some((step) => step.id === activeStep)) {
+      setActiveStep("basic");
+    }
+  }, [activeStep, steps]);
   const goToNextStep = () => {
     const nextStep = steps[Math.min(activeStepIndex + 1, steps.length - 1)];
     setActiveStep(nextStep.id);
@@ -388,6 +403,20 @@ export default function EventEditorForm({
     formData.eligibleGrades.length > 0
       ? formData.eligibleGrades.join(", ")
       : "All eligible grades";
+  const stepGuidance = {
+    basic: isSchoolOwnedFlow
+      ? "Keep this simple: title, date, description, and whether students join individually or in groups."
+      : "Set the public-facing basics for the platform event before deciding audience and limits.",
+    audience: isSchoolOwnedFlow
+      ? "Choose the grades that should see this school event in their student dashboard."
+      : "Choose the grades/schools that can participate in this platform event.",
+    registration: isSchoolOwnedFlow
+      ? "Teachers register students. Set only the deadline, total capacity, and team size if needed."
+      : "Schools register on behalf of students. Set total capacity and optional per-school limits.",
+    partners:
+      "Use this only when a platform event needs public promotion or partner branding.",
+    review: "Confirm the summary. After creation, manage registration, notices, rounds, results, and certificates from the event page.",
+  };
 
   return (
     <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800">
@@ -403,7 +432,7 @@ export default function EventEditorForm({
           {!initialData && (
             <p className="text-sm text-slate-400 mt-1">
               {resolvedOwnerMode === "school"
-                ? "Create events for your school or target a network your school belongs to."
+                ? "Create internal events for your students. School registration and student visibility are handled automatically."
                 : "Create flagship platform events for the wider network."}
             </p>
           )}
@@ -440,16 +469,22 @@ export default function EventEditorForm({
           </div>
         </div>
 
+        <div className="rounded-2xl border border-blue-500/20 bg-blue-500/10 px-4 py-3 text-sm text-blue-100">
+          {stepGuidance[activeStep]}
+        </div>
+
         {activeStep === "basic" && (
           <section className="space-y-4 rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
             <div>
               <h3 className="text-lg font-semibold text-white">Basic Details</h3>
               <p className="mt-1 text-sm text-slate-400">
-                Name the event, choose the type, and set the main public details.
+                {isSchoolOwnedFlow
+                  ? "Name the event and set the core details for your students."
+                  : "Name the event, choose the type, and set the main public details."}
               </p>
             </div>
 
-            <div className="grid md:grid-cols-4 gap-4">
+            <div className={`grid gap-4 ${isSchoolOwnedFlow ? "md:grid-cols-3" : "md:grid-cols-4"}`}>
               <div className="md:col-span-2">
                 <label className="block text-slate-300 mb-1 text-sm">
                   Event Title *
@@ -488,27 +523,32 @@ export default function EventEditorForm({
                   required
                 />
               </div>
+              {!isSchoolOwnedFlow && (
               <div>
                 <label className="block text-slate-300 mb-1 text-sm">
                   Event Type
                 </label>
-                <select
-                  value={formData.eventType}
-                  onChange={(e) =>
-                    setFormData({ ...formData, eventType: e.target.value })
-                  }
-                  className="w-full bg-slate-800 text-white rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  {eventTypes.map((type) => (
-                    <option key={type} value={type}>
-                      {type.replaceAll("_", " ")}
-                    </option>
-                  ))}
-                </select>
+                {
+                  <select
+                    value={formData.eventType}
+                    onChange={(e) =>
+                      setFormData({ ...formData, eventType: e.target.value })
+                    }
+                    className="w-full bg-slate-800 text-white rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    {eventTypes.map((type) => (
+                      <option key={type} value={type}>
+                        {type.replaceAll("_", " ")}
+                      </option>
+                    ))}
+                  </select>
+                }
               </div>
+              )}
             </div>
 
             <div className="grid md:grid-cols-2 gap-4">
+              {!isSchoolOwnedFlow && (
               <div>
                 <label className="block text-slate-300 mb-1 text-sm">
                   Visibility
@@ -525,6 +565,8 @@ export default function EventEditorForm({
                   <option value="PRIVATE">Private</option>
                 </select>
               </div>
+              )}
+              {!isSchoolOwnedFlow && (
               <div>
                 <label className="block text-slate-300 mb-1 text-sm">
                   Event Scope
@@ -550,9 +592,10 @@ export default function EventEditorForm({
                   </p>
                 )}
               </div>
+              )}
               <div>
                 <label className="block text-slate-300 mb-1 text-sm">
-                  Participation Format
+                Participant Type
                 </label>
                 <select
                   value={formData.participationFormat}
@@ -572,11 +615,11 @@ export default function EventEditorForm({
                   }
                   className="w-full bg-slate-800 text-white rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="INDIVIDUAL">Individual participants</option>
-                  <option value="TEAM">School team</option>
+                  <option value="INDIVIDUAL">Individual students</option>
+                  <option value="TEAM">Group / team</option>
                 </select>
                 <p className="mt-1 text-xs text-slate-500">
-                  Use team format for football, basketball, group dance, debate teams, and similar roster-based events.
+                  Choose group/team for football, quiz teams, group dance, debate teams, and other roster-based events.
                 </p>
               </div>
             </div>
@@ -600,15 +643,15 @@ export default function EventEditorForm({
         {activeStep === "audience" && (
           <section className="space-y-4 rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
             <div>
-              <h3 className="text-lg font-semibold text-white">Audience</h3>
+              <h3 className="text-lg font-semibold text-white">Student Audience</h3>
               <p className="mt-1 text-sm text-slate-400">
-                Choose who can see or participate in this event.
+                Choose which students should see this event and be eligible for registration.
               </p>
             </div>
 
             <div>
               <label className="block text-slate-300 mb-2 text-sm">
-                Target Audience (Select Eligible Grades/Years)
+                Eligible Grades
               </label>
               <div className="mb-3">
                 <div className="flex items-center justify-between mb-2">
@@ -656,38 +699,28 @@ export default function EventEditorForm({
           <section className="space-y-4 rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
             <div>
               <h3 className="text-lg font-semibold text-white">
-                Registration Rules
+                Registration Setup
               </h3>
               <p className="mt-1 text-sm text-slate-400">
-                Set deadline, capacity, and how participants join.
+                Set the deadline, capacity, and school-managed registration rules.
               </p>
             </div>
 
-            <div className="grid md:grid-cols-4 gap-4">
+            <div className={`grid gap-4 ${isSchoolOwnedFlow ? "md:grid-cols-3" : "md:grid-cols-4"}`}>
           <div>
             <label className="block text-slate-300 mb-1 text-sm">
-              Registration Mode
+              Registration Method
             </label>
-            <select
-              value={formData.registrationMode}
-              onChange={(e) =>
-                setFormData({ ...formData, registrationMode: e.target.value })
-              }
-              disabled={formData.participationFormat === "TEAM"}
-              className="w-full bg-slate-800 text-white rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="THROUGH_SCHOOL">Through school</option>
-              <option value="DIRECT">Direct participant registration</option>
-            </select>
-            {formData.participationFormat === "TEAM" && (
-              <p className="mt-1 text-xs text-slate-500">
-                Team events are managed through schools only.
-              </p>
-            )}
+            <div className="w-full rounded border border-slate-700 bg-slate-800 p-2 text-white">
+              School registers students
+            </div>
+            <p className="mt-1 text-xs text-slate-500">
+              Teachers or school admins collect names and register students from the school dashboard.
+            </p>
           </div>
           <div>
             <label className="block text-slate-300 mb-1 text-sm">
-              Reg. Deadline (optional)
+              Registration Deadline (optional)
             </label>
             <input
               type="date"
@@ -721,10 +754,15 @@ export default function EventEditorForm({
             />
             <p className="mt-1 text-xs text-slate-500">
               {formData.participationFormat === "TEAM"
-                ? "Maximum teams allowed across the full event."
+                ? isSchoolOwnedFlow
+                  ? "Maximum teams from your school that can take part in this event."
+                  : "Maximum teams allowed across the full event."
+                : isSchoolOwnedFlow
+                ? "Maximum students from your school who can take part in this event."
                 : "Maximum students allowed across all schools."}
             </p>
           </div>
+          {!isSchoolOwnedFlow && (
           <div>
             <label className="block text-slate-300 mb-1 text-sm">
               {formData.participationFormat === "TEAM"
@@ -752,13 +790,14 @@ export default function EventEditorForm({
             </p>
             {formData.maxParticipants &&
               formData.maxParticipantsPerSchool &&
-              Number(formData.maxParticipantsPerSchool) >
+                Number(formData.maxParticipantsPerSchool) >
                 Number(formData.maxParticipants) && (
               <p className="mt-1 text-xs text-red-400">
                 Max students per school cannot exceed total student capacity.
               </p>
             )}
           </div>
+          )}
             </div>
             {formData.participationFormat === "TEAM" && (
               <div className="grid gap-4 md:grid-cols-2">
@@ -791,7 +830,7 @@ export default function EventEditorForm({
                     className="w-full bg-slate-800 text-white rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="Optional"
                     min={formData.minTeamSize || 1}
-                    max={formData.maxParticipantsPerSchool || formData.maxParticipants || undefined}
+                    max={formData.maxParticipants || undefined}
                   />
                 </div>
               </div>
@@ -799,19 +838,18 @@ export default function EventEditorForm({
           </section>
         )}
 
-        {activeStep === "partners" && (
+        {activeStep === "partners" && resolvedOwnerMode === "platform" && (
           <section className="space-y-4 rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
             <div>
               <h3 className="text-lg font-semibold text-white">
-                {resolvedOwnerMode === "platform"
-                  ? "Partners & Publicity"
-                  : "Mentors & Publicity"}
+                Partners & Publicity
               </h3>
               <p className="mt-1 text-sm text-slate-400">
                 Configure public highlights, landing visibility, partners, and mentors.
               </p>
             </div>
 
+        {resolvedOwnerMode === "platform" && (
         <div className={`grid gap-4 ${canFeatureOnLanding ? "md:grid-cols-2" : ""}`}>
           {canFeatureOnLanding && (
             <label className="flex items-center gap-3 p-3 rounded border border-slate-800 bg-slate-800/50">
@@ -848,6 +886,7 @@ export default function EventEditorForm({
             </span>
           </label>
         </div>
+        )}
 
         {resolvedOwnerMode === "platform" && (
           <div className="rounded-2xl border border-slate-800 bg-slate-950/50 p-4 space-y-4">
@@ -965,40 +1004,6 @@ export default function EventEditorForm({
             )}
           </div>
         )}
-
-        {resolvedOwnerMode === "school" && teachers.length > 0 && (
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="block text-slate-300 text-sm">
-                Assigned Mentors
-              </label>
-              <span className="text-xs text-slate-500">
-                {formData.assignedMentors.length} selected
-              </span>
-            </div>
-            <div className="grid md:grid-cols-2 gap-2 bg-slate-800 p-3 rounded border border-slate-700 max-h-48 overflow-y-auto">
-              {teachers.map((teacher) => (
-                <label
-                  key={teacher._id}
-                  className="flex items-start gap-2 cursor-pointer hover:bg-slate-700/50 p-2 rounded transition"
-                >
-                  <input
-                    type="checkbox"
-                    checked={formData.assignedMentors.includes(teacher._id)}
-                    onChange={() => handleMentorToggle(teacher._id)}
-                    className="rounded border-slate-600 bg-slate-700 text-blue-600 focus:ring-blue-500 mt-1"
-                  />
-                  <span className="text-sm text-slate-200">
-                    <span className="block font-medium">{teacher.name}</span>
-                    <span className="text-xs text-slate-400">
-                      {teacher.subject || "General mentor"}
-                    </span>
-                  </span>
-                </label>
-              ))}
-            </div>
-          </div>
-        )}
           </section>
         )}
 
@@ -1013,19 +1018,23 @@ export default function EventEditorForm({
               </p>
             </div>
             <div className="grid gap-3 md:grid-cols-2">
-              {[
+              {[ 
                 ["Title", formData.title || "Missing"],
                 ["Date", formData.date || "Missing"],
-                ["Scope", formData.eventScope.replaceAll("_", " ")],
-                ["Type", formData.eventType.replaceAll("_", " ")],
+                ...(!isSchoolOwnedFlow
+                  ? [
+                      ["Scope", formData.eventScope.replaceAll("_", " ")],
+                      ["Type", formData.eventType.replaceAll("_", " ")],
+                    ]
+                  : []),
                 [
-                  "Format",
-                  formData.participationFormat === "TEAM"
-                    ? "School team"
-                    : "Individual participants",
+                      "Participant Type",
+                      formData.participationFormat === "TEAM"
+                    ? "Group / team"
+                    : "Individual students",
                 ],
-                ["Visibility", formData.visibility],
-                ["Registration", formData.registrationMode.replaceAll("_", " ")],
+                ...(!isSchoolOwnedFlow ? [["Visibility", formData.visibility]] : []),
+                ["Registration Method", "School registers students"],
                 ["Deadline", formData.registrationDeadline || "No deadline"],
                 ["Eligible Grades", selectedGradesLabel],
                 [
@@ -1038,14 +1047,16 @@ export default function EventEditorForm({
                       }`
                     : "Unlimited total capacity",
                 ],
-                [
-                  "Per School Limit",
-                  formData.maxParticipantsPerSchool
-                    ? `${
-                        formData.maxParticipantsPerSchool
-                      } ${formData.participationFormat === "TEAM" ? "teams" : "students"}`
-                    : "Unlimited per school",
-                ],
+                ...(!isSchoolOwnedFlow
+                  ? [[
+                      "Per School Limit",
+                      formData.maxParticipantsPerSchool
+                        ? `${
+                            formData.maxParticipantsPerSchool
+                          } ${formData.participationFormat === "TEAM" ? "teams" : "students"}`
+                        : "Unlimited per school",
+                    ]]
+                  : []),
                 [
                   "Team Size",
                   formData.participationFormat === "TEAM"

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import {
   FaCalendarAlt,
+  FaBell,
   FaClock,
   FaMapMarkerAlt,
   FaUsers,
@@ -21,6 +22,8 @@ import EventParticipationForm from "./EventParticipationForm";
 import { useSession } from "next-auth/react";
 import SchoolRoundPanel from "@/app/school/dashboard/SchoolRoundPanel";
 import EventCertificatesPanel from "./EventCertificatesPanel";
+import EmptyState from "@/components/EmptyState";
+import LoadingState from "@/components/ui/LoadingState";
 import { getEventStage, getStageClasses, isDatePast } from "@/lib/eventUiStatus";
 import { isTeamEventLike } from "@/lib/eventParticipationFormat";
 
@@ -45,6 +48,7 @@ export default function EventHub({
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expandedEventId, setExpandedEventId] = useState(null);
+  const [openNoticeEventId, setOpenNoticeEventId] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState(defaultFilter); // all, participated, pending, approved, rejected
 
@@ -214,7 +218,10 @@ export default function EventHub({
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 p-6">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center text-slate-400">Loading events...</div>
+          <LoadingState
+            title="Loading events"
+            message="Preparing event invitations, registrations, and progress."
+          />
         </div>
       </div>
     );
@@ -275,29 +282,30 @@ export default function EventHub({
         {/* Events List */}
         <div className="space-y-4">
           {filteredEvents.length === 0 ? (
-            <div className="bg-slate-800/50 rounded-xl p-12 text-center border border-slate-700">
-              <FaCalendarAlt className="text-4xl text-slate-600 mb-4 mx-auto" />
-              <p className="text-slate-300 text-lg font-semibold">
-                {filterStatus === "participated"
+            <EmptyState
+              icon={FaCalendarAlt}
+              title={
+                filterStatus === "participated"
                   ? "No registered events yet"
                   : eventScope === "PLATFORM"
                   ? "No platform competitions available"
                   : eventScope === "SCHOOL"
                   ? "No school events available"
-                  : "No events found"}
-              </p>
-              <p className="text-slate-500 text-sm mt-2">
-                {searchQuery
+                  : "No events found"
+              }
+              description={
+                searchQuery
                   ? "Clear the search or adjust filters to see more events."
                   : filterStatus === "participated"
                   ? "Events you join or get registered for will appear here."
-                  : "Check again after your school or the platform publishes an event."}
-              </p>
-            </div>
+                  : "Check again after your school or the platform publishes an event."
+              }
+            />
           ) : (
             filteredEvents.map((event) => (
               (() => {
                 const stage = getEventStage(event);
+                const isTeamEvent = isTeamEventLike(event);
                 const isCompletedEvent = Boolean(event.finalOutcomeReady);
                 const registrationLocked = isRegistrationClosed(event);
                 const needsSchoolApproval =
@@ -363,6 +371,51 @@ export default function EventHub({
                       <p className="text-slate-400 mb-4 line-clamp-2">
                         {event.description}
                       </p>
+
+                      {event.latestEventNotice && (
+                        <div className="mb-4">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenNoticeEventId((current) =>
+                                current === event._id ? null : event._id
+                              );
+                            }}
+                            className="inline-flex items-center gap-2 rounded-full border border-sky-500/25 bg-sky-500/10 px-3 py-2 text-xs font-bold uppercase tracking-wide text-sky-200 transition hover:bg-sky-500/20"
+                          >
+                            <FaBell />
+                            {event.eventNoticeCount > 1
+                              ? `${event.eventNoticeCount} Notices`
+                              : "1 Notice"}
+                          </button>
+                          {openNoticeEventId === event._id && (
+                            <div className="mt-3 rounded-xl border border-sky-500/25 bg-sky-500/10 px-4 py-3">
+                              <p className="text-sm font-semibold text-white">
+                                {event.latestEventNotice.title}
+                              </p>
+                              <p className="mt-1 line-clamp-3 text-sm text-sky-100/85">
+                                {event.latestEventNotice.message}
+                              </p>
+                              <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-sky-100/80">
+                                {event.eventNoticeCount > 1 && (
+                                  <span>
+                                    {event.eventNoticeCount - 1} older notice
+                                    {event.eventNoticeCount - 1 === 1 ? "" : "s"} available
+                                  </span>
+                                )}
+                                <Link
+                                  href={`/events/${event._id}`}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="font-semibold text-white underline underline-offset-2 hover:text-sky-100"
+                                >
+                                  View all notices
+                                </Link>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
 
                       <div
                         className={`mb-4 rounded-xl border px-3 py-2 text-sm ${getStageClasses(
@@ -523,12 +576,16 @@ export default function EventHub({
                                 className="inline-flex items-center gap-2 bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 px-3 py-2 rounded-lg transition-colors"
                                 title={
                                   registrationLocked
-                                    ? "Track rounds and team outcome"
-                                    : "Manage team registration"
+                                    ? `Track rounds and ${isTeamEvent ? "group" : "participant"} outcome`
+                                    : `Manage ${isTeamEvent ? "group" : "participant"} registration`
                                 }
                               >
                                 <FaEdit />
-                                {registrationLocked ? "Track Rounds" : "Manage Team"}
+                                {registrationLocked
+                                  ? "Track Rounds"
+                                  : isTeamEvent
+                                  ? "Manage Groups"
+                                  : "Manage Participants"}
                               </button>
                             </>
                           )}
@@ -586,8 +643,10 @@ export default function EventHub({
                               : registrationLocked
                               ? "Registration Locked"
                               : isStudentView
-                              ? "Join Event"
-                              : "Register Team"}
+                              ? "View Event"
+                              : isTeamEvent
+                              ? "Register Groups"
+                              : "Register Participants"}
                           </div>
                         </div>
                       )}
@@ -604,19 +663,37 @@ export default function EventHub({
                           {isStudentView
                             ? event.participationStatus
                               ? "Registration Status"
-                              : "Join Event"
+                              : "School Registration"
                             : event.participationStatus
-                            ? "Team Registration"
-                            : "Register Team"}
+                            ? isTeamEvent
+                              ? "Group Registration"
+                              : "Participant Registration"
+                            : isTeamEvent
+                            ? "Register Groups"
+                            : "Register Participants"}
                         </h4>
-                        <EventParticipationForm
-                          event={event}
-                          isEditing={!isStudentView && !!event.participationStatus}
-                          onSuccess={() => {
-                            fetchEvents();
-                            setExpandedEventId(null);
-                          }}
-                        />
+                        {isStudentView ? (
+                          <div className="space-y-3 rounded-xl border border-slate-800 bg-slate-900/80 p-4 text-sm text-slate-300">
+                            <p className="font-semibold text-white">
+                              Registration is managed by your school.
+                            </p>
+                            <p>
+                              Teachers or school admins collect student names and submit the final registration for this event.
+                            </p>
+                            <p>
+                              You can still follow event notices, selected status, rounds, results, and certificates from your dashboard.
+                            </p>
+                          </div>
+                        ) : (
+                          <EventParticipationForm
+                            event={event}
+                            isEditing={!isStudentView && !!event.participationStatus}
+                            onSuccess={() => {
+                              fetchEvents();
+                              setExpandedEventId(null);
+                            }}
+                          />
+                        )}
                       </div>
                     )}
 
@@ -627,7 +704,9 @@ export default function EventHub({
                             <h4 className="text-lg font-semibold text-white">
                               {event.finalOutcomeReady
                                 ? "Competition Outcome Ready"
-                                : "Team Registration Locked"}
+                                : isTeamEvent
+                                ? "Group Registration Locked"
+                                : "Participant Registration Locked"}
                             </h4>
                             <p className="mt-2 text-sm text-blue-100/85">
                               {event.finalOutcomeReady

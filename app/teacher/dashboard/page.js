@@ -5,7 +5,6 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import CredentialsModal from "@/components/CredentialsModal";
 import DashboardLayout from "@/components/DashboardLayout";
-import SubmissionReviewManager from "@/components/SubmissionReviewManager";
 import TeacherEventOperations from "@/components/teacher/TeacherEventOperations";
 import {
   FaUser,
@@ -65,12 +64,6 @@ export default function TeacherDashboard() {
 
         <div className="space-y-8">
           <TeacherEventOperations />
-
-          <SubmissionReviewManager
-            title="Mentor Review Queue"
-            description="Shortlist student entries, leave coaching notes, and help the school prepare final event results."
-            compact
-          />
         </div>
       </div>
 

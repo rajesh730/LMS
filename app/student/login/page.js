@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { Eye, EyeOff, Lock, User } from "lucide-react";
@@ -12,7 +13,22 @@ export default function StudentLogin() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const { data: session, status } = useSession();
   const router = useRouter();
+  const currentRole = session?.user?.role
+    ? String(session.user.role).replaceAll("_", " ")
+    : null;
+  const currentName = session?.user?.name || null;
+  const currentEmail = session?.user?.email || null;
+
+  const handleContinue = () => {
+    const role = session?.user?.role;
+    if (role === "STUDENT") router.push("/student/dashboard");
+    else if (role === "SUPER_ADMIN") router.push("/admin/dashboard");
+    else if (role === "SCHOOL_ADMIN") router.push("/school/dashboard");
+    else if (role === "TEACHER") router.push("/teacher/dashboard");
+    else router.push("/");
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -39,14 +55,97 @@ export default function StudentLogin() {
     }
   };
 
+  if (status === "authenticated") {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-600 via-blue-500 to-blue-700 px-4 py-6">
+        <div className="mx-auto mb-8 flex max-w-5xl flex-wrap items-center justify-between gap-3">
+          <Link href="/" className="text-sm font-semibold text-blue-50 hover:text-white">
+            Back to home
+          </Link>
+          <div className="flex flex-wrap gap-2 text-sm">
+            <Link href="/events" className="rounded-lg border border-white/30 px-3 py-2 text-blue-50 hover:bg-white/10">
+              Events
+            </Link>
+            <Link href="/login" className="rounded-lg border border-white/30 px-3 py-2 text-blue-50 hover:bg-white/10">
+              School/Admin Login
+            </Link>
+          </div>
+        </div>
+        <div className="flex items-center justify-center">
+        <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-2xl">
+          <div className="text-center">
+            <div className="inline-block bg-blue-100 rounded-full p-4 mb-4">
+              <User size={36} className="text-blue-600" />
+            </div>
+            <h1 className="text-2xl font-bold text-slate-900">
+              You are already signed in
+            </h1>
+            <p className="mt-3 text-sm leading-6 text-slate-600">
+              This browser already has an active session. To log in as a student
+              here, sign out first or use an incognito window / separate browser
+              profile.
+            </p>
+          </div>
+
+          <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4 text-left">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Current account
+            </p>
+            <p className="mt-2 text-sm font-semibold text-slate-900">
+              {currentRole || "Signed-in account"}
+            </p>
+            {currentName && (
+              <p className="mt-1 text-sm text-slate-700">{currentName}</p>
+            )}
+            {currentEmail && (
+              <p className="mt-1 text-xs text-slate-500">{currentEmail}</p>
+            )}
+          </div>
+
+          <div className="mt-6 space-y-3">
+            <button
+              type="button"
+              onClick={handleContinue}
+              className="w-full rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white transition hover:bg-blue-700"
+            >
+              Continue with this account
+            </button>
+            <button
+              type="button"
+              onClick={() => signOut({ callbackUrl: "/student/login" })}
+              className="w-full rounded-lg border border-slate-300 px-4 py-3 font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
+              Sign out and log in as student
+            </button>
+          </div>
+        </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 via-blue-500 to-blue-700 flex items-center justify-center px-4 py-12">
+    <div className="min-h-screen bg-gradient-to-br from-blue-600 via-blue-500 to-blue-700 px-4 py-6">
       {/* Background decorative elements */}
       <div className="absolute top-0 right-0 w-72 h-72 bg-blue-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob" />
       <div className="absolute bottom-0 left-0 w-72 h-72 bg-blue-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000" />
       <div className="absolute top-1/2 left-1/2 w-72 h-72 bg-blue-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000" />
 
-      <div className="relative z-10 w-full max-w-md">
+      <div className="relative z-10 mx-auto mb-8 flex max-w-5xl flex-wrap items-center justify-between gap-3">
+        <Link href="/" className="text-sm font-semibold text-blue-50 hover:text-white">
+          Back to home
+        </Link>
+        <div className="flex flex-wrap gap-2 text-sm">
+          <Link href="/events" className="rounded-lg border border-white/30 px-3 py-2 text-blue-50 hover:bg-white/10">
+            Events
+          </Link>
+          <Link href="/login" className="rounded-lg border border-white/30 px-3 py-2 text-blue-50 hover:bg-white/10">
+            School/Admin Login
+          </Link>
+        </div>
+      </div>
+
+      <div className="relative z-10 mx-auto w-full max-w-md">
         {/* Logo/Header */}
         <div className="text-center mb-8">
           <div className="inline-block bg-white rounded-full p-4 mb-4">
@@ -195,7 +294,7 @@ export default function StudentLogin() {
               href="/login"
               className="block w-full text-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium"
             >
-              Parent Portal
+              School/Admin Login
             </Link>
           </div>
         </div>

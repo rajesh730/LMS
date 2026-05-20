@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import EventSchoolInvitation from "@/models/EventSchoolInvitation";
+import EventNotice from "@/models/EventNotice";
 import ParticipationRequest from "@/models/ParticipationRequest";
 import { ensureSchoolInvitationsForPublishedEvents } from "@/lib/eventInvitations";
 import "@/models/Event";
@@ -10,6 +11,16 @@ import "@/models/ExternalOrganizer";
 import "@/models/User";
 
 export const dynamic = "force-dynamic";
+
+function getSchoolIds(session) {
+  return Array.from(
+    new Set(
+      [session?.user?.schoolId, session?.user?.id]
+        .filter(Boolean)
+        .map((value) => String(value))
+    )
+  );
+}
 
 export async function GET(req) {
   try {
@@ -20,12 +31,13 @@ export async function GET(req) {
     }
 
     await connectDB();
+    const schoolIds = getSchoolIds(session);
     await ensureSchoolInvitationsForPublishedEvents(session.user.id);
 
     const { searchParams } = new URL(req.url);
     const status = searchParams.get("status");
     const query = {
-      school: session.user.id,
+      school: { $in: schoolIds },
       status: { $ne: "WITHDRAWN" },
     };
 
@@ -53,13 +65,24 @@ export async function GET(req) {
     const eventIds = invitations
       .map((invitation) => invitation.event?._id)
       .filter(Boolean);
-    const participationRequests = await ParticipationRequest.find({
-      school: session.user.id,
-      event: { $in: eventIds },
-      status: { $in: ["PENDING", "APPROVED", "ENROLLED"] },
-    })
-      .select("event status student")
-      .lean();
+    const [participationRequests, eventNotices] = await Promise.all([
+      ParticipationRequest.find({
+        school: { $in: schoolIds },
+        event: { $in: eventIds },
+        status: { $in: ["PENDING", "APPROVED", "ENROLLED"] },
+      })
+        .select("event status student")
+        .lean(),
+      EventNotice.find({
+        event: { $in: eventIds },
+        round: null,
+        status: "PUBLISHED",
+        visibility: "PUBLIC",
+      })
+        .select("event title message type publishedAt createdAt")
+        .sort({ publishedAt: -1, createdAt: -1 })
+        .lean(),
+    ]);
 
     const participationByEvent = new Map();
     participationRequests.forEach((request) => {
@@ -80,6 +103,23 @@ export async function GET(req) {
       participationByEvent.set(eventId, summary);
     });
 
+    const latestNoticeByEvent = new Map();
+    const noticeCountByEvent = new Map();
+    eventNotices.forEach((notice) => {
+      const eventId = String(notice.event || "");
+      if (!eventId) return;
+      noticeCountByEvent.set(eventId, (noticeCountByEvent.get(eventId) || 0) + 1);
+      if (!latestNoticeByEvent.has(eventId)) {
+        latestNoticeByEvent.set(eventId, {
+          _id: notice._id,
+          title: notice.title,
+          message: notice.message,
+          type: notice.type,
+          publishedAt: notice.publishedAt || notice.createdAt,
+        });
+      }
+    });
+
     const invitationsWithParticipation = invitations.map((invitation) => ({
       ...invitation,
       participation: participationByEvent.get(String(invitation.event?._id)) || {
@@ -87,6 +127,9 @@ export async function GET(req) {
         participationStatus: null,
         registeredStudentCount: 0,
       },
+      latestEventNotice:
+        latestNoticeByEvent.get(String(invitation.event?._id)) || null,
+      eventNoticeCount: noticeCountByEvent.get(String(invitation.event?._id)) || 0,
     }));
 
     return NextResponse.json(

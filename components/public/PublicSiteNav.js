@@ -6,11 +6,12 @@ export default function PublicSiteNav({ active = "" }) {
   const navItems = [
     { href: "/events", label: "Events", key: "events" },
     { href: "/schools", label: "Schools", key: "schools" },
+    { href: "/challenges", label: "Pulse", key: "challenges" },
     { href: "/partners", label: "Partners", key: "partners" },
   ];
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-[#16396d] bg-[#081b39]/90 backdrop-blur-xl">
+    <nav className="pratyo-dark-shell sticky top-0 z-50 border-b shadow-lg shadow-black/20 backdrop-blur-xl">
       <div className="mx-auto flex min-h-16 max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
         <div className="flex items-center gap-3">
           <Link
@@ -18,11 +19,11 @@ export default function PublicSiteNav({ active = "" }) {
             className="flex items-center gap-3 rounded-lg pr-2 text-white transition hover:text-[#f6fbff]"
           >
             <PratyoLogo variant="icon" compact withSurface />
-            <span className="hidden sm:block">
-              <span className="block text-xs font-black uppercase tracking-[0.3em] text-[#8fc4ff]">
+              <span className="hidden sm:block">
+              <span className="pratyo-muted block text-xs font-black uppercase tracking-[0.3em]">
                 Pratyo
               </span>
-              <span className="block text-sm font-semibold text-white">
+              <span className="block text-sm font-semibold">
                 Public Hub
               </span>
             </span>
@@ -32,10 +33,10 @@ export default function PublicSiteNav({ active = "" }) {
         <div className="flex flex-wrap items-center gap-2">
           <Link
             href="/"
-            className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition ${
+            className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-semibold transition ${
               active === "home"
-                ? "bg-[#ffb21c] text-[#0a2f66]"
-                : "text-[#d2e3ff] hover:bg-[#0f2953] hover:text-white"
+                ? "bg-[#2f7fdb] text-white"
+                : "text-[#d2e3ff] hover:bg-white/10 hover:text-white"
             }`}
           >
             <FaHome />
@@ -43,12 +44,12 @@ export default function PublicSiteNav({ active = "" }) {
           </Link>
           {navItems.map((item) => (
             <Link
-              key={item.key}
-              href={item.href}
-              className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${
+            key={item.key}
+            href={item.href}
+              className={`rounded-full px-3 py-2 text-sm font-semibold transition ${
                 active === item.key
-                  ? "bg-[#ffb21c] text-[#0a2f66]"
-                  : "text-[#d2e3ff] hover:bg-[#0f2953] hover:text-white"
+                  ? "bg-[#2f7fdb] text-white"
+                  : "text-[#d2e3ff] hover:bg-white/10 hover:text-white"
               }`}
             >
               {item.label}
@@ -56,13 +57,13 @@ export default function PublicSiteNav({ active = "" }) {
           ))}
           <Link
             href="/login"
-            className="rounded-lg border border-[#16396d] px-3 py-2 text-sm font-semibold text-[#eef5ff] transition hover:bg-[#0f2953]"
+            className="rounded-full border border-[#2f7fdb]/30 px-3 py-2 text-sm font-semibold text-[#eef5ff] transition hover:bg-white/10"
           >
             Login
           </Link>
           <Link
             href="/register"
-            className="inline-flex items-center gap-2 rounded-lg bg-[#ffb21c] px-3 py-2 text-sm font-black text-[#0a2f66] transition hover:bg-[#ffc44d]"
+            className="inline-flex items-center gap-2 rounded-full bg-[#2f7fdb] px-3 py-2 text-sm font-black text-white transition hover:bg-[#123f82]"
           >
             <FaCalendarAlt />
             Register

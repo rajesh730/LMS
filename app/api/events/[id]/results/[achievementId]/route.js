@@ -4,23 +4,16 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import Event from "@/models/Event";
 import Achievement from "@/models/Achievement";
+import { canManageEventRounds } from "@/lib/eventRoundAccess";
 import { buildCertificateCode, buildCertificatePath } from "@/lib/results";
-
-function canManageResults(session, event) {
-  if (!session?.user || !event) return false;
-  if (session.user.role === "SUPER_ADMIN") {
-    return event.eventScope === "PLATFORM";
-  }
-  if (session.user.role === "SCHOOL_ADMIN") {
-    return String(event.school) === String(session.user.id);
-  }
-  return false;
-}
 
 export async function PATCH(req, props) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || !["SUPER_ADMIN", "SCHOOL_ADMIN"].includes(session.user.role)) {
+    if (
+      !session ||
+      !["SUPER_ADMIN", "SCHOOL_ADMIN", "TEACHER"].includes(session.user.role)
+    ) {
       return NextResponse.json(
         { success: false, message: "Unauthorized" },
         { status: 401 }
@@ -41,7 +34,7 @@ export async function PATCH(req, props) {
         { status: 404 }
       );
     }
-    if (!canManageResults(session, event)) {
+    if (!canManageEventRounds(session, event)) {
       return NextResponse.json(
         { success: false, message: "Forbidden" },
         { status: 403 }

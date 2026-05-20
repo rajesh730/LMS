@@ -1,7 +1,6 @@
 import mongoose from "mongoose";
 
 export const ROUND_PARTICIPANT_STATUSES = [
-  "PARTICIPATED",
   "SELECTED",
   "DISQUALIFIED",
   "NOT_ATTEMPTED",
@@ -52,7 +51,7 @@ const RoundParticipantSchema = new mongoose.Schema(
     status: {
       type: String,
       enum: ROUND_PARTICIPANT_STATUSES,
-      default: "PARTICIPATED",
+      default: "NOT_ATTEMPTED",
     },
     shortlisted: {
       type: Boolean,
@@ -97,6 +96,9 @@ const RoundParticipantSchema = new mongoose.Schema(
 );
 
 RoundParticipantSchema.pre("validate", function () {
+  if (this.status === "PARTICIPATED") {
+    this.status = "NOT_ATTEMPTED";
+  }
   this.shortlisted = ["SELECTED"].includes(this.status);
 });
 

@@ -4,25 +4,23 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   FaArchive,
+  FaBell,
   FaCalendarAlt,
   FaCheckCircle,
   FaChevronDown,
   FaChevronUp,
   FaEdit,
-  FaGlobe,
   FaHistory,
-  FaLock,
   FaCog,
   FaUsers,
 } from "react-icons/fa";
 import { useSession } from "next-auth/react";
 import EventEditorForm from "./EventEditorForm";
 import EventParticipationForm from "./EventParticipationForm";
+import EmptyState from "@/components/EmptyState";
+import LoadingState from "@/components/ui/LoadingState";
 import { getEventStage, getStageClasses, isDatePast } from "@/lib/eventUiStatus";
-
-function formatVisibility(value) {
-  return String(value || "PRIVATE").replaceAll("_", " ");
-}
+import { isTeamEventLike } from "@/lib/eventParticipationFormat";
 
 function formatType(value) {
   return String(value || "EVENT").replaceAll("_", " ");
@@ -167,27 +165,27 @@ export default function SchoolOwnedEventsManager({
       {statusMessage && <p className="text-sm text-emerald-300">{statusMessage}</p>}
 
       {loading ? (
-        <div className="text-slate-400">Loading school events...</div>
+        <LoadingState
+          title="Loading school events"
+          message="Preparing your school-created events and registration status."
+        />
       ) : filteredEvents.length === 0 ? (
-        <div className="rounded-xl border border-slate-800 bg-slate-950/50 p-6 text-slate-400">
-          <p className="font-semibold text-slate-300">
-            No {activeFilter.toLowerCase()} school events yet.
-          </p>
-          <p className="mt-1 text-sm text-slate-500">
-            {activeFilter === "ACTIVE"
+        <EmptyState
+          icon={FaCalendarAlt}
+          title={`No ${activeFilter.toLowerCase()} school events yet`}
+          description={
+            activeFilter === "ACTIVE"
               ? "Create a school event to start registration, rounds, results, and certificates."
               : activeFilter === "COMPLETED"
               ? "Completed events will appear here after you close them."
-              : "Archived events will appear here and can be restored if needed."}
-          </p>
-        </div>
+              : "Archived events will appear here and can be restored if needed."
+          }
+        />
       ) : (
         <div className="space-y-4">
           {filteredEvents.map((event) => {
             const isExpanded = expandedId === event._id;
-            const mentorNames = (event.assignedMentors || []).map(
-              (mentor) => mentor.name
-            );
+            const isTeamEvent = isTeamEventLike(event);
             const stage = getEventStage(event);
             const eventState = String(event.lifecycleStatus || "ACTIVE").toUpperCase();
             const registrationDeadline = event.registrationDeadline || event.deadline;
@@ -212,17 +210,11 @@ export default function SchoolOwnedEventsManager({
                           {formatType(event.eventType)}
                         </span>
                         <span className="px-2.5 py-1 rounded-full text-xs bg-slate-800 text-slate-300 border border-slate-700">
-                          {formatVisibility(event.visibility)}
+                          {isTeamEvent ? "Group event" : "Individual event"}
                         </span>
-                        {event.publicHighlightsEnabled ? (
-                          <span className="px-2.5 py-1 rounded-full text-xs bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
-                            Public Highlights On
-                          </span>
-                        ) : (
-                          <span className="px-2.5 py-1 rounded-full text-xs bg-slate-800 text-slate-400 border border-slate-700">
-                            Public Highlights Off
-                          </span>
-                        )}
+                        <span className="px-2.5 py-1 rounded-full text-xs bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
+                          Visible to school students
+                        </span>
                       </div>
 
                       <p className="text-sm text-slate-400 max-w-3xl">{event.description}</p>
@@ -245,23 +237,17 @@ export default function SchoolOwnedEventsManager({
                         </span>
                         <span className="inline-flex items-center gap-2">
                           <FaUsers className="text-emerald-400" />
-                          {event.studentCount || 0} student registrations
+                          {isTeamEvent
+                            ? `${event.teamCount || 0} team registrations`
+                            : `${event.studentCount || 0} student registrations`}
                         </span>
-                        <span className="inline-flex items-center gap-2">
-                          {event.visibility === "PUBLIC" ? (
-                            <FaGlobe className="text-yellow-400" />
-                          ) : (
-                            <FaLock className="text-slate-400" />
-                          )}
-                          {mentorNames.length} mentors assigned
-                        </span>
+                        {registrationDeadline && (
+                          <span>
+                            Registration closes{" "}
+                            {new Date(registrationDeadline).toLocaleDateString()}
+                          </span>
+                        )}
                       </div>
-
-                      {mentorNames.length > 0 && (
-                        <p className="text-xs text-slate-500">
-                          Mentors: {mentorNames.join(", ")}
-                        </p>
-                      )}
                     </div>
 
                     <div className="flex flex-wrap gap-2 lg:justify-end">
@@ -279,6 +265,13 @@ export default function SchoolOwnedEventsManager({
                       >
                         <FaCog />
                         Manage Event
+                      </Link>
+                      <Link
+                        href={`/school/events/${event._id}/manage?tab=notices`}
+                        className="px-3 py-2 rounded-lg bg-[#0a2f66] hover:bg-[#1150a1] text-white text-sm transition inline-flex items-center gap-2"
+                      >
+                        <FaBell />
+                        Notices
                       </Link>
                       <button
                         type="button"
@@ -326,12 +319,18 @@ export default function SchoolOwnedEventsManager({
                         className="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-100 text-sm transition inline-flex items-center gap-2 disabled:cursor-not-allowed disabled:bg-slate-800/50 disabled:text-slate-500"
                         title={
                           canQuickRegister
-                            ? "Quickly add or update registered students"
+                            ? isTeamEvent
+                              ? "Quickly add or update registered teams"
+                              : "Quickly add or update registered students"
                             : "Registration is locked for this event"
                         }
                       >
                         {isExpanded ? <FaChevronUp /> : <FaChevronDown />}
-                        {canQuickRegister ? "Quick Register" : "Registration Locked"}
+                        {canQuickRegister
+                          ? isTeamEvent
+                            ? "Quick Team Registration"
+                            : "Quick Student Registration"
+                          : "Registration Locked"}
                       </button>
                     </div>
                   </div>

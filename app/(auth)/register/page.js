@@ -18,6 +18,7 @@ import {
   FaUserTie,
   FaPalette,
   FaLock,
+  FaHome,
 } from "react-icons/fa";
 
 const STEPS = [
@@ -315,7 +316,7 @@ export default function RegisterPage() {
               onChange={(e) =>
                 updateFormData({ schoolNameNepali: e.target.value })
               }
-              placeholder="स्कूलको नाम"
+              placeholder="School name in Nepali"
             />
           </div>
         </div>
@@ -945,7 +946,7 @@ export default function RegisterPage() {
           </div>
           {formData.useDefaultTheme && (
             <p className="text-emerald-400 text-sm mt-3">
-              ✓ Using default professional theme
+              Using default professional theme
             </p>
           )}
         </div>
@@ -973,6 +974,29 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen bg-slate-900 py-8 px-4">
       <div className="max-w-4xl mx-auto">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-700 px-3 py-2 text-sm font-semibold text-slate-300 transition hover:bg-slate-800 hover:text-white"
+          >
+            <FaHome />
+            Back to home
+          </Link>
+          <div className="flex flex-wrap gap-2 text-sm">
+            <Link
+              href="/events"
+              className="rounded-lg border border-slate-700 px-3 py-2 font-semibold text-slate-300 transition hover:bg-slate-800 hover:text-white"
+            >
+              Events
+            </Link>
+            <Link
+              href="/login"
+              className="rounded-lg border border-emerald-500/30 px-3 py-2 font-semibold text-emerald-200 transition hover:bg-emerald-500/10"
+            >
+              Sign in
+            </Link>
+          </div>
+        </div>
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-white mb-2">
             School Registration
@@ -1031,7 +1055,7 @@ export default function RegisterPage() {
                 className="text-slate-400 hover:text-slate-200 transition-colors text-sm"
                 onClick={() => router.push("/login")}
               >
-                ← Back to Login
+                Back to Login
               </button>
             </div>
 

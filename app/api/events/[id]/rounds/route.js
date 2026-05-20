@@ -4,7 +4,6 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import dbConnect from "@/lib/db";
 import EventRound from "@/models/EventRound";
 import RoundParticipant from "@/models/RoundParticipant";
-import EventNotice from "@/models/EventNotice";
 import RoundSubmission from "@/models/RoundSubmission";
 import ParticipationRequest from "@/models/ParticipationRequest";
 import { getManageableEventOrResponse } from "@/lib/eventRoundAccess";
@@ -69,15 +68,12 @@ export async function GET(req, props) {
 
     const rounds = await getOrderedRounds(params.id);
     const roundIds = rounds.map((round) => round._id);
-    const [participants, notices, submissions] = await Promise.all([
+    const [participants, submissions] = await Promise.all([
       RoundParticipant.find({ round: { $in: roundIds } })
         .populate("student", "name grade rollNumber platformStudentId")
         .populate("captainStudent", "name grade")
         .populate("school", "schoolName name")
         .sort({ roundNumber: 1, createdAt: 1 })
-        .lean(),
-      EventNotice.find({ event: params.id, round: { $in: roundIds } })
-        .sort({ createdAt: -1 })
         .lean(),
       RoundSubmission.find({ event: params.id, round: { $in: roundIds } })
         .sort({ submittedAt: -1 })
@@ -101,17 +97,10 @@ export async function GET(req, props) {
       );
     });
 
-    const noticesByRound = new Map();
-    notices.forEach((notice) => {
-      const key = String(notice.round);
-      noticesByRound.set(key, [...(noticesByRound.get(key) || []), notice]);
-    });
-
     return NextResponse.json({
       rounds: rounds.map((round) => ({
         ...round,
         participants: participantsByRound.get(String(round._id)) || [],
-        notices: noticesByRound.get(String(round._id)) || [],
       })),
     });
   } catch (error) {
@@ -272,22 +261,6 @@ export async function POST(req, props) {
       }));
       await RoundParticipant.bulkWrite(operations);
 
-      // Send automatic Notice
-      await EventNotice.create({
-        event: params.id,
-        round: round._id,
-        title: `${round.title} initialized`,
-        message: `A new round has been created. ${operations.length} eligible ${
-          String(event?.participationFormat || "INDIVIDUAL").toUpperCase() === "TEAM"
-            ? "team member records"
-            : "students"
-        } have been added to this round. Please check the round instructions.`,
-        type: "ROUND_INSTRUCTIONS",
-        targetAudience: "REGISTERED_SCHOOLS",
-        visibility: "PUBLIC",
-        status: "PUBLISHED",
-        createdBy: session.user.id,
-      });
     }
 
     return NextResponse.json(

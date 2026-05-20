@@ -1,26 +1,20 @@
-# Multi-School Talent and Public Showcase Platform
+# Pratyo School Platform
 
-This project is a Next.js + MongoDB platform for schools to run and promote talent, extracurricular activities, showcases, and inter-school competitions.
+Pratyo is a Next.js + MongoDB platform for school activities, events, notices, student writing, certificates, and platform-led student challenges.
 
-## Product Direction
+## Product Scope
 
-Strategic focus:
+Core workflows:
 
-- talent and extracurricular profiles
-- school-owned and platform-owned events
-- submissions and judging workflows
-- achievements and certificates
-- public school profile pages and public event pages
+- Platform admins approve schools, manage platform events, publish notices, and run student challenges.
+- Schools manage students and teachers, create school events, register participants, send student notices, review writing, and publish their internal magazine.
+- Students view school events, notices, challenges, approved magazine articles, and their own writing workspace.
+- Public visitors can view approved platform pages, public events, schools, notices, and selected challenge showcase content.
 
-Not a target direction:
+Not included in this phase:
 
-- broad ERP/LMS modules (attendance, exams, marks, report cards)
-
-For the execution plan, see:
-
-- `SHOW_TALENT_MATURE_MVP_CODE_CLEANUP_AND_PUBLIC_SHOWCASE_BLUEPRINT.md`
-- `RECONSTRUCTION_ROADMAP.md`
-- `MANUAL_QA_CHECKLIST.md`
+- ERP/LMS modules such as attendance, exams, marks, report cards, or fee management.
+- Parent mode, student self-registration for events, image-heavy magazines, and complex judging rubrics.
 
 ## Tech Stack
 
@@ -32,10 +26,10 @@ For the execution plan, see:
 
 ## Core Roles
 
-- `SUPER_ADMIN`: platform owner, school approvals, platform events, moderation
-- `SCHOOL_ADMIN`: school setup, school events, submissions and publishing controls
-- `TEACHER`: mentoring, reviews, judging when assigned
-- `STUDENT`: profile, participation, submissions
+- `SUPER_ADMIN`: platform owner, school approvals, platform events, notices, challenges, and moderation.
+- `SCHOOL_ADMIN`: school setup, student and teacher management, school events, notices, magazine review, and certificates.
+- `TEACHER`: school operations support where enabled.
+- `STUDENT`: events, notices, writing, school magazine, and platform challenges.
 
 ## Local Setup
 
@@ -45,13 +39,15 @@ For the execution plan, see:
 npm install
 ```
 
-2. Create `.env.local`:
+2. Create `.env.local` from `.env.example`:
 
 ```env
 MONGODB_URI=mongodb://localhost:27017/schoolproject
 NEXTAUTH_SECRET=your-secret
 NEXTAUTH_URL=http://localhost:3000
-NODE_ENV=development
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+SUPER_ADMIN_BOOTSTRAP_TOKEN=change-this-token
+ENABLE_DEMO_SEED=false
 ```
 
 3. Run development server:
@@ -69,10 +65,9 @@ npm run build
 ## Repository Areas
 
 - `app/`: routes and API handlers
-- `components/`: dashboards, event, showcase, and workflow components
+- `components/`: dashboards, events, notices, magazine, challenge, and workflow components
 - `models/`: Mongoose schemas
 - `lib/`: shared utilities and services
-- `scripts/`: cleanup and migration helpers
 
 ## Quality Gate
 
@@ -80,35 +75,18 @@ Before pilot or release:
 
 - run `npm run lint`
 - run `npm run build`
-- execute manual flows in `MANUAL_QA_CHECKLIST.md`
-- verify role isolation and public visibility safety
+- manually test login and dashboard flows for `SUPER_ADMIN`, `SCHOOL_ADMIN`, `TEACHER`, and `STUDENT`
+- manually test notices, school events, platform events, magazine publishing, platform challenges, and certificates
+- verify role isolation, school data isolation, and public/private visibility rules
 
 ## Deployment
 
 - Use Vercel or any Node.js hosting that supports Next.js App Router.
-- Set production environment variables (`MONGODB_URI`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL`).
+- Set production environment variables from `.env.example`.
+- Use a strong random `NEXTAUTH_SECRET`.
+- Set `NEXTAUTH_URL` and `NEXT_PUBLIC_SITE_URL` to the production domain.
+- Keep `ENABLE_DEMO_SEED=false` in production.
 - Run build check before each deployment.
-
-## References
-
-- [NextAuth.js Documentation](https://next-auth.js.org)
-- [Tailwind CSS](https://tailwindcss.com)
-
-## Contributing
-
-1. Create a new branch: `git checkout -b feature/your-feature`
-2. Make your changes
-3. Commit: `git commit -m "Add feature: description"`
-4. Push: `git push origin feature/your-feature`
-5. Create a Pull Request
-
-## Support
-
-For issues or questions:
-
-1. Check existing issues on GitHub
-2. Create a new issue with detailed description
-3. Contact the development team
 
 ## License
 
@@ -117,8 +95,4 @@ This project is proprietary. All rights reserved.
 ## Authors
 
 - **Rajesh Pandey** - Initial Development
-- **Partner Developer** - To be added
-
----
-
-**Last Updated**: April 25, 2026
+- **Rajesh Pandey** - Product owner
