@@ -9,7 +9,7 @@ import {
 } from "@/lib/challengeShowcase";
 
 export const metadata = {
-  title: "Challenge Showcase",
+  title: "Pratyo Pulse",
   description: "View selected platform challenge responses",
 };
 

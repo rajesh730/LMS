@@ -10,7 +10,7 @@ export default function DashboardChallengeShowcaseClient({ responses = [] }) {
       <PageHeader
         icon={FaFeatherAlt}
         eyebrow="Platform Recognition"
-        title="Challenge Showcase"
+        title="Pratyo Pulse"
         description="Read selected student responses from platform challenges and see the schools behind them."
       />
 

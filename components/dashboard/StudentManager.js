@@ -256,7 +256,10 @@ export default function StudentManager({ initialGrade, hideGradeFilter = false }
               ) : students.length === 0 ? (
                 <tr>
                   <td colSpan="6" className="p-8 text-center text-slate-500">
-                    <EmptyState message="No students found" />
+                    <EmptyState
+                      title="No students added yet"
+                      description="Add students manually or upload a CSV so they can access events, notices, writing, and magazine content."
+                    />
                   </td>
                 </tr>
               ) : (

@@ -20,7 +20,7 @@ const STATUS_STYLES = {
   DRAFT: "bg-slate-700/70 text-slate-200",
   SUBMITTED: "bg-blue-500/15 text-blue-200",
   APPROVED: "bg-emerald-500/15 text-emerald-200",
-  REJECTED: "bg-amber-500/15 text-amber-200",
+  REJECTED: "bg-red-500/15 text-red-200",
 };
 
 function formatStatus(status) {
@@ -279,7 +279,7 @@ export default function StudentWritingWorkspace() {
         meta={
           student ? (
             <p className="text-sm text-slate-400">
-              {student.name} · {student.grade} · Roll {student.rollNumber}
+              {student.name} - {student.grade} - Roll {student.rollNumber}
             </p>
           ) : null
         }
@@ -290,12 +290,12 @@ export default function StudentWritingWorkspace() {
 
       <section className="rounded-xl border border-slate-800 bg-slate-900/70 p-6">
         <div className="flex items-center gap-3">
-          <FaLightbulb className="text-amber-300" />
+          <FaLightbulb className="text-blue-300" />
           <div>
             <h2 className="text-2xl font-bold text-white">Student Challenges</h2>
             <p className="mt-1 text-sm text-slate-400">
-              Respond to active platform topics. Super admin selects the best
-              responses for public showcase.
+              Respond to active platform topics. Selected responses can appear
+              on Pratyo Pulse with student and school recognition.
             </p>
           </div>
         </div>
@@ -348,7 +348,7 @@ export default function StudentWritingWorkspace() {
                   className="mt-4 inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-500 disabled:bg-slate-800 disabled:text-slate-400"
                 >
                   <FaEdit />
-                  {challenge.response ? "Response Submitted" : "Write Response"}
+                  {challenge.response ? "Submitted" : "Respond now"}
                 </button>
               </article>
             ))}
@@ -365,7 +365,7 @@ export default function StudentWritingWorkspace() {
               </h2>
               <p className="mt-2 text-sm text-slate-400">
                 {student
-                  ? `${student.name} · ${student.grade} · Roll ${student.rollNumber}`
+                  ? `${student.name} - ${student.grade} - Roll ${student.rollNumber}`
                   : "Your writing will be reviewed by your school before it appears in the magazine."}
               </p>
             </div>
@@ -375,19 +375,19 @@ export default function StudentWritingWorkspace() {
                 onClick={resetForm}
                 className="rounded-lg border border-slate-700 px-3 py-2 text-sm font-semibold text-slate-200 transition hover:bg-slate-800"
               >
-                New Draft
+                New draft
               </button>
             )}
           </div>
 
           <div className="mt-6 space-y-4">
             {form.challengeId && (
-              <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 p-4 text-sm text-amber-100">
+              <div className="rounded-xl border border-blue-500/20 bg-blue-500/10 p-4 text-sm text-blue-100">
                 <p className="font-semibold">
                   Challenge response: {form.challengeTitle}
                 </p>
                 {form.challengePrompt && (
-                  <p className="mt-2 whitespace-pre-wrap text-amber-100/80">
+                  <p className="mt-2 whitespace-pre-wrap text-blue-100/80">
                     {form.challengePrompt}
                   </p>
                 )}
@@ -438,25 +438,17 @@ export default function StudentWritingWorkspace() {
             />
 
             <div className="flex flex-wrap gap-3">
-              <button
-                type="button"
-                disabled={saving}
-                onClick={() => handleSave("DRAFT")}
-                className={`inline-flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-white transition disabled:opacity-60 ${
-                  form.challengeId
-                    ? "bg-slate-800 text-slate-400"
-                    : "bg-slate-700 hover:bg-slate-600"
-                }`}
-              >
-                <FaEdit />
-                {form.challengeId
-                  ? "No Draft for Challenge"
-                  : saving
-                  ? "Saving..."
-                  : form.id
-                  ? "Update Draft"
-                  : "Save Draft"}
-              </button>
+              {!form.challengeId && (
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={() => handleSave("DRAFT")}
+                  className="inline-flex items-center gap-2 rounded-xl bg-slate-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-600 disabled:opacity-60"
+                >
+                  <FaEdit />
+                  {saving ? "Saving..." : form.id ? "Update draft" : "Save as draft"}
+                </button>
+              )}
               <button
                 type="button"
                 disabled={saving}
@@ -467,8 +459,8 @@ export default function StudentWritingWorkspace() {
                 {saving
                   ? "Submitting..."
                   : form.challengeId
-                  ? "Submit to Platform"
-                  : "Submit to School"}
+                  ? "Submit response"
+                  : "Submit for review"}
               </button>
             </div>
           </div>
@@ -527,7 +519,7 @@ export default function StudentWritingWorkspace() {
                           {writing.category}
                         </p>
                         {writing.submissionSource === "PLATFORM_CHALLENGE" && (
-                          <p className="mt-2 text-xs font-semibold text-amber-200">
+                          <p className="mt-2 text-xs font-semibold text-blue-200">
                             Challenge: {writing.challengeTitle || "Student Challenge"}
                           </p>
                         )}
@@ -535,7 +527,7 @@ export default function StudentWritingWorkspace() {
                     </div>
 
                     {writing.reviewNote && (
-                      <div className="mt-3 rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 text-sm text-amber-100">
+                      <div className="mt-3 rounded-lg border border-blue-500/20 bg-blue-500/10 p-3 text-sm text-blue-100">
                         <span className="font-semibold">School note:</span>{" "}
                         {writing.reviewNote}
                       </div>
@@ -543,7 +535,7 @@ export default function StudentWritingWorkspace() {
 
                     <div className="mt-4 text-xs text-slate-500">
                       Updated {formatDate(writing.updatedAt)}
-                      {writing.submittedAt && ` · Submitted ${formatDate(writing.submittedAt)}`}
+                      {writing.submittedAt && ` - Submitted ${formatDate(writing.submittedAt)}`}
                     </div>
 
                     <div className="mt-4 flex flex-wrap gap-2">

@@ -60,7 +60,7 @@ function EventBadge({ children, tone = "slate" }) {
 
   return (
     <span
-      className={`rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-wide ${
+      className={`inline-flex max-w-full items-center rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-wide sm:text-xs ${
         toneMap[tone] || toneMap.slate
       }`}
     >
@@ -122,19 +122,19 @@ export default async function PublicEventsPage() {
   const resultCount = publicEvents.filter((event) => event.resultsPublished).length;
 
   return (
-    <main className="min-h-screen bg-[#08111f] text-white">
+    <main className="min-h-screen w-full overflow-x-hidden bg-[#08111f] text-white">
       <PublicSiteNav active="events" />
-      <section className="relative overflow-hidden border-b border-white/10 px-6 py-14 md:px-12">
+      <section className="relative overflow-hidden border-b border-white/10 px-4 py-10 sm:px-6 sm:py-14 md:px-12">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(56,189,248,.22),transparent_32%),radial-gradient(circle_at_76%_18%,rgba(167,139,250,.18),transparent_30%)]" />
-        <div className="relative mx-auto grid max-w-6xl gap-8 lg:grid-cols-[1fr_360px] lg:items-center">
-          <div className="max-w-3xl">
-            <p className="text-sm uppercase tracking-[0.35em] text-sky-300 mb-4">
+        <div className="relative mx-auto grid w-full max-w-6xl gap-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-center">
+          <div className="min-w-0 max-w-3xl">
+            <p className="mb-4 text-xs uppercase tracking-[0.18em] text-sky-300 sm:text-sm">
               Public Events
             </p>
-            <h1 className="text-4xl md:text-5xl font-black tracking-tight">
+            <h1 className="break-words text-3xl font-black tracking-tight sm:text-4xl md:text-5xl">
               Discover talent showcases, competitions, and school events before login
             </h1>
-            <p className="text-slate-300 mt-4 text-lg leading-8">
+            <p className="mt-4 text-base leading-7 text-slate-300 sm:text-lg sm:leading-8">
               Explore what schools and the platform are organizing across music,
               debate, arts, innovation, and more.
             </p>
@@ -184,7 +184,7 @@ export default async function PublicEventsPage() {
         </div>
       </section>
 
-      <div className="max-w-6xl mx-auto px-6 py-12 md:px-12">
+      <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 sm:py-12 md:px-12">
         {featuredEvents.length > 0 && (
           <section className="mb-14">
             <div className="mb-6 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
@@ -198,28 +198,28 @@ export default async function PublicEventsPage() {
                 Highlighted public competitions and school activity records.
               </p>
             </div>
-            <div className="grid lg:grid-cols-2 gap-6">
+            <div className="grid min-w-0 gap-5 lg:grid-cols-2 lg:gap-6">
               {featuredEvents.map((event) => (
                 <Link
                   key={String(event._id)}
                   href={`/events/${event._id}`}
-                  className="rounded-2xl border border-white/10 bg-white/[0.05] p-6 transition hover:border-sky-400/50 hover:bg-white/[0.08]"
+                  className="min-w-0 rounded-2xl border border-white/10 bg-white/[0.05] p-5 transition hover:border-sky-400/50 hover:bg-white/[0.08] sm:p-6"
                 >
                   {(() => {
                     const partnerName = getVisiblePartnerName(event);
                     return (
                       <>
-                  <div className="flex items-center justify-between gap-4 mb-3">
+                  <div className="mb-3 flex min-w-0 flex-wrap items-center justify-between gap-2 sm:gap-4">
                     <EventBadge tone="blue">Featured</EventBadge>
-                    <div className="flex items-center gap-2">
+                    <div className="flex min-w-0 flex-wrap items-center justify-start gap-2 sm:justify-end">
                       {event.resultsPublished && (
                         <EventBadge tone="amber">Results Published</EventBadge>
                       )}
                       <EventBadge>{event.eventType}</EventBadge>
                     </div>
                   </div>
-                  <h3 className="text-2xl font-bold">{event.title}</h3>
-                  <p className="text-slate-400 mt-3 line-clamp-3">
+                  <h3 className="break-words text-xl font-bold sm:text-2xl">{event.title}</h3>
+                  <p className="mt-3 line-clamp-3 break-words text-slate-400">
                     {event.description}
                   </p>
                   <div className="mt-5 text-sm text-slate-300 space-y-1">
@@ -232,7 +232,7 @@ export default async function PublicEventsPage() {
                         Partner: {partnerName}
                       </div>
                     )}
-                    <div>
+                    <div className="break-words">
                       Organizer:{" "}
                       {event.eventScope === "PLATFORM"
                         ? "Platform"
@@ -266,16 +266,16 @@ export default async function PublicEventsPage() {
               Public events will appear here after they are published or approved as partner announcements.
             </div>
           ) : (
-            <div className="grid lg:grid-cols-2 gap-6">
+            <div className="grid min-w-0 gap-5 lg:grid-cols-2 lg:gap-6">
               {visibleAnnouncements.map((proposal) => {
                 const partnerName = getVisibleProposalPartnerName(proposal);
 
                 return (
                   <article
                     key={String(proposal._id)}
-                    className="rounded-2xl border border-sky-400/20 bg-sky-400/[0.06] p-6"
+                    className="min-w-0 rounded-2xl border border-sky-400/20 bg-sky-400/[0.06] p-5 sm:p-6"
                   >
-                    <div className="flex items-center justify-between gap-4 mb-3">
+                    <div className="mb-3 flex min-w-0 flex-wrap items-center justify-between gap-2 sm:gap-4">
                       <EventBadge tone="blue">
                         <span className="inline-flex items-center gap-2">
                           <FaBullhorn />
@@ -284,8 +284,8 @@ export default async function PublicEventsPage() {
                       </EventBadge>
                       <EventBadge>{proposal.eventMode || "Event"}</EventBadge>
                     </div>
-                    <h3 className="text-xl font-bold">{proposal.eventTitle}</h3>
-                    <p className="text-slate-400 mt-3 line-clamp-3">
+                    <h3 className="break-words text-xl font-bold">{proposal.eventTitle}</h3>
+                    <p className="mt-3 line-clamp-3 break-words text-slate-400">
                       {proposal.eventDescription}
                     </p>
                     <div className="mt-5 text-sm text-slate-300">
@@ -306,17 +306,17 @@ export default async function PublicEventsPage() {
               <Link
                 key={String(event._id)}
                 href={`/events/${event._id}`}
-                className="rounded-2xl border border-white/10 bg-white/[0.05] p-6 transition hover:border-emerald-400/50 hover:bg-white/[0.08]"
+                className="min-w-0 rounded-2xl border border-white/10 bg-white/[0.05] p-5 transition hover:border-emerald-400/50 hover:bg-white/[0.08] sm:p-6"
               >
                 {(() => {
                   const partnerName = getVisiblePartnerName(event);
                   return (
                     <>
-                <div className="flex items-center justify-between gap-4 mb-3">
+                <div className="mb-3 flex min-w-0 flex-wrap items-center justify-between gap-2 sm:gap-4">
                   <EventBadge tone={event.eventScope === "PLATFORM" ? "blue" : "emerald"}>
                     {event.eventScope}
                   </EventBadge>
-                  <div className="flex items-center gap-2">
+                  <div className="flex min-w-0 flex-wrap items-center justify-start gap-2 sm:justify-end">
                     {event.resultsPublished && (
                       <EventBadge tone="amber">
                         <span className="inline-flex items-center gap-2">
@@ -328,21 +328,23 @@ export default async function PublicEventsPage() {
                     <EventBadge>{event.eventType}</EventBadge>
                   </div>
                 </div>
-                <h3 className="text-xl font-bold">{event.title}</h3>
-                <p className="text-slate-400 mt-3 line-clamp-3">{event.description}</p>
+                <h3 className="break-words text-xl font-bold">{event.title}</h3>
+                <p className="mt-3 line-clamp-3 break-words text-slate-400">{event.description}</p>
                 <div className="mt-5 text-sm text-slate-300">
                   <div className="flex items-center gap-2">
                     <FaCalendarAlt className="text-slate-500" />
                     {formatDate(event.date)}
                   </div>
                   {event.eligibleGrades?.length > 0 && (
-                    <div className="mt-2 flex items-center gap-2 text-slate-400">
+                    <div className="mt-2 flex min-w-0 items-start gap-2 break-words text-slate-400">
                       <FaUsers className="text-slate-500" />
-                      {event.eligibleGrades.join(", ")}
+                      <span className="min-w-0 break-words">
+                        {event.eligibleGrades.join(", ")}
+                      </span>
                     </div>
                   )}
                   {partnerName && (
-                    <div className="mt-1 text-emerald-300">
+                    <div className="mt-1 break-words text-emerald-300">
                       In partnership with {partnerName}
                     </div>
                   )}

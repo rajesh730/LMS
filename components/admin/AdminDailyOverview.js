@@ -254,7 +254,7 @@ export default function AdminDailyOverview({
             description={
               latestSubmission?.student?.name
                 ? `Submission from ${latestSubmission.student.name}.`
-                : "Review student responses and select the best for public showcase."
+                : "Review student responses and select the best for Pratyo Pulse."
             }
             actionLabel="Review challenges"
             tone="violet"
@@ -266,7 +266,7 @@ export default function AdminDailyOverview({
             count={publishedChallenges.length}
             label="live"
             title="Student challenge program"
-            description="Published challenges are visible to students and can produce public showcase responses."
+            description="Published challenges are visible to students and can produce Pratyo Pulse responses."
             actionLabel="Manage challenges"
             tone="rose"
           />

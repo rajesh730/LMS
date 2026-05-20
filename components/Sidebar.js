@@ -60,7 +60,7 @@ export default function Sidebar({
       icon: FaCalendarAlt,
     },
     {
-      name: "Challenge Showcase",
+      name: "Pratyo Pulse",
       href: "/school/dashboard?tab=challenge-showcase",
       icon: FaLightbulb,
     },
@@ -70,7 +70,7 @@ export default function Sidebar({
       icon: FaBell,
     },
     {
-      name: "Public Showcase",
+      name: "Public Profile",
       href: "/school/dashboard?tab=showcase",
       icon: FaSchool,
     },
@@ -88,7 +88,7 @@ export default function Sidebar({
   const studentLinks = [
     { name: "My Activity", href: "/student/dashboard", icon: FaSchool },
     { name: "Events", href: "/student/events", icon: FaCalendarAlt },
-    { name: "Challenge Showcase", href: "/student/challenges", icon: FaLightbulb },
+    { name: "Pratyo Pulse", href: "/student/challenges", icon: FaLightbulb },
     { name: "Notices", href: "/student/notices", icon: FaBell },
     { name: "My Writing", href: "/student/writing", icon: FaFeatherAlt },
     { name: "School Magazine", href: "/student/magazine", icon: FaBookOpen },
@@ -109,11 +109,11 @@ export default function Sidebar({
 
   return (
     <aside
-      className={`pratyo-dark-shell fixed left-0 top-0 z-50 flex h-screen w-64 flex-col border-r backdrop-blur-xl transition-transform duration-300 lg:translate-x-0 ${
+      className={`pratyo-dark-shell fixed left-0 top-0 z-50 flex h-dvh w-[min(88vw,18rem)] flex-col border-r backdrop-blur-xl transition-transform duration-300 lg:h-screen lg:w-64 lg:translate-x-0 ${
         isMobileOpen ? "translate-x-0" : "-translate-x-full"
       }`}
     >
-      <div className="border-b border-white/10 p-6">
+      <div className="border-b border-white/10 p-4 sm:p-6">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
           <PratyoLogo variant="icon" compact withSurface />
@@ -137,7 +137,7 @@ export default function Sidebar({
         </div>
       </div>
 
-      <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+      <nav className="flex-1 space-y-2 overflow-y-auto p-3 sm:p-4">
         {links.map((link) => {
           const Icon = link.icon;
           const isActive = link.href === (pathname + (currentTab ? `?tab=${currentTab}` : ""));
@@ -147,14 +147,14 @@ export default function Sidebar({
               href={link.href}
               onClick={onNavigate}
               aria-current={isActive ? "page" : undefined}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group ${isActive
+              className={`group flex min-h-12 items-center gap-3 rounded-xl px-4 py-3 transition-all duration-200 ${isActive
                   ? "pratyo-active border shadow-sm"
                   : "text-[#bfd3f5] hover:bg-white/10 hover:text-[#f6fbff]"
                 }`}
             >
               <Icon
                 className={`text-lg ${isActive
-                    ? "text-[#ffb21c]"
+                    ? "text-[#d7e9ff]"
                     : "text-[#6fa6ef] group-hover:text-[#d9e8ff]"
                   }`}
               />
@@ -169,7 +169,7 @@ export default function Sidebar({
         )}
       </nav>
 
-      <div className="p-4 border-t border-white/10">
+      <div className="border-t border-white/10 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:p-4">
         {session?.user && (
           <div className="mb-3 rounded-xl border border-white/10 bg-white/10 p-3">
             <p className="truncate text-sm font-semibold">
@@ -183,9 +183,9 @@ export default function Sidebar({
         <button
           type="button"
           onClick={() => signOut({ callbackUrl: "/login" })}
-          className="flex items-center gap-3 px-4 py-3 w-full rounded-xl text-[#ffc37a] hover:bg-[#ffb21c]/10 transition-all duration-200 group"
+          className="group flex min-h-12 w-full items-center gap-3 rounded-xl px-4 py-3 text-[#d7e9ff] transition-all duration-200 hover:bg-white/10"
         >
-          <FaSignOutAlt className="text-lg group-hover:text-[#fff0c9]" />
+          <FaSignOutAlt className="text-lg group-hover:text-white" />
           <span className="font-medium">Logout</span>
         </button>
       </div>

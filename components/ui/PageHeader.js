@@ -18,17 +18,17 @@ export default function PageHeader({
             )}
             <div>
               {eyebrow && (
-                <p className="text-xs font-black uppercase tracking-[0.18em] text-[#52657d]">
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#52657d]">
                   {eyebrow}
                 </p>
               )}
-              <h1 className="text-3xl font-black tracking-tight text-[#17120a]">
+              <h1 className="pratyo-heading text-3xl text-[#17120a] sm:text-[2.35rem]">
                 {title}
               </h1>
             </div>
           </div>
           {description && (
-            <p className="mt-4 max-w-3xl text-sm leading-6 text-[#52657d]">
+            <p className="mt-4 max-w-3xl text-[0.95rem] leading-7 text-[#52657d]">
               {description}
             </p>
           )}

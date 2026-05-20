@@ -1,8 +1,8 @@
 import LoadingSpinner from "@/components/LoadingSpinner";
 
 export default function LoadingState({
-  title = "Loading workspace",
-  message = "Preparing the latest information for this screen.",
+  title = "Preparing this screen",
+  message = "Getting the latest information ready for you.",
   className = "",
 }) {
   return (

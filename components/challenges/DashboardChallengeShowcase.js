@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import DashboardChallengeShowcaseClient from "@/components/challenges/DashboardChallengeShowcaseClient";
+import LoadingState from "@/components/ui/LoadingState";
 
 export default function DashboardChallengeShowcase() {
   const [responses, setResponses] = useState([]);
@@ -47,9 +48,10 @@ export default function DashboardChallengeShowcase() {
 
   if (loading) {
     return (
-      <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-6 text-slate-400">
-        Loading challenge showcase...
-      </div>
+      <LoadingState
+        title="Loading Pratyo Pulse"
+        message="Preparing selected challenge responses."
+      />
     );
   }
 

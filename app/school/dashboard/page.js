@@ -98,7 +98,7 @@ const DashboardChallengeShowcase = dynamic(
   () => import("@/components/challenges/DashboardChallengeShowcase"),
   {
     loading: () => (
-      <LoadingState title="Loading challenge showcase" message="Preparing selected student responses." />
+      <LoadingState title="Loading Pratyo Pulse" message="Preparing selected student responses." />
     ),
   }
 );
@@ -129,7 +129,7 @@ function QuickActionCard({
     emerald:
       "text-emerald-200 bg-emerald-500/10 border-emerald-500/20 hover:border-emerald-400/50",
     amber:
-      "text-amber-200 bg-amber-500/10 border-amber-500/20 hover:border-amber-400/50",
+      "text-blue-200 bg-blue-500/10 border-blue-500/20 hover:border-blue-400/50",
     purple:
       "text-purple-200 bg-purple-500/10 border-purple-500/20 hover:border-purple-400/50",
     cyan: "text-cyan-200 bg-cyan-500/10 border-cyan-500/20 hover:border-cyan-400/50",
@@ -169,6 +169,17 @@ function SchoolDashboardContent() {
       );
     }
   }, [searchParams]);
+
+  useEffect(() => {
+    if (!isNavOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isNavOpen]);
 
   const [teachers, setTeachers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -384,7 +395,7 @@ function SchoolDashboardContent() {
   }
 
   return (
-    <div className="flex min-h-screen bg-slate-950 text-slate-200 font-sans">
+    <div className="flex min-h-screen bg-[#f5f1e8] text-[#17120a] font-sans">
       {isNavOpen && (
         <button
           type="button"
@@ -401,37 +412,38 @@ function SchoolDashboardContent() {
         onNavigate={() => setIsNavOpen(false)}
       />
 
-      <main className="h-screen flex-1 overflow-y-auto p-4 sm:p-6 lg:ml-64 lg:p-8">
-        <header className="flex flex-col gap-4 mb-8 md:flex-row md:items-center md:justify-between">
+      <main className="min-h-screen flex-1 overflow-x-hidden px-4 py-5 sm:px-6 sm:py-6 lg:ml-64 lg:h-screen lg:overflow-y-auto lg:p-8">
+        <header className="mb-6 flex flex-col gap-4 md:mb-8 md:flex-row md:items-center md:justify-between">
           <div>
             <button
               type="button"
               onClick={() => setIsNavOpen(true)}
-              className="mb-4 inline-flex items-center gap-2 rounded-lg border border-slate-700 px-3 py-2 text-sm font-semibold text-slate-200 transition hover:bg-slate-800 lg:hidden"
+              className="mb-4 inline-flex min-h-11 items-center gap-2 rounded-xl border border-[#d7cdbb] bg-white/80 px-4 py-2 text-sm font-semibold text-[#0a2f66] shadow-sm transition hover:bg-[#eaf2ff] lg:hidden"
             >
               <FaBars />
               Menu
             </button>
-            <h1 className="text-3xl font-bold text-white tracking-tight">
+            <h1 className="text-2xl font-black tracking-tight text-[#17120a] sm:text-3xl">
               Pratyo School Hub
             </h1>
-            <p className="text-slate-400 mt-1">
+            <p className="mt-1 max-w-2xl text-sm leading-6 text-[#52657d] sm:text-base">
               Run activities, mentor talent, and promote your school publicly
             </p>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center justify-between gap-3 rounded-2xl border border-[#d7cdbb] bg-white/70 p-2 shadow-sm md:justify-end md:border-0 md:bg-transparent md:p-0 md:shadow-none">
             <SchoolNotificationCenter />
             <div className="text-right hidden md:block">
-              <div className="text-sm font-medium text-white">
+              <div className="text-sm font-semibold text-[#17120a]">
                 {session?.user?.name}
               </div>
-              <div className="text-xs text-slate-400">
+              <div className="text-xs text-[#52657d]">
                 {session?.user?.email}
               </div>
             </div>
             <button
               onClick={() => signOut()}
-              className="bg-slate-800 hover:bg-slate-700 text-white p-2 rounded-full transition"
+              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full bg-[#0a2f66] text-white transition hover:bg-[#123f82]"
+              aria-label="Sign out"
             >
               <FaSignOutAlt />
             </button>
@@ -439,13 +451,13 @@ function SchoolDashboardContent() {
         </header>
 
         {isPending && (
-            <div className="bg-orange-500/10 border border-orange-500/30 p-6 mb-6 rounded-xl flex items-center gap-4 text-orange-200">
-                <div className="p-3 bg-orange-500/20 rounded-full">
-                    <FaClock className="text-orange-500 text-2xl" />
+            <div className="bg-blue-500/10 border border-blue-500/30 p-6 mb-6 rounded-xl flex items-center gap-4 text-blue-100">
+                <div className="p-3 bg-blue-500/20 rounded-full">
+                    <FaClock className="text-blue-500 text-2xl" />
                 </div>
                 <div>
                     <h3 className="text-lg font-bold text-white">Account Pending Approval</h3>
-                    <p className="text-orange-200/80 mt-1">
+                    <p className="text-blue-100/80 mt-1">
                         Your school account is currently under review by the Super Admin. 
                         You will receive full access once your account is approved.
                     </p>
@@ -455,7 +467,8 @@ function SchoolDashboardContent() {
 
         {/* Navigation Tabs - Hide if Pending */}
         {!isPending && (
-        <div className="flex gap-4 mb-8 border-b border-slate-800 pb-1 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+        <div className="mb-8 -mx-4 overflow-x-auto border-y border-[#d7cdbb] bg-white/65 px-4 py-2 shadow-sm sm:mx-0 sm:rounded-2xl sm:border sm:px-3 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          <div className="flex min-w-max gap-2">
           {[
             "overview",
             "students",
@@ -473,10 +486,11 @@ function SchoolDashboardContent() {
               key={tab}
               onClick={() => setActiveTab(tab)}
               disabled={isRestricted && tab !== 'settings'}
-              className={`pb-3 px-2 text-sm font-medium transition-colors relative whitespace-nowrap ${
+              aria-pressed={activeTab === tab}
+              className={`min-h-11 rounded-xl px-4 text-sm font-semibold transition relative whitespace-nowrap ${
                 activeTab === tab
-                  ? "text-blue-400 border-b-2 border-blue-400"
-                  : "text-slate-400 hover:text-slate-200"
+                  ? "bg-[#0a2f66] text-white shadow-sm"
+                  : "text-[#52657d] hover:bg-[#eaf2ff] hover:text-[#0a2f66]"
               } ${isRestricted && tab !== 'settings' ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               {tab === "platform-events"
@@ -484,7 +498,7 @@ function SchoolDashboardContent() {
                 : tab === "school-events"
                 ? "School Events"
                 : tab === "challenge-showcase"
-                ? "Challenge Showcase"
+                ? "Pratyo Pulse"
                 : tab === "student-notices"
                 ? "Student Notices"
                 : tab === "notices"
@@ -494,10 +508,11 @@ function SchoolDashboardContent() {
                 : tab === "teachers"
                 ? "Teachers"
                 : tab === "showcase"
-                ? "Public Showcase"
+                ? "Public Profile"
                 : tab.charAt(0).toUpperCase() + tab.slice(1)}
             </button>
           ))}
+          </div>
         </div>
         )}
 
@@ -610,7 +625,7 @@ function SchoolDashboardContent() {
                 <QuickActionCard
                   href="/school/dashboard?tab=challenge-showcase"
                   icon={FaTrophy}
-                  title="Challenge Showcase"
+                  title="Pratyo Pulse"
                   description="See platform-selected student challenge responses and promote strong work."
                   tone="emerald"
                 />
@@ -621,13 +636,13 @@ function SchoolDashboardContent() {
               <AlertBanner
                 type="info"
                 title="Production note"
-                message="Keep daily announcements inside Student Notices, use School Magazine only for approved writing, and use Public Showcase when you are ready to promote school achievements."
+                message="Keep daily announcements inside Student Notices, use School Magazine only for approved writing, and use Public Profile when you are ready to promote school achievements."
                 action={
                   <Link
                     href="/school/dashboard?tab=showcase"
                     className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-500"
                   >
-                    Open Showcase
+                    Open public profile
                     <FaBookReader />
                   </Link>
                 }

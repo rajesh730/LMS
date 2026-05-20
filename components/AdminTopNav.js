@@ -12,13 +12,14 @@ export default function AdminTopNav({ pendingCount = 0 }) {
   
   const isDashboard = pathname === '/admin/dashboard';
   return (
-    <div className="mt-8 flex gap-3 mb-8 rounded-2xl border border-slate-800 bg-slate-900/50 p-2 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+    <div className="mb-8 mt-8 -mx-4 overflow-x-auto border-y border-[#d7cdbb] bg-white/65 px-4 py-2 shadow-sm sm:mx-0 sm:rounded-2xl sm:border sm:p-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+      <div className="flex min-w-max snap-x gap-2">
       <Link
         href="/admin/dashboard?tab=approvals"
-        className={`flex items-center gap-2 px-4 py-2 rounded-xl transition whitespace-nowrap ${
+        className={`flex min-h-11 snap-start items-center gap-2 rounded-xl px-4 text-sm font-semibold transition whitespace-nowrap ${
           isDashboard && currentTab === 'approvals'
             ? "bg-blue-600 text-white"
-            : "text-slate-400 hover:text-white"
+            : "text-[#52657d] hover:bg-[#eaf2ff] hover:text-[#0a2f66]"
         }`}
       >
         <FaCheckCircle /> Approvals
@@ -31,10 +32,10 @@ export default function AdminTopNav({ pendingCount = 0 }) {
       
       <Link
         href="/admin/dashboard?tab=schools"
-        className={`flex items-center gap-2 px-4 py-2 rounded-xl transition whitespace-nowrap ${
+        className={`flex min-h-11 snap-start items-center gap-2 rounded-xl px-4 text-sm font-semibold transition whitespace-nowrap ${
           isDashboard && currentTab === 'schools'
             ? "bg-blue-600 text-white"
-            : "text-slate-400 hover:text-white"
+            : "text-[#52657d] hover:bg-[#eaf2ff] hover:text-[#0a2f66]"
         }`}
       >
         <FaSchool /> Schools
@@ -42,10 +43,10 @@ export default function AdminTopNav({ pendingCount = 0 }) {
       
       <Link
         href="/admin/dashboard?tab=events"
-        className={`flex items-center gap-2 px-4 py-2 rounded-xl transition whitespace-nowrap ${
+        className={`flex min-h-11 snap-start items-center gap-2 rounded-xl px-4 text-sm font-semibold transition whitespace-nowrap ${
           isDashboard && currentTab === 'events'
             ? "bg-blue-600 text-white"
-            : "text-slate-400 hover:text-white"
+            : "text-[#52657d] hover:bg-[#eaf2ff] hover:text-[#0a2f66]"
         }`}
       >
         <FaCalendarAlt /> Platform Events
@@ -53,10 +54,10 @@ export default function AdminTopNav({ pendingCount = 0 }) {
 
       <Link
         href="/admin/dashboard?tab=partners"
-        className={`flex items-center gap-2 px-4 py-2 rounded-xl transition whitespace-nowrap ${
+        className={`flex min-h-11 snap-start items-center gap-2 rounded-xl px-4 text-sm font-semibold transition whitespace-nowrap ${
           isDashboard && currentTab === "partners"
             ? "bg-blue-600 text-white"
-            : "text-slate-400 hover:text-white"
+            : "text-[#52657d] hover:bg-[#eaf2ff] hover:text-[#0a2f66]"
         }`}
       >
         <FaHandshake /> Partners
@@ -64,10 +65,10 @@ export default function AdminTopNav({ pendingCount = 0 }) {
 
       <Link
         href="/admin/dashboard?tab=notices"
-        className={`flex items-center gap-2 px-4 py-2 rounded-xl transition whitespace-nowrap ${
+        className={`flex min-h-11 snap-start items-center gap-2 rounded-xl px-4 text-sm font-semibold transition whitespace-nowrap ${
           isDashboard && currentTab === "notices"
             ? "bg-blue-600 text-white"
-            : "text-slate-400 hover:text-white"
+            : "text-[#52657d] hover:bg-[#eaf2ff] hover:text-[#0a2f66]"
         }`}
       >
         <FaBullhorn /> Notices
@@ -75,14 +76,15 @@ export default function AdminTopNav({ pendingCount = 0 }) {
 
       <Link
         href="/admin/dashboard?tab=challenges"
-        className={`flex items-center gap-2 px-4 py-2 rounded-xl transition whitespace-nowrap ${
+        className={`flex min-h-11 snap-start items-center gap-2 rounded-xl px-4 text-sm font-semibold transition whitespace-nowrap ${
           isDashboard && currentTab === "challenges"
             ? "bg-blue-600 text-white"
-            : "text-slate-400 hover:text-white"
+            : "text-[#52657d] hover:bg-[#eaf2ff] hover:text-[#0a2f66]"
         }`}
       >
         <FaFeatherAlt /> Student Challenges
       </Link>
+      </div>
     </div>
   );
 }

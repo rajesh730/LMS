@@ -332,7 +332,7 @@ function AdminDashboardContent() {
         icon={FaLayerGroup}
         eyebrow="Platform control room"
         title="Super Admin Dashboard"
-        description="Approve schools, run platform events, publish notices, manage partners, and select student challenge responses for public showcase."
+        description="Approve schools, run platform events, publish notices, manage partners, and select student challenge responses for Pratyo Pulse."
         meta={
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4">

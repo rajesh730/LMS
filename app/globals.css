@@ -13,13 +13,30 @@
   --brand-muted: #52657d;
   --brand-ink: #17120a;
   --brand-soft-blue: #eaf2ff;
+  --font-display:
+    "Aptos Display", "Segoe UI Variable Display", "Avenir Next",
+    "Trebuchet MS", sans-serif;
+  --font-body:
+    "Aptos", "Segoe UI Variable Text", "Segoe UI", "Source Sans 3",
+    "Noto Sans", "Helvetica Neue", Arial, sans-serif;
+  --font-code:
+    "Cascadia Code", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  --button-primary: #0a2f66;
+  --button-primary-hover: #123f82;
+  --button-primary-soft: rgba(10, 47, 102, 0.1);
+  --button-secondary: #ffffff;
+  --button-secondary-hover: #eaf2ff;
+  --button-danger: #b42318;
+  --button-danger-hover: #9f1f14;
+  --button-radius: 0.9rem;
+  --button-shadow: 0 10px 22px rgba(10, 47, 102, 0.14);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-body);
+  --font-mono: var(--font-code);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -29,10 +46,25 @@
   }
 }
 
+html,
+body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: "Segoe UI", "Trebuchet MS", sans-serif;
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.6;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings:
+    "kern" 1,
+    "liga" 1,
+    "calt" 1;
   background-image:
     radial-gradient(circle at 16% 8%, rgba(47, 127, 219, 0.14), transparent 28%),
     radial-gradient(circle at 84% 14%, rgba(10, 47, 102, 0.12), transparent 26%),
@@ -42,6 +74,88 @@ body {
 ::selection {
   background: rgba(47, 127, 219, 0.22);
   color: var(--brand-navy);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.pratyo-heading {
+  color: var(--brand-ink);
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1.08;
+}
+
+h1 {
+  text-wrap: balance;
+}
+
+p,
+li,
+.pratyo-copy {
+  line-height: 1.72;
+}
+
+small,
+label,
+.pratyo-label {
+  letter-spacing: -0.005em;
+}
+
+label {
+  color: #27344a;
+  font-weight: 700;
+}
+
+strong,
+b {
+  font-weight: 760;
+}
+
+code,
+kbd,
+samp,
+pre,
+[class*="font-mono"] {
+  font-family: var(--font-code) !important;
+}
+
+[class~="font-black"] {
+  font-weight: 800 !important;
+}
+
+[class~="font-bold"] {
+  font-weight: 750 !important;
+}
+
+[class~="font-semibold"] {
+  font-weight: 700 !important;
+}
+
+[class~="tracking-tight"] {
+  letter-spacing: -0.04em !important;
+}
+
+[class*="uppercase"][class*="tracking-"] {
+  letter-spacing: 0.12em !important;
+}
+
+[class*="text-5xl"],
+[class*="text-6xl"],
+[class*="text-7xl"] {
+  letter-spacing: -0.055em !important;
+  line-height: 0.98 !important;
+}
+
+table,
+[class*="tabular-nums"],
+[class*="text-2xl"],
+[class*="text-3xl"] {
+  font-variant-numeric: tabular-nums;
 }
 
 /* Pulse-inspired app theme. These overrides keep layouts intact while moving
@@ -175,6 +289,8 @@ input,
 select,
 textarea {
   color: var(--brand-ink);
+  font-family: var(--font-body);
+  line-height: 1.45;
   background-color: rgba(255, 255, 255, 0.92);
   border-color: rgba(10, 47, 102, 0.22);
 }
@@ -193,7 +309,9 @@ textarea:focus {
 
 button,
 a {
+  font-family: var(--font-body);
   text-underline-offset: 3px;
+  -webkit-tap-highlight-color: rgba(47, 127, 219, 0.14);
 }
 
 button:focus-visible,
@@ -224,6 +342,23 @@ table tbody tr:hover {
   border: 1px solid rgba(10, 47, 102, 0.14);
 }
 
+@media (max-width: 640px) {
+  .pratyo-card {
+    border-radius: 1rem;
+    box-shadow: 0 10px 28px rgba(10, 47, 102, 0.08);
+  }
+
+  table {
+    font-size: 0.875rem;
+  }
+
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
 [class*="shadow-black"] {
   --tw-shadow-color: rgba(10, 47, 102, 0.14) !important;
   --tw-shadow: var(--tw-shadow-colored) !important;
@@ -238,6 +373,12 @@ table tbody tr:hover {
 .pratyo-dark-shell [class*="text-white"],
 .pratyo-dark-shell [class*="text-slate"],
 .pratyo-dark-shell [class*="text-[#"],
+.pratyo-dark-shell h1,
+.pratyo-dark-shell h2,
+.pratyo-dark-shell h3,
+.pratyo-dark-shell h4,
+.pratyo-dark-shell h5,
+.pratyo-dark-shell h6,
 .pratyo-dark-shell p,
 .pratyo-dark-shell span,
 .pratyo-dark-shell a,
@@ -255,26 +396,180 @@ table tbody tr:hover {
   color: #d7e9ff !important;
 }
 
-@keyframes softHeartbeat {
-  0%,
-  100% {
-    transform: scale(1);
-  }
-  14% {
-    transform: scale(1.03);
-  }
-  28% {
-    transform: scale(1);
-  }
-  42% {
-    transform: scale(1.05);
-  }
-  70% {
-    transform: scale(1);
-  }
+/* Consistent product buttons.
+   Existing screens use many Tailwind color utilities, so these scoped rules
+   normalize button-like elements without requiring a risky full rewrite. */
+:is(button, a[class*="rounded"])[class*="px-"],
+:is(button, a[class*="rounded"])[class*="py-"],
+.pratyo-btn {
+  min-height: 2.75rem;
+  border-radius: var(--button-radius) !important;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease,
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    opacity 160ms ease;
 }
 
-.soft-heartbeat {
-  animation: softHeartbeat 2.8s ease-in-out infinite;
-  transform-origin: center;
+:is(button, a[class*="rounded"])[class*="px-"]:not(:disabled):hover,
+:is(button, a[class*="rounded"])[class*="py-"]:not(:disabled):hover,
+.pratyo-btn:not(:disabled):hover {
+  transform: translateY(-1px);
+}
+
+:is(button, a)[class~="bg-[#0a2f66]"],
+:is(button, a)[class~="bg-[#2f7fdb]"],
+:is(button, a)[class~="bg-blue-500"],
+:is(button, a)[class~="bg-blue-600"],
+:is(button, a)[class~="bg-blue-700"],
+:is(button, a)[class~="bg-emerald-500"],
+:is(button, a)[class~="bg-emerald-600"],
+:is(button, a)[class~="bg-emerald-700"],
+:is(button, a)[class~="bg-green-500"],
+:is(button, a)[class~="bg-green-600"],
+:is(button, a)[class~="bg-green-700"],
+.pratyo-btn-primary {
+  background: linear-gradient(135deg, var(--button-primary), var(--button-primary-hover)) !important;
+  border: 1px solid rgba(10, 47, 102, 0.18) !important;
+  box-shadow: var(--button-shadow) !important;
+  color: #ffffff !important;
+}
+
+:is(button, a)[class~="bg-[#0a2f66]"] *,
+:is(button, a)[class~="bg-[#2f7fdb]"] *,
+:is(button, a)[class~="bg-blue-500"] *,
+:is(button, a)[class~="bg-blue-600"] *,
+:is(button, a)[class~="bg-blue-700"] *,
+:is(button, a)[class~="bg-emerald-500"] *,
+:is(button, a)[class~="bg-emerald-600"] *,
+:is(button, a)[class~="bg-emerald-700"] *,
+:is(button, a)[class~="bg-green-500"] *,
+:is(button, a)[class~="bg-green-600"] *,
+:is(button, a)[class~="bg-green-700"] *,
+.pratyo-btn-primary * {
+  color: #ffffff !important;
+}
+
+:is(button, a)[class~="bg-[#0a2f66]"]:not(:disabled):hover,
+:is(button, a)[class~="bg-[#2f7fdb]"]:not(:disabled):hover,
+:is(button, a)[class~="bg-blue-500"]:not(:disabled):hover,
+:is(button, a)[class~="bg-blue-600"]:not(:disabled):hover,
+:is(button, a)[class~="bg-blue-700"]:not(:disabled):hover,
+:is(button, a)[class~="bg-emerald-500"]:not(:disabled):hover,
+:is(button, a)[class~="bg-emerald-600"]:not(:disabled):hover,
+:is(button, a)[class~="bg-emerald-700"]:not(:disabled):hover,
+:is(button, a)[class~="bg-green-500"]:not(:disabled):hover,
+:is(button, a)[class~="bg-green-600"]:not(:disabled):hover,
+:is(button, a)[class~="bg-green-700"]:not(:disabled):hover,
+.pratyo-btn-primary:not(:disabled):hover {
+  background: linear-gradient(135deg, var(--button-primary-hover), #184f9d) !important;
+  box-shadow: 0 14px 28px rgba(10, 47, 102, 0.2) !important;
+}
+
+:is(button, a)[class~="bg-slate-600"],
+:is(button, a)[class~="bg-slate-700"],
+:is(button, a)[class~="bg-slate-800"],
+:is(button, a)[class~="bg-slate-900"],
+:is(button, a)[class~="bg-gray-600"],
+:is(button, a)[class~="bg-gray-700"],
+:is(button, a)[class~="bg-gray-800"],
+:is(button, a)[class~="bg-gray-900"],
+.pratyo-btn-secondary {
+  background: var(--button-secondary) !important;
+  border: 1px solid rgba(10, 47, 102, 0.16) !important;
+  box-shadow: 0 8px 18px rgba(10, 47, 102, 0.08) !important;
+  color: var(--brand-navy) !important;
+}
+
+:is(button, a)[class~="bg-slate-600"] *,
+:is(button, a)[class~="bg-slate-700"] *,
+:is(button, a)[class~="bg-slate-800"] *,
+:is(button, a)[class~="bg-slate-900"] *,
+:is(button, a)[class~="bg-gray-600"] *,
+:is(button, a)[class~="bg-gray-700"] *,
+:is(button, a)[class~="bg-gray-800"] *,
+:is(button, a)[class~="bg-gray-900"] *,
+.pratyo-btn-secondary * {
+  color: var(--brand-navy) !important;
+}
+
+:is(button, a)[class~="bg-slate-600"]:not(:disabled):hover,
+:is(button, a)[class~="bg-slate-700"]:not(:disabled):hover,
+:is(button, a)[class~="bg-slate-800"]:not(:disabled):hover,
+:is(button, a)[class~="bg-slate-900"]:not(:disabled):hover,
+:is(button, a)[class~="bg-gray-600"]:not(:disabled):hover,
+:is(button, a)[class~="bg-gray-700"]:not(:disabled):hover,
+:is(button, a)[class~="bg-gray-800"]:not(:disabled):hover,
+:is(button, a)[class~="bg-gray-900"]:not(:disabled):hover,
+.pratyo-btn-secondary:not(:disabled):hover {
+  background: var(--button-secondary-hover) !important;
+  border-color: rgba(10, 47, 102, 0.28) !important;
+}
+
+:is(button, a)[class~="bg-red-500"],
+:is(button, a)[class~="bg-red-600"],
+:is(button, a)[class~="bg-red-700"],
+.pratyo-btn-danger {
+  background: linear-gradient(135deg, var(--button-danger), var(--button-danger-hover)) !important;
+  border: 1px solid rgba(180, 35, 24, 0.22) !important;
+  box-shadow: 0 10px 22px rgba(180, 35, 24, 0.14) !important;
+  color: #ffffff !important;
+}
+
+:is(button, a)[class~="bg-red-500"] *,
+:is(button, a)[class~="bg-red-600"] *,
+:is(button, a)[class~="bg-red-700"] *,
+.pratyo-btn-danger * {
+  color: #ffffff !important;
+}
+
+:is(button, a)[class~="bg-red-500"]:not(:disabled):hover,
+:is(button, a)[class~="bg-red-600"]:not(:disabled):hover,
+:is(button, a)[class~="bg-red-700"]:not(:disabled):hover,
+.pratyo-btn-danger:not(:disabled):hover {
+  background: linear-gradient(135deg, var(--button-danger-hover), #7f1d1d) !important;
+}
+
+:is(button, a[class*="rounded"])[class*="border"][class*="px-"]:not([class*="bg-"]),
+:is(button, a[class*="rounded"])[class*="border"][class*="py-"]:not([class*="bg-"]),
+.pratyo-btn-outline {
+  background: rgba(255, 255, 255, 0.68) !important;
+  border-color: rgba(10, 47, 102, 0.22) !important;
+  box-shadow: 0 8px 18px rgba(10, 47, 102, 0.06) !important;
+  color: var(--brand-navy) !important;
+}
+
+:is(button, a[class*="rounded"])[class*="border"][class*="px-"]:not([class*="bg-"]):not(:disabled):hover,
+:is(button, a[class*="rounded"])[class*="border"][class*="py-"]:not([class*="bg-"]):not(:disabled):hover,
+.pratyo-btn-outline:not(:disabled):hover {
+  background: var(--button-secondary-hover) !important;
+  border-color: rgba(10, 47, 102, 0.35) !important;
+}
+
+button[class*="p-2"]:not([class*="px-"]),
+button[class*="p-3"]:not([class*="px-"]),
+.pratyo-btn-icon {
+  border-radius: 0.75rem !important;
+  transition:
+    transform 160ms ease,
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease;
+}
+
+button[class*="rounded-full"]:not([class*="px-"]):not([class*="py-"]) {
+  border-radius: 9999px !important;
+}
+
+button:disabled,
+button[aria-disabled="true"],
+a[aria-disabled="true"] {
+  cursor: not-allowed !important;
+  opacity: 0.58 !important;
+  transform: none !important;
+  box-shadow: none !important;
 }

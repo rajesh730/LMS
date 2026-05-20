@@ -190,7 +190,7 @@ export default function StudentChallengeManager() {
   };
 
   const deleteChallenge = async (challengeId) => {
-    if (!confirm("Delete this student challenge?")) return;
+    if (!confirm("Delete this student challenge? Students will no longer see it.")) return;
 
     try {
       setBusyId(challengeId);
@@ -258,7 +258,7 @@ export default function StudentChallengeManager() {
         icon={FaFeatherAlt}
         eyebrow="Platform writing program"
         title="Student Challenges"
-        description="Create simple research or writing prompts, let students submit responses, then publish selected answers publicly with student and school credit."
+        description="Create simple research or writing prompts, let students submit responses, then publish selected answers on Pratyo Pulse with student and school credit."
       />
 
       {error && (
@@ -323,7 +323,7 @@ export default function StudentChallengeManager() {
                 className="inline-flex items-center gap-2 rounded-xl bg-slate-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-600 disabled:opacity-60"
               >
                 <FaSave />
-                {saving ? "Saving..." : "Save Draft"}
+                {saving ? "Saving draft..." : "Save as draft"}
               </button>
               <button
                 type="button"
@@ -332,7 +332,7 @@ export default function StudentChallengeManager() {
                 className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-500 disabled:opacity-60"
               >
                 <FaPaperPlane />
-                {saving ? "Publishing..." : "Publish"}
+                {saving ? "Publishing..." : "Publish challenge"}
               </button>
             </div>
           </div>
@@ -354,7 +354,7 @@ export default function StudentChallengeManager() {
               <EmptyState
                 icon={FaFeatherAlt}
                 title="No student challenges yet"
-                description="Create a challenge when you want students to respond to a platform topic."
+                description="Create a challenge when you want students to respond to a platform topic. Published challenges appear in student dashboards."
               />
             </div>
           ) : (
@@ -397,7 +397,7 @@ export default function StudentChallengeManager() {
                         onClick={() => deleteChallenge(challenge.id)}
                         className="inline-flex items-center gap-2 rounded-lg bg-red-500/10 px-3 py-2 text-sm font-semibold text-red-200 transition hover:bg-red-500/20 disabled:opacity-60"
                       >
-                        <FaTrash /> Delete
+                        <FaTrash /> Delete challenge
                       </button>
                     </div>
                   </div>
@@ -415,8 +415,8 @@ export default function StudentChallengeManager() {
               Challenge Submissions
             </h3>
             <p className="mt-1 text-sm text-slate-400">
-              Review responses from all schools and publish selected answers for
-              the public showcase.
+              Review responses from all schools and publish selected answers on
+              Pratyo Pulse.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -489,7 +489,7 @@ export default function StudentChallengeManager() {
           <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-5">
             {!selectedSubmission ? (
               <div className="text-sm text-slate-400">
-                Select a submission to review it.
+                Select a student response from the list to review and publish it.
               </div>
             ) : (
               <div className="space-y-5">
@@ -531,7 +531,7 @@ export default function StudentChallengeManager() {
                       className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:opacity-60"
                     >
                       <FaPaperPlane />
-                      Select & Publish Publicly
+                      Select and publish on Pulse
                     </button>
                     <button
                       type="button"
@@ -540,7 +540,7 @@ export default function StudentChallengeManager() {
                       className="inline-flex items-center gap-2 rounded-xl bg-red-500/10 px-5 py-3 text-sm font-semibold text-red-200 transition hover:bg-red-500/20 disabled:opacity-60"
                     >
                       <FaTrash />
-                      Reject
+                      Send back
                     </button>
                   </div>
                 ) : (

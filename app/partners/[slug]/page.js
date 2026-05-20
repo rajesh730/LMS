@@ -326,7 +326,7 @@ export default async function PartnerPortfolioPage({ params }) {
               </p>
               <Link
                 href="/organize-event"
-                className="inline-flex rounded-xl bg-emerald-600 hover:bg-emerald-500 px-4 py-3 text-sm font-bold"
+                className="inline-flex items-center justify-center rounded-xl bg-[#0a2f66] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#123f82]"
               >
                 Propose an event
               </Link>

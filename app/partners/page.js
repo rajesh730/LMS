@@ -78,7 +78,7 @@ export default async function PartnersPage() {
           </p>
           <Link
             href="/organize-event"
-            className="soft-heartbeat mt-7 inline-flex items-center rounded-full bg-emerald-500 px-6 py-3 text-sm font-black text-slate-950 shadow-lg shadow-emerald-500/20 transition hover:bg-emerald-400"
+            className="mt-7 inline-flex items-center justify-center rounded-xl bg-[#0a2f66] px-6 py-3 text-sm font-black text-white transition hover:bg-[#123f82]"
           >
             Propose an event
           </Link>
@@ -94,7 +94,7 @@ export default async function PartnersPage() {
               <Link
                 key={String(partner._id)}
                 href={`/partners/${partner.slug}`}
-                className="rounded-3xl border border-slate-800 bg-slate-900/70 p-6 hover:border-emerald-500/40 transition"
+                className="rounded-3xl border border-slate-800 bg-slate-900/70 p-6 transition hover:border-blue-500/40"
               >
                 <div className="flex items-start gap-4">
                   <div className="h-16 w-16 rounded-2xl bg-slate-800 border border-slate-700 overflow-hidden flex items-center justify-center shrink-0">

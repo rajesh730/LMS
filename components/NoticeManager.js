@@ -7,7 +7,6 @@ import {
   FaPlus,
   FaTrash,
   FaEye,
-  FaCalendarAlt,
   FaUserGraduate,
   FaChalkboardTeacher,
   FaUserFriends,
@@ -53,14 +52,14 @@ export default function NoticeManager({
     { value: "GENERAL", label: "General", color: "bg-blue-500" },
     { value: "URGENT", label: "Urgent", color: "bg-red-500" },
     { value: "EVENT", label: "Event", color: "bg-purple-500" },
-    { value: "HOLIDAY", label: "Holiday", color: "bg-yellow-500" },
-    { value: "SHOWCASE", label: "Showcase", color: "bg-orange-500" },
+    { value: "HOLIDAY", label: "Holiday", color: "bg-blue-500" },
+    { value: "SHOWCASE", label: "Showcase", color: "bg-slate-500" },
   ];
 
   const priorities = [
     { value: "LOW", label: "Low", color: "text-slate-400" },
     { value: "NORMAL", label: "Normal", color: "text-blue-400" },
-    { value: "HIGH", label: "High", color: "text-orange-400" },
+    { value: "HIGH", label: "High", color: "text-blue-400" },
     { value: "URGENT", label: "Urgent", color: "text-red-400" },
   ];
   const isPlatformMode = scopeMode === "platform";
@@ -310,21 +309,13 @@ export default function NoticeManager({
               </h1>
               <div className="flex items-center gap-4 text-slate-400 text-sm">
                 <span>By {selectedNotice.author?.name}</span>
-                <span>•</span>
+                <span>-</span>
                 <span>{getStatusLabel(selectedNotice)}</span>
                 <span>
                   {selectedNotice.publishedAt
                     ? formatDate(selectedNotice.publishedAt)
                     : "Not published yet"}
                 </span>
-                {selectedNotice.expiryDate && (
-                  <>
-                    <span>•</span>
-                    <span>
-                      Expires: {formatDate(selectedNotice.expiryDate)}
-                    </span>
-                  </>
-                )}
               </div>
             </div>
 
@@ -662,18 +653,8 @@ export default function NoticeManager({
 
             {!isPlatformMode && !isStudentOnlyMode && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-slate-300 mb-2 font-medium">
-                    Expiry Date (Optional)
-                  </label>
-                  <input
-                    type="datetime-local"
-                    value={noticeForm.expiryDate}
-                    onChange={(e) =>
-                      setNoticeForm({ ...noticeForm, expiryDate: e.target.value })
-                    }
-                    className="w-full bg-slate-800 text-white p-3 rounded-lg border border-slate-700"
-                  />
+                <div className="rounded-lg border border-slate-700 bg-slate-800/80 p-4 text-sm text-slate-300">
+                  Notices stay visible until you edit, draft, or delete them.
                 </div>
               </div>
             )}
@@ -702,7 +683,7 @@ export default function NoticeManager({
                 className="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-lg font-medium transition"
               >
                 {noticeForm.status === "DRAFT"
-                  ? "Save Draft"
+                  ? "Save as draft"
                   : editingNoticeId
                   ? "Update Notice"
                   : "Publish Notice"}
@@ -777,7 +758,7 @@ export default function NoticeManager({
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => openEditNotice(notice)}
-                      className="text-slate-400 hover:text-amber-400 transition"
+                      className="text-slate-400 hover:text-blue-400 transition"
                       title="Edit Notice"
                     >
                       <FaEdit />
@@ -836,12 +817,6 @@ export default function NoticeManager({
                   )}
                 </div>
 
-                {notice.expiryDate && (
-                  <div className="mt-2 text-xs text-orange-400 flex items-center gap-1">
-                    <FaCalendarAlt />
-                    Expires: {formatDate(notice.expiryDate)}
-                  </div>
-                )}
               </div>
             ))}
           </div>

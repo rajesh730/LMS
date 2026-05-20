@@ -9,9 +9,9 @@ import {
   FaUsers,
 } from "react-icons/fa";
 import StatisticsCard, { StatisticsGrid } from "@/components/StatisticsCard";
-import LoadingSpinner from "@/components/LoadingSpinner";
 import EmptyState from "@/components/EmptyState";
 import EducationConfigCard from "@/components/EducationConfigCard";
+import LoadingState from "@/components/ui/LoadingState";
 
 export default function DashboardOverview() {
   const [stats, setStats] = useState(null);
@@ -34,14 +34,14 @@ export default function DashboardOverview() {
       } else {
         try {
           const err = await res.json();
-          setError(err.message || "Failed to load statistics");
+          setError(err.message || "We could not load your dashboard numbers.");
         } catch {
-          setError("Failed to load statistics");
+          setError("We could not load your dashboard numbers.");
         }
       }
     } catch (err) {
       console.error("Error fetching dashboard stats:", err);
-      setError("Failed to load dashboard statistics");
+      setError("We could not load your dashboard numbers. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -49,18 +49,19 @@ export default function DashboardOverview() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center py-12">
-        <LoadingSpinner text="Loading statistics..." />
-      </div>
+      <LoadingState
+        title="Preparing school overview"
+        message="Loading student, mentor, grade, and event totals."
+      />
     );
   }
 
   if (error) {
     return (
       <EmptyState
-        title="Error Loading Statistics"
+        title="Dashboard numbers could not load"
         description={error}
-        actionLabel="Retry"
+        actionLabel="Try again"
         onAction={fetchStats}
       />
     );
@@ -69,8 +70,8 @@ export default function DashboardOverview() {
   if (!stats) {
     return (
       <EmptyState
-        title="No Data Available"
-        description="Dashboard statistics could not be loaded"
+        title="Dashboard overview is not ready yet"
+        description="Once students, teachers, or events are added, your school overview will appear here."
       />
     );
   }
@@ -82,7 +83,9 @@ export default function DashboardOverview() {
       </div>
 
       <div>
-        <h2 className="text-2xl font-bold text-white mb-6">Overview</h2>
+        <h2 className="mb-6 text-2xl font-black text-[#17120a]">
+          School overview
+        </h2>
         <StatisticsGrid>
           <StatisticsCard
             icon={FaUserGraduate}
@@ -113,7 +116,9 @@ export default function DashboardOverview() {
       </div>
 
       <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800">
-        <h3 className="text-xl font-bold text-white mb-4">Student Status</h3>
+        <h3 className="mb-4 text-xl font-black text-[#17120a]">
+          Student status
+        </h3>
         <div className="grid md:grid-cols-3 gap-4">
           {stats.students?.byStatus &&
             Object.entries(stats.students.byStatus).map(([status, count]) => (
@@ -130,9 +135,9 @@ export default function DashboardOverview() {
 
       {stats.students?.byGrade && stats.students.byGrade.length > 0 && (
         <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800">
-          <h3 className="text-xl font-bold text-white mb-4">
-            Students by Grade
-          </h3>
+        <h3 className="mb-4 text-xl font-black text-[#17120a]">
+          Students by Grade
+        </h3>
           <div className="space-y-2">
             {stats.students.byGrade.map((group) => (
               <div
@@ -152,7 +157,7 @@ export default function DashboardOverview() {
       )}
 
       <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800">
-        <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+        <h3 className="mb-4 flex items-center gap-2 text-xl font-black text-[#17120a]">
           <FaUsers /> Participation Snapshot
         </h3>
         <div className="grid md:grid-cols-3 gap-4">
@@ -181,7 +186,7 @@ export default function DashboardOverview() {
       </div>
 
       <div className="bg-blue-900/20 border border-blue-500/30 p-6 rounded-xl">
-        <h4 className="text-white font-semibold mb-2">School Snapshot</h4>
+        <h4 className="mb-2 font-black text-[#17120a]">School snapshot</h4>
         <ul className="text-blue-200 text-sm space-y-1">
           <li>
             You currently have{" "}

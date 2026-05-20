@@ -16,6 +16,17 @@ export default function DashboardLayout({ children }) {
         }
     }, [session]);
 
+    useEffect(() => {
+        if (!isNavOpen) return;
+
+        const previousOverflow = document.body.style.overflow;
+        document.body.style.overflow = "hidden";
+
+        return () => {
+            document.body.style.overflow = previousOverflow;
+        };
+    }, [isNavOpen]);
+
     // Keep auth transitions from looking like a broken blank screen.
     if (!session) {
         return (
@@ -70,8 +81,8 @@ export default function DashboardLayout({ children }) {
                 </div>
             </header>
 
-            <main className="min-h-screen transition-all duration-300 lg:ml-64">
-                <div className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
+            <main className="min-h-screen overflow-x-hidden transition-all duration-300 lg:ml-64">
+                <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-6 lg:p-8">
                     {children}
                 </div>
             </main>
