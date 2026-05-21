@@ -25,7 +25,11 @@ export async function DELETE(req, { params }) {
     const { id: eventId } = params;
 
     // ===== Get student =====
-    const student = await Student.findOne({ userId: session.user.id });
+    const student = await Student.findOne({
+      userId: session.user.id,
+      isDeleted: { $ne: true },
+      status: "ACTIVE",
+    });
 
     if (!student) {
       return NextResponse.json(

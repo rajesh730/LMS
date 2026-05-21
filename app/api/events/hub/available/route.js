@@ -28,6 +28,8 @@ export async function GET(req) {
 
     // Get student info
     const student = await Student.findOne({
+      isDeleted: { $ne: true },
+      status: "ACTIVE",
       $or: [
         { _id: session.user.id },
         { userId: session.user.id },
@@ -125,6 +127,7 @@ export async function GET(req) {
         round: null,
         status: "PUBLISHED",
         visibility: "PUBLIC",
+        isDeleted: { $ne: true },
       })
         .select("event title message type publishedAt createdAt")
         .sort({ publishedAt: -1, createdAt: -1 })

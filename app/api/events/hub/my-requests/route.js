@@ -24,6 +24,8 @@ export async function GET(req) {
 
     // Student sessions use the Student document id, with fallbacks for legacy data.
     const student = await Student.findOne({
+      isDeleted: { $ne: true },
+      status: "ACTIVE",
       $or: [
         { _id: session.user.id },
         { userId: session.user.id },

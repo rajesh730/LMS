@@ -8,7 +8,7 @@ import connectDB from "@/lib/db";
 export async function DELETE(req) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) {
+    if (!session || session.user.role !== "SCHOOL_ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -29,16 +29,34 @@ export async function DELETE(req) {
       const emails = await collectEmails({
         _id: { $in: studentIds },
         school: session.user.id,
+        isDeleted: { $ne: true },
       });
-      await Student.deleteMany({
-        _id: { $in: studentIds },
-        school: session.user.id,
-      });
+      await Student.updateMany(
+        {
+          _id: { $in: studentIds },
+          school: session.user.id,
+          isDeleted: { $ne: true },
+        },
+        {
+          $set: {
+            isDeleted: true,
+            deletedAt: new Date(),
+            deletedBy: session.user.id,
+            status: "INACTIVE",
+            statusChangedAt: new Date(),
+            statusChangedBy: session.user.id,
+            statusReason: "Bulk archived by school admin",
+          },
+        }
+      );
       if (emails.length) {
-        await User.deleteMany({ email: { $in: emails } });
+        await User.updateMany(
+          { email: { $in: emails }, role: "STUDENT" },
+          { status: "UNSUBSCRIBED", $inc: { authVersion: 1 } }
+        );
       }
       return NextResponse.json({
-        message: "Selected students deleted successfully",
+        message: "Selected students archived successfully",
       });
     } else {
       return NextResponse.json(

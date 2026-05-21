@@ -7,12 +7,16 @@ import {
   FaPlus,
   FaTrash,
   FaEye,
+  FaSearch,
   FaUserGraduate,
   FaChalkboardTeacher,
   FaUserFriends,
 } from "react-icons/fa";
 import { buildGradeLabels, normalizeGradeValue } from "@/lib/schoolGrades";
 import EmptyState from "@/components/EmptyState";
+import PaginationControls from "@/components/PaginationControls";
+import AlertBanner from "@/components/ui/AlertBanner";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 export default function NoticeManager({
   scopeMode = "school",
@@ -29,7 +33,16 @@ export default function NoticeManager({
     type: "",
     priority: "",
     audience: "",
+    search: "",
   });
+  const [pagination, setPagination] = useState({
+    page: 1,
+    totalPages: 1,
+    totalItems: 0,
+    limit: 20,
+  });
+  const [feedback, setFeedback] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   const [noticeForm, setNoticeForm] = useState({
     title: "",
@@ -74,10 +87,13 @@ export default function NoticeManager({
     [isStudentOnlyMode]
   );
 
-  const fetchNotices = useCallback(async () => {
+  const fetchNotices = useCallback(async (page = 1) => {
     try {
       setLoading(true);
+      setFeedback(null);
       const params = new URLSearchParams();
+      params.append("page", String(page));
+      params.append("limit", "10");
       if (!isPlatformMode && filters.type) params.append("type", filters.type);
       if (!isPlatformMode && filters.priority) {
         params.append("priority", filters.priority);
@@ -87,20 +103,41 @@ export default function NoticeManager({
       } else if (!isPlatformMode && filters.audience) {
         params.append("audience", filters.audience);
       }
+      if (filters.search.trim()) {
+        params.append("search", filters.search.trim());
+      }
       params.append("scope", isPlatformMode ? "PLATFORM" : "SCHOOL");
 
       const res = await fetch(`/api/notices?${params}`);
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || data.message || "Failed to load notices.");
+      }
       setNotices(data.notices || []);
+      if (data.pagination) {
+        setPagination(data.pagination);
+      }
     } catch (error) {
       console.error("Error fetching notices:", error);
+      setNotices([]);
+      setFeedback({
+        type: "error",
+        title: "Notices could not be loaded",
+        message:
+          error.message ||
+          "Please retry. If it continues, check your connection and server logs.",
+        retry: () => fetchNotices(page),
+      });
     } finally {
       setLoading(false);
     }
   }, [filters, isPlatformMode, isStudentOnlyMode]);
 
   useEffect(() => {
-    fetchNotices();
+    const timer = setTimeout(() => {
+      fetchNotices(1);
+    }, 300);
+    return () => clearTimeout(timer);
   }, [fetchNotices]);
 
   useEffect(() => {
@@ -147,6 +184,7 @@ export default function NoticeManager({
   const saveNotice = async (e) => {
     e.preventDefault();
     try {
+      setFeedback(null);
       const isEditing = Boolean(editingNoticeId);
       const res = await fetch(
         isEditing ? `/api/notices/${editingNoticeId}` : "/api/notices",
@@ -161,45 +199,65 @@ export default function NoticeManager({
           scope: isPlatformMode ? "PLATFORM" : "SCHOOL",
         }),
       });
+      const payload = await res.json().catch(() => ({}));
 
-      if (res.ok) {
-        alert(
-          noticeForm.status === "DRAFT"
-            ? "Notice saved as draft!"
-            : isEditing
-            ? "Notice updated successfully!"
-            : "Notice published successfully!"
-        );
-        resetForm();
-        setEditingNoticeId("");
-        setShowForm(false);
-        fetchNotices();
-      } else {
-        const error = await res.json();
-        alert(error.error || "Failed to save notice");
+      if (!res.ok) {
+        throw new Error(payload.error || payload.message || "Failed to save notice.");
       }
+
+      setFeedback({
+        type: "success",
+        title:
+          noticeForm.status === "DRAFT"
+            ? "Notice saved as draft"
+            : isEditing
+            ? "Notice updated"
+            : "Notice published",
+        message:
+          payload.message ||
+          "Your notice list has been refreshed with the latest changes.",
+      });
+      resetForm();
+      setEditingNoticeId("");
+      setShowForm(false);
+      fetchNotices();
     } catch (error) {
       console.error("Error saving notice:", error);
-      alert("Error saving notice");
+      setFeedback({
+        type: "error",
+        title: "Notice was not saved",
+        message: error.message || "Please retry after checking the notice details.",
+      });
     }
   };
 
-  const deleteNotice = async (noticeId) => {
-    if (!confirm("Are you sure you want to delete this notice?")) return;
-
+  const deleteNotice = async () => {
+    if (!deleteTarget) return;
     try {
-      const res = await fetch(`/api/notices/${noticeId}`, { method: "DELETE" });
+      setDeleteTarget((current) => ({ ...current, busy: true }));
+      setFeedback(null);
+      const res = await fetch(`/api/notices/${deleteTarget._id}`, { method: "DELETE" });
+      const payload = await res.json().catch(() => ({}));
 
-      if (res.ok) {
-        alert("Notice deleted successfully!");
-        fetchNotices();
-      } else {
-        const error = await res.json();
-        alert(error.error || "Failed to delete notice");
+      if (!res.ok) {
+        throw new Error(payload.error || payload.message || "Failed to archive notice.");
       }
+
+      setFeedback({
+        type: "success",
+        title: "Notice archived",
+        message: `"${deleteTarget.title}" is no longer visible in the active notice list.`,
+      });
+      setDeleteTarget(null);
+      fetchNotices(pagination.page || 1);
     } catch (error) {
       console.error("Error deleting notice:", error);
-      alert("Error deleting notice");
+      setFeedback({
+        type: "error",
+        title: "Notice was not archived",
+        message: error.message || "Please retry after checking the connection.",
+      });
+      setDeleteTarget(null);
     }
   };
 
@@ -392,6 +450,25 @@ export default function NoticeManager({
 
   return (
     <div className="space-y-6">
+      {feedback && (
+        <AlertBanner
+          type={feedback.type}
+          title={feedback.title}
+          message={feedback.message}
+          action={
+            feedback.retry ? (
+              <button
+                type="button"
+                onClick={feedback.retry}
+                className="rounded-lg bg-white/80 px-3 py-2 text-xs font-black text-slate-900 transition hover:bg-white"
+              >
+                Retry
+              </button>
+            ) : null
+          }
+        />
+      )}
+
       {/* Header */}
       <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -426,15 +503,55 @@ export default function NoticeManager({
           }`}
         >
           {isPlatformMode ? (
-            <div className="bg-slate-800 text-slate-400 p-3 rounded-lg border border-slate-700 text-sm">
-              Platform notices appear inside logged-in school dashboards and notification panels.
-            </div>
+            <>
+              <div className="bg-slate-800 text-slate-400 p-3 rounded-lg border border-slate-700 text-sm">
+                Platform notices appear inside logged-in school dashboards and notification panels.
+              </div>
+              <div className="relative">
+                <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                <input
+                  type="text"
+                  value={filters.search}
+                  onChange={(e) =>
+                    setFilters({ ...filters, search: e.target.value })
+                  }
+                  placeholder="Search platform notices..."
+                  className="w-full rounded-lg border border-slate-700 bg-slate-800 py-3 pl-10 pr-3 text-white outline-none transition focus:border-blue-500"
+                />
+              </div>
+            </>
           ) : isStudentOnlyMode ? (
-            <div className="bg-slate-800 text-slate-300 p-3 rounded-lg border border-slate-700 text-sm">
-              These notices are sent only to students of your school. Leave grades empty to send to all students.
-            </div>
+            <>
+              <div className="bg-slate-800 text-slate-300 p-3 rounded-lg border border-slate-700 text-sm">
+                These notices are sent only to students of your school. Leave grades empty to send to all students.
+              </div>
+              <div className="relative">
+                <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                <input
+                  type="text"
+                  value={filters.search}
+                  onChange={(e) =>
+                    setFilters({ ...filters, search: e.target.value })
+                  }
+                  placeholder="Search student notices..."
+                  className="w-full rounded-lg border border-slate-700 bg-slate-800 py-3 pl-10 pr-3 text-white outline-none transition focus:border-blue-500"
+                />
+              </div>
+            </>
           ) : (
             <>
+              <div className="relative md:col-span-3">
+                <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                <input
+                  type="text"
+                  value={filters.search}
+                  onChange={(e) =>
+                    setFilters({ ...filters, search: e.target.value })
+                  }
+                  placeholder="Search notice title or content..."
+                  className="w-full rounded-lg border border-slate-700 bg-slate-800 py-3 pl-10 pr-3 text-white outline-none transition focus:border-blue-500"
+                />
+              </div>
               <select
                 value={filters.type}
                 onChange={(e) =>
@@ -707,7 +824,7 @@ export default function NoticeManager({
       {/* Notices List */}
       <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800">
         <h3 className="text-xl font-semibold text-white mb-4">
-          All Notices ({notices.length})
+          All Notices ({pagination.totalItems ?? notices.length})
         </h3>
 
         {loading ? (
@@ -724,9 +841,10 @@ export default function NoticeManager({
             ))}
           </div>
         ) : notices.length > 0 ? (
-          <div className="space-y-4">
-            {notices.map((notice) => (
-              <div
+          <>
+            <div className="space-y-4">
+              {notices.map((notice) => (
+                <div
                 key={notice._id}
                 className="bg-slate-800/50 p-4 rounded-xl border border-slate-700 hover:border-slate-600 transition"
               >
@@ -771,7 +889,7 @@ export default function NoticeManager({
                       <FaEye />
                     </button>
                     <button
-                      onClick={() => deleteNotice(notice._id)}
+                      onClick={() => setDeleteTarget(notice)}
                       className="text-slate-400 hover:text-red-400 transition"
                       title="Delete Notice"
                     >
@@ -817,9 +935,18 @@ export default function NoticeManager({
                   )}
                 </div>
 
-              </div>
-            ))}
-          </div>
+                </div>
+              ))}
+            </div>
+            <PaginationControls
+              currentPage={pagination.page || pagination.currentPage || 1}
+              totalPages={pagination.totalPages || 1}
+              onPageChange={fetchNotices}
+              totalItems={pagination.totalItems}
+              start={pagination.start}
+              end={pagination.end}
+            />
+          </>
         ) : (
           <EmptyState
             icon={FaBullhorn}
@@ -828,6 +955,21 @@ export default function NoticeManager({
           />
         )}
       </div>
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        title="Archive this notice?"
+        message={
+          deleteTarget
+            ? `"${deleteTarget.title}" will be removed from active notice lists, while keeping the record safely archived.`
+            : ""
+        }
+        confirmLabel="Archive notice"
+        tone="danger"
+        busy={Boolean(deleteTarget?.busy)}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={deleteNotice}
+      />
     </div>
   );
 }

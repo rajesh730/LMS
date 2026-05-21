@@ -46,6 +46,8 @@ export async function POST(req, { params }) {
     // Get students with school info
     const students = await Student.find({
       _id: { $in: studentIds },
+      status: "ACTIVE",
+      isDeleted: { $ne: true },
     }).populate("school");
 
     if (students.length === 0) {

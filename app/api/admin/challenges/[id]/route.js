@@ -28,7 +28,10 @@ export async function PATCH(request, props) {
     await connectDB();
 
     const params = await props.params;
-    const challenge = await PlatformChallenge.findById(params.id);
+    const challenge = await PlatformChallenge.findOne({
+      _id: params.id,
+      isDeleted: { $ne: true },
+    });
 
     if (!challenge) {
       return NextResponse.json(
@@ -90,7 +93,10 @@ export async function DELETE(request, props) {
     await connectDB();
 
     const params = await props.params;
-    const challenge = await PlatformChallenge.findById(params.id);
+    const challenge = await PlatformChallenge.findOne({
+      _id: params.id,
+      isDeleted: { $ne: true },
+    });
 
     if (!challenge) {
       return NextResponse.json(
@@ -99,9 +105,13 @@ export async function DELETE(request, props) {
       );
     }
 
-    await PlatformChallenge.deleteOne({ _id: challenge._id });
+    challenge.isDeleted = true;
+    challenge.deletedAt = new Date();
+    challenge.deletedBy = session.user.id;
+    challenge.status = "CLOSED";
+    await challenge.save();
 
-    return NextResponse.json({ message: "Challenge deleted" });
+    return NextResponse.json({ message: "Challenge archived" });
   } catch (error) {
     console.error("DELETE /api/admin/challenges/[id] error:", error);
     return NextResponse.json(

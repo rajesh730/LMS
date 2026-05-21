@@ -89,6 +89,20 @@ const noticeSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    isDeleted: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    deletedAt: {
+      type: Date,
+      default: null,
+    },
+    deletedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
     readBy: [
       {
         user: {
@@ -144,6 +158,34 @@ noticeSchema.index({ school: 1, "targetAudience.students": 1, isActive: 1 });
 noticeSchema.index({ school: 1, "targetAudience.teachers": 1, isActive: 1 });
 noticeSchema.index({ school: 1, "targetAudience.parents": 1, isActive: 1 });
 noticeSchema.index({ expiryDate: 1, isActive: 1 });
+noticeSchema.index({ scope: 1, isActive: 1, isDeleted: 1, publishedAt: -1 });
+noticeSchema.index({
+  school: 1,
+  scope: 1,
+  isActive: 1,
+  isDeleted: 1,
+  publishedAt: -1,
+});
+noticeSchema.index({
+  school: 1,
+  status: 1,
+  isActive: 1,
+  isDeleted: 1,
+  publishedAt: -1,
+});
+noticeSchema.index({
+  school: 1,
+  "targetAudience.students": 1,
+  isActive: 1,
+  isDeleted: 1,
+  publishedAt: -1,
+});
+noticeSchema.index({
+  event: 1,
+  isActive: 1,
+  isDeleted: 1,
+  publishedAt: -1,
+});
 
 // Virtual for read count
 noticeSchema.virtual("readCount", {

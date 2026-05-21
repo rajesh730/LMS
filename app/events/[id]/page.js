@@ -58,6 +58,7 @@ async function getEventData(id) {
       round: null,
       status: "PUBLISHED",
       visibility: "PUBLIC",
+      isDeleted: { $ne: true },
     })
       .sort({ publishedAt: -1, createdAt: -1 })
       .lean(),

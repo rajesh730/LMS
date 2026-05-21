@@ -1,10 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { FaBookOpen, FaCheck, FaTimes } from "react-icons/fa";
+import { FaBookOpen, FaCheck, FaSearch, FaTimes } from "react-icons/fa";
 import AlertBanner from "@/components/ui/AlertBanner";
 import LoadingState from "@/components/ui/LoadingState";
 import EmptyState from "@/components/EmptyState";
+import LifecycleTimeline from "@/components/ui/LifecycleTimeline";
+import PaginationControls from "@/components/PaginationControls";
 
 const FILTERS = [
   { id: "SUBMITTED", label: "Pending Review" },
@@ -33,17 +35,27 @@ export default function SchoolMagazineReviewManager() {
   const [success, setSuccess] = useState("");
   const [selectedSubmission, setSelectedSubmission] = useState(null);
   const [reviewNote, setReviewNote] = useState("");
+  const [search, setSearch] = useState("");
+  const [pagination, setPagination] = useState({
+    page: 1,
+    totalPages: 1,
+    totalItems: 0,
+    limit: 20,
+  });
 
-  const loadSubmissions = useCallback(async (nextFilter = activeFilter) => {
+  const loadSubmissions = useCallback(async (nextFilter = activeFilter, page = 1) => {
     try {
       setLoading(true);
       setError("");
-      const res = await fetch(
-        `/api/school/magazine-submissions?status=${nextFilter}`,
-        {
-          cache: "no-store",
-        }
-      );
+      const params = new URLSearchParams({
+        status: nextFilter,
+        page: String(page),
+        limit: "12",
+      });
+      if (search.trim()) params.append("search", search.trim());
+      const res = await fetch(`/api/school/magazine-submissions?${params}`, {
+        cache: "no-store",
+      });
       const payload = await res.json().catch(() => ({}));
 
       if (!res.ok) {
@@ -54,15 +66,21 @@ export default function SchoolMagazineReviewManager() {
         ? payload.submissions
         : [];
       setSubmissions(nextSubmissions);
+      if (payload.pagination) {
+        setPagination(payload.pagination);
+      }
     } catch (loadError) {
       setError(loadError.message || "Failed to load submissions");
     } finally {
       setLoading(false);
     }
-  }, [activeFilter]);
+  }, [activeFilter, search]);
 
   useEffect(() => {
-    loadSubmissions(activeFilter);
+    const timer = setTimeout(() => {
+      loadSubmissions(activeFilter, 1);
+    }, 300);
+    return () => clearTimeout(timer);
   }, [activeFilter, loadSubmissions]);
 
   useEffect(() => {
@@ -117,7 +135,7 @@ export default function SchoolMagazineReviewManager() {
       }
 
       setSuccess(payload.message || "Review updated");
-      await loadSubmissions(activeFilter);
+      await loadSubmissions(activeFilter, pagination.page || 1);
     } catch (reviewError) {
       setError(reviewError.message || "Failed to review submission");
     } finally {
@@ -166,10 +184,21 @@ export default function SchoolMagazineReviewManager() {
         ))}
       </div>
 
+      <div className="relative max-w-xl">
+        <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+        <input
+          type="text"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Search title, challenge, or content..."
+          className="w-full rounded-xl border border-slate-800 bg-slate-900/60 py-3 pl-10 pr-4 text-white outline-none transition focus:border-blue-500"
+        />
+      </div>
+
       <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
         <section className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6">
           <h3 className="text-xl font-bold text-white">
-            Student Submissions ({submissions.length})
+            Student Submissions ({pagination.totalItems ?? submissions.length})
           </h3>
 
           {loading ? (
@@ -229,6 +258,14 @@ export default function SchoolMagazineReviewManager() {
                   </div>
                 </button>
               ))}
+              <PaginationControls
+                currentPage={pagination.page || pagination.currentPage || 1}
+                totalPages={pagination.totalPages || 1}
+                onPageChange={(page) => loadSubmissions(activeFilter, page)}
+                totalItems={pagination.totalItems}
+                start={pagination.start}
+                end={pagination.end}
+              />
             </div>
           )}
         </section>
@@ -265,6 +302,11 @@ export default function SchoolMagazineReviewManager() {
                     : `Updated ${formatDate(selectedSubmission.updatedAt)}`}
                 </p>
               </div>
+
+              <LifecycleTimeline
+                title="Review history"
+                items={selectedSubmission.lifecycle}
+              />
 
               <article className="rounded-xl border border-slate-800 bg-slate-950/70 p-5 text-sm leading-7 text-slate-200 whitespace-pre-wrap">
                 {selectedSubmission.content}

@@ -15,6 +15,8 @@ import {
   FaUsers,
 } from "react-icons/fa";
 import { isTeamEventLike } from "@/lib/eventParticipationFormat";
+import AlertBanner from "@/components/ui/AlertBanner";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 function normalizeStatus(statuses = []) {
   const normalized = statuses.map((status) => String(status || "").toUpperCase());
@@ -129,6 +131,8 @@ export default function EventParticipantsView({ event, onBack }) {
   const [processingId, setProcessingId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [feedback, setFeedback] = useState(null);
+  const [confirmState, setConfirmState] = useState(null);
   const [detail, setDetail] = useState(null);
 
   const fetchDetails = useCallback(async () => {
@@ -196,19 +200,38 @@ export default function EventParticipantsView({ event, onBack }) {
       .length,
   };
 
-  const handleApprove = async (participant, action) => {
-    if (!confirm(`Are you sure you want to ${action} this ${isTeamEvent ? "team" : "school"}?`)) {
-      return;
-    }
+  const requestParticipantAction = (participant, action) => {
+    setConfirmState({
+      participant,
+      action,
+      title: `${action === "approve" ? "Approve" : action === "reject" ? "Reject" : "Mark pending"} ${isTeamEvent ? "team" : "school"}?`,
+      message: `${participant.school?.schoolName || "This entry"} will be updated for ${event.title}.`,
+      confirmLabel:
+        action === "approve"
+          ? "Approve"
+          : action === "reject"
+          ? "Reject"
+          : "Mark pending",
+      tone: action === "reject" ? "danger" : "info",
+      busy: false,
+    });
+  };
 
+  const handleApprove = async (participant, action) => {
     const requestIds = participant.requestIds || [];
     const schoolId = participant.school?._id;
 
     if (requestIds.length === 0 && !schoolId) {
-      alert("No requests found to process");
+      setFeedback({
+        type: "error",
+        title: "Nothing to process",
+        message: "No requests found to process.",
+      });
       return;
     }
 
+    setConfirmState((current) => (current ? { ...current, busy: true } : current));
+    setFeedback(null);
     setProcessingId(participant.key);
 
     try {
@@ -221,18 +244,32 @@ export default function EventParticipantsView({ event, onBack }) {
       if (!res.ok) {
         throw new Error(data.message || "Failed to update participant status");
       }
+      setFeedback({
+        type: "success",
+        title: "Participant status updated",
+        message: `${participant.school?.schoolName || "Entry"} was updated.`,
+      });
       await fetchDetails();
     } catch (requestError) {
       console.error(requestError);
-      alert(requestError.message || "Error processing request");
+      setFeedback({
+        type: "error",
+        title: "Participant update failed",
+        message: requestError.message || "Error processing request",
+      });
     } finally {
       setProcessingId(null);
+      setConfirmState(null);
     }
   };
 
   const exportToCSV = () => {
     if (filteredParticipants.length === 0) {
-      alert("No participant rows to export");
+      setFeedback({
+        type: "warning",
+        title: "No rows to export",
+        message: "Change the filters or search query before exporting.",
+      });
       return;
     }
 
@@ -307,6 +344,14 @@ export default function EventParticipantsView({ event, onBack }) {
           </button>
         </div>
       </div>
+
+      {feedback && (
+        <AlertBanner
+          type={feedback.type}
+          title={feedback.title}
+          message={feedback.message}
+        />
+      )}
 
       {loading ? (
         <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-8 text-center text-slate-400">
@@ -512,7 +557,7 @@ export default function EventParticipantsView({ event, onBack }) {
                             {(participant.status === "PENDING" ||
                               participant.status === "REJECTED") && (
                               <button
-                                onClick={() => handleApprove(participant, "approve")}
+                                onClick={() => requestParticipantAction(participant, "approve")}
                                 disabled={processingId === participant.key}
                                 className="w-full px-3 py-1.5 bg-green-600/20 text-green-400 rounded hover:bg-green-600/30 transition flex items-center justify-center gap-2 text-xs font-medium border border-green-600/20 disabled:opacity-50"
                               >
@@ -527,7 +572,7 @@ export default function EventParticipantsView({ event, onBack }) {
                             {(participant.status === "PENDING" ||
                               participant.status === "APPROVED") && (
                               <button
-                                onClick={() => handleApprove(participant, "reject")}
+                                onClick={() => requestParticipantAction(participant, "reject")}
                                 disabled={processingId === participant.key}
                                 className="w-full px-3 py-1.5 bg-red-600/20 text-red-400 rounded hover:bg-red-600/30 transition flex items-center justify-center gap-2 text-xs font-medium border border-red-600/20 disabled:opacity-50"
                               >
@@ -542,7 +587,7 @@ export default function EventParticipantsView({ event, onBack }) {
                             {(participant.status === "APPROVED" ||
                               participant.status === "REJECTED") && (
                               <button
-                                onClick={() => handleApprove(participant, "pending")}
+                                onClick={() => requestParticipantAction(participant, "pending")}
                                 disabled={processingId === participant.key}
                                 className="w-full px-3 py-1.5 bg-yellow-600/20 text-yellow-400 rounded hover:bg-yellow-600/30 transition flex items-center justify-center gap-2 text-xs font-medium border border-yellow-600/20 disabled:opacity-50"
                               >
@@ -565,6 +610,21 @@ export default function EventParticipantsView({ event, onBack }) {
           </div>
         </>
       )}
+
+      <ConfirmDialog
+        open={Boolean(confirmState)}
+        title={confirmState?.title}
+        message={confirmState?.message}
+        confirmLabel={confirmState?.confirmLabel}
+        tone={confirmState?.tone}
+        busy={Boolean(confirmState?.busy)}
+        onClose={() => setConfirmState(null)}
+        onConfirm={() => {
+          if (confirmState?.participant && confirmState?.action) {
+            handleApprove(confirmState.participant, confirmState.action);
+          }
+        }}
+      />
     </div>
   );
 }

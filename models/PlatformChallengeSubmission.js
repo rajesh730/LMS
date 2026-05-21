@@ -88,6 +88,19 @@ PlatformChallengeSubmissionSchema.index({
   isPublic: 1,
   publishedAt: -1,
 });
+PlatformChallengeSubmissionSchema.index({ status: 1, createdAt: -1 });
+PlatformChallengeSubmissionSchema.index({
+  school: 1,
+  status: 1,
+  isPublic: 1,
+  publishedAt: -1,
+});
+PlatformChallengeSubmissionSchema.index({
+  challenge: 1,
+  status: 1,
+  createdAt: -1,
+});
+PlatformChallengeSubmissionSchema.index({ student: 1, createdAt: -1 });
 
 export default mongoose.models.PlatformChallengeSubmission ||
   mongoose.model(

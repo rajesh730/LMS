@@ -56,6 +56,9 @@ const EventSchoolInvitationSchema = new mongoose.Schema(
 EventSchoolInvitationSchema.index({ event: 1, school: 1 }, { unique: true });
 EventSchoolInvitationSchema.index({ school: 1, status: 1, notifiedAt: -1 });
 EventSchoolInvitationSchema.index({ event: 1, status: 1 });
+EventSchoolInvitationSchema.index({ school: 1, event: 1, status: 1 });
+EventSchoolInvitationSchema.index({ school: 1, notifiedAt: -1 });
+EventSchoolInvitationSchema.index({ status: 1, notifiedAt: -1 });
 
 export default mongoose.models.EventSchoolInvitation ||
   mongoose.model("EventSchoolInvitation", EventSchoolInvitationSchema);

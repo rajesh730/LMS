@@ -69,6 +69,7 @@ export async function GET(req, props) {
         event: params.id,
         round: null,
         status: "PUBLISHED",
+        isDeleted: { $ne: true },
         $or: [
           { visibility: "PUBLIC" },
           {

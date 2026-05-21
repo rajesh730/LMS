@@ -59,7 +59,10 @@ export async function GET(req) {
 
     const [totalStudents, totalTeachers] = await Promise.all([
       Student.countDocuments({ school: session.user.id, isDeleted: { $ne: true } }),
-      Teacher.countDocuments({ school: session.user.id }),
+      Teacher.countDocuments({
+        school: session.user.id,
+        isDeleted: { $ne: true },
+      }),
     ]);
 
     const payload = config.toObject();

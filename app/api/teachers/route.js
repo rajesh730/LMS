@@ -6,6 +6,7 @@ import Teacher from "@/models/Teacher";
 import User from "@/models/User";
 import bcrypt from "bcryptjs";
 import { generateStrongPassword } from "@/lib/passwordGenerator";
+import { buildPagination, escapeRegex, parsePagination } from "@/lib/pagination";
 
 export async function POST(req) {
   try {
@@ -29,7 +30,10 @@ export async function POST(req) {
         .map((email) => email.toLowerCase());
 
       const [existingTeachers, existingUsers] = await Promise.all([
-        Teacher.find({ email: { $in: emails } }).select("email").lean(),
+        Teacher.find({
+          email: { $in: emails },
+          isDeleted: { $ne: true },
+        }).select("email").lean(),
         User.find({ email: { $in: emails } }).select("email").lean(),
       ]);
 
@@ -122,6 +126,17 @@ export async function POST(req) {
       }
 
       const hashedPassword = await bcrypt.hash(password, 10);
+      const [existingTeacher, existingUser] = await Promise.all([
+        Teacher.findOne({ email, isDeleted: { $ne: true } }),
+        User.findOne({ email }),
+      ]);
+
+      if (existingTeacher || existingUser) {
+        return NextResponse.json(
+          { message: "A mentor with this email already exists" },
+          { status: 409 },
+        );
+      }
 
       const newTeacher = await Teacher.create({
         name,
@@ -135,18 +150,13 @@ export async function POST(req) {
         school: session.user.id,
       });
 
-      // Create User account for Teacher
-      const existingUser = await User.findOne({ email });
-      if (!existingUser) {
-        // const hashedPassword = await bcrypt.hash(password, 10); // Already hashed above
-        await User.create({
-          email,
-          password: hashedPassword,
-          role: "TEACHER",
-          schoolName: session.user.name, // Link to school name if available
-          status: "APPROVED",
-        });
-      }
+      await User.create({
+        email,
+        password: hashedPassword,
+        role: "TEACHER",
+        schoolName: session.user.name,
+        status: "APPROVED",
+      });
 
       if (assignments && Array.isArray(assignments)) {
         // Assignments parameter is accepted but not processed
@@ -183,8 +193,8 @@ export async function PUT(req, { params }) {
 
     await connectDB();
 
-    const updatedTeacher = await Teacher.findByIdAndUpdate(
-      id,
+    const updatedTeacher = await Teacher.findOneAndUpdate(
+      { _id: id, school: session.user.id, isDeleted: { $ne: true } },
       { name, email, phone, subject, roles },
       { new: true },
     );
@@ -223,7 +233,11 @@ export async function DELETE(req, { params }) {
     const { id } = params;
     await connectDB();
 
-    const teacherDoc = await Teacher.findById(id);
+    const teacherDoc = await Teacher.findOne({
+      _id: id,
+      school: session.user.id,
+      isDeleted: { $ne: true },
+    });
     if (!teacherDoc) {
       return NextResponse.json(
         { message: "Teacher not found" },
@@ -231,14 +245,25 @@ export async function DELETE(req, { params }) {
       );
     }
 
-    await Teacher.findByIdAndDelete(id);
+    await Teacher.findOneAndUpdate(
+      { _id: id, school: session.user.id, isDeleted: { $ne: true } },
+      {
+        isDeleted: true,
+        deletedAt: new Date(),
+        deletedBy: session.user.id,
+        status: "INACTIVE",
+      },
+    );
 
-    // Remove linked user account (if any)
+    // Revoke linked legacy user account (if any)
     if (teacherDoc.email) {
-      await User.deleteOne({ email: teacherDoc.email });
+      await User.findOneAndUpdate(
+        { email: teacherDoc.email, role: "TEACHER" },
+        { status: "UNSUBSCRIBED", $inc: { authVersion: 1 } },
+      );
     }
 
-    return NextResponse.json({ message: "Teacher deleted" }, { status: 200 });
+    return NextResponse.json({ message: "Mentor archived" }, { status: 200 });
   } catch (error) {
     console.error("Delete Teacher Error:", error);
     return NextResponse.json(
@@ -257,54 +282,57 @@ export async function GET(req) {
 
     const { searchParams } = new URL(req.url);
     const search = searchParams.get("search") || "";
-    const page = parseInt(searchParams.get("page")) || 1;
-    const limit = parseInt(searchParams.get("limit")) || 100; // Increased limit to ensure dropdowns get all teachers
-    const skip = (page - 1) * limit;
+    const status = searchParams.get("status");
+    const { page, limit, skip } = parsePagination(searchParams, {
+      limit: 20,
+      maxLimit: 200,
+    });
 
     await connectDB();
 
     // Ensure we only fetch teachers for the current school
-    const query = { school: session.user.id };
+    const query = { school: session.user.id, isDeleted: { $ne: true } };
+
+    if (status && status !== "ALL") {
+      query.status = { $regex: new RegExp(`^${escapeRegex(status)}$`, "i") };
+    }
 
     if (search) {
+      const safeSearch = escapeRegex(search.trim());
       query.$or = [
-        { name: { $regex: search, $options: "i" } },
-        { email: { $regex: search, $options: "i" } },
-        { subject: { $regex: search, $options: "i" } },
+        { name: { $regex: safeSearch, $options: "i" } },
+        { email: { $regex: safeSearch, $options: "i" } },
+        { subject: { $regex: safeSearch, $options: "i" } },
+        { phone: { $regex: safeSearch, $options: "i" } },
       ];
     }
 
-    const totalTeachers = await Teacher.countDocuments(query);
-    const totalPages = Math.ceil(totalTeachers / limit);
-
-    // Fetch teachers
-    const teachers = await Teacher.find(query)
-      .select("-password -visiblePassword")
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
+    const [totalTeachers, teachers] = await Promise.all([
+      Teacher.countDocuments(query),
+      Teacher.find(query)
+        .select("-password -visiblePassword")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+    ]);
+    const pagination = buildPagination({ page, limit, total: totalTeachers });
 
     // Map roles to teachers
-    const teachersWithRoles = teachers.map((teacher) => {
-      const t = teacher.toObject();
-
-      return {
-        ...t,
+    const teachersWithRoles = teachers.map((teacher) => ({
+        ...teacher,
         detailedRoles: {
           activityLeadOf: [],
           mentorOf: [],
         },
-      };
-    });
+      }));
 
     return NextResponse.json(
       {
         teachers: teachersWithRoles,
         pagination: {
-          page,
-          totalPages,
+          ...pagination,
           totalTeachers,
-          limit,
         },
       },
       { status: 200 },
@@ -329,7 +357,11 @@ export async function PATCH(req, { params }) {
     const { id } = params;
     await connectDB();
 
-    const teacherDoc = await Teacher.findById(id);
+    const teacherDoc = await Teacher.findOne({
+      _id: id,
+      school: session.user.id,
+      isDeleted: { $ne: true },
+    });
     if (!teacherDoc) {
       return NextResponse.json(
         { message: "Teacher not found" },
@@ -340,8 +372,8 @@ export async function PATCH(req, { params }) {
     const newPassword = generateStrongPassword();
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-    await Teacher.findByIdAndUpdate(
-      id,
+    await Teacher.findOneAndUpdate(
+      { _id: id, school: session.user.id, isDeleted: { $ne: true } },
       {
         visiblePassword: newPassword,
         password: hashedPassword,

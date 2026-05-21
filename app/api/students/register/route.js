@@ -3,6 +3,11 @@ import Student from "../../../../models/Student.js";
 import { hashPassword } from "../../../../lib/credentialGenerator.js";
 import { successResponse, errorResponse } from "../../../../lib/apiResponse.js";
 import {
+  getSessionSchoolId,
+  isActiveStudentQuery,
+  requireApiSession,
+} from "../../../../lib/authz.js";
+import {
   generatePlatformStudentId,
   generateUniqueStudentUsername,
 } from "../../../../lib/studentIdentity.js";
@@ -10,6 +15,14 @@ import { normalizeGradeValue } from "../../../../lib/schoolGrades.js";
 
 export async function POST(req) {
   try {
+    const { session, error } = await requireApiSession(["SCHOOL_ADMIN"]);
+    if (error) return error;
+
+    const schoolId = getSessionSchoolId(session);
+    if (!schoolId) {
+      return errorResponse(403, "Forbidden", "FORBIDDEN");
+    }
+
     await connectDB();
 
     const {
@@ -35,7 +48,6 @@ export async function POST(req) {
       parentAlternativeContact,
 
       // School reference
-      school,
       email,
     } = await req.json();
 
@@ -46,7 +58,6 @@ export async function POST(req) {
       { value: lastName, name: "lastName" },
       { value: grade, name: "grade" },
       { value: rollNumber, name: "rollNumber" },
-      { value: school, name: "school" },
     ];
 
     for (const field of requiredFields) {
@@ -63,9 +74,10 @@ export async function POST(req) {
 
     // Check if roll number already exists in the same grade
     const existingRollNumber = await Student.findOne({
-      school,
+      school: schoolId,
       grade: normalizedGrade,
       rollNumber: normalizedRollNumber,
+      isDeleted: { $ne: true },
     });
 
     if (existingRollNumber) {
@@ -77,7 +89,9 @@ export async function POST(req) {
 
     // Student email is optional and distinct from guardian email.
     if (email) {
-      const existingEmail = await Student.findOne({ email });
+      const existingEmail = await Student.findOne(
+        isActiveStudentQuery({ email })
+      );
       if (existingEmail) {
         return errorResponse(409, `Email ${email} is already registered`);
       }
@@ -87,7 +101,7 @@ export async function POST(req) {
       firstName,
       grade: normalizedGrade,
       rollNumber: normalizedRollNumber,
-      school,
+      school: schoolId,
     });
 
     // Create new student
@@ -119,7 +133,7 @@ export async function POST(req) {
       parentAlternativeContact,
 
       // School reference
-      school,
+      school: schoolId,
 
       // Status
       status: "ACTIVE",

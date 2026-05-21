@@ -34,6 +34,7 @@ const StudentSchema = new mongoose.Schema(
       required: false,
       trim: true,
       lowercase: true,
+      unique: true,
       sparse: true,
     },
     platformStudentId: {
@@ -197,6 +198,15 @@ const StudentSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    deletedAt: {
+      type: Date,
+      default: null,
+    },
+    deletedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
     
     createdAt: {
       type: Date,
@@ -209,6 +219,18 @@ const StudentSchema = new mongoose.Schema(
 // Create compound unique index for username per school
 StudentSchema.index({ username: 1, school: 1 }, { unique: true, sparse: true });
 StudentSchema.index({ platformStudentId: 1 }, { unique: true, sparse: true });
+StudentSchema.index({ school: 1, isDeleted: 1, status: 1 });
+StudentSchema.index({ school: 1, isDeleted: 1, status: 1, createdAt: -1 });
+StudentSchema.index({
+  school: 1,
+  isDeleted: 1,
+  status: 1,
+  grade: 1,
+  createdAt: -1,
+});
+StudentSchema.index({ school: 1, isDeleted: 1, username: 1 });
+StudentSchema.index({ school: 1, isDeleted: 1, platformStudentId: 1 });
+StudentSchema.index({ school: 1, isDeleted: 1, rollNumber: 1 });
 
 // Compound index: Roll Number must be unique within a specific Grade in a specific School
 StudentSchema.index({ school: 1, grade: 1, rollNumber: 1 }, { unique: true });

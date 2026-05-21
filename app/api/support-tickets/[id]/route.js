@@ -15,7 +15,10 @@ export async function GET(req, { params }) {
       return errorResponse(401, "Unauthorized");
     }
 
-    const ticket = await SupportTicket.findById(id)
+    const ticket = await SupportTicket.findOne({
+      _id: id,
+      isDeleted: { $ne: true },
+    })
       .populate("school", "name email")
       .populate("replies.author", "name email role")
       .populate("internalNotes.author", "name email role")
@@ -58,7 +61,10 @@ export async function PATCH(req, { params }) {
     const body = await req.json();
     const { action, message, status, internalNote, sendNotification } = body;
 
-    const ticket = await SupportTicket.findById(id);
+    const ticket = await SupportTicket.findOne({
+      _id: id,
+      isDeleted: { $ne: true },
+    });
 
     if (!ticket) {
       return errorResponse(404, "Ticket not found");
@@ -195,13 +201,21 @@ export async function DELETE(req, { params }) {
       return errorResponse(403, "Only super admin can delete tickets");
     }
 
-    const ticket = await SupportTicket.findByIdAndDelete(id);
+    const ticket = await SupportTicket.findOneAndUpdate(
+      { _id: id, isDeleted: { $ne: true } },
+      {
+        isDeleted: true,
+        deletedAt: new Date(),
+        deletedBy: session.user.id,
+      },
+      { new: true }
+    );
 
     if (!ticket) {
       return errorResponse(404, "Ticket not found");
     }
 
-    return successResponse(200, "Ticket deleted successfully");
+    return successResponse(200, "Ticket archived successfully");
   } catch (error) {
     console.error("Error deleting ticket:", error);
     return errorResponse(500, error.message);

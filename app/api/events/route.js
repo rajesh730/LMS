@@ -511,6 +511,7 @@ export async function GET(req) {
         round: null,
         status: "PUBLISHED",
         visibility: "PUBLIC",
+        isDeleted: { $ne: true },
       })
         .select("event title message type publishedAt createdAt")
         .sort({ publishedAt: -1, createdAt: -1 })

@@ -18,7 +18,11 @@ export const authOptions = {
         await connectDB();
 
         // 1. Try Teacher collection FIRST (Clean Architecture)
-        const teacher = await Teacher.findOne({ email: credentials.email });
+        const teacher = await Teacher.findOne({
+          email: credentials.email,
+          isDeleted: { $ne: true },
+          status: { $ne: "INACTIVE" },
+        });
 
         if (teacher) {
           let isValid = false;
@@ -82,20 +86,12 @@ export const authOptions = {
             throw new Error("Your account is inactive.");
           }
 
+          if (["STUDENT", "TEACHER"].includes(user.role)) {
+            throw new Error("Your profile is inactive or unavailable.");
+          }
+
           // Resolve a schoolId for downstream filtering
           let schoolId = null;
-
-          if (user.role === "STUDENT") {
-            // Legacy support if any students are still in User collection
-            return {
-              id: user._id.toString(),
-              email: user.email,
-              role: user.role,
-              name: user.name,
-              status: user.status,
-              schoolId,
-            };
-          }
 
           if (user.role === "SCHOOL_ADMIN") {
             schoolId = user._id.toString();
@@ -119,6 +115,8 @@ export const authOptions = {
         // Check by username OR email (in case they use email)
         const student = await Student.findOne({
           $or: [{ username: credentials.email }, { email: credentials.email }],
+          isDeleted: { $ne: true },
+          status: "ACTIVE",
         });
 
         if (student) {
@@ -155,25 +153,58 @@ export const authOptions = {
         token.schoolId = user.schoolId || null;
         token.authVersion = user.authVersion || 0;
         delete token.error;
-      } else if (
-        token?.id &&
-        ["SUPER_ADMIN", "SCHOOL_ADMIN"].includes(String(token.role || ""))
-      ) {
+      } else if (token?.id) {
         await connectDB();
-        const currentUser = await User.findById(token.id).select(
-          "authVersion status role"
-        );
+        const role = String(token.role || "");
 
-        if (!currentUser) {
-          token.error = "SessionRevoked";
-          delete token.role;
-          delete token.schoolId;
-        } else {
-          token.status = currentUser.status;
-          if ((currentUser.authVersion || 0) !== (token.authVersion || 0)) {
+        if (["SUPER_ADMIN", "SCHOOL_ADMIN"].includes(role)) {
+          const currentUser = await User.findById(token.id).select(
+            "authVersion status role"
+          );
+
+          if (!currentUser) {
             token.error = "SessionRevoked";
             delete token.role;
             delete token.schoolId;
+          } else {
+            token.status = currentUser.status;
+            if ((currentUser.authVersion || 0) !== (token.authVersion || 0)) {
+              token.error = "SessionRevoked";
+              delete token.role;
+              delete token.schoolId;
+            }
+          }
+        } else if (role === "TEACHER") {
+          const currentTeacher = await Teacher.findById(token.id).select(
+            "status isDeleted school"
+          );
+
+          if (
+            !currentTeacher ||
+            currentTeacher.isDeleted ||
+            currentTeacher.status === "INACTIVE"
+          ) {
+            token.error = "SessionRevoked";
+            delete token.role;
+            delete token.schoolId;
+          } else {
+            token.schoolId = currentTeacher.school?.toString() || null;
+          }
+        } else if (role === "STUDENT") {
+          const currentStudent = await Student.findById(token.id).select(
+            "status isDeleted school"
+          );
+
+          if (
+            !currentStudent ||
+            currentStudent.isDeleted ||
+            currentStudent.status !== "ACTIVE"
+          ) {
+            token.error = "SessionRevoked";
+            delete token.role;
+            delete token.schoolId;
+          } else {
+            token.schoolId = currentStudent.school?.toString() || null;
           }
         }
       }

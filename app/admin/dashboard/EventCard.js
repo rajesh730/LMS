@@ -5,14 +5,12 @@ import {
   FaUsers,
   FaChevronDown,
   FaChevronUp,
-  FaTrash,
   FaClock,
   FaPhone,
   FaUser,
   FaUserGraduate,
   FaCalendarAlt,
   FaDownload,
-  FaSpinner,
   FaEdit,
   FaCheck,
   FaTimes,
@@ -101,7 +99,6 @@ export default function EventCard({
 
   const exportToCSV = () => {
     if (!event.participants || event.participants.length === 0) {
-      alert("No participants to export");
       return;
     }
 
@@ -403,9 +400,9 @@ export default function EventCard({
           {/* Archive (Soft Delete) - If not already archived */}
           {(isManageMode || isCompletedMode) && event.lifecycleStatus !== "ARCHIVED" && (
             <button
-              onClick={() => onDelete(event._id, false)} // false = soft delete
+              onClick={() => onDelete(event._id, false)}
               disabled={isDeleting}
-              className="bg-orange-600 hover:bg-orange-500 text-white px-4 py-3 rounded-lg flex items-center justify-center gap-2 transition shadow-lg hover:shadow-orange-500/20"
+              className="bg-slate-700 hover:bg-slate-600 text-white px-4 py-3 rounded-lg flex items-center justify-center gap-2 transition shadow-lg hover:shadow-slate-500/20"
               title="Archive Event"
             >
               <FaArchive size={18} />
@@ -421,26 +418,6 @@ export default function EventCard({
               title="Restore to Active"
             >
               <FaUndo size={18} />
-            </button>
-          )}
-
-          {/* Permanent Delete - Only if ARCHIVED */}
-          {isArchivedMode && event.lifecycleStatus === "ARCHIVED" && (
-            <button
-              onClick={() => onDelete(event._id, true)} // true = permanent
-              disabled={isDeleting}
-              className={`p-3 rounded-lg flex items-center justify-center transition shadow-lg ${
-                isDeleting
-                  ? "bg-red-500/50 text-white/50 cursor-not-allowed"
-                  : "bg-red-600 hover:bg-red-500 text-white hover:shadow-red-500/20"
-              }`}
-              title="Delete Permanently"
-            >
-              {isDeleting ? (
-                <FaSpinner className="animate-spin" size={18} />
-              ) : (
-                <FaTrash size={18} />
-              )}
             </button>
           )}
 

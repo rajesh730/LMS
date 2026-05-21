@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import PlatformChallengeSubmission from "@/models/PlatformChallengeSubmission";
+import { recordLifecycleAudit } from "@/lib/lifecycle";
 
 export async function PATCH(request, props) {
   try {
@@ -35,6 +36,13 @@ export async function PATCH(request, props) {
       );
     }
 
+    const before = {
+      status: submission.status,
+      isPublic: submission.isPublic,
+      publishedAt: submission.publishedAt,
+      reviewNote: submission.reviewNote,
+    };
+
     if (action === "SELECT_PUBLISH") {
       submission.status = "SELECTED";
       submission.isPublic = true;
@@ -53,6 +61,20 @@ export async function PATCH(request, props) {
     submission.reviewedBy = session.user.id;
 
     await submission.save();
+    await recordLifecycleAudit({
+      entityType: "PlatformChallengeSubmission",
+      entityId: submission._id,
+      action: submission.status === "SELECTED" ? "SELECTED_PUBLISHED" : "REJECTED",
+      session,
+      reason: reviewNote,
+      before,
+      after: {
+        status: submission.status,
+        isPublic: submission.isPublic,
+        publishedAt: submission.publishedAt,
+        reviewNote: submission.reviewNote,
+      },
+    });
 
     return NextResponse.json({
       message:

@@ -17,6 +17,7 @@ export default function TicketDetailModal({ ticket, isOpen, onClose, onReplyAdde
   const [replyMessage, setReplyMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [showResolveDialog, setShowResolveDialog] = useState(false);
   const [resolutionMessage, setResolutionMessage] = useState("");
 
@@ -46,6 +47,7 @@ export default function TicketDetailModal({ ticket, isOpen, onClose, onReplyAdde
   const handleReply = async (e) => {
     e.preventDefault();
     setError("");
+    setSuccess("");
 
     if (!replyMessage.trim()) {
       setError("Message cannot be empty");
@@ -68,7 +70,7 @@ export default function TicketDetailModal({ ticket, isOpen, onClose, onReplyAdde
       if (res.ok) {
         setReplyMessage("");
         onReplyAdded();
-        alert("Reply sent successfully!");
+        setSuccess("Reply sent successfully.");
       } else {
         setError(data.message || "Failed to send reply");
       }
@@ -82,6 +84,7 @@ export default function TicketDetailModal({ ticket, isOpen, onClose, onReplyAdde
   const handleResolveTicket = async () => {
     setLoading(true);
     setError("");
+    setSuccess("");
 
     try {
       const res = await fetch(`/api/support-tickets/${ticket._id}`, {
@@ -100,7 +103,7 @@ export default function TicketDetailModal({ ticket, isOpen, onClose, onReplyAdde
         setShowResolveDialog(false);
         setResolutionMessage("");
         onReplyAdded();
-        alert("Ticket resolved successfully!");
+        setSuccess("Ticket resolved successfully.");
       } else {
         setError(data.message || "Failed to resolve ticket");
       }
@@ -220,6 +223,11 @@ export default function TicketDetailModal({ ticket, isOpen, onClose, onReplyAdde
                 {error && (
                   <div className="bg-red-900/30 border border-red-700 text-red-100 p-3 rounded text-sm">
                     {error}
+                  </div>
+                )}
+                {success && (
+                  <div className="bg-emerald-900/30 border border-emerald-700 text-emerald-100 p-3 rounded text-sm">
+                    {success}
                   </div>
                 )}
                 <textarea

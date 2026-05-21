@@ -1,7 +1,11 @@
 import { successResponse, errorResponse } from "../../../../lib/apiResponse.js";
+import { requireApiSession } from "../../../../lib/authz.js";
 
 export async function POST(req) {
   try {
+    const { error } = await requireApiSession(["SCHOOL_ADMIN"]);
+    if (error) return error;
+
     const {
       parentEmail,
       parentName,
@@ -21,7 +25,7 @@ export async function POST(req) {
       return errorResponse(400, "Missing required fields");
     }
 
-    // Email template
+    // Email template kept ready for a real provider. Do not log passwords.
     const emailHtml = `
       <!DOCTYPE html>
       <html>
@@ -94,24 +98,15 @@ export async function POST(req) {
       </html>
     `;
 
-    // TODO: Send email via SendGrid or similar service
-    // For now, we log the email that would be sent
-    console.log(`
-      ======= EMAIL NOTIFICATION =======
-      TO: ${parentEmail}
-      SUBJECT: Student Login Credentials
-      
-      HTML Content:
-      ${emailHtml}
-      ===================================
-    `);
+    // TODO: Send email via a production provider such as SendGrid, Resend, or SES.
+    void emailHtml;
 
     // Send success response
     return successResponse(
       200,
-      "Credentials email sent to parent",
+      "Credentials email prepared",
       {
-        message: "Email sent successfully",
+        message: "Email provider is not configured yet.",
         recipientEmail: parentEmail,
       }
     );

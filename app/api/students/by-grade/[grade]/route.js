@@ -55,6 +55,7 @@ export async function GET(req, { params }) {
     const query = {
         school: schoolId,
         status: "ACTIVE",
+        isDeleted: { $ne: true },
         $or: [
             { grade: gradeQuery },
             // Also try regex matching for "Grade X" vs "grade x"

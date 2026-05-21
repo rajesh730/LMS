@@ -8,6 +8,7 @@ import {
   generateUniqueStudentUsername,
 } from "@/lib/studentIdentity";
 import { normalizeGradeValue } from "@/lib/schoolGrades";
+import { buildPagination, escapeRegex, parsePagination } from "@/lib/pagination";
 import bcrypt from "bcryptjs";
 
 export const dynamic = "force-dynamic";
@@ -144,6 +145,7 @@ export async function POST(req) {
         school: session.user.id,
         grade: normalizedGrade,
         rollNumber: normalizedRollNumber,
+        isDeleted: { $ne: true },
       });
       if (duplicateRoll) {
         return NextResponse.json(
@@ -215,14 +217,18 @@ export async function GET(req) {
     const { searchParams } = new URL(req.url);
     const grade = searchParams.get("grade");
     const search = searchParams.get("search") || "";
-    const page = parseInt(searchParams.get("page")) || 1;
-    const limit = parseInt(searchParams.get("limit")) || 10;
-    const skip = (page - 1) * limit;
+    const { page, limit, skip } = parsePagination(searchParams, {
+      limit: 10,
+      maxLimit: 1000,
+    });
 
     await connectDB();
 
     // Ensure we only fetch students for the current school
-    const andConditions = [{ school: session.user.id }];
+    const andConditions = [
+      { school: session.user.id },
+      { isDeleted: { $ne: true } },
+    ];
     
     // Filter by Status (default to ACTIVE if not specified, unless 'ALL' is requested)
     const status = searchParams.get("status");
@@ -260,34 +266,43 @@ export async function GET(req) {
     }
 
     if (search) {
+      const safeSearch = escapeRegex(search.trim());
       andConditions.push({
         $or: [
-          { name: { $regex: search, $options: "i" } },
-          { email: { $regex: search, $options: "i" } },
+          { name: { $regex: safeSearch, $options: "i" } },
+          { email: { $regex: safeSearch, $options: "i" } },
+          { username: { $regex: safeSearch, $options: "i" } },
+          { platformStudentId: { $regex: safeSearch, $options: "i" } },
+          { rollNumber: { $regex: safeSearch, $options: "i" } },
+          { parentName: { $regex: safeSearch, $options: "i" } },
+          { parentPhone: { $regex: safeSearch, $options: "i" } },
         ]
       });
     }
 
     const query = andConditions.length > 0 ? { $and: andConditions } : {};
 
-    const totalStudents = await Student.countDocuments(query);
-
-    const totalPages = Math.ceil(totalStudents / limit);
-
-    const students = await Student.find(query)
-      .select("-password -visiblePassword -parentAccessPin")
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
+    const [totalStudents, students] = await Promise.all([
+      Student.countDocuments(query),
+      Student.find(query)
+        .select("-password -visiblePassword -parentAccessPin")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+    ]);
+    const pagination = buildPagination({
+      page,
+      limit,
+      total: totalStudents,
+    });
 
     return NextResponse.json(
       {
         students,
         pagination: {
-          currentPage: page,
-          totalPages,
+          ...pagination,
           totalStudents,
-          limit,
         }
       },
       { status: 200 }

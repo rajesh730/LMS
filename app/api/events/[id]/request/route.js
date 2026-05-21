@@ -75,6 +75,8 @@ export async function GET(req, { params }) {
     const { id: eventId } = params;
 
     const student = await Student.findOne({
+      isDeleted: { $ne: true },
+      status: "ACTIVE",
       $or: [
         { _id: session.user.id },
         { userId: session.user.id },

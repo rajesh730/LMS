@@ -60,11 +60,34 @@ const TeacherSchema = new mongoose.Schema({
     ref: "User",
     required: true,
   },
+  status: {
+    type: String,
+    enum: ["ACTIVE", "INACTIVE"],
+    default: "ACTIVE",
+  },
+  isDeleted: {
+    type: Boolean,
+    default: false,
+  },
+  deletedAt: {
+    type: Date,
+    default: null,
+  },
+  deletedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    default: null,
+  },
   createdAt: {
     type: Date,
     default: Date.now,
   },
 });
+
+TeacherSchema.index({ school: 1, isDeleted: 1, createdAt: -1 });
+TeacherSchema.index({ school: 1, isDeleted: 1, status: 1, createdAt: -1 });
+TeacherSchema.index({ school: 1, isDeleted: 1, email: 1 });
+TeacherSchema.index({ school: 1, isDeleted: 1, subject: 1, createdAt: -1 });
 
 export default mongoose.models.Teacher ||
   mongoose.model("Teacher", TeacherSchema);

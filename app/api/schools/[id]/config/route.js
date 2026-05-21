@@ -3,11 +3,24 @@ import User from "../../../../../models/User";
 import SchoolConfig from "../../../../../models/SchoolConfig";
 import { successResponse, errorResponse } from "../../../../../lib/apiResponse";
 import { buildGradeLabels } from "../../../../../lib/schoolGrades";
+import {
+  getSessionSchoolId,
+  requireApiSession,
+  sameId,
+} from "../../../../../lib/authz";
 
 export async function GET(req, { params }) {
   try {
+    const { session, error } = await requireApiSession(["SCHOOL_ADMIN"]);
+    if (error) return error;
+
     await connectDB();
     const { id } = await params;
+    const schoolId = getSessionSchoolId(session);
+
+    if (!sameId(id, schoolId)) {
+      return errorResponse(403, "Forbidden", "FORBIDDEN");
+    }
 
     const school = await User.findById(id).select("schoolConfig educationLevels");
 

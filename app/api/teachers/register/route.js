@@ -3,9 +3,18 @@ import connectDB from "@/lib/db";
 import Teacher from "@/models/Teacher";
 import User from "@/models/User";
 import bcrypt from "bcryptjs";
+import { getSessionSchoolId, requireApiSession } from "@/lib/authz";
 
 export async function POST(req) {
   try {
+    const { session, error } = await requireApiSession(["SCHOOL_ADMIN"]);
+    if (error) return error;
+
+    const schoolId = getSessionSchoolId(session);
+    if (!schoolId) {
+      return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+    }
+
     await connectDB();
     const body = await req.json();
 
@@ -21,21 +30,23 @@ export async function POST(req) {
       designation,
       experience,
       bloodGroup,
-      password, 
-      schoolId 
+      password
     } = body;
 
     // Validation
-    if (!name || !email || !subject || !password || !schoolId) {
+    if (!name || !email || !subject || !password) {
       return NextResponse.json(
         { message: "Missing required fields" },
         { status: 400 }
       );
     }
 
-    // Check if User exists
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
+    const [existingTeacher, existingUser] = await Promise.all([
+      Teacher.findOne({ email, isDeleted: { $ne: true } }),
+      User.findOne({ email }),
+    ]);
+
+    if (existingTeacher || existingUser) {
       return NextResponse.json(
         { message: "User with this email already exists" },
         { status: 409 }

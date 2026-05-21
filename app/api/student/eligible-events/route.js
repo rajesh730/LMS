@@ -29,7 +29,11 @@ export async function GET(req) {
     await connectDB();
 
     // Get student's grade from Student model
-    const student = await Student.findById(session.user.id).select("grade school");
+    const student = await Student.findOne({
+      _id: session.user.id,
+      isDeleted: { $ne: true },
+      status: "ACTIVE",
+    }).select("grade school");
 
     if (!student) {
       return NextResponse.json(

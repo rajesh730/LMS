@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
+import { recordLifecycleAudit } from "@/lib/lifecycle";
 
 export async function PATCH(request, props) {
   try {
@@ -18,6 +19,7 @@ export async function PATCH(request, props) {
     const article = await SchoolMagazineArticle.findOne({
       _id: params.id,
       school: session.user.id,
+      isDeleted: { $ne: true },
     });
 
     if (!article) {
@@ -45,12 +47,30 @@ export async function PATCH(request, props) {
       );
     }
 
+    const before = {
+      status: article.status,
+      reviewNote: article.reviewNote,
+      reviewedAt: article.reviewedAt,
+    };
     article.status = action === "APPROVE" ? "APPROVED" : "REJECTED";
     article.reviewNote = reviewNote;
     article.reviewedAt = new Date();
     article.reviewedBy = session.user.id;
 
     await article.save();
+    await recordLifecycleAudit({
+      entityType: "SchoolMagazineArticle",
+      entityId: article._id,
+      action: article.status,
+      session,
+      reason: reviewNote,
+      before,
+      after: {
+        status: article.status,
+        reviewNote: article.reviewNote,
+        reviewedAt: article.reviewedAt,
+      },
+    });
 
     return NextResponse.json({
       message:

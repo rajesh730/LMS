@@ -6,6 +6,7 @@ import {
   FaEdit,
   FaKey,
   FaPlus,
+  FaSearch,
   FaTrash,
 } from "react-icons/fa";
 import { TableSkeleton } from "@/components/Skeletons";
@@ -13,6 +14,8 @@ import PaginationControls from "@/components/PaginationControls";
 import EmptyState from "@/components/EmptyState";
 import Modal from "@/components/Modal";
 import CredentialsModal from "@/components/CredentialsModal";
+import AlertBanner from "@/components/ui/AlertBanner";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 export default function StudentManager({ initialGrade, hideGradeFilter = false }) {
   // Data State
@@ -29,6 +32,7 @@ export default function StudentManager({ initialGrade, hideGradeFilter = false }
   const [grades, setGrades] = useState([]);
   const [selectedGrade, setSelectedGrade] = useState(initialGrade || "");
   const [selectedStatus, setSelectedStatus] = useState("ACTIVE");
+  const [search, setSearch] = useState("");
 
   // Edit State
   const [editingStudent, setEditingStudent] = useState(null);
@@ -38,6 +42,8 @@ export default function StudentManager({ initialGrade, hideGradeFilter = false }
     isOpen: false,
     credentials: null,
   });
+  const [feedback, setFeedback] = useState(null);
+  const [confirmState, setConfirmState] = useState(null);
   
   useEffect(() => {
     if (initialGrade) {
@@ -65,45 +71,65 @@ export default function StudentManager({ initialGrade, hideGradeFilter = false }
   const fetchStudents = useCallback(
     async (page = 1) => {
       setLoading(true);
+      setFeedback(null);
       try {
         const params = new URLSearchParams({
           page,
           limit: 10,
           status: selectedStatus,
+          ...(search.trim() && { search: search.trim() }),
           ...(selectedGrade && { grade: selectedGrade }),
         });
 
         const res = await fetch(`/api/students?${params}`);
-        if (res.ok) {
-          const data = await res.json();
-          setStudents(data.students);
-          if (data.pagination) {
-            setPagination({
-              page: data.pagination.currentPage,
-              totalPages: data.pagination.totalPages,
-              totalStudents: data.pagination.totalStudents,
-              limit: data.pagination.limit,
-            });
-          } else {
-            setPagination({
-              page: 1,
-              totalPages: 1,
-              totalStudents: data.students.length,
-              limit: data.students.length,
-            });
-          }
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+          throw new Error(data.message || "Failed to load students.");
+        }
+
+        const nextStudents = Array.isArray(data.students) ? data.students : [];
+        setStudents(nextStudents);
+        if (data.pagination) {
+          setPagination({
+            page: data.pagination.currentPage,
+            totalPages: data.pagination.totalPages,
+            totalStudents: data.pagination.totalStudents,
+            limit: data.pagination.limit,
+            start: data.pagination.start,
+            end: data.pagination.end,
+          });
+        } else {
+          setPagination({
+            page: 1,
+            totalPages: 1,
+            totalStudents: nextStudents.length,
+            limit: nextStudents.length,
+          });
         }
       } catch (error) {
         console.error("Error fetching students:", error);
+        setStudents([]);
+        setFeedback({
+          type: "error",
+          title: "Students could not be loaded",
+          message:
+            error.message ||
+            "Please retry. If it continues, check your connection and server logs.",
+          retry: () => fetchStudents(page),
+        });
       } finally {
         setLoading(false);
       }
     },
-    [selectedGrade, selectedStatus]
+    [search, selectedGrade, selectedStatus]
   );
 
   useEffect(() => {
-    fetchStudents(1);
+    const timer = setTimeout(() => {
+      fetchStudents(1);
+    }, 350);
+    return () => clearTimeout(timer);
   }, [fetchStudents]);
 
   // Page Change Handlers
@@ -116,30 +142,61 @@ export default function StudentManager({ initialGrade, hideGradeFilter = false }
     setIsEditModalOpen(true);
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm("Are you sure you want to delete this student?")) return;
+  const requestDelete = (student) => {
+    setConfirmState({
+      type: "archive",
+      student,
+      title: "Archive this student?",
+      message: `${student.name} will be removed from active student lists, but their record will stay safely archived for reporting and history.`,
+      confirmLabel: "Archive student",
+      tone: "danger",
+      busy: false,
+    });
+  };
+
+  const executeDelete = async (student) => {
     try {
-      const res = await fetch(`/api/students/${id}`, { method: "DELETE" });
-      if (res.ok) {
-        setStudents(students.filter((s) => s._id !== id));
-      } else {
-        alert("Failed to delete student");
+      setConfirmState((current) => ({ ...current, busy: true }));
+      const res = await fetch(`/api/students/${student._id}`, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to archive student.");
       }
+
+      setConfirmState(null);
+      setFeedback({
+        type: "success",
+        title: "Student archived",
+        message: `${student.name} is no longer shown in active student records.`,
+      });
+      await fetchStudents(pagination.page);
     } catch (error) {
       console.error("Error deleting student:", error);
+      setConfirmState(null);
+      setFeedback({
+        type: "error",
+        title: "Student was not archived",
+        message: error.message || "Please retry after checking the connection.",
+      });
     }
   };
 
-  const handleResetPassword = async (student) => {
-    if (
-      !confirm(
-        `Reset password for ${student.name}? A new temporary password will be generated.`
-      )
-    ) {
-      return;
-    }
+  const requestResetPassword = (student) => {
+    setConfirmState({
+      type: "reset-password",
+      student,
+      title: "Reset student password?",
+      message: `A new temporary password will be generated for ${student.name}. Share it only with the student or school staff responsible for the account.`,
+      confirmLabel: "Reset password",
+      tone: "warning",
+      busy: false,
+    });
+  };
 
+  const executeResetPassword = async (student) => {
     try {
+      setConfirmState((current) => ({ ...current, busy: true }));
       const res = await fetch(`/api/students/${student._id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -151,6 +208,13 @@ export default function StudentManager({ initialGrade, hideGradeFilter = false }
         throw new Error(data.message || "Failed to reset password");
       }
 
+      setConfirmState(null);
+      setFeedback({
+        type: "success",
+        title: "Password reset",
+        message: `A new temporary password is ready for ${student.name}.`,
+      });
+
       if (data.credentials) {
         setCredentialsModal({
           isOpen: true,
@@ -159,7 +223,12 @@ export default function StudentManager({ initialGrade, hideGradeFilter = false }
       }
     } catch (error) {
       console.error("Error resetting student password:", error);
-      alert(error.message || "Failed to reset student password");
+      setConfirmState(null);
+      setFeedback({
+        type: "error",
+        title: "Password was not reset",
+        message: error.message || "Failed to reset student password",
+      });
     }
   };
 
@@ -173,19 +242,27 @@ export default function StudentManager({ initialGrade, hideGradeFilter = false }
         body: JSON.stringify(editingStudent),
       });
 
-      if (res.ok) {
-        const updatedStudent = await res.json();
-        // Refresh list or update local state
-        fetchStudents(pagination.page);
-        setIsEditModalOpen(false);
-        setEditingStudent(null);
-      } else {
-        const error = await res.json();
-        alert(`Failed to update: ${error.message}`);
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to update student.");
       }
+
+      await fetchStudents(pagination.page);
+      setIsEditModalOpen(false);
+      setEditingStudent(null);
+      setFeedback({
+        type: "success",
+        title: "Student updated",
+        message: `${data.name || editingStudent.name} has been saved successfully.`,
+      });
     } catch (error) {
       console.error("Error updating student:", error);
-      alert("Error updating student");
+      setFeedback({
+        type: "error",
+        title: "Student was not updated",
+        message: error.message || "Please retry after checking the details.",
+      });
     } finally {
       setIsSaving(false);
     }
@@ -193,10 +270,39 @@ export default function StudentManager({ initialGrade, hideGradeFilter = false }
 
   return (
     <div className="space-y-6">
+      {feedback && (
+        <AlertBanner
+          type={feedback.type}
+          title={feedback.title}
+          message={feedback.message}
+          action={
+            feedback.retry ? (
+              <button
+                type="button"
+                onClick={feedback.retry}
+                className="rounded-lg bg-white/80 px-3 py-2 text-xs font-black text-slate-900 transition hover:bg-white"
+              >
+                Retry
+              </button>
+            ) : null
+          }
+        />
+      )}
+
       {/* Filters */}
       {!hideGradeFilter && (
       <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 bg-slate-900/50 p-4 rounded-2xl border border-slate-800">
         <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+          <div className="relative w-full sm:w-72">
+            <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+            <input
+              type="text"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search name, roll, ID..."
+              className="w-full rounded-lg border border-slate-700 bg-slate-800 py-2 pl-10 pr-3 text-white outline-none transition focus:border-blue-500"
+            />
+          </div>
           <select
             value={selectedGrade}
             onChange={(e) => setSelectedGrade(e.target.value)}
@@ -257,8 +363,12 @@ export default function StudentManager({ initialGrade, hideGradeFilter = false }
                 <tr>
                   <td colSpan="6" className="p-8 text-center text-slate-500">
                     <EmptyState
-                      title="No students added yet"
-                      description="Add students manually or upload a CSV so they can access events, notices, writing, and magazine content."
+                      title={search ? "No students match this search" : "No students added yet"}
+                      description={
+                        search
+                          ? "Try a different name, roll number, username, or student ID."
+                          : "Add students manually or upload a CSV so they can access events, notices, writing, and magazine content."
+                      }
                     />
                   </td>
                 </tr>
@@ -299,14 +409,14 @@ export default function StudentManager({ initialGrade, hideGradeFilter = false }
                           <FaEdit />
                         </button>
                         <button
-                          onClick={() => handleResetPassword(student)}
+                          onClick={() => requestResetPassword(student)}
                           className="p-2 text-slate-400 hover:text-amber-400 hover:bg-amber-400/10 rounded-lg transition-colors"
                           title="Reset Password"
                         >
                           <FaKey />
                         </button>
                         <button
-                          onClick={() => handleDelete(student._id)}
+                          onClick={() => requestDelete(student)}
                           className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
                           title="Delete Student"
                         >
@@ -328,6 +438,9 @@ export default function StudentManager({ initialGrade, hideGradeFilter = false }
                     currentPage={pagination.page}
                     totalPages={pagination.totalPages}
                     onPageChange={handlePageChange}
+                    totalItems={pagination.totalStudents}
+                    start={pagination.start}
+                    end={pagination.end}
                 />
             </div>
         )}
@@ -466,6 +579,24 @@ export default function StudentManager({ initialGrade, hideGradeFilter = false }
         onClose={() =>
           setCredentialsModal({ isOpen: false, credentials: null })
         }
+      />
+
+      <ConfirmDialog
+        open={Boolean(confirmState)}
+        title={confirmState?.title}
+        message={confirmState?.message}
+        confirmLabel={confirmState?.confirmLabel}
+        tone={confirmState?.tone}
+        busy={Boolean(confirmState?.busy)}
+        onClose={() => setConfirmState(null)}
+        onConfirm={() => {
+          if (!confirmState?.student) return;
+          if (confirmState.type === "archive") {
+            executeDelete(confirmState.student);
+          } else if (confirmState.type === "reset-password") {
+            executeResetPassword(confirmState.student);
+          }
+        }}
       />
     </div>
   );

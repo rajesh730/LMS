@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { FaBell, FaEdit, FaEye, FaPlus, FaSave, FaTrash } from "react-icons/fa";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 const EMPTY_FORM = {
   title: "",
@@ -33,6 +34,7 @@ export default function EventNoticeManager({ eventId, eventTitle = "Event" }) {
   const [statusMessage, setStatusMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   const fetchNotices = useCallback(async () => {
     try {
@@ -107,10 +109,10 @@ export default function EventNoticeManager({ eventId, eventTitle = "Event" }) {
     }
   };
 
-  const deleteNotice = async (noticeId) => {
-    if (!confirm("Delete this event notice?")) return;
+  const deleteNotice = async () => {
+    if (!deleteTarget) return;
     try {
-      const res = await fetch(`/api/events/${eventId}/notices/${noticeId}`, {
+      const res = await fetch(`/api/events/${eventId}/notices/${deleteTarget._id}`, {
         method: "DELETE",
       });
       const data = await res.json().catch(() => ({}));
@@ -118,12 +120,14 @@ export default function EventNoticeManager({ eventId, eventTitle = "Event" }) {
         throw new Error(data.message || "Failed to delete notice.");
       }
       setStatusMessage(data.message || "Notice deleted.");
-      if (selectedNotice?._id === noticeId) {
+      if (selectedNotice?._id === deleteTarget._id) {
         setSelectedNotice(null);
       }
+      setDeleteTarget(null);
       await fetchNotices();
     } catch (error) {
       setStatusMessage(error.message);
+      setDeleteTarget(null);
     }
   };
 
@@ -300,7 +304,7 @@ export default function EventNoticeManager({ eventId, eventTitle = "Event" }) {
                     </button>
                     <button
                       type="button"
-                      onClick={() => deleteNotice(notice._id)}
+                      onClick={() => setDeleteTarget(notice)}
                       className="rounded-lg bg-rose-100 p-2 text-rose-700 hover:bg-rose-200"
                       title="Delete notice"
                     >
@@ -313,6 +317,20 @@ export default function EventNoticeManager({ eventId, eventTitle = "Event" }) {
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        title="Archive this event notice?"
+        message={
+          deleteTarget
+            ? `"${deleteTarget.title}" will no longer be shown on the event notice stream.`
+            : ""
+        }
+        confirmLabel="Archive notice"
+        tone="danger"
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={deleteNotice}
+      />
     </div>
   );
 }

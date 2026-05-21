@@ -24,6 +24,8 @@ import SchoolRoundPanel from "@/app/school/dashboard/SchoolRoundPanel";
 import EventCertificatesPanel from "./EventCertificatesPanel";
 import EmptyState from "@/components/EmptyState";
 import LoadingState from "@/components/ui/LoadingState";
+import AlertBanner from "@/components/ui/AlertBanner";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { getEventStage, getStageClasses, isDatePast } from "@/lib/eventUiStatus";
 import { isTeamEventLike } from "@/lib/eventParticipationFormat";
 
@@ -51,6 +53,8 @@ export default function EventHub({
   const [openNoticeEventId, setOpenNoticeEventId] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState(defaultFilter); // all, participated, pending, approved, rejected
+  const [feedback, setFeedback] = useState(null);
+  const [withdrawTarget, setWithdrawTarget] = useState(null);
 
   const fetchEvents = useCallback(async () => {
     try {
@@ -134,32 +138,45 @@ export default function EventHub({
   const handleWithdraw = async (eventId) => {
     const event = events.find((item) => item._id === eventId);
     if (event && isRegistrationClosed(event)) {
-      alert("Registration is closed, so this team can no longer be withdrawn.");
+      setFeedback({
+        type: "warning",
+        title: "Registration is locked",
+        message: "Registration is closed, so this team can no longer be withdrawn.",
+      });
       return;
     }
 
-    if (
-      !confirm(
-        "Are you sure you want to withdraw from this event? This will remove all students."
-      )
-    )
-      return;
-
     try {
+      setFeedback(null);
       const res = await fetch(`/api/events/${eventId}/participate`, {
         method: "DELETE",
       });
 
       if (res.ok) {
-        alert("Successfully withdrawn from event");
+        setFeedback({
+          type: "success",
+          title: "Registration withdrawn",
+          message: "Your school registration was withdrawn from this event.",
+        });
+        setWithdrawTarget(null);
         fetchEvents();
       } else {
-        const data = await res.json();
-        alert(data.error || "Failed to withdraw");
+        const data = await res.json().catch(() => ({}));
+        setFeedback({
+          type: "error",
+          title: "Withdraw failed",
+          message: data.error || "Failed to withdraw",
+        });
       }
     } catch (error) {
       console.error("Error withdrawing:", error);
-      alert("An error occurred");
+      setFeedback({
+        type: "error",
+        title: "Withdraw failed",
+        message: "An error occurred.",
+      });
+    } finally {
+      setWithdrawTarget(null);
     }
   };
 
@@ -238,6 +255,16 @@ export default function EventHub({
           </div>
           <p className="text-slate-400">{description}</p>
         </div>
+
+        {feedback && (
+          <div className="mb-6">
+            <AlertBanner
+              type={feedback.type}
+              title={feedback.title}
+              message={feedback.message}
+            />
+          </div>
+        )}
 
         {/* Search & Filter */}
         <div className="mb-8 space-y-4">
@@ -551,7 +578,7 @@ export default function EventHub({
                                 disabled={registrationLocked}
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleWithdraw(event._id);
+                                  setWithdrawTarget(event);
                                 }}
                                 className="inline-flex items-center gap-2 bg-red-600/20 hover:bg-red-600/40 text-red-400 px-3 py-2 rounded-lg transition-colors disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-500"
                                 title={
@@ -806,6 +833,18 @@ export default function EventHub({
           )}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={Boolean(withdrawTarget)}
+        title="Withdraw from this event?"
+        message="This will remove the registered students or teams for your school while registration is still open."
+        confirmLabel="Withdraw registration"
+        tone="danger"
+        onClose={() => setWithdrawTarget(null)}
+        onConfirm={() => {
+          if (withdrawTarget?._id) handleWithdraw(withdrawTarget._id);
+        }}
+      />
     </div>
   );
 }

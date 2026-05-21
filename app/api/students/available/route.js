@@ -50,6 +50,7 @@ export async function GET(req) {
       _id: { $nin: enrolledStudentIds },
       school: schoolId,
       status: "ACTIVE",
+      isDeleted: { $ne: true },
     })
       .select("name email grade")
       .sort({ name: 1 })

@@ -8,6 +8,8 @@ import PlatformChallengeSubmission from "@/models/PlatformChallengeSubmission";
 
 function buildStudentLookup(session) {
   return {
+    isDeleted: { $ne: true },
+    status: "ACTIVE",
     $or: [
       { _id: session.user.id },
       { userId: session.user.id },
@@ -46,6 +48,7 @@ export async function GET() {
     const now = new Date();
     const challenges = await PlatformChallenge.find({
       status: "PUBLISHED",
+      isDeleted: { $ne: true },
       $or: [{ deadline: null }, { deadline: { $gte: now } }],
     })
       .sort({ deadline: 1, createdAt: -1 })

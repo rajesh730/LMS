@@ -14,6 +14,8 @@ export async function GET(request) {
 
     // Get current student to find their class/grade
     const currentStudent = await Student.findOne({
+      isDeleted: { $ne: true },
+      status: "ACTIVE",
       $or: [
         { _id: session.user.id },
         { userId: session.user.id },
@@ -29,6 +31,8 @@ export async function GET(request) {
     const leaderboard = await Student.find({
       school: currentStudent.school,
       grade: currentStudent.grade,
+      isDeleted: { $ne: true },
+      status: "ACTIVE",
       "gamification.totalPoints": { $gt: 0 }, // Only show students with points
     })
       .sort({ "gamification.totalPoints": -1 })

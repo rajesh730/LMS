@@ -28,7 +28,11 @@ export async function DELETE(req, { params }) {
     // Get event and student
     const [event, student] = await Promise.all([
       Event.findById(eventId),
-      Student.findById(studentId),
+      Student.findOne({
+        _id: studentId,
+        status: "ACTIVE",
+        isDeleted: { $ne: true },
+      }),
     ]);
 
     if (!event) {

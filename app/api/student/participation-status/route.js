@@ -20,6 +20,8 @@ export async function GET(req) {
     await connectDB();
 
     const student = await Student.findOne({
+      isDeleted: { $ne: true },
+      status: "ACTIVE",
       $or: [
         { _id: session.user.id },
         { userId: session.user.id },

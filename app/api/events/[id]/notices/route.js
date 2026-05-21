@@ -52,6 +52,7 @@ export async function GET(req, props) {
     const notices = await EventNotice.find({
       event: params.id,
       round: null,
+      isDeleted: { $ne: true },
     })
       .sort({ publishedAt: -1, createdAt: -1 })
       .lean();

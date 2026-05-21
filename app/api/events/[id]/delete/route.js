@@ -3,8 +3,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import Event from "@/models/Event";
-import EventSchoolInvitation from "@/models/EventSchoolInvitation";
-import ParticipationRequest from "@/models/ParticipationRequest";
+import { canManageEventRecord } from "@/lib/authz";
+import { syncEventSchoolInvitations } from "@/lib/eventInvitations";
 
 export async function POST(req, props) {
   try {
@@ -19,24 +19,33 @@ export async function POST(req, props) {
     const params = await props.params;
     const id = params.id;
 
-    console.log(`[POST DELETE EVENT] Request received for ID: ${id}`);
-    console.log(`[POST DELETE EVENT] User Role: ${session?.user?.role}`);
-
     await connectDB();
 
-    const deletedEvent = await Event.findByIdAndDelete(id);
+    const event = await Event.findById(id);
 
-    if (!deletedEvent) {
+    if (!event) {
       return NextResponse.json({ message: "Event not found" }, { status: 404 });
     }
 
-    await Promise.all([
-      EventSchoolInvitation.deleteMany({ event: id }),
-      ParticipationRequest.deleteMany({ event: id }),
-    ]);
+    if (!canManageEventRecord(session, event)) {
+      return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+    }
+
+    event.lifecycleStatus = "ARCHIVED";
+    await event.save();
+
+    if (session.user.role === "SUPER_ADMIN") {
+      try {
+        await syncEventSchoolInvitations(event._id, {
+          createdBy: session.user.id,
+        });
+      } catch (invitationError) {
+        console.error("Archive Event Invitations Error:", invitationError);
+      }
+    }
 
     return NextResponse.json(
-      { message: "Event deleted via POST" },
+      { message: "Event archived successfully" },
       { status: 200 }
     );
   } catch (error) {

@@ -5,6 +5,7 @@ import dbConnect from "@/lib/db";
 import Event from "@/models/Event";
 import ParticipationRequest from "@/models/ParticipationRequest";
 import Student from "@/models/Student";
+import { buildParticipationLifecycle } from "@/lib/lifecycle";
 
 function isTeamEvent(event) {
   return String(event?.participationFormat || "INDIVIDUAL").toUpperCase() === "TEAM";
@@ -91,6 +92,7 @@ export async function GET(req, context) {
       .populate("student", "name email grade")
       .populate("captainStudent", "name grade")
       .populate("school", "schoolName name email")
+      .populate("approvedBy", "name schoolName email")
       .lean();
 
     // Organize requests by status
@@ -103,7 +105,10 @@ export async function GET(req, context) {
     };
 
     requests.forEach((req) => {
-      organized[req.status]?.push(req);
+      organized[req.status]?.push({
+        ...req,
+        lifecycle: buildParticipationLifecycle(req),
+      });
     });
 
     const teamEvent = isTeamEvent(event);

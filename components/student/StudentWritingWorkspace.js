@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { FaBookOpen, FaEdit, FaFileAlt, FaLightbulb, FaPaperPlane, FaTrash } from "react-icons/fa";
 import EmptyState from "@/components/EmptyState";
 import AlertBanner from "@/components/ui/AlertBanner";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import LoadingState from "@/components/ui/LoadingState";
 import PageHeader from "@/components/ui/PageHeader";
 
@@ -62,6 +63,7 @@ export default function StudentWritingWorkspace() {
   const [success, setSuccess] = useState("");
   const [form, setForm] = useState(buildEmptyForm());
   const [readingWriting, setReadingWriting] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   const loadWritings = async () => {
     try {
@@ -222,13 +224,12 @@ export default function StudentWritingWorkspace() {
     }
   };
 
-  const handleDelete = async (writingId) => {
-    if (!confirm("Delete this writing?")) return;
-
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
     try {
       setError("");
       setSuccess("");
-      const res = await fetch(`/api/student/writings/${writingId}`, {
+      const res = await fetch(`/api/student/writings/${deleteTarget.id}`, {
         method: "DELETE",
       });
       const payload = await res.json().catch(() => ({}));
@@ -237,13 +238,15 @@ export default function StudentWritingWorkspace() {
         throw new Error(payload.message || "Failed to delete writing");
       }
 
-      if (form.id === writingId) {
+      if (form.id === deleteTarget.id) {
         resetForm();
       }
+      setDeleteTarget(null);
       setSuccess(payload.message || "Writing deleted");
       await loadWritings();
     } catch (deleteError) {
       setError(deleteError.message || "Failed to delete writing");
+      setDeleteTarget(null);
     }
   };
 
@@ -574,7 +577,7 @@ export default function StudentWritingWorkspace() {
                       {canDelete && (
                         <button
                           type="button"
-                          onClick={() => handleDelete(writing.id)}
+                          onClick={() => setDeleteTarget(writing)}
                           className="inline-flex items-center gap-2 rounded-lg bg-red-500/10 px-3 py-2 text-sm font-semibold text-red-200 transition hover:bg-red-500/20"
                         >
                           <FaTrash />
@@ -649,6 +652,20 @@ export default function StudentWritingWorkspace() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        title="Delete this writing?"
+        message={
+          deleteTarget
+            ? `"${deleteTarget.title}" will be removed from your writing list.`
+            : ""
+        }
+        confirmLabel="Delete writing"
+        tone="danger"
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleDelete}
+      />
     </div>
   );
 }

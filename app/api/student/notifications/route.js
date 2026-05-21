@@ -10,6 +10,8 @@ import { getEquivalentGradeValues } from "@/lib/schoolGrades";
 
 function buildStudentLookup(session) {
   return {
+    isDeleted: { $ne: true },
+    status: "ACTIVE",
     $or: [
       { _id: session.user.id },
       { userId: session.user.id },
@@ -108,6 +110,7 @@ export async function GET(request) {
         round: null,
         status: "PUBLISHED",
         visibility: "PUBLIC",
+        isDeleted: { $ne: true },
       })
         .select("event title message publishedAt createdAt")
         .sort({ publishedAt: -1, createdAt: -1 })

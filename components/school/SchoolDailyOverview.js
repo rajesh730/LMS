@@ -75,6 +75,12 @@ export default function SchoolDailyOverview() {
   const [notifications, setNotifications] = useState([]);
   const [events, setEvents] = useState([]);
   const [challengeWinners, setChallengeWinners] = useState([]);
+  const [totals, setTotals] = useState({
+    submissions: 0,
+    invitations: 0,
+    notifications: 0,
+    challengeWinners: 0,
+  });
 
   useEffect(() => {
     let active = true;
@@ -91,15 +97,15 @@ export default function SchoolDailyOverview() {
           eventsRes,
           challengeWinnersRes,
         ] = await Promise.all([
-          fetch("/api/school/magazine-submissions?status=SUBMITTED", {
+          fetch("/api/school/magazine-submissions?status=SUBMITTED&limit=5", {
             cache: "no-store",
           }),
-          fetch("/api/school/event-invitations?status=PENDING", {
+          fetch("/api/school/event-invitations?status=PENDING&limit=5", {
             cache: "no-store",
           }),
           fetch("/api/school/notifications?limit=5", { cache: "no-store" }),
           fetch("/api/events", { cache: "no-store" }),
-          fetch("/api/school/challenge-winners", { cache: "no-store" }),
+          fetch("/api/school/challenge-winners?limit=5", { cache: "no-store" }),
         ]);
 
         const [
@@ -144,6 +150,24 @@ export default function SchoolDailyOverview() {
             ? challengeWinnersPayload.submissions
             : []
         );
+        setTotals({
+          submissions:
+            submissionsPayload.pagination?.totalItems ??
+            submissionsPayload.submissions?.length ??
+            0,
+          invitations:
+            invitationsPayload.pagination?.totalItems ??
+            invitationsPayload.invitations?.length ??
+            0,
+          notifications:
+            notificationsPayload.pagination?.totalItems ??
+            notificationsPayload.notifications?.length ??
+            0,
+          challengeWinners:
+            challengeWinnersPayload.pagination?.totalItems ??
+            challengeWinnersPayload.submissions?.length ??
+            0,
+        });
 
         const failedSources = [
           !submissionsRes.ok && "magazine submissions",
@@ -236,7 +260,7 @@ export default function SchoolDailyOverview() {
           <WorkCard
             href="/school/dashboard?tab=magazine"
             icon={FaFeatherAlt}
-            count={submissions.length}
+            count={totals.submissions}
             label="pending"
             title={
               submissions[0]?.title || "No magazine submissions waiting"
@@ -253,7 +277,7 @@ export default function SchoolDailyOverview() {
           <WorkCard
             href="/school/dashboard?tab=platform-events"
             icon={FaClipboardCheck}
-            count={invitations.length}
+            count={totals.invitations}
             label="invites"
             title={
               invitations[0]?.event?.title || "No platform invitations pending"
@@ -281,7 +305,7 @@ export default function SchoolDailyOverview() {
           <WorkCard
             href="/school/dashboard?tab=notices"
             icon={FaBell}
-            count={notifications.length}
+            count={totals.notifications}
             label="updates"
             title={latestNotice?.title || "No received notices yet"}
             description={
@@ -295,7 +319,7 @@ export default function SchoolDailyOverview() {
           <WorkCard
             href="/school/dashboard?tab=challenge-showcase"
             icon={FaTrophy}
-            count={challengeWinners.length}
+            count={totals.challengeWinners}
             label="selected"
             title={winnerToAdd?.title || "No showcase responses to add"}
             description={

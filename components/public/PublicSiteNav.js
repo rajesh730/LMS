@@ -10,7 +10,6 @@ export default function PublicSiteNav({ active = "" }) {
   const navItems = [
     { href: "/events", label: "Events", key: "events" },
     { href: "/schools", label: "Schools", key: "schools" },
-    { href: "/challenges", label: "Pulse", key: "challenges" },
     { href: "/partners", label: "Partners", key: "partners" },
   ];
 

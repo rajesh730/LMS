@@ -25,6 +25,7 @@ export default function AdminSupportDashboard() {
   const [newStatus, setNewStatus] = useState("");
   const [replyLoading, setReplyLoading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [showResolveDialog, setShowResolveDialog] = useState(false);
   const [resolutionMessage, setResolutionMessage] = useState("");
   const [showFaqDialog, setShowFaqDialog] = useState(false);
@@ -94,6 +95,7 @@ export default function AdminSupportDashboard() {
 
     setReplyLoading(true);
     setError("");
+    setSuccess("");
 
     try {
       const res = await fetch(`/api/support-tickets/${selectedTicket._id}`, {
@@ -115,7 +117,7 @@ export default function AdminSupportDashboard() {
         setSelectedTicket(data.data?.ticket);
         setNewStatus(data.data?.ticket?.status);
         fetchTickets();
-        alert("Ticket updated successfully!");
+        setSuccess("Ticket updated successfully.");
       } else {
         setError(data.message || "Failed to update ticket");
       }
@@ -131,6 +133,7 @@ export default function AdminSupportDashboard() {
 
     setReplyLoading(true);
     setError("");
+    setSuccess("");
 
     try {
       const res = await fetch(`/api/support-tickets/${selectedTicket._id}`, {
@@ -152,7 +155,7 @@ export default function AdminSupportDashboard() {
         setSelectedTicket(data.data?.ticket);
         setNewStatus("resolved");
         fetchTickets();
-        alert("Ticket resolved and school has been notified!");
+        setSuccess("Ticket resolved and school has been notified.");
       } else {
         setError(data.message || "Failed to resolve ticket");
       }
@@ -187,7 +190,7 @@ export default function AdminSupportDashboard() {
         setShowFaqDialog(false);
         setFaqTitle("");
         setFaqContent("");
-        alert("FAQ article created successfully!");
+        setSuccess("FAQ article created successfully.");
       } else {
         setError(data.message || "Failed to create FAQ");
       }
@@ -350,6 +353,11 @@ export default function AdminSupportDashboard() {
       <div className="lg:col-span-2">
         {selectedTicket ? (
           <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 space-y-6">
+            {success && (
+              <div className="rounded-lg border border-emerald-700 bg-emerald-900/30 p-3 text-sm text-emerald-100">
+                {success}
+              </div>
+            )}
             {/* Header */}
             <div>
               <h3 className="text-2xl font-bold text-white mb-2">

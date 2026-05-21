@@ -68,4 +68,8 @@ const UserSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+UserSchema.index({ role: 1, status: 1, createdAt: -1 });
+UserSchema.index({ role: 1, schoolName: 1 });
+UserSchema.index({ status: 1, createdAt: -1 });
+
 export default mongoose.models.User || mongoose.model("User", UserSchema);

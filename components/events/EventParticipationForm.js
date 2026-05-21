@@ -12,6 +12,7 @@ import { useSession } from "next-auth/react";
 import { gradeListContains, normalizeGradeValue } from "@/lib/schoolGrades";
 import { isDatePast } from "@/lib/eventUiStatus";
 import { isTeamEventLike } from "@/lib/eventParticipationFormat";
+import AlertBanner from "@/components/ui/AlertBanner";
 
 function normalizeSchoolTeamBaseName(schoolName = "") {
   const cleaned = String(schoolName || "")
@@ -80,6 +81,7 @@ const EventParticipationForm = memo(function EventParticipationForm({
   const [grades, setGrades] = useState([]);
   const [activeTeamIndex, setActiveTeamIndex] = useState(0);
   const [savedParticipation, setSavedParticipation] = useState(null);
+  const [feedback, setFeedback] = useState(null);
 
   const [interestedStudents, setInterestedStudents] = useState([]);
   const [interestedFilter, setInterestedFilter] = useState("all"); // all, pending, approved, rejected
@@ -186,7 +188,7 @@ const EventParticipationForm = memo(function EventParticipationForm({
   const loadStudents = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch("/api/students?page=1&limit=500");
+      const res = await fetch("/api/students?page=1&limit=1000");
       if (res.ok) {
         const data = await res.json();
         setStudents(Array.isArray(data.students) ? data.students : []);
@@ -441,14 +443,25 @@ const EventParticipationForm = memo(function EventParticipationForm({
     }
   };
 
+  const showRegistrationError = (message) => {
+    setFeedback({
+      type: "error",
+      title: "Registration needs attention",
+      message,
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setFeedback(null);
     if (isEventLocked) {
-      alert(lockReason || "Registration changes are locked for this event.");
+      showRegistrationError(
+        lockReason || "Registration changes are locked for this event."
+      );
       return;
     }
     if (!isTeamEvent && formData.selectedStudents.length === 0) {
-      alert("Please select at least one student");
+      showRegistrationError("Please select at least one student.");
       return;
     }
     if (isTeamEvent) {
@@ -456,39 +469,41 @@ const EventParticipationForm = memo(function EventParticipationForm({
         (team) => team.teamName.trim() || team.studentIds.length > 0
       );
       if (teams.length === 0) {
-        alert("Please create at least one team");
+        showRegistrationError("Please create at least one team.");
         return;
       }
 
       const seenStudents = new Set();
       for (const team of teams) {
         if (!team.teamName.trim()) {
-          alert("Each team must have a team name");
+          showRegistrationError("Each team must have a team name.");
           return;
         }
         if (!team.captainStudentId) {
-          alert(`Please select a captain for ${team.teamName}`);
+          showRegistrationError(`Please select a captain for ${team.teamName}.`);
           return;
         }
         if (!team.studentIds.includes(team.captainStudentId)) {
-          alert(`Captain for ${team.teamName} must be one of its selected members`);
+          showRegistrationError(
+            `Captain for ${team.teamName} must be one of its selected members.`
+          );
           return;
         }
         if (team.studentIds.length === 0) {
-          alert(`Please select at least one member for ${team.teamName}`);
+          showRegistrationError(`Please select at least one member for ${team.teamName}.`);
           return;
         }
         if (minTeamSize && team.studentIds.length < minTeamSize) {
-          alert(`${team.teamName} requires at least ${minTeamSize} members.`);
+          showRegistrationError(`${team.teamName} requires at least ${minTeamSize} members.`);
           return;
         }
         if (maxTeamSize && team.studentIds.length > maxTeamSize) {
-          alert(`${team.teamName} allows at most ${maxTeamSize} members.`);
+          showRegistrationError(`${team.teamName} allows at most ${maxTeamSize} members.`);
           return;
         }
         for (const studentId of team.studentIds) {
           if (seenStudents.has(studentId)) {
-            alert("A student cannot be added to more than one team.");
+            showRegistrationError("A student cannot be added to more than one team.");
             return;
           }
           seenStudents.add(studentId);
@@ -520,21 +535,23 @@ const EventParticipationForm = memo(function EventParticipationForm({
       });
 
       if (res.ok) {
-        alert(
-          isEditing
-            ? "Participation updated successfully!"
-            : isTeamEvent
-            ? "Team registered successfully!"
-            : "Participation request submitted successfully!"
-        );
+        setFeedback({
+          type: "success",
+          title: isEditing ? "Registration updated" : "Registration submitted",
+          message: isTeamEvent
+            ? "Team registration has been saved for this event."
+            : "Selected students have been submitted for this event.",
+        });
         onSuccess?.();
       } else {
-        const data = await res.json();
-        alert(data.message || "Error submitting participation request");
+        const data = await res.json().catch(() => ({}));
+        showRegistrationError(
+          data.message || "Error submitting participation request."
+        );
       }
     } catch (error) {
       console.error("Error:", error);
-      alert("Error submitting request");
+      showRegistrationError("Error submitting request. Please retry.");
     } finally {
       setSubmitting(false);
     }
@@ -550,6 +567,16 @@ const EventParticipationForm = memo(function EventParticipationForm({
           : "Register Students:"}{" "}
         <span className="text-emerald-400">{event.title}</span>
       </h2>
+
+      {feedback && (
+        <div className="mb-6">
+          <AlertBanner
+            type={feedback.type}
+            title={feedback.title}
+            message={feedback.message}
+          />
+        </div>
+      )}
 
       {session?.user?.role === "SCHOOL_ADMIN" && (
         <div className="mb-6 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-5">

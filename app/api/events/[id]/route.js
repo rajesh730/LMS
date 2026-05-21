@@ -4,7 +4,6 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import Event from "@/models/Event";
 import EventProposal from "@/models/EventProposal";
-import EventSchoolInvitation from "@/models/EventSchoolInvitation";
 import { syncEventSchoolInvitations } from "@/lib/eventInvitations";
 import { validateEventDates } from "@/lib/eventDates";
 import { validateEventCapacity } from "@/lib/eventCapacity";
@@ -434,12 +433,6 @@ export async function DELETE(req, props) {
     const params = await props.params;
     const id = params.id;
     
-    // Check for permanent delete flag
-    const { searchParams } = new URL(req.url);
-    const isPermanent = searchParams.get("permanent") === "true";
-
-    console.log(`[DELETE EVENT] Request received for ID: ${id}, Permanent: ${isPermanent}`);
-
     await connectDB();
 
     const event = await Event.findById(id);
@@ -451,68 +444,28 @@ export async function DELETE(req, props) {
       return NextResponse.json({ message: "Forbidden" }, { status: 403 });
     }
 
-    if (!isPermanent) {
-      // SOFT DELETE (Archive)
-      const archivedEvent = await Event.findByIdAndUpdate(
-        id,
-        { lifecycleStatus: "ARCHIVED" },
-        { new: true }
-      );
+    const archivedEvent = await Event.findByIdAndUpdate(
+      id,
+      { lifecycleStatus: "ARCHIVED" },
+      { new: true }
+    );
 
-      if (!archivedEvent) {
-        return NextResponse.json({ message: "Event not found" }, { status: 404 });
-      }
-
-      if (session.user.role === "SUPER_ADMIN") {
-        try {
-          await syncEventSchoolInvitations(archivedEvent._id, {
-            createdBy: session.user.id,
-          });
-        } catch (invitationError) {
-          console.error("Withdraw Event Invitations Error:", invitationError);
-        }
-      }
-
-      return NextResponse.json(
-        { message: "Event archived successfully" },
-        { status: 200 }
-      );
-    }
-
-    // PERMANENT DELETE
-    let deletedEvent;
-    try {
-      console.log("[DELETE EVENT] Attempting findByIdAndDelete...");
-      deletedEvent = await Event.findByIdAndDelete(id);
-      console.log(
-        "[DELETE EVENT] Result:",
-        deletedEvent ? "Deleted" : "Not Found"
-      );
-
-      // ===== CASCADE DELETE: Remove related participation requests =====
-      if (deletedEvent) {
-        const ParticipationRequest = (
-          await import("@/models/ParticipationRequest")
-        ).default;
-        const deleteResult = await ParticipationRequest.deleteMany({
-          event: id,
-        });
-        await EventSchoolInvitation.deleteMany({ event: id });
-        console.log(
-          `[DELETE EVENT] Deleted ${deleteResult.deletedCount} related participation requests`
-        );
-      }
-    } catch (dbError) {
-      console.error("[DELETE EVENT] DB Error:", dbError);
-      throw dbError;
-    }
-
-    if (!deletedEvent) {
+    if (!archivedEvent) {
       return NextResponse.json({ message: "Event not found" }, { status: 404 });
     }
 
+    if (session.user.role === "SUPER_ADMIN") {
+      try {
+        await syncEventSchoolInvitations(archivedEvent._id, {
+          createdBy: session.user.id,
+        });
+      } catch (invitationError) {
+        console.error("Archive Event Invitations Error:", invitationError);
+      }
+    }
+
     return NextResponse.json(
-      { message: "Event and related requests permanently deleted" },
+      { message: "Event archived successfully" },
       { status: 200 }
     );
   } catch (error) {

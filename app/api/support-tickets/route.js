@@ -16,7 +16,7 @@ export async function GET(req) {
     const { searchParams } = new URL(req.url);
     const role = session.user.role;
 
-    let query = {};
+    let query = { isDeleted: { $ne: true } };
 
     // School admin can only see their own tickets
     if (role === "SCHOOL_ADMIN") {

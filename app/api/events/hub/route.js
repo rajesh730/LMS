@@ -47,6 +47,8 @@ export async function GET(req) {
     if (session.user.role === "STUDENT") {
       // Get student info for grade eligibility
       const student = await Student.findOne({
+        isDeleted: { $ne: true },
+        status: "ACTIVE",
         $or: [
           { _id: session.user.id },
           { userId: session.user.id },

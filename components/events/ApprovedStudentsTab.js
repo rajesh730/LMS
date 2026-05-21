@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { FaTrash, FaPlus, FaDownload, FaSearch } from "react-icons/fa";
 import AddStudentModal from "./AddStudentModal";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 export default function ApprovedStudentsTab({
   requests,
@@ -13,14 +14,13 @@ export default function ApprovedStudentsTab({
   const [showAddModal, setShowAddModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
+  const [removeTarget, setRemoveTarget] = useState(null);
 
   const filteredRequests = requests.filter((req) =>
     req.student.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleRemoveStudent = async (studentId) => {
-    if (!confirm("Remove this student from the event?")) return;
-
     try {
       setLoading(true);
       const res = await fetch(
@@ -31,6 +31,7 @@ export default function ApprovedStudentsTab({
       );
 
       if (res.ok) {
+        setRemoveTarget(null);
         onDataChange();
       }
     } catch (error) {
@@ -147,7 +148,7 @@ export default function ApprovedStudentsTab({
                 </td>
                 <td className="p-3">
                   <button
-                    onClick={() => handleRemoveStudent(request.student._id)}
+                    onClick={() => setRemoveTarget(request)}
                     disabled={loading}
                     className="text-red-600 hover:text-red-700 font-semibold disabled:opacity-50"
                     title="Remove student"
@@ -172,6 +173,25 @@ export default function ApprovedStudentsTab({
           }}
         />
       )}
+
+      <ConfirmDialog
+        open={Boolean(removeTarget)}
+        title="Remove this student?"
+        message={
+          removeTarget
+            ? `${removeTarget.student?.name || "This student"} will be removed from this event.`
+            : ""
+        }
+        confirmLabel="Remove student"
+        tone="danger"
+        busy={loading}
+        onClose={() => setRemoveTarget(null)}
+        onConfirm={() => {
+          if (removeTarget?.student?._id) {
+            handleRemoveStudent(removeTarget.student._id);
+          }
+        }}
+      />
     </div>
   );
 }

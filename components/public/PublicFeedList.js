@@ -1,0 +1,287 @@
+"use client";
+
+import { useState } from "react";
+import {
+  FaArrowRight,
+  FaAward,
+  FaCalendarAlt,
+  FaFeatherAlt,
+  FaRegCommentDots,
+  FaSchool,
+  FaTrophy,
+  FaUsers,
+} from "react-icons/fa";
+
+function formatDate(value) {
+  if (!value) return "Date to be announced";
+
+  return new Intl.DateTimeFormat("en", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date(value));
+}
+
+function SponsoredSchoolCard({ promotion, compact = false }) {
+  return (
+    <a
+      href={promotion.href}
+      className="group block overflow-hidden rounded-[26px] border border-[#2f7fdb]/25 bg-[#10243f] shadow-xl shadow-black/15 transition hover:-translate-y-0.5 hover:border-[#8fc4ff]/60"
+    >
+      <div
+        className={compact ? "h-32 bg-cover bg-center" : "h-44 bg-cover bg-center"}
+        style={{
+          backgroundImage: promotion.profile?.coverImageUrl
+            ? `linear-gradient(rgba(7,24,51,0.12), rgba(7,24,51,0.9)), url(${promotion.profile.coverImageUrl})`
+            : "linear-gradient(135deg, rgba(47,127,219,.38), rgba(10,47,102,.95))",
+        }}
+      />
+      <div className="p-5">
+        <div className="mb-3 inline-flex rounded-full bg-white/10 px-3 py-1 text-xs font-black uppercase tracking-[0.14em] text-[#d7e9ff]">
+          Sponsored School
+        </div>
+        <h2 className="text-xl font-black text-white group-hover:text-[#d7e9ff]">
+          {promotion.title}
+        </h2>
+        <p className="mt-1 text-sm font-semibold text-[#8fc4ff]">
+          {promotion.school.name}
+          {promotion.school.location ? ` - ${promotion.school.location}` : ""}
+        </p>
+        <p className="mt-3 line-clamp-3 text-sm leading-6 text-slate-300">
+          {promotion.tagline}
+        </p>
+        <span className="mt-5 inline-flex items-center gap-2 text-sm font-black text-[#d7e9ff]">
+          View promotion
+          <FaArrowRight />
+        </span>
+      </div>
+    </a>
+  );
+}
+
+function PulseFeedCard({ item }) {
+  return (
+    <article className="rounded-[26px] border border-slate-200 bg-white p-5 shadow-sm transition hover:border-[#2f7fdb]/35 hover:shadow-xl hover:shadow-[#0a2f66]/10 sm:p-6">
+      <div className="flex items-start gap-4">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#eaf2ff] text-[#0a2f66]">
+          <FaFeatherAlt />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap gap-2">
+            <span className="rounded-full bg-[#eaf2ff] px-3 py-1 text-xs font-black uppercase tracking-[0.12em] text-[#0a2f66]">
+              {item.challengeTitle || "Platform"}
+            </span>
+            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black uppercase tracking-[0.12em] text-slate-600">
+              {item.category || "Writing"}
+            </span>
+          </div>
+          <h3 className="mt-4 text-2xl font-black tracking-tight text-slate-950">
+            {item.title}
+          </h3>
+          <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-500">
+            <span>{item.studentLabel || "Student"}</span>
+            <span className="hidden text-slate-300 sm:inline">|</span>
+            <span>{item.schoolName || "School community"}</span>
+            <span className="hidden text-slate-300 sm:inline">|</span>
+            <span>{formatDate(item.date)}</span>
+          </p>
+          <p className="mt-4 line-clamp-4 text-base leading-7 text-slate-700">
+            {item.content}
+          </p>
+          <div className="mt-5 flex flex-wrap gap-3 text-sm font-bold text-slate-500">
+            <span className="inline-flex items-center gap-2">
+              <FaRegCommentDots />
+              Student response
+            </span>
+            <span className="inline-flex items-center gap-2">
+              <FaSchool />
+              School credit
+            </span>
+          </div>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function ResultFeedCard({ item }) {
+  return (
+    <article className="rounded-[26px] border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+      <div className="flex items-start gap-4">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#eaf2ff] text-[#0a2f66]">
+          <FaTrophy />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap gap-2">
+            <span className="rounded-full bg-[#eaf2ff] px-3 py-1 text-xs font-black uppercase tracking-[0.12em] text-[#0a2f66]">
+              Result
+            </span>
+            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black uppercase tracking-[0.12em] text-slate-600">
+              {item.placement}
+            </span>
+          </div>
+          <h3 className="mt-4 text-2xl font-black tracking-tight text-slate-950">
+            {item.title}
+          </h3>
+          <p className="mt-2 text-sm leading-6 text-slate-500">
+            {item.recipientName || "Student"} from {item.schoolName || "School"}
+          </p>
+          <p className="mt-4 flex items-center gap-2 text-sm font-bold text-slate-600">
+            <FaAward className="text-[#0a2f66]" />
+            {item.eventTitle || "Published event result"}
+          </p>
+          {item.certificateUrl && (
+            <a
+              href={item.certificateUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-5 inline-flex items-center gap-2 rounded-full bg-[#0a2f66] px-4 py-2 text-sm font-black text-white transition hover:bg-[#123f82]"
+            >
+              View certificate
+              <FaArrowRight />
+            </a>
+          )}
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function EventFeedCard({ item }) {
+  return (
+    <a
+      href={item.href}
+      className="group block rounded-[26px] border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-[#2f7fdb]/35 hover:shadow-xl hover:shadow-[#0a2f66]/10 sm:p-6"
+    >
+      <div className="flex items-start gap-4">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#eaf2ff] text-[#0a2f66]">
+          <FaCalendarAlt />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap gap-2">
+            <span className="rounded-full bg-[#eaf2ff] px-3 py-1 text-xs font-black uppercase tracking-[0.12em] text-[#0a2f66]">
+              Event
+            </span>
+            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black uppercase tracking-[0.12em] text-slate-600">
+              {item.eventScope || "Platform"}
+            </span>
+          </div>
+          <h3 className="mt-4 text-2xl font-black tracking-tight text-slate-950 group-hover:text-[#0a2f66]">
+            {item.title}
+          </h3>
+          <p className="mt-3 line-clamp-3 text-base leading-7 text-slate-700">
+            {item.description}
+          </p>
+          <div className="mt-5 flex flex-wrap gap-4 text-sm font-bold text-slate-500">
+            <span className="inline-flex items-center gap-2">
+              <FaCalendarAlt className="text-[#0a2f66]" />
+              {formatDate(item.date)}
+            </span>
+            <span className="inline-flex items-center gap-2">
+              <FaUsers className="text-[#0a2f66]" />
+              {item.eligibleGrades?.length
+                ? item.eligibleGrades.join(", ")
+                : "Eligible grades"}
+            </span>
+          </div>
+        </div>
+      </div>
+    </a>
+  );
+}
+
+function FeedCard({ item }) {
+  if (item.type === "pulse") return <PulseFeedCard item={item} />;
+  if (item.type === "result") return <ResultFeedCard item={item} />;
+  return <EventFeedCard item={item} />;
+}
+
+export { SponsoredSchoolCard };
+
+export default function PublicFeedList({
+  initialItems = [],
+  initialCursor = null,
+  initialHasMore = false,
+  sponsoredPromotion = null,
+}) {
+  const [items, setItems] = useState(initialItems);
+  const [cursor, setCursor] = useState(initialCursor);
+  const [hasMore, setHasMore] = useState(initialHasMore);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const loadMore = async () => {
+    if (!hasMore || loading) return;
+
+    try {
+      setLoading(true);
+      setError("");
+      const params = new URLSearchParams({ limit: "8" });
+      if (cursor) params.set("cursor", cursor);
+
+      const res = await fetch(`/api/public/feed?${params.toString()}`, {
+        cache: "no-store",
+      });
+      const payload = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(payload.message || "Failed to load more posts");
+      }
+
+      setItems((current) => [...current, ...(payload.items || [])]);
+      setCursor(payload.nextCursor || null);
+      setHasMore(Boolean(payload.hasMore));
+    } catch (loadError) {
+      setError(loadError.message || "Failed to load more posts");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (items.length === 0) {
+    return (
+      <div className="rounded-[26px] border border-slate-200 bg-white p-8 text-center shadow-sm">
+        <FaFeatherAlt className="mx-auto text-3xl text-[#0a2f66]" />
+        <h2 className="mt-4 text-2xl font-black text-slate-950">
+          The public feed is ready
+        </h2>
+        <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-600">
+          Published challenge responses, event results, and public events will
+          appear here as schools start using the platform.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {items.map((item, index) => (
+        <div key={item.id} className="space-y-4">
+          <FeedCard item={item} />
+          {index === 1 && sponsoredPromotion && (
+            <SponsoredSchoolCard promotion={sponsoredPromotion} />
+          )}
+        </div>
+      ))}
+
+      {error && (
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-700">
+          {error}
+        </div>
+      )}
+
+      {hasMore && (
+        <div className="pt-2 text-center">
+          <button
+            type="button"
+            disabled={loading}
+            onClick={loadMore}
+            className="rounded-full bg-[#0a2f66] px-6 py-3 text-sm font-black text-white shadow-lg shadow-[#0a2f66]/15 transition hover:bg-[#123f82] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {loading ? "Loading..." : "Load more posts"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}

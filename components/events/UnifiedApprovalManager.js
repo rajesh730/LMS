@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   FaCheck,
   FaPhone,
@@ -10,6 +10,11 @@ import {
   FaUser,
   FaUserGraduate,
 } from "react-icons/fa";
+import PaginationControls from "@/components/PaginationControls";
+import LifecycleTimeline from "@/components/ui/LifecycleTimeline";
+import AlertBanner from "@/components/ui/AlertBanner";
+
+const PAGE_SIZE = 8;
 
 function getSchoolLabel(request) {
   return (
@@ -48,10 +53,29 @@ function statusChip(status) {
   return "border-[#0a2f66]/20 bg-[#0a2f66]/10 text-[#0a2f66]";
 }
 
+function getGroupLifecycle(requests) {
+  const items = requests
+    .flatMap((request) => request.lifecycle || [])
+    .filter((item) => item?.at)
+    .sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime());
+
+  const seen = new Set();
+  return items
+    .filter((item) => {
+      const key = `${item.label}-${item.status}-${item.at}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(-4);
+}
+
 export default function UnifiedApprovalManager({ requests, event, onDataChange }) {
   const [filter, setFilter] = useState("ALL");
   const [searchTerm, setSearchTerm] = useState("");
   const [loadingAction, setLoadingAction] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [feedback, setFeedback] = useState(null);
 
   const groupedParticipants = useMemo(() => {
     const grouped = new Map();
@@ -84,6 +108,16 @@ export default function UnifiedApprovalManager({ requests, event, onDataChange }
     );
   }, [filter, requests, searchTerm]);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filter, searchTerm, requests]);
+
+  const totalPages = Math.max(1, Math.ceil(groupedParticipants.length / PAGE_SIZE));
+  const pagedParticipants = groupedParticipants.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE
+  );
+
   const stats = useMemo(() => {
     const schoolMap = new Map();
     for (const request of requests) {
@@ -109,6 +143,7 @@ export default function UnifiedApprovalManager({ requests, event, onDataChange }
   const updateSchoolStatus = async (schoolRequests, action) => {
     try {
       setLoadingAction(`${action}-${schoolRequests[0]?._id}`);
+      setFeedback(null);
       const res = await fetch(`/api/events/${event._id}/approve`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -122,9 +157,24 @@ export default function UnifiedApprovalManager({ requests, event, onDataChange }
       if (!res.ok) {
         throw new Error(data.message || "Failed to update school registration.");
       }
+      const statusLabel =
+        action === "approve"
+          ? "approved"
+          : action === "reject"
+          ? "rejected"
+          : "marked pending";
+      setFeedback({
+        type: "success",
+        title: "Registration updated",
+        message: `${getSchoolLabel(schoolRequests[0])} is now ${statusLabel}.`,
+      });
       await onDataChange?.();
     } catch (error) {
-      alert(error.message);
+      setFeedback({
+        type: "error",
+        title: "Registration update failed",
+        message: error.message || "Please retry after checking the connection.",
+      });
     } finally {
       setLoadingAction("");
     }
@@ -132,6 +182,14 @@ export default function UnifiedApprovalManager({ requests, event, onDataChange }
 
   return (
     <div className="space-y-6">
+      {feedback && (
+        <AlertBanner
+          type={feedback.type}
+          title={feedback.title}
+          message={feedback.message}
+        />
+      )}
+
       <div className="flex w-fit rounded-lg bg-[#0a2145] p-1">
         {["ALL", "PENDING", "APPROVED", "REJECTED"].map((status) => (
           <button
@@ -208,7 +266,8 @@ export default function UnifiedApprovalManager({ requests, event, onDataChange }
               Approved students are added to Round 1 automatically.
             </div>
             <div className="text-sm text-[#cddfff]">
-              Showing {groupedParticipants.length} results
+              Showing {groupedParticipants.length} school
+              {groupedParticipants.length === 1 ? "" : "s"}
             </div>
           </div>
         </div>
@@ -233,11 +292,12 @@ export default function UnifiedApprovalManager({ requests, event, onDataChange }
                   </td>
                 </tr>
               ) : (
-                groupedParticipants.map((group) => {
+                pagedParticipants.map((group) => {
                   const schoolRequests = group.requests;
                   const schoolStatus = getSchoolStatus(schoolRequests);
                   const contactPerson = getContactPerson(schoolRequests);
                   const phone = getSchoolPhone(schoolRequests);
+                  const groupLifecycle = getGroupLifecycle(schoolRequests);
 
                   return (
                     <tr key={group.schoolId} className="transition hover:bg-[#0f2953]/60">
@@ -250,6 +310,13 @@ export default function UnifiedApprovalManager({ requests, event, onDataChange }
                             {schoolRequests.length} registered student
                             {schoolRequests.length === 1 ? "" : "s"}
                           </span>
+                        </div>
+                        <div className="mt-3 min-w-[240px]">
+                          <LifecycleTimeline
+                            compact
+                            title="Registration history"
+                            items={groupLifecycle}
+                          />
                         </div>
                       </td>
                       <td className="p-4 align-top">
@@ -347,6 +414,13 @@ export default function UnifiedApprovalManager({ requests, event, onDataChange }
               )}
             </tbody>
           </table>
+        </div>
+        <div className="border-t border-[#16396d] px-4 pb-4">
+          <PaginationControls
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
         </div>
       </div>
     </div>

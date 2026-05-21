@@ -7,6 +7,8 @@ import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
 
 function buildStudentLookup(session) {
   return {
+    isDeleted: { $ne: true },
+    status: "ACTIVE",
     $or: [
       { _id: session.user.id },
       { userId: session.user.id },
@@ -42,6 +44,7 @@ export async function PATCH(request, props) {
       _id: params.id,
       authorStudent: student._id,
       school: student.school,
+      isDeleted: { $ne: true },
     });
 
     if (!article) {
@@ -132,6 +135,7 @@ export async function DELETE(request, props) {
       _id: params.id,
       authorStudent: student._id,
       school: student.school,
+      isDeleted: { $ne: true },
     });
 
     if (!article) {
@@ -148,7 +152,12 @@ export async function DELETE(request, props) {
       );
     }
 
-    await SchoolMagazineArticle.deleteOne({ _id: article._id });
+    article.isDeleted = true;
+    article.deletedAt = new Date();
+    article.deletedBy = student._id;
+    article.isPublished = false;
+    article.publishedAt = null;
+    await article.save();
 
     return NextResponse.json({ message: "Writing deleted" });
   } catch (error) {
@@ -186,6 +195,7 @@ export async function POST(request, props) {
       _id: params.id,
       authorStudent: student._id,
       school: student.school,
+      isDeleted: { $ne: true },
     }).lean();
 
     if (!article) {

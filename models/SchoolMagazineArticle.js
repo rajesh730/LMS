@@ -91,11 +91,30 @@ const SchoolMagazineArticleSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    isDeleted: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    deletedAt: {
+      type: Date,
+      default: null,
+    },
+    deletedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Student",
+      default: null,
+    },
   },
   { timestamps: true }
 );
 
-SchoolMagazineArticleSchema.index({ school: 1, status: 1, updatedAt: -1 });
+SchoolMagazineArticleSchema.index({
+  school: 1,
+  status: 1,
+  isDeleted: 1,
+  updatedAt: -1,
+});
 SchoolMagazineArticleSchema.index({
   authorStudent: 1,
   updatedAt: -1,
@@ -103,6 +122,25 @@ SchoolMagazineArticleSchema.index({
 SchoolMagazineArticleSchema.index({
   authorStudent: 1,
   challenge: 1,
+});
+SchoolMagazineArticleSchema.index({
+  school: 1,
+  isDeleted: 1,
+  status: 1,
+  submittedAt: -1,
+  updatedAt: -1,
+});
+SchoolMagazineArticleSchema.index({
+  school: 1,
+  isDeleted: 1,
+  isPublished: 1,
+  publishedAt: -1,
+});
+SchoolMagazineArticleSchema.index({
+  challenge: 1,
+  isDeleted: 1,
+  status: 1,
+  createdAt: -1,
 });
 
 export default mongoose.models.SchoolMagazineArticle ||

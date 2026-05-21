@@ -7,12 +7,18 @@ import {
   FaPaperPlane,
   FaPlus,
   FaSave,
+  FaSearch,
   FaTrash,
 } from "react-icons/fa";
 import PageHeader from "@/components/ui/PageHeader";
 import AlertBanner from "@/components/ui/AlertBanner";
 import LoadingState from "@/components/ui/LoadingState";
 import EmptyState from "@/components/EmptyState";
+import PaginationControls from "@/components/PaginationControls";
+import LifecycleTimeline from "@/components/ui/LifecycleTimeline";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
+
+const CHALLENGE_PAGE_SIZE = 6;
 
 const STATUS_STYLES = {
   DRAFT: "bg-slate-700 text-slate-100",
@@ -58,6 +64,7 @@ export default function StudentChallengeManager() {
   const [challenges, setChallenges] = useState([]);
   const [submissions, setSubmissions] = useState([]);
   const [submissionFilter, setSubmissionFilter] = useState("SUBMITTED");
+  const [submissionSearch, setSubmissionSearch] = useState("");
   const [selectedSubmission, setSelectedSubmission] = useState(null);
   const [reviewNote, setReviewNote] = useState("");
   const [form, setForm] = useState(emptyForm);
@@ -67,6 +74,14 @@ export default function StudentChallengeManager() {
   const [busyId, setBusyId] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [challengePage, setChallengePage] = useState(1);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [submissionPagination, setSubmissionPagination] = useState({
+    page: 1,
+    totalPages: 1,
+    totalItems: 0,
+    limit: 20,
+  });
 
   const formTitle = useMemo(
     () => (form.id ? "Edit Student Challenge" : "Create Student Challenge"),
@@ -96,14 +111,21 @@ export default function StudentChallengeManager() {
     loadChallenges();
   }, []);
 
-  const loadSubmissions = useCallback(async (nextFilter = submissionFilter) => {
+  const loadSubmissions = useCallback(async (nextFilter = submissionFilter, page = 1) => {
     try {
       setSubmissionsLoading(true);
       setError("");
-      const res = await fetch(
-        `/api/admin/challenges/submissions?status=${nextFilter}`,
-        { cache: "no-store" }
-      );
+      const params = new URLSearchParams({
+        status: nextFilter,
+        page: String(page),
+        limit: "12",
+      });
+      if (submissionSearch.trim()) {
+        params.append("search", submissionSearch.trim());
+      }
+      const res = await fetch(`/api/admin/challenges/submissions?${params}`, {
+        cache: "no-store",
+      });
       const payload = await res.json().catch(() => ({}));
 
       if (!res.ok) {
@@ -114,6 +136,9 @@ export default function StudentChallengeManager() {
         ? payload.submissions
         : [];
       setSubmissions(nextSubmissions);
+      if (payload.pagination) {
+        setSubmissionPagination(payload.pagination);
+      }
       setSelectedSubmission((current) => {
         if (!current) return nextSubmissions[0] || null;
         return (
@@ -127,11 +152,31 @@ export default function StudentChallengeManager() {
     } finally {
       setSubmissionsLoading(false);
     }
-  }, [submissionFilter]);
+  }, [submissionFilter, submissionSearch]);
 
   useEffect(() => {
-    loadSubmissions(submissionFilter);
+    const timer = setTimeout(() => {
+      loadSubmissions(submissionFilter, 1);
+    }, 300);
+    return () => clearTimeout(timer);
   }, [loadSubmissions, submissionFilter]);
+
+  useEffect(() => {
+    setChallengePage(1);
+  }, [challenges]);
+
+  useEffect(() => {
+    setSubmissionPagination((current) => ({ ...current, page: 1 }));
+  }, [submissionFilter, submissionSearch]);
+
+  const challengeTotalPages = Math.max(
+    1,
+    Math.ceil(challenges.length / CHALLENGE_PAGE_SIZE)
+  );
+  const pagedChallenges = challenges.slice(
+    (challengePage - 1) * CHALLENGE_PAGE_SIZE,
+    challengePage * CHALLENGE_PAGE_SIZE
+  );
 
   const resetForm = () => {
     setForm(emptyForm);
@@ -190,8 +235,6 @@ export default function StudentChallengeManager() {
   };
 
   const deleteChallenge = async (challengeId) => {
-    if (!confirm("Delete this student challenge? Students will no longer see it.")) return;
-
     try {
       setBusyId(challengeId);
       setError("");
@@ -207,9 +250,11 @@ export default function StudentChallengeManager() {
 
       setSuccess(payload.message || "Challenge deleted");
       if (form.id === challengeId) resetForm();
+      setDeleteTarget(null);
       await loadChallenges();
     } catch (deleteError) {
       setError(deleteError.message || "Failed to delete challenge");
+      setDeleteTarget(null);
     } finally {
       setBusyId("");
     }
@@ -244,7 +289,7 @@ export default function StudentChallengeManager() {
 
       setSuccess(payload.message || "Submission updated");
       setReviewNote("");
-      await loadSubmissions(submissionFilter);
+      await loadSubmissions(submissionFilter, submissionPagination.page || 1);
     } catch (reviewError) {
       setError(reviewError.message || "Failed to update submission");
     } finally {
@@ -359,7 +404,7 @@ export default function StudentChallengeManager() {
             </div>
           ) : (
             <div className="mt-5 space-y-4">
-              {challenges.map((challenge) => (
+              {pagedChallenges.map((challenge) => (
                 <article
                   key={challenge.id}
                   className="rounded-xl border border-slate-800 bg-slate-950/70 p-5"
@@ -394,15 +439,20 @@ export default function StudentChallengeManager() {
                       <button
                         type="button"
                         disabled={busyId === challenge.id}
-                        onClick={() => deleteChallenge(challenge.id)}
+                        onClick={() => setDeleteTarget(challenge)}
                         className="inline-flex items-center gap-2 rounded-lg bg-red-500/10 px-3 py-2 text-sm font-semibold text-red-200 transition hover:bg-red-500/20 disabled:opacity-60"
                       >
-                        <FaTrash /> Delete challenge
+                        <FaTrash /> Archive challenge
                       </button>
                     </div>
                   </div>
                 </article>
               ))}
+              <PaginationControls
+                currentPage={challengePage}
+                totalPages={challengeTotalPages}
+                onPageChange={setChallengePage}
+              />
             </div>
           )}
         </section>
@@ -434,6 +484,19 @@ export default function StudentChallengeManager() {
                 {status === "ALL" ? "All" : status}
               </button>
             ))}
+          </div>
+        </div>
+
+        <div className="mt-4 max-w-xl">
+          <div className="relative">
+            <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+            <input
+              type="text"
+              value={submissionSearch}
+              onChange={(event) => setSubmissionSearch(event.target.value)}
+              placeholder="Search challenge responses..."
+              className="w-full rounded-xl border border-slate-800 bg-slate-950/70 py-3 pl-10 pr-4 text-white outline-none transition focus:border-blue-500"
+            />
           </div>
         </div>
 
@@ -482,6 +545,20 @@ export default function StudentChallengeManager() {
                     </div>
                   </button>
                 ))}
+                <PaginationControls
+                  currentPage={
+                    submissionPagination.page ||
+                    submissionPagination.currentPage ||
+                    1
+                  }
+                  totalPages={submissionPagination.totalPages || 1}
+                  onPageChange={(page) =>
+                    loadSubmissions(submissionFilter, page)
+                  }
+                  totalItems={submissionPagination.totalItems}
+                  start={submissionPagination.start}
+                  end={submissionPagination.end}
+                />
               </div>
             )}
           </div>
@@ -510,6 +587,11 @@ export default function StudentChallengeManager() {
                     {selectedSubmission.challenge?.title || "Student Challenge"}
                   </p>
                 </div>
+
+                <LifecycleTimeline
+                  title="Platform review history"
+                  items={selectedSubmission.lifecycle}
+                />
 
                 <article className="whitespace-pre-wrap rounded-xl border border-slate-800 bg-slate-900/70 p-5 text-sm leading-7 text-slate-200">
                   {selectedSubmission.content}
@@ -553,6 +635,23 @@ export default function StudentChallengeManager() {
           </div>
         </div>
       </section>
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        title="Archive this challenge?"
+        message={
+          deleteTarget
+            ? `"${deleteTarget.title}" will stop appearing in student dashboards. Existing submissions and review history stay safe.`
+            : ""
+        }
+        confirmLabel="Archive challenge"
+        tone="danger"
+        busy={Boolean(deleteTarget && busyId === deleteTarget.id)}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={() => {
+          if (deleteTarget?.id) deleteChallenge(deleteTarget.id);
+        }}
+      />
     </div>
   );
 }

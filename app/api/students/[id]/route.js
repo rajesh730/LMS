@@ -30,7 +30,11 @@ export async function PUT(req, { params }) {
         await connectDB();
 
         // 1. Find the student first to ensure they exist and belong to this school
-        const existingStudent = await Student.findOne({ _id: id, school: session.user.id });
+        const existingStudent = await Student.findOne({
+            _id: id,
+            school: session.user.id,
+            isDeleted: { $ne: true },
+        });
         if (!existingStudent) {
             return NextResponse.json({ message: 'Student not found' }, { status: 404 });
         }
@@ -50,6 +54,7 @@ export async function PUT(req, { params }) {
                 school: session.user.id,
                 grade: normalizedGrade,
                 rollNumber: normalizedRollNumber,
+                isDeleted: { $ne: true },
                 _id: { $ne: id } // Exclude current student
             });
 
@@ -64,6 +69,7 @@ export async function PUT(req, { params }) {
         if (email && email !== existingStudent.email) {
             const emailCheck = await Student.findOne({
                 email: email,
+                isDeleted: { $ne: true },
                 _id: { $ne: id }
             });
 
@@ -170,13 +176,25 @@ export async function DELETE(req, { params }) {
         const { id } = await params;
 
         await connectDB();
-        const deletedStudent = await Student.findOneAndDelete({ _id: id, school: session.user.id });
+        const deletedStudent = await Student.findOneAndUpdate(
+            { _id: id, school: session.user.id, isDeleted: { $ne: true } },
+            {
+                isDeleted: true,
+                deletedAt: new Date(),
+                deletedBy: session.user.id,
+                status: 'INACTIVE',
+                statusChangedAt: new Date(),
+                statusChangedBy: session.user.id,
+                statusReason: 'Removed by school admin',
+            },
+            { new: true }
+        );
 
         if (!deletedStudent) {
             return NextResponse.json({ message: 'Student not found' }, { status: 404 });
         }
 
-        return NextResponse.json({ message: 'Student deleted successfully' }, { status: 200 });
+        return NextResponse.json({ message: 'Student archived successfully' }, { status: 200 });
     } catch (error) {
         console.error('Delete Student Error:', error);
         return NextResponse.json({ message: 'Error deleting student' }, { status: 500 });
@@ -194,7 +212,11 @@ export async function PATCH(req, { params }) {
         const { id } = await params;
 
         await connectDB();
-        const studentDoc = await Student.findOne({ _id: id, school: session.user.id });
+        const studentDoc = await Student.findOne({
+            _id: id,
+            school: session.user.id,
+            isDeleted: { $ne: true },
+        });
 
         if (!studentDoc) {
             return NextResponse.json({ message: 'Student not found' }, { status: 404 });

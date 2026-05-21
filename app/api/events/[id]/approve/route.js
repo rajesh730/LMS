@@ -9,6 +9,7 @@ import {
   removeStudentsFromCompetition,
   syncApprovedRequestsToRoundOne,
 } from "@/lib/competitionFlow";
+import { recordLifecycleAudit } from "@/lib/lifecycle";
 
 function canManageEventApprovals(session, event) {
   if (!session?.user || !event) return false;
@@ -153,6 +154,13 @@ export async function PUT(req, { params }) {
     // ===== Process each request =====
     for (const request of requests) {
       try {
+        const before = {
+          status: request.status,
+          approvedAt: request.approvedAt,
+          rejectedAt: request.rejectedAt,
+          rejectionReason: request.rejectionReason,
+          enrollmentConfirmedAt: request.enrollmentConfirmedAt,
+        };
         // Use request.school instead of request.student.school for reliability
         const schoolIdStr = request.school.toString();
         const studentIdStr = request.student._id.toString();
@@ -238,6 +246,18 @@ export async function PUT(req, { params }) {
           }
 
           await request.save();
+          await recordLifecycleAudit({
+            entityType: "ParticipationRequest",
+            entityId: request._id,
+            action: "APPROVED",
+            session,
+            before,
+            after: {
+              status: request.status,
+              approvedAt: request.approvedAt,
+              enrollmentConfirmedAt: request.enrollmentConfirmedAt,
+            },
+          });
           results.approved.push(request._id);
           approvedRequestIds.push(request._id);
         } else if (action === "reject") {
@@ -254,6 +274,19 @@ export async function PUT(req, { params }) {
           request.enrollmentConfirmedAt = null;
 
           await request.save();
+          await recordLifecycleAudit({
+            entityType: "ParticipationRequest",
+            entityId: request._id,
+            action: "REJECTED",
+            session,
+            reason: request.rejectionReason || "",
+            before,
+            after: {
+              status: request.status,
+              rejectedAt: request.rejectedAt,
+              rejectionReason: request.rejectionReason,
+            },
+          });
           results.rejected.push(request._id);
           removedStudentIds.push(request.student._id);
         } else if (action === "pending") {
@@ -269,6 +302,18 @@ export async function PUT(req, { params }) {
           request.approvedBy = null;
 
           await request.save();
+          await recordLifecycleAudit({
+            entityType: "ParticipationRequest",
+            entityId: request._id,
+            action: "RESET_PENDING",
+            session,
+            before,
+            after: {
+              status: request.status,
+              approvedAt: request.approvedAt,
+              rejectedAt: request.rejectedAt,
+            },
+          });
           // We can track pending resets in 'approved' or a new array, but let's put in approved for now as "success"
           results.approved.push(request._id);
           removedStudentIds.push(request.student._id);

@@ -2,6 +2,7 @@ import dbConnect from "@/lib/db";
 import Notice from "@/models/Notice";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/route";
+import { buildPagination, escapeRegex, parsePagination } from "@/lib/pagination";
 
 export async function GET(request) {
   try {
@@ -19,10 +20,13 @@ export async function GET(request) {
     const active = searchParams.get("active") !== "false";
     const audience = searchParams.get("audience"); // 'students', 'teachers', 'parents'
     const scope = String(searchParams.get("scope") || "SCHOOL").toUpperCase();
-    const page = parseInt(searchParams.get("page")) || 1;
-    const limit = parseInt(searchParams.get("limit")) || 20;
+    const search = String(searchParams.get("search") || "").trim();
+    const { page, limit, skip } = parsePagination(searchParams, {
+      limit: 20,
+      maxLimit: 100,
+    });
 
-    const query = { isActive: active };
+    const query = { isActive: active, isDeleted: { $ne: true } };
 
     if (scope === "PLATFORM") {
       if (session.user.role !== "SUPER_ADMIN") {
@@ -38,6 +42,18 @@ export async function GET(request) {
     if (type) query.type = type.toUpperCase();
     if (priority) query.priority = priority.toUpperCase();
     if (status) query.status = status.toUpperCase();
+    if (search) {
+      const safeSearch = escapeRegex(search);
+      query.$and = [
+        ...(query.$and || []),
+        {
+          $or: [
+            { title: { $regex: safeSearch, $options: "i" } },
+            { content: { $regex: safeSearch, $options: "i" } },
+          ],
+        },
+      ];
+    }
 
     // Filter by audience
     if (audience) {
@@ -49,21 +65,26 @@ export async function GET(request) {
       query.$or = [{ expiryDate: null }, { expiryDate: { $gte: new Date() } }];
     }
 
-    const skip = (page - 1) * limit;
-
-    const notices = await Notice.find(query)
-      .populate("author", "name email")
-      .sort({ priority: -1, publishedAt: -1 })
-      .skip(skip)
-      .limit(limit);
-
-    const total = await Notice.countDocuments(query);
+    const [notices, total] = await Promise.all([
+      Notice.find(query)
+        .select(
+          "title content type scope priority status school author event visibility targetAudience grades isActive publishedAt createdAt updatedAt"
+        )
+        .populate("author", "name email")
+        .sort({ priority: -1, publishedAt: -1, createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Notice.countDocuments(query),
+    ]);
+    const pagination = buildPagination({ page, limit, total });
 
     return Response.json({
       notices,
       total,
       page,
-      totalPages: Math.ceil(total / limit),
+      totalPages: pagination.totalPages,
+      pagination,
     });
   } catch (error) {
     console.error("GET /api/notices error:", error);

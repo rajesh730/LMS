@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useSearchParams, usePathname } from 'next/navigation';
-import { FaCheckCircle, FaSchool, FaCalendarAlt, FaHandshake, FaBullhorn, FaFeatherAlt } from 'react-icons/fa';
+import { FaBullhorn, FaBullseye, FaCalendarAlt, FaCheckCircle, FaFeatherAlt, FaHandshake, FaSchool } from 'react-icons/fa';
 
 export default function AdminTopNav({ pendingCount = 0 }) {
   const searchParams = useSearchParams();
@@ -83,6 +83,17 @@ export default function AdminTopNav({ pendingCount = 0 }) {
         }`}
       >
         <FaFeatherAlt /> Student Challenges
+      </Link>
+
+      <Link
+        href="/admin/dashboard?tab=spotlight"
+        className={`flex min-h-11 snap-start items-center gap-2 rounded-xl px-4 text-sm font-semibold transition whitespace-nowrap ${
+          isDashboard && currentTab === "spotlight"
+            ? "bg-blue-600 text-white"
+            : "text-[#52657d] hover:bg-[#eaf2ff] hover:text-[#0a2f66]"
+        }`}
+      >
+        <FaBullseye /> School Spotlight
       </Link>
       </div>
     </div>

@@ -6,12 +6,25 @@ import {
   generateUniqueStudentUsername,
 } from "../../../../lib/studentIdentity.js";
 import { normalizeGradeValue } from "../../../../lib/schoolGrades.js";
+import {
+  getSessionSchoolId,
+  isActiveStudentQuery,
+  requireApiSession,
+} from "../../../../lib/authz.js";
 import bcrypt from "bcryptjs";
 
 export async function POST(req) {
   try {
+    const { session, error } = await requireApiSession(["SCHOOL_ADMIN"]);
+    if (error) return error;
+
+    const schoolId = getSessionSchoolId(session);
+    if (!schoolId) {
+      return errorResponse(403, "Forbidden", "FORBIDDEN");
+    }
+
     await connectDB();
-    const { students, schoolId } = await req.json();
+    const { students } = await req.json();
 
     if (!students || !Array.isArray(students) || students.length === 0) {
       return errorResponse(400, "No students provided");
@@ -51,6 +64,7 @@ export async function POST(req) {
           school: schoolId,
           grade: normalizedGrade,
           rollNumber: normalizedRollNumber,
+          isDeleted: { $ne: true },
         });
 
         if (existingRollNumber) {
@@ -61,7 +75,9 @@ export async function POST(req) {
 
         // Check for duplicate email (if provided)
         if (studentData.email) {
-          const existingEmail = await Student.findOne({ email: studentData.email });
+          const existingEmail = await Student.findOne(
+            isActiveStudentQuery({ email: studentData.email })
+          );
           if (existingEmail) {
             throw new Error(`Email ${studentData.email} is already registered`);
           }

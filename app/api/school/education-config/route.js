@@ -17,7 +17,11 @@ export async function GET() {
     let schoolId = session.user.schoolId || session.user.id;
 
     if (session.user.role === "TEACHER" && !session.user.schoolId) {
-      const teacher = await Teacher.findById(session.user.id).select("school");
+      const teacher = await Teacher.findOne({
+        _id: session.user.id,
+        isDeleted: { $ne: true },
+        status: { $ne: "INACTIVE" },
+      }).select("school");
       schoolId = teacher?.school;
     }
 

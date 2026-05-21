@@ -87,6 +87,20 @@ const EventNoticeSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    isDeleted: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    deletedAt: {
+      type: Date,
+      default: null,
+    },
+    deletedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
   },
   { timestamps: true }
 );
@@ -102,6 +116,15 @@ EventNoticeSchema.pre("validate", function () {
 
 EventNoticeSchema.index({ event: 1, round: 1, createdAt: -1 });
 EventNoticeSchema.index({ event: 1, status: 1, visibility: 1, publishedAt: -1 });
+EventNoticeSchema.index({ event: 1, round: 1, isDeleted: 1, createdAt: -1 });
+EventNoticeSchema.index({
+  event: 1,
+  status: 1,
+  visibility: 1,
+  isDeleted: 1,
+  publishedAt: -1,
+});
+EventNoticeSchema.index({ createdBy: 1, status: 1, createdAt: -1 });
 
 export default mongoose.models.EventNotice ||
   mongoose.model("EventNotice", EventNoticeSchema);

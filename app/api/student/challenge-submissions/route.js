@@ -10,6 +10,8 @@ const VALID_CATEGORIES = ["ESSAY", "POEM", "REPORT", "OPINION", "STORY", "OTHER"
 
 function buildStudentLookup(session) {
   return {
+    isDeleted: { $ne: true },
+    status: "ACTIVE",
     $or: [
       { _id: session.user.id },
       { userId: session.user.id },
@@ -64,6 +66,7 @@ export async function POST(request) {
     const challenge = await PlatformChallenge.findOne({
       _id: challengeId,
       status: "PUBLISHED",
+      isDeleted: { $ne: true },
       $or: [{ deadline: null }, { deadline: { $gte: now } }],
     }).lean();
 

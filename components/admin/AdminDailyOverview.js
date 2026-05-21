@@ -79,6 +79,10 @@ export default function AdminDailyOverview({
   const [notices, setNotices] = useState([]);
   const [challenges, setChallenges] = useState([]);
   const [challengeSubmissions, setChallengeSubmissions] = useState([]);
+  const [totals, setTotals] = useState({
+    notices: 0,
+    challengeSubmissions: 0,
+  });
 
   useEffect(() => {
     let active = true;
@@ -91,7 +95,7 @@ export default function AdminDailyOverview({
         const [noticesRes, challengesRes, submissionsRes] = await Promise.all([
           fetch("/api/notices?scope=PLATFORM&limit=5", { cache: "no-store" }),
           fetch("/api/admin/challenges", { cache: "no-store" }),
-          fetch("/api/admin/challenges/submissions?status=SUBMITTED", {
+          fetch("/api/admin/challenges/submissions?status=SUBMITTED&limit=5", {
             cache: "no-store",
           }),
         ]);
@@ -120,6 +124,16 @@ export default function AdminDailyOverview({
             ? submissionsPayload.submissions
             : []
         );
+        setTotals({
+          notices:
+            noticesPayload.pagination?.totalItems ??
+            noticesPayload.notices?.length ??
+            0,
+          challengeSubmissions:
+            submissionsPayload.pagination?.totalItems ??
+            submissionsPayload.submissions?.length ??
+            0,
+        });
 
         const failedSources = [
           !noticesRes.ok && "platform notices",
@@ -234,7 +248,7 @@ export default function AdminDailyOverview({
           <CommandCard
             href="/admin/dashboard?tab=notices"
             icon={FaBell}
-            count={notices.length}
+            count={totals.notices}
             label="notices"
             title={latestNotice?.title || "No platform notices yet"}
             description={
@@ -248,7 +262,7 @@ export default function AdminDailyOverview({
           <CommandCard
             href="/admin/dashboard?tab=challenges"
             icon={FaFeatherAlt}
-            count={challengeSubmissions.length}
+            count={totals.challengeSubmissions}
             label="to review"
             title={latestSubmission?.title || "No challenge submissions waiting"}
             description={

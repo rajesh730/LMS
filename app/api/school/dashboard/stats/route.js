@@ -33,6 +33,7 @@ export async function GET(req) {
         }),
         Teacher.countDocuments({
           school: session.user.schoolId,
+          isDeleted: { $ne: true },
         }),
         Event.countDocuments({
           schools: session.user.schoolId,

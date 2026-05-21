@@ -12,6 +12,7 @@ import SchoolNoticeBoard from "@/components/school/SchoolNoticeBoard";
 import SchoolDailyOverview from "@/components/school/SchoolDailyOverview";
 import PageHeader from "@/components/ui/PageHeader";
 import AlertBanner from "@/components/ui/AlertBanner";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import LoadingState from "@/components/ui/LoadingState";
 
 const StudentManager = dynamic(
@@ -160,6 +161,8 @@ function SchoolDashboardContent() {
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState("overview");
   const [isNavOpen, setIsNavOpen] = useState(false);
+  const [feedback, setFeedback] = useState(null);
+  const [confirmState, setConfirmState] = useState(null);
 
   useEffect(() => {
     const tab = searchParams.get("tab");
@@ -297,24 +300,59 @@ function SchoolDashboardContent() {
     }
   };
 
+  const requestDeleteTeacher = (teacher) => {
+    setConfirmState({
+      type: "delete-teacher",
+      teacher,
+      title: "Archive this teacher?",
+      message: `${teacher.name || "This teacher"} will be removed from active teacher records.`,
+      confirmLabel: "Archive teacher",
+      tone: "danger",
+      busy: false,
+    });
+  };
+
   const deleteTeacher = async (id) => {
-    if (!confirm("Delete this teacher?")) return;
     try {
+      setConfirmState((current) => (current ? { ...current, busy: true } : current));
+      setFeedback(null);
       const res = await fetch(`/api/teachers/${id}`, { method: "DELETE" });
-      if (res.ok) setTeachers(teachers.filter((t) => t._id !== id));
+      if (res.ok) {
+        setTeachers(teachers.filter((t) => t._id !== id));
+        setFeedback({
+          type: "success",
+          title: "Teacher archived",
+          message: "Teacher record moved out of the active list.",
+        });
+      }
     } catch (error) {
       console.error("Error deleting teacher", error);
+      setFeedback({
+        type: "error",
+        title: "Teacher was not archived",
+        message: error.message || "Please retry.",
+      });
+    } finally {
+      setConfirmState(null);
     }
   };
 
+  const requestResetTeacherPassword = (teacher) => {
+    setConfirmState({
+      type: "reset-teacher-password",
+      teacher,
+      title: "Reset teacher password?",
+      message: `A new temporary password will be generated for ${teacher.name || "this teacher"}.`,
+      confirmLabel: "Reset password",
+      tone: "warning",
+      busy: false,
+    });
+  };
+
   const resetTeacherPassword = async (id) => {
-    if (
-      !confirm(
-        "Reset password for this teacher? A new password will be generated."
-      )
-    )
-      return;
     try {
+      setConfirmState((current) => (current ? { ...current, busy: true } : current));
+      setFeedback(null);
       const res = await fetch(`/api/teachers/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -327,9 +365,21 @@ function SchoolDashboardContent() {
         }
         // Update the teacher list
         fetchData();
+        setFeedback({
+          type: "success",
+          title: "Password reset",
+          message: "New teacher credentials are ready.",
+        });
       }
     } catch (error) {
       console.error("Error resetting password", error);
+      setFeedback({
+        type: "error",
+        title: "Password reset failed",
+        message: error.message || "Please retry.",
+      });
+    } finally {
+      setConfirmState(null);
     }
   };
 
@@ -342,7 +392,11 @@ function SchoolDashboardContent() {
       });
       if (res.ok) {
         const resData = await res.json();
-        alert(`Successfully imported ${resData.count} mentors`);
+        setFeedback({
+          type: "success",
+          title: "Teachers imported",
+          message: `Successfully imported ${resData.count} mentors.`,
+        });
         if (resData.credentials?.length > 0) {
           setCredentialsModal({
             isOpen: true,
@@ -352,11 +406,19 @@ function SchoolDashboardContent() {
         fetchData(); // Reload to get updated list
       } else {
         const error = await res.json();
-        alert(`Import failed: ${error.message}`);
+        setFeedback({
+          type: "error",
+          title: "Teacher import failed",
+          message: error.message || "Please check the upload and retry.",
+        });
       }
     } catch (error) {
       console.error("Bulk Import Error:", error);
-      alert("Error importing teachers");
+      setFeedback({
+        type: "error",
+        title: "Teacher import failed",
+        message: "Error importing teachers.",
+      });
     }
   };
 
@@ -375,7 +437,11 @@ function SchoolDashboardContent() {
         const data = await res.json();
         setSchoolConfig(data.config);
       } else {
-        alert("Failed to update config");
+        setFeedback({
+          type: "error",
+          title: "Configuration update failed",
+          message: "Failed to update config.",
+        });
       }
     } catch (error) {
       console.error("Error updating config", error);
@@ -463,6 +529,16 @@ function SchoolDashboardContent() {
                     </p>
                 </div>
             </div>
+        )}
+
+        {feedback && (
+          <div className="mb-6">
+            <AlertBanner
+              type={feedback.type}
+              title={feedback.title}
+              message={feedback.message}
+            />
+          </div>
         )}
 
         {/* Navigation Tabs - Hide if Pending */}
@@ -779,6 +855,23 @@ function SchoolDashboardContent() {
           onClose={() =>
             setCredentialsModal({ isOpen: false, credentials: null })
           }
+        />
+
+        <ConfirmDialog
+          open={Boolean(confirmState)}
+          title={confirmState?.title}
+          message={confirmState?.message}
+          confirmLabel={confirmState?.confirmLabel}
+          tone={confirmState?.tone}
+          busy={Boolean(confirmState?.busy)}
+          onClose={() => setConfirmState(null)}
+          onConfirm={() => {
+            if (confirmState?.type === "delete-teacher") {
+              deleteTeacher(confirmState.teacher._id);
+            } else if (confirmState?.type === "reset-teacher-password") {
+              resetTeacherPassword(confirmState.teacher._id);
+            }
+          }}
         />
       </main>
     </div>

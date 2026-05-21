@@ -9,6 +9,7 @@ export default function AddStudentModal({ event, onClose, onSuccess }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const fetchStudents = useCallback(async () => {
     try {
@@ -58,6 +59,7 @@ export default function AddStudentModal({ event, onClose, onSuccess }) {
     if (selectedStudents.length === 0) return;
 
     try {
+      setErrorMessage("");
       setSubmitting(true);
       const res = await fetch(`/api/events/${event.id}/manage/student/add`, {
         method: "POST",
@@ -68,12 +70,12 @@ export default function AddStudentModal({ event, onClose, onSuccess }) {
       if (res.ok) {
         onSuccess();
       } else {
-        const error = await res.json();
-        alert(error.message || "Failed to add students");
+        const error = await res.json().catch(() => ({}));
+        setErrorMessage(error.message || "Failed to add students");
       }
     } catch (error) {
       console.error("Error adding students:", error);
-      alert("Error adding students");
+      setErrorMessage("Error adding students");
     } finally {
       setSubmitting(false);
     }
@@ -92,6 +94,12 @@ export default function AddStudentModal({ event, onClose, onSuccess }) {
 
         {/* Content */}
         <div className="p-6 space-y-4">
+          {errorMessage && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {errorMessage}
+            </div>
+          )}
+
           {/* Search & Filter */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div className="relative">

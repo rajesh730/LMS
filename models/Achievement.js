@@ -151,6 +151,10 @@ const AchievementSchema = new mongoose.Schema(
 );
 
 AchievementSchema.index({ school: 1, awardedAt: -1 });
+AchievementSchema.index({ student: 1, awardedAt: -1 });
+AchievementSchema.index({ event: 1, placement: 1, awardedAt: -1 });
+AchievementSchema.index({ isPublic: 1, awardedAt: -1 });
+AchievementSchema.index({ school: 1, isPublic: 1, awardedAt: -1 });
 AchievementSchema.index(
   { certificateCode: 1 },
   {

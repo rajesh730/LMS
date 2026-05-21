@@ -93,6 +93,12 @@ ParticipationRequestSchema.index(
   { student: 1, event: 1, school: 1 },
   { unique: true }
 );
+ParticipationRequestSchema.index({ event: 1, status: 1, requestedAt: -1 });
+ParticipationRequestSchema.index({ event: 1, school: 1, status: 1 });
+ParticipationRequestSchema.index({ school: 1, event: 1, status: 1 });
+ParticipationRequestSchema.index({ school: 1, status: 1, requestedAt: -1 });
+ParticipationRequestSchema.index({ event: 1, teamName: 1, status: 1 });
+ParticipationRequestSchema.index({ event: 1, captainStudent: 1 });
 
 export default mongoose.models.ParticipationRequest ||
   mongoose.model("ParticipationRequest", ParticipationRequestSchema);

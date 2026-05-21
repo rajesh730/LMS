@@ -2,6 +2,7 @@ import Link from "next/link";
 import connectDB from "@/lib/db";
 import User from "@/models/User";
 import SchoolShowcaseProfile from "@/models/SchoolShowcaseProfile";
+import { getActiveSchoolPromotions } from "@/lib/schoolPromotions";
 import PublicSiteNav from "@/components/public/PublicSiteNav";
 
 export const dynamic = "force-dynamic";
@@ -9,12 +10,15 @@ export const dynamic = "force-dynamic";
 export default async function PublicSchoolsPage() {
   await connectDB();
 
-  const schools = await User.find({
-    role: "SCHOOL_ADMIN",
-    status: { $in: ["APPROVED", "SUBSCRIBED"] },
-  })
-    .select("schoolName schoolLocation principalName")
-    .lean();
+  const [schools, spotlights] = await Promise.all([
+    User.find({
+      role: "SCHOOL_ADMIN",
+      status: { $in: ["APPROVED", "SUBSCRIBED"] },
+    })
+      .select("schoolName schoolLocation principalName")
+      .lean(),
+    getActiveSchoolPromotions("SCHOOLS_SPOTLIGHT", 3),
+  ]);
 
   const schoolIds = schools.map((school) => school._id);
 
@@ -43,7 +47,7 @@ export default async function PublicSchoolsPage() {
     <main className="min-h-screen bg-[#08111f] text-slate-100">
       <PublicSiteNav active="schools" />
       <section className="relative overflow-hidden border-b border-white/10 px-6 py-14 md:px-12">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(52,211,153,.22),transparent_32%),radial-gradient(circle_at_78%_16%,rgba(251,191,36,.16),transparent_28%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(47,127,219,.24),transparent_32%),radial-gradient(circle_at_78%_16%,rgba(143,196,255,.18),transparent_28%)]" />
         <div className="relative mx-auto grid max-w-6xl gap-8 lg:grid-cols-[1fr_360px] lg:items-center">
           <div className="max-w-3xl">
             <p className="text-sm uppercase tracking-[0.35em] text-emerald-300 mb-4">
@@ -64,8 +68,8 @@ export default async function PublicSchoolsPage() {
           >
             <defs>
               <linearGradient id="schoolPageAccent" x1="0" x2="1" y1="0" y2="1">
-                <stop offset="0%" stopColor="#34d399" />
-                <stop offset="100%" stopColor="#fbbf24" />
+                <stop offset="0%" stopColor="#2f7fdb" />
+                <stop offset="100%" stopColor="#8fc4ff" />
               </linearGradient>
             </defs>
             <path d="M38 212h284" stroke="#334155" strokeLinecap="round" strokeWidth="16" />
@@ -79,6 +83,69 @@ export default async function PublicSchoolsPage() {
       </section>
 
       <div className="max-w-6xl mx-auto px-6 py-12 md:px-12">
+        {spotlights.length > 0 && (
+          <section className="mb-12">
+            <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+              <div>
+                <p className="text-sm font-bold uppercase tracking-[0.25em] text-[#8fc4ff]">
+                  School Spotlight
+                </p>
+                <h2 className="mt-3 text-3xl font-black tracking-tight text-white">
+                  Paid placements from active schools
+                </h2>
+                <p className="mt-3 max-w-2xl text-slate-400">
+                  These paid spotlight slots rotate independently from the
+                  normal public school directory.
+                </p>
+              </div>
+              <span className="w-fit rounded-full border border-[#2f7fdb]/30 bg-[#2f7fdb]/10 px-4 py-2 text-xs font-black uppercase tracking-[0.16em] text-[#d7e9ff]">
+                Sponsored
+              </span>
+            </div>
+
+            <div className="grid gap-5 lg:grid-cols-3">
+              {spotlights.map((promotion) => (
+                <Link
+                  key={promotion.id}
+                  href={promotion.href}
+                  className="group overflow-hidden rounded-2xl border border-[#2f7fdb]/25 bg-[#10243f] shadow-xl shadow-black/20 transition hover:-translate-y-1 hover:border-[#8fc4ff]/60"
+                >
+                  <div
+                    className="h-44 bg-cover bg-center"
+                    style={{
+                      backgroundImage: promotion.profile?.coverImageUrl
+                        ? `linear-gradient(rgba(8,17,31,0.15), rgba(8,17,31,0.88)), url(${promotion.profile.coverImageUrl})`
+                        : "linear-gradient(135deg, rgba(47,127,219,0.35), rgba(10,47,102,0.95))",
+                    }}
+                  />
+                  <div className="p-5">
+                    <div className="flex flex-wrap gap-2">
+                      <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-black uppercase tracking-[0.12em] text-[#d7e9ff]">
+                        Paid Spotlight
+                      </span>
+                      <span className="rounded-full bg-[#2f7fdb]/15 px-3 py-1 text-xs font-black uppercase tracking-[0.12em] text-[#d7e9ff]">
+                        {promotion.priority}
+                      </span>
+                    </div>
+                    <h3 className="mt-4 text-xl font-black text-white group-hover:text-[#d7e9ff]">
+                      {promotion.title}
+                    </h3>
+                    <p className="mt-1 text-sm font-semibold text-[#8fc4ff]">
+                      {promotion.school.name}
+                    </p>
+                    <p className="mt-3 line-clamp-3 text-sm leading-6 text-slate-300">
+                      {promotion.tagline}
+                    </p>
+                    <span className="mt-5 inline-flex text-sm font-bold text-[#d7e9ff]">
+                      View spotlight
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+
         {publicSchools.length === 0 ? (
           <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-10 text-center text-slate-400">
             No public school profiles are available yet.

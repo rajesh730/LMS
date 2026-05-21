@@ -13,6 +13,7 @@ import {
   FaCalendar,
 } from "react-icons/fa";
 import StudentDetailsCard from "./StudentDetailsCard";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 export default function DetailPanel({
   status,
@@ -31,6 +32,8 @@ export default function DetailPanel({
   const [loading, setLoading] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
   const [showRejectionForm, setShowRejectionForm] = useState(false);
+  const [feedback, setFeedback] = useState(null);
+  const [removeTarget, setRemoveTarget] = useState(null);
 
   const filteredRequests = requests.filter((req) =>
     req.student.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -38,7 +41,10 @@ export default function DetailPanel({
 
   const handleApproveSelected = async () => {
     if (selectedStudents.length === 0) {
-      alert("Please select students to approve");
+      setFeedback({
+        type: "warning",
+        message: "Please select students to approve.",
+      });
       return;
     }
 
@@ -61,12 +67,15 @@ export default function DetailPanel({
         onDataChange();
         onClearSelection();
       } else {
-        const data = await res.json();
-        alert(data.message || "Error approving students");
+        const data = await res.json().catch(() => ({}));
+        setFeedback({
+          type: "error",
+          message: data.message || "Error approving students.",
+        });
       }
     } catch (error) {
       console.error("Error:", error);
-      alert("Error approving students");
+      setFeedback({ type: "error", message: "Error approving students." });
     } finally {
       setLoading(false);
     }
@@ -74,7 +83,10 @@ export default function DetailPanel({
 
   const handleRejectSelected = async () => {
     if (selectedStudents.length === 0) {
-      alert("Please select students to reject");
+      setFeedback({
+        type: "warning",
+        message: "Please select students to reject.",
+      });
       return;
     }
 
@@ -100,20 +112,21 @@ export default function DetailPanel({
         setShowRejectionForm(false);
         setRejectionReason("");
       } else {
-        const data = await res.json();
-        alert(data.message || "Error rejecting students");
+        const data = await res.json().catch(() => ({}));
+        setFeedback({
+          type: "error",
+          message: data.message || "Error rejecting students.",
+        });
       }
     } catch (error) {
       console.error("Error:", error);
-      alert("Error rejecting students");
+      setFeedback({ type: "error", message: "Error rejecting students." });
     } finally {
       setLoading(false);
     }
   };
 
   const handleRemoveStudent = async (studentId) => {
-    if (!confirm("Remove this student from the event?")) return;
-
     try {
       setLoading(true);
       const res = await fetch(`/api/events/${event._id}/manage/remove`, {
@@ -125,12 +138,13 @@ export default function DetailPanel({
       if (res.ok) {
         onDataChange();
         onSelectStudentDetail(null);
+        setRemoveTarget(null);
       } else {
-        alert("Error removing student");
+        setFeedback({ type: "error", message: "Error removing student." });
       }
     } catch (error) {
       console.error("Error:", error);
-      alert("Error removing student");
+      setFeedback({ type: "error", message: "Error removing student." });
     } finally {
       setLoading(false);
     }
@@ -161,6 +175,18 @@ export default function DetailPanel({
 
   return (
     <div className="lg:col-span-3 bg-white rounded-lg border border-gray-200 p-6 h-full flex flex-col">
+      {feedback && (
+        <div
+          className={`mb-4 rounded-lg border px-4 py-3 text-sm ${
+            feedback.type === "error"
+              ? "border-red-200 bg-red-50 text-red-700"
+              : "border-blue-200 bg-blue-50 text-blue-700"
+          }`}
+        >
+          {feedback.message}
+        </div>
+      )}
+
       {/* Main Content Grid: Left (Details) + Right (Student Selection) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 overflow-y-auto">
         {/* LEFT PANEL: Contact Details Section */}
@@ -393,7 +419,7 @@ export default function DetailPanel({
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleRemoveStudent(request.student._id);
+                          setRemoveTarget(request);
                         }}
                         className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                         title="Remove"
@@ -417,7 +443,7 @@ export default function DetailPanel({
           onClose={() => onSelectStudentDetail(null)}
           onApprove={() => handleApproveSelected()}
           onReject={() => setShowRejectionForm(true)}
-          onRemove={() => handleRemoveStudent(selectedStudent.student._id)}
+          onRemove={() => setRemoveTarget(selectedStudent)}
           loading={loading}
         />
       )}
@@ -491,11 +517,7 @@ export default function DetailPanel({
             </button>
             {selectedStudents.length > 0 && (
               <button
-                onClick={() => {
-                  if (confirm("Remove selected students?")) {
-                    selectedStudents.forEach((sid) => handleRemoveStudent(sid));
-                  }
-                }}
+                onClick={() => setRemoveTarget({ bulk: true })}
                 disabled={loading}
                 className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-red-700 disabled:opacity-50 transition-colors"
               >
@@ -524,6 +546,31 @@ export default function DetailPanel({
           </button>
         )}
       </div>
+
+      <ConfirmDialog
+        open={Boolean(removeTarget)}
+        title={removeTarget?.bulk ? "Remove selected students?" : "Remove this student?"}
+        message={
+          removeTarget?.bulk
+            ? `${selectedStudents.length} selected student(s) will be removed from this event.`
+            : `${removeTarget?.student?.name || "This student"} will be removed from this event.`
+        }
+        confirmLabel="Remove"
+        tone="danger"
+        busy={loading}
+        onClose={() => setRemoveTarget(null)}
+        onConfirm={async () => {
+          if (removeTarget?.bulk) {
+            for (const sid of selectedStudents) {
+              await handleRemoveStudent(sid);
+            }
+            onClearSelection();
+            setRemoveTarget(null);
+          } else if (removeTarget?.student?._id) {
+            await handleRemoveStudent(removeTarget.student._id);
+          }
+        }}
+      />
     </div>
   );
 }

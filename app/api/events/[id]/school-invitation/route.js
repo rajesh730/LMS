@@ -7,6 +7,7 @@ import EventSchoolInvitation from "@/models/EventSchoolInvitation";
 import ParticipationRequest from "@/models/ParticipationRequest";
 import { ensureSchoolInvitationForEvent } from "@/lib/eventInvitations";
 import { isAfterEndOfDay, isBeforeToday } from "@/lib/eventDates";
+import { buildInvitationLifecycle, recordLifecycleAudit } from "@/lib/lifecycle";
 import "@/models/ExternalOrganizer";
 
 export const dynamic = "force-dynamic";
@@ -34,7 +35,18 @@ export async function GET(req, props) {
       );
     }
 
-    return NextResponse.json({ invitation }, { status: 200 });
+    const invitationObject =
+      typeof invitation.toObject === "function" ? invitation.toObject() : invitation;
+
+    return NextResponse.json(
+      {
+        invitation: {
+          ...invitationObject,
+          lifecycle: buildInvitationLifecycle(invitationObject),
+        },
+      },
+      { status: 200 }
+    );
   } catch (error) {
     console.error("Fetch School Invitation Error:", error);
     return NextResponse.json(
@@ -133,6 +145,11 @@ export async function PUT(req, props) {
     }
 
     const now = new Date();
+    const before = {
+      status: invitation.status,
+      decisionAt: invitation.decisionAt,
+      reason: invitation.reason,
+    };
     invitation.status = action === "approve" ? "APPROVED" : "DISAPPROVED";
     invitation.readAt = invitation.readAt || now;
     invitation.decisionAt = now;
@@ -140,6 +157,19 @@ export async function PUT(req, props) {
     invitation.reason = body.reason || "";
 
     await invitation.save();
+    await recordLifecycleAudit({
+      entityType: "EventSchoolInvitation",
+      entityId: invitation._id,
+      action: invitation.status,
+      session,
+      reason: invitation.reason,
+      before,
+      after: {
+        status: invitation.status,
+        decisionAt: invitation.decisionAt,
+        reason: invitation.reason,
+      },
+    });
 
     const populatedInvitation = await EventSchoolInvitation.findById(
       invitation._id
@@ -156,6 +186,11 @@ export async function PUT(req, props) {
       })
       .lean();
 
+    const invitationWithLifecycle = {
+      ...populatedInvitation,
+      lifecycle: buildInvitationLifecycle(populatedInvitation),
+    };
+
     return NextResponse.json(
       {
         message:
@@ -164,7 +199,7 @@ export async function PUT(req, props) {
             : withdrawnCount > 0
             ? `Event disapproved for your school and ${withdrawnCount} team registration${withdrawnCount === 1 ? "" : "s"} withdrawn.`
             : "Event disapproved for your school",
-        invitation: populatedInvitation,
+        invitation: invitationWithLifecycle,
         withdrawnCount,
       },
       { status: 200 }

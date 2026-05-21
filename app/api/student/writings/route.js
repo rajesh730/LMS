@@ -7,6 +7,8 @@ import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
 
 function buildStudentLookup(session) {
   return {
+    isDeleted: { $ne: true },
+    status: "ACTIVE",
     $or: [
       { _id: session.user.id },
       { userId: session.user.id },
@@ -40,6 +42,7 @@ export async function GET() {
     const writings = await SchoolMagazineArticle.find({
       authorStudent: student._id,
       school: student.school,
+      isDeleted: { $ne: true },
     })
       .sort({ updatedAt: -1, createdAt: -1 })
       .lean();

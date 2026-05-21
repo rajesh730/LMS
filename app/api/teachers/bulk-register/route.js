@@ -2,11 +2,20 @@ import { NextResponse } from "next/server";
 import connectDB from "@/lib/db";
 import Teacher from "@/models/Teacher";
 import bcrypt from "bcryptjs";
+import { getSessionSchoolId, requireApiSession } from "@/lib/authz";
 
 export async function POST(req) {
   try {
+    const { session, error } = await requireApiSession(["SCHOOL_ADMIN"]);
+    if (error) return error;
+
+    const schoolId = getSessionSchoolId(session);
+    if (!schoolId) {
+      return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+    }
+
     await connectDB();
-    const { teachers, schoolId } = await req.json();
+    const { teachers } = await req.json();
 
     if (!teachers || !Array.isArray(teachers) || teachers.length === 0) {
       return NextResponse.json(
@@ -28,7 +37,10 @@ export async function POST(req) {
         }
 
         // Check if Teacher already exists
-        const existingTeacher = await Teacher.findOne({ email: teacherData.email });
+        const existingTeacher = await Teacher.findOne({
+          email: teacherData.email,
+          isDeleted: { $ne: true },
+        });
         if (existingTeacher) {
           throw new Error(`Teacher with email ${teacherData.email} already exists`);
         }

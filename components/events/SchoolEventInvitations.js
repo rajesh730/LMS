@@ -1,16 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   FaBell,
   FaCalendarAlt,
   FaCheckCircle,
+  FaSearch,
   FaTimesCircle,
   FaUsers,
 } from "react-icons/fa";
 import EventParticipationForm from "./EventParticipationForm";
 import { getEventStage, getStageClasses, isDatePast } from "@/lib/eventUiStatus";
+import PaginationControls from "@/components/PaginationControls";
+import LifecycleTimeline from "@/components/ui/LifecycleTimeline";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 const FILTERS = [
   { id: "PENDING", label: "Pending" },
@@ -56,6 +60,10 @@ function isRegistrationClosed(event) {
   return false;
 }
 
+function isTeamEventLike(event) {
+  return String(event?.participationFormat || "INDIVIDUAL").toUpperCase() === "TEAM";
+}
+
 export default function SchoolEventInvitations({ refreshKey = 0, onChanged }) {
   const [invitations, setInvitations] = useState([]);
   const [filter, setFilter] = useState("PENDING");
@@ -64,11 +72,32 @@ export default function SchoolEventInvitations({ refreshKey = 0, onChanged }) {
   const [message, setMessage] = useState("");
   const [participationEvent, setParticipationEvent] = useState(null);
   const [openNoticeInvitationId, setOpenNoticeInvitationId] = useState(null);
+  const [search, setSearch] = useState("");
+  const [counts, setCounts] = useState({
+    ALL: 0,
+    PENDING: 0,
+    APPROVED: 0,
+    DISAPPROVED: 0,
+  });
+  const [pagination, setPagination] = useState({
+    page: 1,
+    totalPages: 1,
+    totalItems: 0,
+    limit: 20,
+  });
+  const [confirmInvitation, setConfirmInvitation] = useState(null);
 
-  const fetchInvitations = useCallback(async () => {
+  const fetchInvitations = useCallback(async (page = 1) => {
     try {
       setLoading(true);
-      const res = await fetch("/api/school/event-invitations", {
+      const params = new URLSearchParams({
+        status: filter,
+        page: String(page),
+        limit: "10",
+      });
+      if (search.trim()) params.append("search", search.trim());
+
+      const res = await fetch(`/api/school/event-invitations?${params}`, {
         cache: "no-store",
       });
 
@@ -78,60 +107,35 @@ export default function SchoolEventInvitations({ refreshKey = 0, onChanged }) {
 
       const data = await res.json();
       setInvitations(Array.isArray(data.invitations) ? data.invitations : []);
+      if (data.counts) {
+        setCounts(data.counts);
+      }
+      if (data.pagination) {
+        setPagination(data.pagination);
+      }
     } catch (error) {
       console.error("Failed to load event invitations", error);
       setMessage("Could not load platform event notifications.");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [filter, search]);
 
   useEffect(() => {
-    fetchInvitations();
+    const timer = setTimeout(() => {
+      fetchInvitations(1);
+    }, 250);
+    return () => clearTimeout(timer);
   }, [fetchInvitations, refreshKey]);
 
-  const counts = useMemo(
-    () =>
-      invitations
-        .filter((invitation) => {
-          const lifecycle = String(
-            invitation.event?.lifecycleStatus || "ACTIVE"
-          ).toUpperCase();
-          return !["COMPLETED", "ARCHIVED"].includes(lifecycle);
-        })
-        .reduce(
-        (acc, invitation) => {
-          acc.ALL += 1;
-          if (acc[invitation.status] !== undefined) {
-            acc[invitation.status] += 1;
-          }
-          return acc;
-        },
-        { ALL: 0, PENDING: 0, APPROVED: 0, DISAPPROVED: 0 }
-      ),
-    [invitations]
-  );
-
-  const visibleInvitations = invitations.filter((invitation) => {
-    const lifecycle = String(
-      invitation.event?.lifecycleStatus || "ACTIVE"
-    ).toUpperCase();
-    if (["COMPLETED", "ARCHIVED"].includes(lifecycle)) {
-      return false;
-    }
-    if (filter === "ALL") return true;
-    return invitation.status === filter;
-  });
-
-  const updateInvitation = async (invitation, action) => {
+  const updateInvitation = async (invitation, action, options = {}) => {
     try {
       if (
+        !options.skipConfirm &&
         action === "disapprove" &&
-        invitation.status === "APPROVED" &&
-        !confirm(
-          "Disapprove this event for your school? If you already registered a team and registration is still open, this will withdraw that team."
-        )
+        invitation.status === "APPROVED"
       ) {
+        setConfirmInvitation({ invitation, action });
         return;
       }
 
@@ -154,13 +158,14 @@ export default function SchoolEventInvitations({ refreshKey = 0, onChanged }) {
       }
 
       setMessage(data.message);
-      await fetchInvitations();
+      await fetchInvitations(pagination.page || 1);
       onChanged?.();
     } catch (error) {
       console.error("Failed to update invitation", error);
       setMessage(error.message || "Failed to update invitation");
     } finally {
       setActioningId(null);
+      setConfirmInvitation(null);
     }
   };
 
@@ -205,6 +210,19 @@ export default function SchoolEventInvitations({ refreshKey = 0, onChanged }) {
         ))}
       </div>
 
+      <div className="mt-4 max-w-xl">
+        <div className="relative">
+          <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+          <input
+            type="text"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search platform event invitations..."
+            className="w-full rounded-xl border border-slate-700 bg-slate-950/70 py-3 pl-10 pr-4 text-white outline-none transition focus:border-emerald-500"
+          />
+        </div>
+      </div>
+
       {message && (
         <div className="mt-4 rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-sm text-slate-200">
           {message}
@@ -216,7 +234,7 @@ export default function SchoolEventInvitations({ refreshKey = 0, onChanged }) {
           <div className="rounded-xl border border-slate-700 bg-slate-800/70 p-6 text-center text-slate-400">
             Loading platform event notifications...
           </div>
-        ) : visibleInvitations.length === 0 ? (
+        ) : invitations.length === 0 ? (
           <div className="rounded-xl border border-slate-700 bg-slate-800/70 p-6 text-center text-slate-400">
             <p className="font-semibold text-slate-300">
               No {filter.toLowerCase()} platform invitations right now.
@@ -226,7 +244,7 @@ export default function SchoolEventInvitations({ refreshKey = 0, onChanged }) {
             </p>
           </div>
         ) : (
-          visibleInvitations.map((invitation) => {
+          invitations.map((invitation) => {
             const event = invitation.event;
             if (!event) return null;
             const participation = invitation.participation || {};
@@ -328,6 +346,14 @@ export default function SchoolEventInvitations({ refreshKey = 0, onChanged }) {
                       </div>
                     </div>
 
+                    <div className="mt-4">
+                      <LifecycleTimeline
+                        compact
+                        title="School decision history"
+                        items={invitation.lifecycle}
+                      />
+                    </div>
+
                     <div className="mt-4 flex flex-wrap gap-4 text-sm text-slate-300">
                       <span className="flex items-center gap-2">
                         <FaCalendarAlt className="text-slate-500" />
@@ -391,6 +417,17 @@ export default function SchoolEventInvitations({ refreshKey = 0, onChanged }) {
         )}
       </div>
 
+      {!loading && invitations.length > 0 && (
+        <PaginationControls
+          currentPage={pagination.page || pagination.currentPage || 1}
+          totalPages={pagination.totalPages || 1}
+          onPageChange={fetchInvitations}
+          totalItems={pagination.totalItems}
+          start={pagination.start}
+          end={pagination.end}
+        />
+      )}
+
       {participationEvent && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
           <div className="max-h-[90vh] w-full max-w-6xl overflow-y-auto rounded-2xl border border-slate-700 bg-slate-900 p-6 shadow-2xl">
@@ -401,7 +438,7 @@ export default function SchoolEventInvitations({ refreshKey = 0, onChanged }) {
                     (invitation) =>
                       invitation.event?._id === participationEvent._id
                   )?.participation?.hasParticipation
-                    ? (isTeamEventLike(event) ? "Manage Groups" : "Manage Participants")
+                    ? (isTeamEventLike(participationEvent) ? "Manage Groups" : "Manage Participants")
                     : "Take Part"}
                   : {participationEvent.title}
                 </h3>
@@ -427,13 +464,32 @@ export default function SchoolEventInvitations({ refreshKey = 0, onChanged }) {
               isEditing
               onSuccess={async () => {
                 setParticipationEvent(null);
-                await fetchInvitations();
+                await fetchInvitations(pagination.page || 1);
                 onChanged?.();
               }}
             />
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={Boolean(confirmInvitation)}
+        title="Disapprove this event?"
+        message="If your school already registered students and registration is still open, this will withdraw that registration."
+        confirmLabel="Disapprove event"
+        tone="danger"
+        busy={Boolean(confirmInvitation && actioningId === confirmInvitation.invitation?._id)}
+        onClose={() => setConfirmInvitation(null)}
+        onConfirm={() => {
+          if (confirmInvitation) {
+            updateInvitation(
+              confirmInvitation.invitation,
+              confirmInvitation.action,
+              { skipConfirm: true }
+            );
+          }
+        }}
+      />
     </section>
   );
 }

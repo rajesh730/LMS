@@ -7,6 +7,7 @@ import {
   FaSave,
   FaTrash,
 } from "react-icons/fa";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 const ROUND_STATUS_OPTIONS = [
   "DRAFT",
@@ -134,6 +135,7 @@ export default function RoundsTab({ event, onCompetitionClosed }) {
   const [editingRoundId, setEditingRoundId] = useState("");
   const [roundForm, setRoundForm] = useState(EMPTY_ROUND_FORM);
   const [busyKey, setBusyKey] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   const fetchRounds = useCallback(async () => {
     try {
@@ -252,7 +254,6 @@ export default function RoundsTab({ event, onCompetitionClosed }) {
 
   const deleteRound = async (roundId) => {
     if (competitionLocked) return;
-    if (!confirm("Delete this round?")) return;
     try {
       setBusyKey(`delete-${roundId}`);
       const res = await fetch(`/api/events/${eventId}/rounds/${roundId}`, {
@@ -263,9 +264,11 @@ export default function RoundsTab({ event, onCompetitionClosed }) {
         throw new Error(data.message || "Failed to delete round.");
       }
       setMessage(data.message || "Round deleted.");
+      setDeleteTarget(null);
       await fetchRounds();
     } catch (error) {
       setMessage(error.message);
+      setDeleteTarget(null);
     } finally {
       setBusyKey("");
     }
@@ -492,7 +495,7 @@ export default function RoundsTab({ event, onCompetitionClosed }) {
                           <button
                             type="button"
                             disabled={competitionLocked || busyKey === `delete-${round._id}`}
-                            onClick={() => deleteRound(round._id)}
+                            onClick={() => setDeleteTarget(round)}
                             className="rounded-lg bg-rose-50 p-2 text-rose-700 hover:bg-rose-100 disabled:opacity-50"
                             title="Delete round"
                           >
@@ -951,6 +954,23 @@ export default function RoundsTab({ event, onCompetitionClosed }) {
           </form>
         </div>
       )}
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        title="Delete this round?"
+        message={
+          deleteTarget
+            ? `${deleteTarget.title} will be removed from this event's round plan.`
+            : ""
+        }
+        confirmLabel="Delete round"
+        tone="danger"
+        busy={Boolean(deleteTarget && busyKey === `delete-${deleteTarget._id}`)}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={() => {
+          if (deleteTarget?._id) deleteRound(deleteTarget._id);
+        }}
+      />
 
     </div>
   );

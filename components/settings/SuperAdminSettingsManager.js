@@ -14,6 +14,7 @@ import {
   FiUserPlus,
   FiUserX,
 } from "react-icons/fi";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 const defaultConfig = {
   general: {
@@ -138,6 +139,8 @@ export default function SuperAdminSettingsManager() {
     currentPassword: "",
   });
   const [adminActionPassword, setAdminActionPassword] = useState("");
+  const [pendingRiskSave, setPendingRiskSave] = useState(null);
+  const [pendingAdminAction, setPendingAdminAction] = useState(null);
   const activeAdminCount = adminUsers.filter(
     (admin) => admin.status !== "UNSUBSCRIBED"
   ).length;
@@ -262,10 +265,11 @@ export default function SuperAdminSettingsManager() {
       setAdminForm((current) => ({ ...current, [field]: value }));
   };
 
-  const handleSave = async () => {
+  const handleSave = async (skipRiskConfirm = false) => {
     try {
       setSaving(true);
       setMessage({ type: "", text: "" });
+      const bypassRiskConfirm = skipRiskConfirm === true;
 
       const platformName = String(config.general.platformName || "").trim();
       const supportEmail = String(config.general.supportEmail || "").trim();
@@ -311,17 +315,10 @@ export default function SuperAdminSettingsManager() {
       };
 
       const riskWarnings = getRiskWarnings(sanitizedConfig, savedConfig);
-      if (riskWarnings.length > 0) {
-        const confirmed = window.confirm(
-          `Please confirm these platform policy changes:\n\n- ${riskWarnings.join(
-            "\n- "
-          )}\n\nDo you want to continue?`
-        );
-
-        if (!confirmed) {
-          setSaving(false);
-          return;
-        }
+      if (riskWarnings.length > 0 && !bypassRiskConfirm) {
+        setPendingRiskSave({ warnings: riskWarnings });
+        setSaving(false);
+        return;
       }
 
       const res = await fetch("/api/admin/settings", {
@@ -440,7 +437,7 @@ export default function SuperAdminSettingsManager() {
     }
   };
 
-  const handleAdminStatusChange = async (admin, action) => {
+  const handleAdminStatusChange = async (admin, action, skipConfirm = false) => {
     try {
       setAdminMessage({ type: "", text: "" });
 
@@ -454,10 +451,8 @@ export default function SuperAdminSettingsManager() {
       }
 
       const label = action === "deactivate" ? "deactivate" : "reactivate";
-      const confirmed = window.confirm(
-        `Do you want to ${label} ${admin.name || admin.email}?`
-      );
-      if (!confirmed) {
+      if (skipConfirm !== true) {
+        setPendingAdminAction({ admin, action, label });
         return;
       }
 
@@ -1091,6 +1086,53 @@ export default function SuperAdminSettingsManager() {
           {saving ? "Saving..." : "Save platform settings"}
         </button>
       </div>
+
+      <ConfirmDialog
+        open={Boolean(pendingRiskSave)}
+        title="Confirm platform policy changes"
+        message={
+          pendingRiskSave?.warnings?.length
+            ? pendingRiskSave.warnings.join(" ")
+            : ""
+        }
+        confirmLabel="Save changes"
+        tone="warning"
+        busy={saving}
+        onClose={() => setPendingRiskSave(null)}
+        onConfirm={() => {
+          setPendingRiskSave(null);
+          handleSave(true);
+        }}
+      />
+
+      <ConfirmDialog
+        open={Boolean(pendingAdminAction)}
+        title={
+          pendingAdminAction
+            ? `${pendingAdminAction.label === "deactivate" ? "Deactivate" : "Reactivate"} admin?`
+            : "Update admin?"
+        }
+        message={
+          pendingAdminAction
+            ? `${pendingAdminAction.admin.name || pendingAdminAction.admin.email} access will be updated.`
+            : ""
+        }
+        confirmLabel={
+          pendingAdminAction?.label === "deactivate"
+            ? "Deactivate admin"
+            : "Reactivate admin"
+        }
+        tone={pendingAdminAction?.label === "deactivate" ? "danger" : "info"}
+        busy={adminsSaving}
+        onClose={() => setPendingAdminAction(null)}
+        onConfirm={() => {
+          if (pendingAdminAction) {
+            const { admin, action } = pendingAdminAction;
+            setPendingAdminAction(null);
+            handleAdminStatusChange(admin, action, true);
+          }
+        }}
+      />
     </div>
   );
 }

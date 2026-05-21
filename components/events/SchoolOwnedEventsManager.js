@@ -19,6 +19,8 @@ import EventEditorForm from "./EventEditorForm";
 import EventParticipationForm from "./EventParticipationForm";
 import EmptyState from "@/components/EmptyState";
 import LoadingState from "@/components/ui/LoadingState";
+import AlertBanner from "@/components/ui/AlertBanner";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { getEventStage, getStageClasses, isDatePast } from "@/lib/eventUiStatus";
 import { isTeamEventLike } from "@/lib/eventParticipationFormat";
 
@@ -38,6 +40,8 @@ export default function SchoolOwnedEventsManager({
   const [expandedId, setExpandedId] = useState(null);
   const [editingEvent, setEditingEvent] = useState(null);
   const [statusMessage, setStatusMessage] = useState("");
+  const [feedback, setFeedback] = useState(null);
+  const [archiveTarget, setArchiveTarget] = useState(null);
 
   const loadEvents = useCallback(async () => {
     try {
@@ -62,6 +66,11 @@ export default function SchoolOwnedEventsManager({
       setEvents(schoolEvents);
     } catch (error) {
       console.error("Failed to load school-owned events", error);
+      setFeedback({
+        type: "error",
+        title: "School events could not be loaded",
+        message: "Please retry or check the server connection.",
+      });
       setEvents([]);
     } finally {
       setLoading(false);
@@ -87,46 +96,57 @@ export default function SchoolOwnedEventsManager({
       });
 
       if (!res.ok) {
-        const data = await res.json();
-        alert(data.message || "Failed to update event status");
-        return;
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.message || "Failed to update event status");
       }
 
       setStatusMessage(`Event moved to ${lifecycleStatus.toLowerCase()}.`);
+      setFeedback({
+        type: "success",
+        title: "Event updated",
+        message: `Event moved to ${lifecycleStatus.toLowerCase()}.`,
+      });
       await loadEvents();
       onChanged?.();
     } catch (error) {
       console.error("Failed to update school event status", error);
-      alert("Failed to update event status");
+      setFeedback({
+        type: "error",
+        title: "Event status was not updated",
+        message: error.message || "Failed to update event status.",
+      });
     }
   };
 
-  const handleArchive = async (eventId) => {
-    if (
-      !confirm(
-        "Archive this event? It will move to history and disappear from active student discovery."
-      )
-    ) {
-      return;
-    }
-
+  const handleArchive = async () => {
+    if (!archiveTarget) return;
     try {
-      const res = await fetch(`/api/events/${eventId}`, {
+      const res = await fetch(`/api/events/${archiveTarget._id}`, {
         method: "DELETE",
       });
 
       if (!res.ok) {
-        const data = await res.json();
-        alert(data.message || "Failed to archive event");
-        return;
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.message || "Failed to archive event");
       }
 
       setStatusMessage("Event archived.");
+      setFeedback({
+        type: "success",
+        title: "Event archived",
+        message: `${archiveTarget.title} moved to event history.`,
+      });
+      setArchiveTarget(null);
       await loadEvents();
       onChanged?.();
     } catch (error) {
       console.error("Failed to archive event", error);
-      alert("Failed to archive event");
+      setFeedback({
+        type: "error",
+        title: "Event was not archived",
+        message: error.message || "Failed to archive event.",
+      });
+      setArchiveTarget(null);
     }
   };
 
@@ -162,7 +182,15 @@ export default function SchoolOwnedEventsManager({
         </div>
       </div>
 
-      {statusMessage && <p className="text-sm text-emerald-300">{statusMessage}</p>}
+      {feedback ? (
+        <AlertBanner
+          type={feedback.type}
+          title={feedback.title}
+          message={feedback.message}
+        />
+      ) : (
+        statusMessage && <p className="text-sm text-emerald-300">{statusMessage}</p>
+      )}
 
       {loading ? (
         <LoadingState
@@ -296,8 +324,8 @@ export default function SchoolOwnedEventsManager({
                       {(event.lifecycleStatus || "ACTIVE") !== "ARCHIVED" ? (
                         <button
                           type="button"
-                          onClick={() => handleArchive(event._id)}
-                          className="px-3 py-2 rounded-lg bg-orange-600 hover:bg-orange-500 text-white text-sm transition inline-flex items-center gap-2"
+                          onClick={() => setArchiveTarget(event)}
+                          className="px-3 py-2 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-100 border border-rose-500/20 text-sm transition inline-flex items-center gap-2"
                         >
                           <FaArchive />
                           Archive
@@ -374,6 +402,20 @@ export default function SchoolOwnedEventsManager({
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={Boolean(archiveTarget)}
+        title="Archive this event?"
+        message={
+          archiveTarget
+            ? `${archiveTarget.title} will move to history and disappear from active student discovery. You can restore it later from archived events.`
+            : ""
+        }
+        confirmLabel="Archive event"
+        tone="danger"
+        onClose={() => setArchiveTarget(null)}
+        onConfirm={handleArchive}
+      />
     </div>
   );
 }

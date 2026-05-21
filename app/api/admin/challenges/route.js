@@ -27,7 +27,7 @@ export async function GET() {
 
     await connectDB();
 
-    const challenges = await PlatformChallenge.find({})
+    const challenges = await PlatformChallenge.find({ isDeleted: { $ne: true } })
       .sort({ createdAt: -1 })
       .lean();
 

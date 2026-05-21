@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
+import { buildMagazineLifecycle } from "@/lib/lifecycle";
 
 export async function GET(request) {
   try {
@@ -17,7 +18,7 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const view = String(searchParams.get("view") || "published").toLowerCase();
 
-    const query = { school: session.user.id };
+    const query = { school: session.user.id, isDeleted: { $ne: true } };
     if (view === "approved") {
       query.status = "APPROVED";
     } else {
@@ -26,6 +27,7 @@ export async function GET(request) {
 
     const articles = await SchoolMagazineArticle.find(query)
       .populate("authorStudent", "name grade rollNumber")
+      .populate("reviewedBy", "name schoolName email")
       .sort({
         publishedAt: -1,
         reviewedAt: -1,
@@ -46,6 +48,7 @@ export async function GET(request) {
         publishedAt: article.publishedAt,
         reviewedAt: article.reviewedAt,
         updatedAt: article.updatedAt,
+        lifecycle: buildMagazineLifecycle(article),
         authorStudent: article.authorStudent
           ? {
               id: String(article.authorStudent._id),

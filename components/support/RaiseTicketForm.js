@@ -17,10 +17,12 @@ export default function RaiseTicketForm({ onTicketCreated }) {
     priority: "medium",
   });
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    setSuccess("");
 
     if (!formData.title.trim() || !formData.description.trim()) {
       setError("Title and description are required");
@@ -45,7 +47,7 @@ export default function RaiseTicketForm({ onTicketCreated }) {
         });
         setIsOpen(false);
         onTicketCreated();
-        alert("Ticket raised successfully!");
+        setSuccess("Ticket raised successfully.");
       } else {
         setError(data.message || "Failed to create ticket");
       }
@@ -58,12 +60,19 @@ export default function RaiseTicketForm({ onTicketCreated }) {
 
   if (!isOpen) {
     return (
-      <button
-        onClick={() => setIsOpen(true)}
-        className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg font-medium transition flex items-center gap-2"
-      >
-        <FaPlus /> Raise New Ticket
-      </button>
+      <div className="space-y-3">
+        {success && (
+          <div className="rounded-lg border border-emerald-700 bg-emerald-900/30 px-4 py-3 text-sm text-emerald-100">
+            {success}
+          </div>
+        )}
+        <button
+          onClick={() => setIsOpen(true)}
+          className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg font-medium transition flex items-center gap-2"
+        >
+          <FaPlus /> Raise New Ticket
+        </button>
+      </div>
     );
   }
 

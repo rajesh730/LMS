@@ -18,7 +18,10 @@ export async function GET(req) {
     await connectDB();
 
     // Fetch all students for this school
-    const students = await Student.find({ school: session.user.id });
+    const students = await Student.find({
+      school: session.user.id,
+      isDeleted: { $ne: true },
+    });
     
     let updatedCount = 0;
     let errors = [];

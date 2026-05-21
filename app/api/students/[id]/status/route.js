@@ -33,7 +33,10 @@ export async function PATCH(req, { params }) {
       return errorResponse(400, "Invalid action");
     }
 
-    const student = await Student.findById(id);
+    const student = await Student.findOne({
+      _id: id,
+      isDeleted: { $ne: true },
+    });
     if (!student) {
       return errorResponse(404, "Student not found");
     }

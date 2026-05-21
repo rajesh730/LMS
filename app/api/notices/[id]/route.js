@@ -114,9 +114,13 @@ export async function DELETE(request, props) {
       return Response.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    await Notice.deleteOne({ _id: params.id });
+    notice.isActive = false;
+    notice.isDeleted = true;
+    notice.deletedAt = new Date();
+    notice.deletedBy = session.user.id;
+    await notice.save();
 
-    return Response.json({ message: "Notice deleted" });
+    return Response.json({ message: "Notice archived" });
   } catch (error) {
     console.error("DELETE /api/notices/[id] error:", error);
     return Response.json({ error: "Failed to delete notice" }, { status: 500 });

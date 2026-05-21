@@ -11,8 +11,10 @@ import AdminDailyOverview from "@/components/admin/AdminDailyOverview";
 import CredentialsModal from "@/components/CredentialsModal";
 import NoticeManager from "@/components/NoticeManager";
 import StudentChallengeManager from "@/components/admin/StudentChallengeManager";
+import SchoolPromotionManager from "@/components/admin/SchoolPromotionManager";
 import PageHeader from "@/components/ui/PageHeader";
 import AlertBanner from "@/components/ui/AlertBanner";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import LoadingState from "@/components/ui/LoadingState";
 import EmptyState from "@/components/EmptyState";
 import SendEventForm from "./SendEventForm";
@@ -95,6 +97,8 @@ function AdminDashboardContent() {
   const [eventWorkspaceTab, setEventWorkspaceTab] = useState("manage");
   const [deletingId, setDeletingId] = useState(null);
   const [lastError, setLastError] = useState(null);
+  const [actionFeedback, setActionFeedback] = useState(null);
+  const [confirmState, setConfirmState] = useState(null);
   const [editingEvent, setEditingEvent] = useState(null);
   const [credentialsModal, setCredentialsModal] = useState({
     isOpen: false,
@@ -185,11 +189,36 @@ function AdminDashboardContent() {
     }
   };
 
-  const updateStatus = async (schoolId, newStatus) => {
-    if (!confirm(`Are you sure you want to change status to ${newStatus}?`))
-      return;
+  const requestSchoolStatusUpdate = (school, newStatus) => {
+    setConfirmState({
+      type: "school-status",
+      school,
+      newStatus,
+      title:
+        newStatus === "APPROVED"
+          ? "Approve this school?"
+          : newStatus === "REJECTED"
+          ? "Reject this school?"
+          : "Update school status?",
+      message: `${school.schoolName || school.email} will be marked as ${newStatus}.`,
+      confirmLabel:
+        newStatus === "APPROVED"
+          ? "Approve school"
+          : newStatus === "REJECTED"
+          ? "Reject school"
+          : "Update status",
+      tone:
+        newStatus === "REJECTED" || newStatus === "UNSUBSCRIBED"
+          ? "danger"
+          : "info",
+      busy: false,
+    });
+  };
 
+  const updateStatus = async (schoolId, newStatus) => {
     try {
+      setConfirmState((current) => (current ? { ...current, busy: true } : current));
+      setActionFeedback(null);
       console.log(`Updating school ${schoolId} to status: ${newStatus}`);
       const res = await fetch(`/api/schools/${schoolId}/status`, {
         method: "PUT",
@@ -207,26 +236,47 @@ function AdminDashboardContent() {
             s._id === schoolId ? { ...s, status: newStatus } : s
           )
         );
+        setActionFeedback({
+          type: "success",
+          title: "School status updated",
+          message: `School is now ${newStatus}.`,
+        });
       } else {
         console.error("❌ Status update failed:", data.message);
-        alert(`Error: ${data.message || "Failed to update status"}`);
+        setActionFeedback({
+          type: "error",
+          title: "School status update failed",
+          message: data.message || "Failed to update status",
+        });
       }
     } catch (error) {
       console.error("❌ Error updating status", error);
-      alert(`Error: ${error.message}`);
+      setActionFeedback({
+        type: "error",
+        title: "School status update failed",
+        message: error.message,
+      });
+    } finally {
+      setConfirmState(null);
     }
   };
 
-  const resetSchoolPassword = async (school) => {
-    if (
-      !confirm(
-        `Reset the password for ${school.schoolName}? The current password will stop working immediately.`
-      )
-    ) {
-      return;
-    }
+  const requestResetSchoolPassword = (school) => {
+    setConfirmState({
+      type: "school-password",
+      school,
+      title: "Reset school password?",
+      message: `The current password for ${school.schoolName} will stop working immediately and a new temporary password will be generated.`,
+      confirmLabel: "Reset password",
+      tone: "warning",
+      busy: false,
+    });
+  };
 
+  const resetSchoolPassword = async (school) => {
     try {
+      setConfirmState((current) => (current ? { ...current, busy: true } : current));
+      setActionFeedback(null);
       const res = await fetch(`/api/schools/${school._id}/reset-password`, {
         method: "POST",
       });
@@ -242,54 +292,78 @@ function AdminDashboardContent() {
           credentials: data.data.credentials,
         });
       }
+      setActionFeedback({
+        type: "success",
+        title: "Password reset",
+        message: `New credentials are ready for ${school.schoolName}.`,
+      });
     } catch (error) {
       console.error("Error resetting school password", error);
-      alert(`Error: ${error.message}`);
+      setActionFeedback({
+        type: "error",
+        title: "Password reset failed",
+        message: error.message,
+      });
+    } finally {
+      setConfirmState(null);
     }
   };
 
   // Event CRUD
-  const deleteEvent = async (id, permanent = false) => {
-    setLastError(null);
-    console.log("Deleting event with ID:", id, "Permanent:", permanent);
-    if (
-      !confirm(
-        permanent
-          ? "Are you sure you want to PERMANENTLY delete this event? This cannot be undone."
-          : "Are you sure you want to archive this event?"
-      )
-    )
-      return;
+  const requestArchiveEvent = (event) => {
+    setConfirmState({
+      type: "event-archive",
+      event,
+      title: "Archive this event?",
+      message: `${event.title} will move to history. You can restore it later.`,
+      confirmLabel: "Archive event",
+      tone: "danger",
+      busy: false,
+    });
+  };
 
+  const deleteEvent = async (id) => {
+    setLastError(null);
     setDeletingId(id);
     try {
-      const res = await fetch(`/api/events/${id}?permanent=${permanent}`, {
+      setConfirmState((current) => (current ? { ...current, busy: true } : current));
+      setActionFeedback(null);
+      const res = await fetch(`/api/events/${id}`, {
         method: "DELETE",
       });
       if (res.ok) {
-        if (permanent) {
-          setEvents(events.filter((e) => e._id !== id));
-        } else {
-          // If soft delete (archive), update local state to reflect archived status
-          setEvents(
-            events.map((e) =>
-              e._id === id ? { ...e, lifecycleStatus: "ARCHIVED" } : e
-            )
-          );
-        }
+        setEvents(
+          events.map((e) =>
+            e._id === id ? { ...e, lifecycleStatus: "ARCHIVED" } : e
+          )
+        );
+        setActionFeedback({
+          type: "success",
+          title: "Event archived",
+          message: "The event moved to archived history.",
+        });
       } else {
         const data = await res.json();
         console.error("Failed to delete event:", data);
         const msg = `Failed: ${data.message} (${res.status})`;
         setLastError(msg);
-        alert(msg);
+        setActionFeedback({
+          type: "error",
+          title: "Event archive failed",
+          message: msg,
+        });
       }
     } catch (error) {
       console.error("Error deleting event", error);
       setLastError(`Error: ${error.message}`);
-      alert(`Network/Client Error: ${error.message}`);
+      setActionFeedback({
+        type: "error",
+        title: "Event archive failed",
+        message: `Network/Client Error: ${error.message}`,
+      });
     } finally {
       setDeletingId(null);
+      setConfirmState(null);
     }
   };
 
@@ -304,8 +378,17 @@ function AdminDashboardContent() {
         setEvents(
           events.map((e) => (e._id === id ? { ...e, lifecycleStatus: status } : e))
         );
+        setActionFeedback({
+          type: "success",
+          title: "Event status updated",
+          message: `Event moved to ${status.toLowerCase()}.`,
+        });
       } else {
-        alert("Failed to update event status");
+        setActionFeedback({
+          type: "error",
+          title: "Event status update failed",
+          message: "Failed to update event status",
+        });
       }
     } catch (error) {
       console.error("Error updating status:", error);
@@ -391,6 +474,16 @@ function AdminDashboardContent() {
         </div>
       )}
 
+      {actionFeedback && (
+        <div className="mb-6">
+          <AlertBanner
+            type={actionFeedback.type}
+            title={actionFeedback.title}
+            message={actionFeedback.message}
+          />
+        </div>
+      )}
+
       {/* Content */}
       {activeTab === "approvals" && (
         <div className="space-y-6">
@@ -458,13 +551,13 @@ function AdminDashboardContent() {
                     </div>
                     <div className="flex items-center gap-3">
                       <button
-                        onClick={() => updateStatus(school._id, "APPROVED")}
+                        onClick={() => requestSchoolStatusUpdate(school, "APPROVED")}
                         className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded flex items-center gap-2 font-medium transition"
                       >
                         <FaCheckCircle /> Approve
                       </button>
                       <button
-                        onClick={() => updateStatus(school._id, "REJECTED")}
+                        onClick={() => requestSchoolStatusUpdate(school, "REJECTED")}
                         className="bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded flex items-center gap-2 font-medium transition"
                       >
                         <FaTimesCircle /> Reject
@@ -536,7 +629,7 @@ function AdminDashboardContent() {
                         </td>
                         <td className="p-3">
                           <button
-                            onClick={() => resetSchoolPassword(school)}
+                            onClick={() => requestResetSchoolPassword(school)}
                             className="flex items-center gap-2 px-3 py-1 rounded transition bg-blue-500/20 text-blue-300 hover:bg-blue-500/30"
                           >
                             <FaKey />
@@ -546,8 +639,8 @@ function AdminDashboardContent() {
                         <td className="p-3">
                           <button
                             onClick={() =>
-                              updateStatus(
-                                school._id,
+                              requestSchoolStatusUpdate(
+                                school,
                                 isActive ? "UNSUBSCRIBED" : "APPROVED"
                               )
                             }
@@ -583,6 +676,8 @@ function AdminDashboardContent() {
       )}
 
       {activeTab === "challenges" && <StudentChallengeManager />}
+
+      {activeTab === "spotlight" && <SchoolPromotionManager />}
 
       {activeTab === "events" && (
         <div className="space-y-6">
@@ -660,7 +755,7 @@ function AdminDashboardContent() {
                         <EventCard
                           key={event._id}
                           event={event}
-                          onDelete={deleteEvent}
+                          onDelete={() => requestArchiveEvent(event)}
                           onUpdateStatus={updateEventStatus}
                           isDeleting={deletingId === event._id}
                           onEdit={(e) => {
@@ -698,7 +793,7 @@ function AdminDashboardContent() {
                           <EventCard
                             key={event._id}
                             event={event}
-                            onDelete={deleteEvent}
+                            onDelete={() => requestArchiveEvent(event)}
                             onUpdateStatus={updateEventStatus}
                             isDeleting={deletingId === event._id}
                             onViewParticipants={(e) => setViewingEvent(e)}
@@ -716,8 +811,8 @@ function AdminDashboardContent() {
                     <h2 className="text-xl font-semibold text-white">
                       Archived Platform Events
                     </h2>
-                    <div className="rounded-lg bg-orange-500/10 px-4 py-2 text-sm text-orange-300 border border-orange-500/20">
-                      Archive history and permanent cleanup for old events
+                    <div className="rounded-lg bg-blue-500/10 px-4 py-2 text-sm text-blue-200 border border-blue-500/20">
+                      Archived events stay available for review and can be restored.
                     </div>
                   </div>
 
@@ -733,7 +828,7 @@ function AdminDashboardContent() {
                           <EventCard
                             key={event._id}
                             event={event}
-                            onDelete={deleteEvent}
+                            onDelete={() => requestArchiveEvent(event)}
                             onUpdateStatus={updateEventStatus}
                             isDeleting={deletingId === event._id}
                             onEdit={(e) => {
@@ -791,6 +886,25 @@ function AdminDashboardContent() {
         onClose={() =>
           setCredentialsModal({ isOpen: false, credentials: null })
         }
+      />
+
+      <ConfirmDialog
+        open={Boolean(confirmState)}
+        title={confirmState?.title}
+        message={confirmState?.message}
+        confirmLabel={confirmState?.confirmLabel}
+        tone={confirmState?.tone}
+        busy={Boolean(confirmState?.busy)}
+        onClose={() => setConfirmState(null)}
+        onConfirm={() => {
+          if (confirmState?.type === "school-status") {
+            updateStatus(confirmState.school._id, confirmState.newStatus);
+          } else if (confirmState?.type === "school-password") {
+            resetSchoolPassword(confirmState.school);
+          } else if (confirmState?.type === "event-archive") {
+            deleteEvent(confirmState.event._id);
+          }
+        }}
       />
     </DashboardLayout>
   );

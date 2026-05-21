@@ -298,5 +298,16 @@ EventSchema.pre("validate", function () {
 
 EventSchema.index({ eventScope: 1, visibility: 1, lifecycleStatus: 1, date: 1 });
 EventSchema.index({ "partners.organizer": 1, visibility: 1, lifecycleStatus: 1 });
+EventSchema.index({ eventScope: 1, status: 1, lifecycleStatus: 1, date: 1 });
+EventSchema.index({ school: 1, eventScope: 1, lifecycleStatus: 1, date: 1 });
+EventSchema.index({ createdBy: 1, eventScope: 1, lifecycleStatus: 1, createdAt: -1 });
+EventSchema.index({ lifecycleStatus: 1, status: 1, createdAt: -1 });
+EventSchema.index({
+  featuredOnLanding: 1,
+  visibility: 1,
+  status: 1,
+  lifecycleStatus: 1,
+  date: 1,
+});
 
 export default mongoose.models.Event || mongoose.model("Event", EventSchema);

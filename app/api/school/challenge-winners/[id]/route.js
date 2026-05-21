@@ -4,6 +4,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import PlatformChallengeSubmission from "@/models/PlatformChallengeSubmission";
 import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
+import { recordLifecycleAudit } from "@/lib/lifecycle";
 import "@/models/PlatformChallenge";
 
 export async function PATCH(request, props) {
@@ -61,6 +62,16 @@ export async function PATCH(request, props) {
     submission.addedToSchoolMagazine = true;
     submission.schoolMagazineArticle = article._id;
     await submission.save();
+    await recordLifecycleAudit({
+      entityType: "PlatformChallengeSubmission",
+      entityId: submission._id,
+      action: "ADDED_TO_SCHOOL_MAGAZINE",
+      session,
+      after: {
+        addedToSchoolMagazine: submission.addedToSchoolMagazine,
+        schoolMagazineArticle: submission.schoolMagazineArticle,
+      },
+    });
 
     return NextResponse.json({
       message: "Challenge response added to school magazine",

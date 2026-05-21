@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import connectDB from '@/lib/db';
 import Teacher from '@/models/Teacher';
+import User from '@/models/User';
 
 export async function PUT(req, { params }) {
     try {
@@ -23,7 +24,11 @@ export async function PUT(req, { params }) {
         await connectDB();
 
         // 1. Find the teacher first
-        const existingTeacher = await Teacher.findOne({ _id: id, school: session.user.id });
+        const existingTeacher = await Teacher.findOne({
+            _id: id,
+            school: session.user.id,
+            isDeleted: { $ne: true },
+        });
         if (!existingTeacher) {
             return NextResponse.json({ message: 'Teacher not found' }, { status: 404 });
         }
@@ -32,6 +37,7 @@ export async function PUT(req, { params }) {
         if (email && email !== existingTeacher.email) {
             const emailCheck = await Teacher.findOne({
                 email: email,
+                isDeleted: { $ne: true },
                 _id: { $ne: id }
             });
 
@@ -59,8 +65,8 @@ export async function PUT(req, { params }) {
         };
 
         // 4. Perform Update
-        const updatedTeacher = await Teacher.findByIdAndUpdate(
-            id,
+        const updatedTeacher = await Teacher.findOneAndUpdate(
+            { _id: id, school: session.user.id, isDeleted: { $ne: true } },
             updateData,
             { new: true, runValidators: true }
         );
@@ -88,13 +94,29 @@ export async function DELETE(req, { params }) {
         const { id } = await params;
 
         await connectDB();
-        const deletedTeacher = await Teacher.findOneAndDelete({ _id: id, school: session.user.id });
+        const deletedTeacher = await Teacher.findOneAndUpdate(
+            { _id: id, school: session.user.id, isDeleted: { $ne: true } },
+            {
+                isDeleted: true,
+                deletedAt: new Date(),
+                deletedBy: session.user.id,
+                status: 'INACTIVE',
+            },
+            { new: true }
+        );
 
         if (!deletedTeacher) {
             return NextResponse.json({ message: 'Teacher not found' }, { status: 404 });
         }
 
-        return NextResponse.json({ message: 'Teacher deleted successfully' }, { status: 200 });
+        if (deletedTeacher.email) {
+            await User.findOneAndUpdate(
+                { email: deletedTeacher.email, role: 'TEACHER' },
+                { status: 'UNSUBSCRIBED', $inc: { authVersion: 1 } }
+            );
+        }
+
+        return NextResponse.json({ message: 'Mentor archived successfully' }, { status: 200 });
     } catch (error) {
         console.error('Delete Teacher Error:', error);
         return NextResponse.json({ message: 'Error deleting teacher' }, { status: 500 });

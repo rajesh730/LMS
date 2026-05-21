@@ -110,6 +110,7 @@ export async function GET(request) {
       round: null,
       status: "PUBLISHED",
       visibility: "PUBLIC",
+      isDeleted: { $ne: true },
     })
       .populate("event", "title eventScope")
       .select("event title message publishedAt createdAt")

@@ -81,6 +81,7 @@ export async function PATCH(req, props) {
       _id: access.params.noticeId,
       event: access.params.id,
       round: null,
+      isDeleted: { $ne: true },
     });
     if (!notice) {
       return NextResponse.json({ message: "Notice not found" }, { status: 404 });
@@ -127,13 +128,24 @@ export async function DELETE(req, props) {
     const access = await requireAccess(props, session);
     if (access.response) return access.response;
 
-    await EventNotice.deleteOne({
+    const notice = await EventNotice.findOne({
       _id: access.params.noticeId,
       event: access.params.id,
       round: null,
+      isDeleted: { $ne: true },
     });
 
-    return NextResponse.json({ message: "Notice deleted" });
+    if (!notice) {
+      return NextResponse.json({ message: "Notice not found" }, { status: 404 });
+    }
+
+    notice.isDeleted = true;
+    notice.deletedAt = new Date();
+    notice.deletedBy = session.user.id;
+    notice.status = "UNPUBLISHED";
+    await notice.save();
+
+    return NextResponse.json({ message: "Notice archived" });
   } catch (error) {
     console.error("Delete Event Notice Error:", error);
     return NextResponse.json(

@@ -21,6 +21,7 @@ export default function TeacherManager() {
 
   // Filters & Search
   const [search, setSearch] = useState("");
+  const [status, setStatus] = useState("ALL");
 
   // Fetch Teachers
   const fetchTeachers = useCallback(async (page = 1) => {
@@ -30,6 +31,7 @@ export default function TeacherManager() {
         page,
         limit: 10,
         ...(search && { search }),
+        ...(status !== "ALL" && { status }),
       });
 
       const res = await fetch(`/api/teachers?${params}`);
@@ -56,7 +58,7 @@ export default function TeacherManager() {
     } finally {
       setLoading(false);
     }
-  }, [search]);
+  }, [search, status]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -83,6 +85,15 @@ export default function TeacherManager() {
             className="w-full bg-slate-800 text-white pl-10 pr-4 py-2 rounded-lg border border-slate-700 focus:border-emerald-500 outline-none"
           />
         </div>
+        <select
+          value={status}
+          onChange={(event) => setStatus(event.target.value)}
+          className="w-full rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-white outline-none transition focus:border-emerald-500 md:w-44"
+        >
+          <option value="ALL">All Mentors</option>
+          <option value="ACTIVE">Active</option>
+          <option value="INACTIVE">Inactive</option>
+        </select>
         <Link
           href="/school/dashboard?tab=register-teacher"
           className="inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-4 py-2 rounded-lg transition w-full md:w-auto"
@@ -115,7 +126,7 @@ export default function TeacherManager() {
               ) : teachers.length === 0 ? (
                 <tr>
                   <td colSpan="5" className="p-8 text-center text-slate-500">
-                    No teachers found.
+                    {search ? "No teachers match this search." : "No teachers found."}
                   </td>
                 </tr>
               ) : (
@@ -153,8 +164,14 @@ export default function TeacherManager() {
                       <div className="text-xs text-emerald-400">{teacher.subject || "General mentoring"}</div>
                     </td>
                     <td className="p-4">
-                        <span className="bg-emerald-500/10 text-emerald-400 px-2 py-1 rounded text-xs">
-                            Active
+                        <span
+                          className={`px-2 py-1 rounded text-xs ${
+                            String(teacher.status || "ACTIVE").toUpperCase() === "ACTIVE"
+                              ? "bg-emerald-500/10 text-emerald-400"
+                              : "bg-slate-700 text-slate-300"
+                          }`}
+                        >
+                            {teacher.status || "ACTIVE"}
                         </span>
                     </td>
                   </tr>
@@ -171,6 +188,9 @@ export default function TeacherManager() {
                     currentPage={pagination.page}
                     totalPages={pagination.totalPages}
                     onPageChange={handlePageChange}
+                    totalItems={pagination.totalTeachers}
+                    start={pagination.start}
+                    end={pagination.end}
                 />
             </div>
         )}

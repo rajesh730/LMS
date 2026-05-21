@@ -216,6 +216,8 @@ async function replaceTeamParticipation({
   const selectedStudents = await Student.find({
     _id: { $in: allStudentIds },
     school: schoolId,
+    status: "ACTIVE",
+    isDeleted: { $ne: true },
   }).select("name grade");
 
   if (selectedStudents.length !== allStudentIds.length) {
@@ -329,6 +331,8 @@ async function replaceTeamParticipation({
 
 function studentLookupQuery(session) {
   return {
+    status: "ACTIVE",
+    isDeleted: { $ne: true },
     $or: [
       { _id: session.user.id },
       { userId: session.user.id },
@@ -614,6 +618,8 @@ export async function POST(req, { params }) {
           const student = await Student.findOne({
             _id: studentId,
             school: schoolId,
+            status: "ACTIVE",
+            isDeleted: { $ne: true },
           });
 
           if (!student) {
@@ -992,6 +998,8 @@ export async function PUT(req, { params }) {
     const selectedStudents = await Student.find({
       _id: { $in: normalizedStudentIds },
       school: schoolId,
+      status: "ACTIVE",
+      isDeleted: { $ne: true },
     }).select("name grade");
 
     if (selectedStudents.length !== normalizedStudentIds.length) {
@@ -1074,6 +1082,8 @@ export async function PUT(req, { params }) {
       const student = await Student.findOne({
         _id: studentId,
         school: schoolId,
+        status: "ACTIVE",
+        isDeleted: { $ne: true },
       });
 
       if (student) {

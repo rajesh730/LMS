@@ -14,6 +14,7 @@ import PageHeader from "@/components/ui/PageHeader";
 import AlertBanner from "@/components/ui/AlertBanner";
 import LoadingState from "@/components/ui/LoadingState";
 import EmptyState from "@/components/EmptyState";
+import LifecycleTimeline from "@/components/ui/LifecycleTimeline";
 
 function formatDate(value) {
   if (!value) return "";
@@ -73,6 +74,13 @@ function ArticleCard({
           {busyId === article.id ? primaryBusyLabel : primaryActionLabel}
         </button>
         {helper && <p className="text-sm leading-6 text-slate-500">{helper}</p>}
+      </div>
+      <div className="mt-5">
+        <LifecycleTimeline
+          compact
+          title="Publishing history"
+          items={article.lifecycle}
+        />
       </div>
     </article>
   );
@@ -440,6 +448,13 @@ export default function SchoolMagazineManager() {
                   <p className="mt-5 whitespace-pre-wrap text-sm leading-7 text-slate-300">
                     {submission.content}
                   </p>
+                  <div className="mt-5">
+                    <LifecycleTimeline
+                      compact
+                      title="Platform decision history"
+                      items={submission.lifecycle}
+                    />
+                  </div>
                 </article>
               ))}
             </div>
