@@ -41,26 +41,11 @@ const STATUS_STYLES = {
   ARCHIVED: "bg-rose-500/15 text-rose-200 border-rose-500/25",
 };
 
-const PAYMENT_STYLES = {
-  PAID: "bg-emerald-500/15 text-emerald-200 border-emerald-500/25",
-  PENDING: "bg-slate-700/80 text-slate-200 border-slate-600",
-  REFUNDED: "bg-rose-500/15 text-rose-200 border-rose-500/25",
-};
-
 function toDateInputValue(value) {
   if (!value) return "";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
   return date.toISOString().slice(0, 10);
-}
-
-function formatDate(value) {
-  if (!value) return "Not set";
-  return new Date(value).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
 }
 
 function formatPlacement(value) {
@@ -69,13 +54,6 @@ function formatPlacement(value) {
 
 function getCampaignState(campaign) {
   if (campaign.status !== "ACTIVE") return campaign.status;
-
-  const now = new Date();
-  const startsAt = new Date(campaign.startsAt);
-  const endsAt = new Date(campaign.endsAt);
-
-  if (startsAt > now) return "SCHEDULED";
-  if (endsAt < now) return "EXPIRED";
   return "ACTIVE";
 }
 
@@ -98,11 +76,6 @@ export default function SchoolPromotionManager() {
   const archivedPromotions = useMemo(
     () => promotions.filter((promotion) => promotion.status === "ARCHIVED"),
     [promotions]
-  );
-
-  const selectedSchool = useMemo(
-    () => schools.find((school) => school.id === form.school),
-    [form.school, schools]
   );
 
   const loadData = useCallback(async () => {
@@ -286,9 +259,9 @@ export default function SchoolPromotionManager() {
     <div className="space-y-6">
       <PageHeader
         icon={FaBullhorn}
-        eyebrow="Paid school promotion"
+        eyebrow="School recognition"
         title="School Spotlight"
-        description="Control paid school placements separately from organic discovery. Active campaigns rotate on public pages without mixing unpaid schools into paid slots."
+        description="Choose which school profiles are highlighted on public pages. Active spotlights rotate separately from the regular school directory."
       />
 
       {error && (
@@ -306,7 +279,7 @@ export default function SchoolPromotionManager() {
                 {form.id ? "Edit Spotlight Campaign" : "Create Spotlight Campaign"}
               </h3>
               <p className="mt-1 text-sm text-slate-400">
-                Choose a paid school, placement, schedule, and campaign status.
+                Choose the school and decide where its spotlight appears.
               </p>
             </div>
             {form.id && (
@@ -323,7 +296,7 @@ export default function SchoolPromotionManager() {
           <div className="space-y-4">
             <label className="block">
               <span className="mb-2 block text-sm font-semibold text-slate-200">
-                Paid school
+                School
               </span>
               <select
                 value={form.school}
@@ -372,112 +345,6 @@ export default function SchoolPromotionManager() {
               </label>
             </div>
 
-            <div className="rounded-2xl border border-blue-500/20 bg-blue-500/10 p-4">
-              <div className="mb-4">
-                <p className="text-sm font-bold text-blue-100">
-                  Payment control
-                </p>
-                <p className="mt-1 text-xs leading-5 text-blue-100/70">
-                  A campaign appears publicly only when its status is Active and
-                  payment status is Paid.
-                </p>
-              </div>
-              <div className="grid gap-4 md:grid-cols-3">
-                <label className="block">
-                  <span className="mb-2 block text-sm font-semibold text-slate-200">
-                    Payment status
-                  </span>
-                  <select
-                    value={form.paymentStatus}
-                    onChange={(event) =>
-                      updateForm("paymentStatus", event.target.value)
-                    }
-                    className="w-full rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-white outline-none transition focus:border-blue-500"
-                  >
-                    <option value="PENDING">Pending</option>
-                    <option value="PAID">Paid</option>
-                    <option value="REFUNDED">Refunded</option>
-                  </select>
-                </label>
-
-                <label className="block">
-                  <span className="mb-2 block text-sm font-semibold text-slate-200">
-                    Paid amount
-                  </span>
-                  <input
-                    type="number"
-                    min="0"
-                    value={form.paidAmount}
-                    onChange={(event) =>
-                      updateForm("paidAmount", event.target.value)
-                    }
-                    placeholder="0"
-                    className="w-full rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-white outline-none transition focus:border-blue-500"
-                  />
-                </label>
-
-                <label className="block">
-                  <span className="mb-2 block text-sm font-semibold text-slate-200">
-                    Payment reference
-                  </span>
-                  <input
-                    type="text"
-                    value={form.paymentReference}
-                    onChange={(event) =>
-                      updateForm("paymentReference", event.target.value)
-                    }
-                    placeholder="Receipt, invoice, or note"
-                    className="w-full rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-white outline-none transition focus:border-blue-500"
-                  />
-                </label>
-              </div>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <label className="block">
-                <span className="mb-2 block text-sm font-semibold text-slate-200">
-                  Start date
-                </span>
-                <input
-                  type="date"
-                  value={form.startsAt}
-                  onChange={(event) => updateForm("startsAt", event.target.value)}
-                  className="w-full rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-white outline-none transition focus:border-blue-500"
-                />
-              </label>
-
-              <label className="block">
-                <span className="mb-2 block text-sm font-semibold text-slate-200">
-                  End date
-                </span>
-                <input
-                  type="date"
-                  value={form.endsAt}
-                  onChange={(event) => updateForm("endsAt", event.target.value)}
-                  className="w-full rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-white outline-none transition focus:border-blue-500"
-                />
-              </label>
-            </div>
-
-            <input
-              type="text"
-              value={form.title}
-              onChange={(event) => updateForm("title", event.target.value)}
-              placeholder={
-                selectedSchool
-                  ? `${selectedSchool.name} Spotlight`
-                  : "Custom spotlight title"
-              }
-              className="w-full rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-white outline-none transition focus:border-blue-500"
-            />
-
-            <textarea
-              value={form.tagline}
-              onChange={(event) => updateForm("tagline", event.target.value)}
-              placeholder="Short promotional line shown in the paid spotlight"
-              className="min-h-[110px] w-full rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-white outline-none transition focus:border-blue-500"
-            />
-
             <input
               type="text"
               value={form.destinationUrl}
@@ -491,7 +358,7 @@ export default function SchoolPromotionManager() {
             <textarea
               value={form.notes}
               onChange={(event) => updateForm("notes", event.target.value)}
-              placeholder="Internal payment or campaign note"
+              placeholder="Internal note"
               className="min-h-[90px] w-full rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-white outline-none transition focus:border-blue-500"
             />
 
@@ -535,7 +402,7 @@ export default function SchoolPromotionManager() {
                   Active Campaign Board
                 </h3>
                 <p className="mt-1 text-sm text-slate-400">
-                  Paid campaigns only. Rotation is based on priority and least
+                  Active school spotlights. Rotation is based on priority and least
                   recently shown.
                 </p>
               </div>
@@ -547,13 +414,13 @@ export default function SchoolPromotionManager() {
             {loading ? (
               <LoadingState
                 title="Loading spotlight campaigns"
-                message="Preparing paid school promotions."
+                message="Preparing school spotlight records."
               />
             ) : activePromotions.length === 0 ? (
               <EmptyState
                 icon={FaBullhorn}
-                title="No paid spotlight campaigns yet"
-                description="Create an active campaign only after a school has paid for placement."
+                title="No school spotlights yet"
+                description="Choose a school and activate it when it should appear in the public spotlight area."
               />
             ) : (
               <div className="space-y-4">
@@ -581,14 +448,6 @@ export default function SchoolPromotionManager() {
                             <span className="rounded-full border border-blue-500/20 bg-blue-500/10 px-3 py-1 text-xs font-bold text-blue-100">
                               {promotion.priority}
                             </span>
-                            <span
-                              className={`rounded-full border px-3 py-1 text-xs font-bold ${
-                                PAYMENT_STYLES[promotion.paymentStatus] ||
-                                PAYMENT_STYLES.PENDING
-                              }`}
-                            >
-                              {promotion.paymentStatus || "PENDING"}
-                            </span>
                           </div>
                           <h4 className="mt-3 text-lg font-black text-white">
                             {promotion.title ||
@@ -601,25 +460,10 @@ export default function SchoolPromotionManager() {
                               ? `- ${promotion.school.location}`
                               : ""}
                           </p>
-                          {promotion.tagline && (
-                            <p className="mt-3 text-sm leading-6 text-slate-300">
-                              {promotion.tagline}
-                            </p>
-                          )}
                           <div className="mt-4 grid gap-2 text-xs text-slate-500 sm:grid-cols-2">
-                            <span>
-                              Schedule: {formatDate(promotion.startsAt)} to{" "}
-                              {formatDate(promotion.endsAt)}
-                            </span>
                             <span>
                               Views: {promotion.impressionCount || 0} | Clicks:{" "}
                               {promotion.clickCount || 0}
-                            </span>
-                            <span>
-                              Payment: {promotion.paidAmount || 0}
-                              {promotion.paymentReference
-                                ? ` | ${promotion.paymentReference}`
-                                : ""}
                             </span>
                           </div>
                         </div>
@@ -707,7 +551,7 @@ export default function SchoolPromotionManager() {
         title="Archive this spotlight campaign?"
         message={
           archiveTarget
-            ? `"${archiveTarget.title || archiveTarget.school?.name}" will stop appearing in paid public placements. Historical views and clicks stay saved.`
+            ? `"${archiveTarget.title || archiveTarget.school?.name}" will stop appearing in public spotlight areas. Historical views and clicks stay saved.`
             : ""
         }
         confirmLabel="Archive campaign"

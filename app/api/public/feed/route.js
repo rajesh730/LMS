@@ -6,8 +6,10 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const limit = Number(searchParams.get("limit") || 8);
     const cursor = searchParams.get("cursor") || null;
+    const type = searchParams.get("type") || "all";
+    const types = type === "pulse" ? ["pulse"] : ["pulse", "result", "event"];
 
-    const feed = await getPublicFeedItems({ limit, cursor });
+    const feed = await getPublicFeedItems({ limit, cursor, types });
 
     return NextResponse.json(feed);
   } catch (error) {

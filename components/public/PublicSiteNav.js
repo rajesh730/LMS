@@ -2,16 +2,11 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { FaBars, FaCalendarAlt, FaHome, FaTimes } from "react-icons/fa";
+import { FaBars, FaCalendarAlt, FaTimes } from "react-icons/fa";
 import PratyoLogo from "@/components/brand/PratyoLogo";
 
-export default function PublicSiteNav({ active = "" }) {
+export default function PublicSiteNav() {
   const [isOpen, setIsOpen] = useState(false);
-  const navItems = [
-    { href: "/events", label: "Events", key: "events" },
-    { href: "/schools", label: "Schools", key: "schools" },
-    { href: "/partners", label: "Partners", key: "partners" },
-  ];
 
   return (
     <nav className="pratyo-dark-shell sticky top-0 z-50 border-b shadow-lg shadow-black/20 backdrop-blur-xl">
@@ -33,30 +28,6 @@ export default function PublicSiteNav({ active = "" }) {
         </div>
 
         <div className="hidden items-center gap-2 md:flex">
-          <Link
-            href="/"
-            className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-semibold transition ${
-              active === "home"
-                ? "bg-[#2f7fdb] text-white"
-                : "text-[#d2e3ff] hover:bg-white/10 hover:text-white"
-            }`}
-          >
-            <FaHome />
-            Platform
-          </Link>
-          {navItems.map((item) => (
-            <Link
-              key={item.key}
-              href={item.href}
-              className={`rounded-full px-3 py-2 text-sm font-semibold transition ${
-                active === item.key
-                  ? "bg-[#2f7fdb] text-white"
-                  : "text-[#d2e3ff] hover:bg-white/10 hover:text-white"
-              }`}
-            >
-              {item.label}
-            </Link>
-          ))}
           <Link
             href="/login"
             className="rounded-full border border-[#2f7fdb]/30 px-3 py-2 text-sm font-semibold text-[#eef5ff] transition hover:bg-white/10"
@@ -92,32 +63,6 @@ export default function PublicSiteNav({ active = "" }) {
           className="border-t border-white/10 px-4 pb-4 md:hidden"
         >
           <div className="grid gap-2 rounded-2xl bg-white/10 p-2">
-            <Link
-              href="/"
-              onClick={() => setIsOpen(false)}
-              className={`flex min-h-12 items-center gap-3 rounded-xl px-4 text-sm font-semibold transition ${
-                active === "home"
-                  ? "bg-[#2f7fdb] text-white"
-                  : "text-[#d2e3ff] hover:bg-white/10 hover:text-white"
-              }`}
-            >
-              <FaHome />
-              Platform
-            </Link>
-            {navItems.map((item) => (
-              <Link
-                key={item.key}
-                href={item.href}
-                onClick={() => setIsOpen(false)}
-                className={`flex min-h-12 items-center rounded-xl px-4 text-sm font-semibold transition ${
-                  active === item.key
-                    ? "bg-[#2f7fdb] text-white"
-                    : "text-[#d2e3ff] hover:bg-white/10 hover:text-white"
-                }`}
-              >
-                {item.label}
-              </Link>
-            ))}
             <div className="grid grid-cols-2 gap-2 pt-1">
               <Link
                 href="/login"

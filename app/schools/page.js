@@ -91,16 +91,13 @@ export default async function PublicSchoolsPage() {
                   School Spotlight
                 </p>
                 <h2 className="mt-3 text-3xl font-black tracking-tight text-white">
-                  Paid placements from active schools
+                  Highlighted school profiles
                 </h2>
                 <p className="mt-3 max-w-2xl text-slate-400">
-                  These paid spotlight slots rotate independently from the
-                  normal public school directory.
+                  These spotlights rotate separately from the regular public
+                  school directory.
                 </p>
               </div>
-              <span className="w-fit rounded-full border border-[#2f7fdb]/30 bg-[#2f7fdb]/10 px-4 py-2 text-xs font-black uppercase tracking-[0.16em] text-[#d7e9ff]">
-                Sponsored
-              </span>
             </div>
 
             <div className="grid gap-5 lg:grid-cols-3">
@@ -121,7 +118,7 @@ export default async function PublicSchoolsPage() {
                   <div className="p-5">
                     <div className="flex flex-wrap gap-2">
                       <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-black uppercase tracking-[0.12em] text-[#d7e9ff]">
-                        Paid Spotlight
+                        School Spotlight
                       </span>
                       <span className="rounded-full bg-[#2f7fdb]/15 px-3 py-1 text-xs font-black uppercase tracking-[0.12em] text-[#d7e9ff]">
                         {promotion.priority}
@@ -130,9 +127,11 @@ export default async function PublicSchoolsPage() {
                     <h3 className="mt-4 text-xl font-black text-white group-hover:text-[#d7e9ff]">
                       {promotion.title}
                     </h3>
-                    <p className="mt-1 text-sm font-semibold text-[#8fc4ff]">
-                      {promotion.school.name}
-                    </p>
+                    {promotion.school.location && (
+                      <p className="mt-1 text-sm font-semibold text-[#8fc4ff]">
+                        {promotion.school.location}
+                      </p>
+                    )}
                     <p className="mt-3 line-clamp-3 text-sm leading-6 text-slate-300">
                       {promotion.tagline}
                     </p>

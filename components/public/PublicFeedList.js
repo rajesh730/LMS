@@ -22,44 +22,60 @@ function formatDate(value) {
   }).format(new Date(value));
 }
 
-function SponsoredSchoolCard({ promotion, compact = false }) {
+function SchoolSpotlightCard({ promotion, compact = false, className = "" }) {
   return (
     <a
       href={promotion.href}
-      className="group block overflow-hidden rounded-[26px] border border-[#2f7fdb]/25 bg-[#10243f] shadow-xl shadow-black/15 transition hover:-translate-y-0.5 hover:border-[#8fc4ff]/60"
+      className={`group flex flex-col overflow-hidden rounded-[26px] border border-[#cfe0f6] bg-white shadow-[0_18px_45px_rgba(10,47,102,0.12)] transition hover:-translate-y-0.5 hover:border-[#2f7fdb]/45 ${className}`.trim()}
     >
-      <div
-        className={compact ? "h-32 bg-cover bg-center" : "h-44 bg-cover bg-center"}
-        style={{
-          backgroundImage: promotion.profile?.coverImageUrl
-            ? `linear-gradient(rgba(7,24,51,0.12), rgba(7,24,51,0.9)), url(${promotion.profile.coverImageUrl})`
-            : "linear-gradient(135deg, rgba(47,127,219,.38), rgba(10,47,102,.95))",
-        }}
-      />
-      <div className="p-5">
-        <div className="mb-3 inline-flex rounded-full bg-white/10 px-3 py-1 text-xs font-black uppercase tracking-[0.14em] text-[#d7e9ff]">
-          Sponsored School
+      <div className="relative">
+        <div
+          className={compact ? "h-16 bg-cover bg-center" : "h-44 bg-cover bg-center"}
+          style={{
+            backgroundImage: promotion.profile?.coverImageUrl
+              ? `linear-gradient(rgba(7,24,51,0.08), rgba(7,24,51,0.52)), url(${promotion.profile.coverImageUrl})`
+              : "linear-gradient(135deg, rgba(47,127,219,.96), rgba(10,47,102,.92))",
+          }}
+        />
+        <div className="absolute left-3 top-3 inline-flex rounded-full bg-white/90 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-[#0a2f66] shadow-sm">
+          School Spotlight
         </div>
-        <h2 className="text-xl font-black text-white group-hover:text-[#d7e9ff]">
-          {promotion.title}
-        </h2>
-        <p className="mt-1 text-sm font-semibold text-[#8fc4ff]">
-          {promotion.school.name}
-          {promotion.school.location ? ` - ${promotion.school.location}` : ""}
-        </p>
-        <p className="mt-3 line-clamp-3 text-sm leading-6 text-slate-300">
-          {promotion.tagline}
-        </p>
-        <span className="mt-5 inline-flex items-center gap-2 text-sm font-black text-[#d7e9ff]">
-          View promotion
-          <FaArrowRight />
-        </span>
+      </div>
+
+      <div className={compact ? "flex flex-1 flex-col justify-between p-4" : "flex flex-1 flex-col justify-between p-5"}>
+        <div>
+          <h2 className={compact ? "text-base font-black leading-6 text-slate-950 group-hover:text-[#0a2f66]" : "text-xl font-black text-slate-950 group-hover:text-[#0a2f66]"}>
+            {promotion.title}
+          </h2>
+          <p className="mt-1 line-clamp-1 text-sm leading-6 text-slate-500">
+            {promotion.school.location || "School activity profile"}
+          </p>
+          <p className={compact ? "mt-2 line-clamp-2 text-sm leading-6 text-slate-700" : "mt-4 line-clamp-4 text-sm leading-6 text-slate-700"}>
+            {promotion.tagline}
+          </p>
+        </div>
+
+        <div className={compact ? "mt-3" : "mt-5 space-y-3"}>
+          {!compact && (
+            <div className="rounded-2xl border border-[#dce9fa] bg-[#f8fbff] px-4 py-3 text-sm text-slate-600">
+              Highlighted school profiles stay separate from student writing.
+            </div>
+          )}
+          <span className={compact ? "inline-flex items-center gap-2 text-sm font-black text-[#0a2f66]" : "inline-flex items-center gap-2 rounded-full bg-[#0a2f66] px-4 py-2 text-sm font-black text-white"}>
+            View school
+            <FaArrowRight />
+          </span>
+        </div>
       </div>
     </a>
   );
 }
 
 function PulseFeedCard({ item }) {
+  const [expanded, setExpanded] = useState(false);
+  const content = String(item.content || "");
+  const needsReadMore = content.length > 420;
+
   return (
     <article className="rounded-[26px] border border-slate-200 bg-white p-5 shadow-sm transition hover:border-[#2f7fdb]/35 hover:shadow-xl hover:shadow-[#0a2f66]/10 sm:p-6">
       <div className="flex items-start gap-4">
@@ -85,9 +101,22 @@ function PulseFeedCard({ item }) {
             <span className="hidden text-slate-300 sm:inline">|</span>
             <span>{formatDate(item.date)}</span>
           </p>
-          <p className="mt-4 line-clamp-4 text-base leading-7 text-slate-700">
-            {item.content}
+          <p
+            className={`mt-4 whitespace-pre-line break-words text-base leading-7 text-slate-700 ${
+              needsReadMore && !expanded ? "line-clamp-6" : ""
+            }`}
+          >
+            {content}
           </p>
+          {needsReadMore && (
+            <button
+              type="button"
+              onClick={() => setExpanded((current) => !current)}
+              className="mt-3 text-sm font-black text-[#0a2f66] transition hover:text-[#123f82]"
+            >
+              {expanded ? "Show less" : "Read more"}
+            </button>
+          )}
           <div className="mt-5 flex flex-wrap gap-3 text-sm font-bold text-slate-500">
             <span className="inline-flex items-center gap-2">
               <FaRegCommentDots />
@@ -196,13 +225,13 @@ function FeedCard({ item }) {
   return <EventFeedCard item={item} />;
 }
 
-export { SponsoredSchoolCard };
+export { SchoolSpotlightCard };
 
 export default function PublicFeedList({
   initialItems = [],
   initialCursor = null,
   initialHasMore = false,
-  sponsoredPromotion = null,
+  feedType = "all",
 }) {
   const [items, setItems] = useState(initialItems);
   const [cursor, setCursor] = useState(initialCursor);
@@ -218,6 +247,7 @@ export default function PublicFeedList({
       setError("");
       const params = new URLSearchParams({ limit: "8" });
       if (cursor) params.set("cursor", cursor);
+      if (feedType !== "all") params.set("type", feedType);
 
       const res = await fetch(`/api/public/feed?${params.toString()}`, {
         cache: "no-store",
@@ -246,8 +276,8 @@ export default function PublicFeedList({
           The public feed is ready
         </h2>
         <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-600">
-          Published challenge responses, event results, and public events will
-          appear here as schools start using the platform.
+          Published student writing will appear here as schools start using the
+          platform.
         </p>
       </div>
     );
@@ -255,12 +285,9 @@ export default function PublicFeedList({
 
   return (
     <div className="space-y-4">
-      {items.map((item, index) => (
+      {items.map((item) => (
         <div key={item.id} className="space-y-4">
           <FeedCard item={item} />
-          {index === 1 && sponsoredPromotion && (
-            <SponsoredSchoolCard promotion={sponsoredPromotion} />
-          )}
         </div>
       ))}
 

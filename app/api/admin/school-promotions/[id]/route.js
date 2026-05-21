@@ -10,7 +10,18 @@ import {
   PROMOTION_STATUSES,
 } from "@/lib/schoolPromotions";
 
-const PAYMENT_STATUSES = ["PENDING", "PAID", "REFUNDED"];
+function getDefaultStartDate() {
+  const date = new Date();
+  date.setHours(0, 0, 0, 0);
+  return date;
+}
+
+function getDefaultEndDate() {
+  const date = new Date();
+  date.setFullYear(date.getFullYear() + 10);
+  date.setHours(23, 59, 59, 999);
+  return date;
+}
 
 function serializePromotion(promotion) {
   return {
@@ -61,10 +72,10 @@ function validatePayload(body) {
   const placement = String(body.placement || "").toUpperCase();
   const status = String(body.status || "DRAFT").toUpperCase();
   const priority = String(body.priority || "STANDARD").toUpperCase();
-  const paymentStatus = String(body.paymentStatus || "PENDING").toUpperCase();
-  const startsAt = getDate(body.startsAt, "start");
-  const endsAt = getDate(body.endsAt, "end");
-  const paidAmount = Math.max(0, Number(body.paidAmount || 0));
+  const paymentStatus = "PAID";
+  const startsAt = getDefaultStartDate();
+  const endsAt = getDefaultEndDate();
+  const paidAmount = 0;
 
   if (!school) return { error: "School is required" };
   if (!PROMOTION_PLACEMENTS.includes(placement)) {
@@ -75,17 +86,6 @@ function validatePayload(body) {
   }
   if (!PROMOTION_PRIORITIES.includes(priority)) {
     return { error: "Invalid campaign priority" };
-  }
-  if (!PAYMENT_STATUSES.includes(paymentStatus)) {
-    return { error: "Invalid payment status" };
-  }
-  if (status === "ACTIVE" && paymentStatus !== "PAID") {
-    return {
-      error: "Only paid campaigns can be activated for public spotlight",
-    };
-  }
-  if (!startsAt || !endsAt) {
-    return { error: "Start and end dates are required" };
   }
   if (endsAt <= startsAt) {
     return { error: "End date must be after the start date" };
@@ -99,12 +99,12 @@ function validatePayload(body) {
       priority,
       paymentStatus,
       paidAmount,
-      paymentReference: String(body.paymentReference || "").trim(),
+      paymentReference: "",
       paidAt: paymentStatus === "PAID" ? getDate(body.paidAt) || new Date() : null,
       startsAt,
       endsAt,
-      title: String(body.title || "").trim(),
-      tagline: String(body.tagline || "").trim(),
+      title: "",
+      tagline: "",
       destinationUrl: String(body.destinationUrl || "").trim(),
       notes: String(body.notes || "").trim(),
     },
