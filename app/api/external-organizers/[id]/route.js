@@ -6,6 +6,9 @@ import ExternalOrganizer, { PARTNER_ROLES } from "@/models/ExternalOrganizer";
 
 export const dynamic = "force-dynamic";
 
+const SPOTLIGHT_STATUSES = ["OFF", "ACTIVE", "PAUSED"];
+const SPOTLIGHT_PRIORITIES = ["STANDARD", "FEATURED"];
+
 function slugify(value) {
   return String(value || "")
     .toLowerCase()
@@ -76,6 +79,41 @@ export async function PUT(req, props) {
 
     if (body.partnerRoles !== undefined) {
       organizer.partnerRoles = sanitizeRoles(body.partnerRoles, organizer.partnerRoles);
+    }
+
+    if (body.spotlightStatus !== undefined) {
+      if (!SPOTLIGHT_STATUSES.includes(body.spotlightStatus)) {
+        return NextResponse.json(
+          { success: false, message: "Invalid spotlight status" },
+          { status: 400 }
+        );
+      }
+      organizer.spotlightStatus = body.spotlightStatus;
+    }
+
+    if (body.spotlightPriority !== undefined) {
+      if (!SPOTLIGHT_PRIORITIES.includes(body.spotlightPriority)) {
+        return NextResponse.json(
+          { success: false, message: "Invalid spotlight priority" },
+          { status: 400 }
+        );
+      }
+      organizer.spotlightPriority = body.spotlightPriority;
+    }
+
+    if (
+      organizer.spotlightStatus === "ACTIVE" &&
+      (organizer.verificationStatus !== "VERIFIED" ||
+        organizer.profileVisibility !== "PUBLIC")
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Partner Spotlight requires a verified partner with a public profile.",
+        },
+        { status: 400 }
+      );
     }
 
     await organizer.save();

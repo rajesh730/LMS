@@ -152,7 +152,9 @@ export default function StudentLogin() {
             <User size={40} className="text-blue-600" />
           </div>
           <h1 className="text-4xl font-black text-[#17120a] mb-2">Student Portal</h1>
-          <p className="text-[#52657d]">Log in to your account</p>
+          <p className="text-[#52657d]">
+            Log in once and stay signed in until you log out.
+          </p>
         </div>
 
         {/* Login Card */}
@@ -232,15 +234,11 @@ export default function StudentLogin() {
               </div>
             </div>
 
-            {/* Remember Me & Help */}
+            {/* Help */}
             <div className="flex items-center justify-between">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
-                />
-                <span className="text-sm text-gray-600">Remember me</span>
-              </label>
+              <p className="text-sm text-gray-600">
+                Session stays active on this device.
+              </p>
               <a
                 href="mailto:support@egrantha.com"
                 className="text-sm text-blue-600 hover:text-blue-700 font-medium transition"

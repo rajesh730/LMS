@@ -20,6 +20,19 @@ function formatDate(value) {
   });
 }
 
+function canUsePartnerSpotlight(partner) {
+  return (
+    partner.verificationStatus === "VERIFIED" &&
+    partner.profileVisibility === "PUBLIC"
+  );
+}
+
+function spotlightLabel(status) {
+  if (status === "ACTIVE") return "Active";
+  if (status === "PAUSED") return "Paused";
+  return "Off";
+}
+
 export default function AdminPartnerWorkspace({ onChanged }) {
   const [proposals, setProposals] = useState([]);
   const [partners, setPartners] = useState([]);
@@ -277,74 +290,163 @@ export default function AdminPartnerWorkspace({ onChanged }) {
             {partners.length === 0 ? (
               <p className="text-slate-500 italic">No partners created yet.</p>
             ) : (
-              partners.map((partner) => (
-                <article
-                  key={partner._id}
-                  className="rounded-2xl border border-slate-800 bg-slate-950/70 p-5"
-                >
-                  <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-                    <div>
-                      <h3 className="text-lg font-bold text-white">
-                        {partner.organizationName}
-                      </h3>
-                      <p className="text-sm text-slate-400 mt-1">
-                        {(partner.partnerRoles || []).map(label).join(", ")}
-                      </p>
-                      <p className="text-xs text-slate-500 mt-2">
-                        {partner.verificationStatus} - {partner.profileVisibility} -{" "}
-                        {partner.trustLevel}
-                      </p>
-                      {partner.description && (
-                        <p className="text-sm text-slate-400 mt-3 max-w-2xl">
-                          {partner.description}
+              partners.map((partner) => {
+                const spotlightStatus = partner.spotlightStatus || "OFF";
+                const spotlightReady = canUsePartnerSpotlight(partner);
+                const nextSpotlightStatus =
+                  spotlightStatus === "ACTIVE" ? "PAUSED" : "ACTIVE";
+
+                return (
+                  <article
+                    key={partner._id}
+                    className="rounded-2xl border border-slate-800 bg-slate-950/70 p-5"
+                  >
+                    <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="text-lg font-bold text-white">
+                            {partner.organizationName}
+                          </h3>
+                          <span
+                            className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                              spotlightStatus === "ACTIVE"
+                                ? "border border-emerald-500/25 bg-emerald-500/10 text-emerald-300"
+                                : spotlightStatus === "PAUSED"
+                                ? "border border-amber-500/25 bg-amber-500/10 text-amber-300"
+                                : "border border-slate-700 bg-slate-900 text-slate-400"
+                            }`}
+                          >
+                            Spotlight {spotlightLabel(spotlightStatus)}
+                          </span>
+                        </div>
+                        <p className="text-sm text-slate-400 mt-1">
+                          {(partner.partnerRoles || []).map(label).join(", ")}
                         </p>
-                      )}
-                    </div>
-                    <div className="flex flex-wrap gap-2 md:justify-end">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          updatePartner(partner._id, {
-                            profileVisibility:
+                        <p className="text-xs text-slate-500 mt-2">
+                          {partner.verificationStatus} - {partner.profileVisibility} -{" "}
+                          {partner.trustLevel}
+                        </p>
+                        {partner.description && (
+                          <p className="text-sm text-slate-400 mt-3 max-w-2xl">
+                            {partner.description}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap gap-2 md:justify-end">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const nextVisibility =
                               partner.profileVisibility === "PUBLIC"
                                 ? "PRIVATE"
-                                : "PUBLIC",
-                          })
-                        }
-                        className="rounded-lg bg-slate-700 hover:bg-slate-600 text-white px-3 py-2 text-sm"
-                      >
-                        {partner.profileVisibility === "PUBLIC"
-                          ? "Make Private"
-                          : "Make Public"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          updatePartner(partner._id, {
-                            trustLevel:
-                              partner.trustLevel === "FEATURED_PARTNER"
-                                ? "APPROVED_PARTNER"
-                                : "FEATURED_PARTNER",
-                          })
-                        }
-                        className="rounded-lg bg-blue-600 hover:bg-blue-500 text-white px-3 py-2 text-sm"
-                      >
-                        {partner.trustLevel === "FEATURED_PARTNER"
-                          ? "Unfeature"
-                          : "Feature"}
-                      </button>
-                      {partner.profileVisibility === "PUBLIC" && (
-                        <Link
-                          href={`/partners/${partner.slug}`}
-                          className="rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 text-sm"
+                                : "PUBLIC";
+                            updatePartner(partner._id, {
+                              profileVisibility: nextVisibility,
+                              ...(nextVisibility === "PRIVATE"
+                                ? { spotlightStatus: "OFF" }
+                                : {}),
+                            });
+                          }}
+                          className="rounded-lg bg-slate-700 hover:bg-slate-600 text-white px-3 py-2 text-sm"
                         >
-                          View Portfolio
-                        </Link>
-                      )}
+                          {partner.profileVisibility === "PUBLIC"
+                            ? "Make Private"
+                            : "Make Public"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            updatePartner(partner._id, {
+                              trustLevel:
+                                partner.trustLevel === "FEATURED_PARTNER"
+                                  ? "APPROVED_PARTNER"
+                                  : "FEATURED_PARTNER",
+                            })
+                          }
+                          className="rounded-lg bg-blue-600 hover:bg-blue-500 text-white px-3 py-2 text-sm"
+                        >
+                          {partner.trustLevel === "FEATURED_PARTNER"
+                            ? "Unfeature"
+                            : "Feature"}
+                        </button>
+                        {partner.profileVisibility === "PUBLIC" && (
+                          <Link
+                            href={`/partners/${partner.slug}`}
+                            className="rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 text-sm"
+                          >
+                            View Portfolio
+                          </Link>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </article>
-              ))
+
+                    <div className="mt-5 rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+                      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                        <div>
+                          <h4 className="text-sm font-bold text-white">
+                            Partner Spotlight
+                          </h4>
+                          <p className="mt-1 text-xs leading-5 text-slate-400">
+                            Highlight this partner in the homepage partner panel.
+                            They must be verified, public, and connected to at
+                            least one active public event.
+                          </p>
+                          {!spotlightReady && (
+                            <p className="mt-2 text-xs text-amber-300">
+                              Make this partner verified and public before turning
+                              on spotlight.
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                          <select
+                            value={partner.spotlightPriority || "STANDARD"}
+                            disabled={!spotlightReady}
+                            onChange={(event) =>
+                              updatePartner(partner._id, {
+                                spotlightPriority: event.target.value,
+                              })
+                            }
+                            className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            <option value="STANDARD">Standard rotation</option>
+                            <option value="FEATURED">Featured rotation</option>
+                          </select>
+                          <button
+                            type="button"
+                            disabled={!spotlightReady}
+                            onClick={() =>
+                              updatePartner(partner._id, {
+                                spotlightStatus: nextSpotlightStatus,
+                              })
+                            }
+                            className="rounded-lg bg-cyan-600 px-3 py-2 text-sm font-semibold text-white hover:bg-cyan-500 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500"
+                          >
+                            {spotlightStatus === "ACTIVE"
+                              ? "Pause Spotlight"
+                              : spotlightStatus === "PAUSED"
+                              ? "Resume Spotlight"
+                              : "Start Spotlight"}
+                          </button>
+                          {spotlightStatus !== "OFF" && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                updatePartner(partner._id, {
+                                  spotlightStatus: "OFF",
+                                })
+                              }
+                              className="rounded-lg bg-slate-800 px-3 py-2 text-sm font-semibold text-slate-200 hover:bg-slate-700"
+                            >
+                              Remove
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </article>
+                );
+              })
             )}
           </div>
         </div>

@@ -150,6 +150,9 @@ export default function LoginPage() {
         <h2 className="mb-6 text-center text-3xl font-black text-[#17120a]">
           Login
         </h2>
+        <p className="-mt-3 mb-6 text-center text-sm leading-6 text-[#52657d]">
+          You will stay signed in on this device until you log out.
+        </p>
 
         {error && (
           <div className="mb-4 rounded-lg border border-red-500/30 bg-red-50 p-3 text-sm text-red-800">

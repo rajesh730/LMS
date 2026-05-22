@@ -131,7 +131,7 @@ export default async function Home() {
                   <div>
                     <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-black uppercase tracking-[0.16em] text-[#d7e9ff]">
                       <FaHandshake />
-                      Event Partner
+                      Partner Spotlight
                     </div>
                     <h2 className="mt-4 text-2xl font-black tracking-tight">
                       {partnerSpotlight.name}
@@ -146,14 +146,14 @@ export default async function Home() {
                   <div className="mt-6">
                     <div className="rounded-2xl bg-white/10 p-4">
                       <p className="text-xs font-black uppercase tracking-[0.14em] text-[#d7e9ff]">
-                        Active now
+                        Active public events
                       </p>
                       <p className="mt-2 text-sm text-white">
                         {partnerSpotlight.activeEventCount} public event
                         {partnerSpotlight.activeEventCount === 1 ? "" : "s"}
                       </p>
                       <p className="mt-1 text-xs text-slate-200">
-                        Rotates across verified organizers handling public
+                        Rotates across selected partners helping run public
                         events.
                       </p>
                     </div>
@@ -168,14 +168,14 @@ export default async function Home() {
               <div className="rounded-[30px] border border-[#d7cdbb] bg-white p-6 shadow-sm">
                 <div className="inline-flex items-center gap-2 rounded-full bg-[#eaf2ff] px-3 py-1 text-xs font-black uppercase tracking-[0.16em] text-[#0a2f66]">
                   <FaHandshake />
-                  Event Partner
+                  Partner Spotlight
                 </div>
                 <h2 className="mt-4 text-2xl font-black text-slate-950">
-                  Verified organizers appear here
+                  Selected partners appear here
                 </h2>
                 <p className="mt-3 text-sm leading-6 text-slate-600">
-                  As more public events go live with partner branding, this
-                  panel rotates through the active organizers.
+                  Admin can highlight verified partners connected to active
+                  public events.
                 </p>
               </div>
             )}

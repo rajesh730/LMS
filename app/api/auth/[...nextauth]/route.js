@@ -6,6 +6,9 @@ import User from "@/models/User";
 import Teacher from "@/models/Teacher";
 import Student from "@/models/Student";
 
+const PERSISTENT_SESSION_MAX_AGE = 60 * 60 * 24 * 365; // 1 year
+const SESSION_REFRESH_INTERVAL = 60 * 60 * 24; // 1 day
+
 export const authOptions = {
   providers: [
     CredentialsProvider({
@@ -229,6 +232,11 @@ export const authOptions = {
   },
   session: {
     strategy: "jwt",
+    maxAge: PERSISTENT_SESSION_MAX_AGE,
+    updateAge: SESSION_REFRESH_INTERVAL,
+  },
+  jwt: {
+    maxAge: PERSISTENT_SESSION_MAX_AGE,
   },
   secret: process.env.NEXTAUTH_SECRET,
 };

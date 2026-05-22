@@ -86,6 +86,30 @@ const ExternalOrganizerSchema = new mongoose.Schema(
       enum: ["REQUEST_ONLY", "APPROVED_PARTNER", "FEATURED_PARTNER"],
       default: "REQUEST_ONLY",
     },
+    spotlightStatus: {
+      type: String,
+      enum: ["OFF", "ACTIVE", "PAUSED"],
+      default: "OFF",
+    },
+    spotlightPriority: {
+      type: String,
+      enum: ["STANDARD", "FEATURED"],
+      default: "STANDARD",
+    },
+    spotlightLastShownAt: {
+      type: Date,
+      default: null,
+    },
+    spotlightImpressionCount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    spotlightClickCount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
     createdFromProposal: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "EventProposal",
@@ -112,6 +136,11 @@ ExternalOrganizerSchema.index({
 });
 ExternalOrganizerSchema.index({ contactEmail: 1 });
 ExternalOrganizerSchema.index({ verificationStatus: 1, profileVisibility: 1 });
+ExternalOrganizerSchema.index({
+  spotlightStatus: 1,
+  spotlightPriority: 1,
+  spotlightLastShownAt: 1,
+});
 
 export { PARTNER_ROLES };
 
