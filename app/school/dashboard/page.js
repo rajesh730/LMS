@@ -658,7 +658,7 @@ function SchoolDashboardContent() {
                 </div>
                 <p className="max-w-xl text-sm leading-6 text-slate-400">
                   These shortcuts match the real school workflow: students,
-                  events, student notices, publishing, and promotion.
+                  events, student notices, publishing, and school spotlight.
                 </p>
               </div>
 

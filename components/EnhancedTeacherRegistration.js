@@ -152,7 +152,7 @@ const EnhancedTeacherRegistration = ({ schoolId, onSuccess }) => {
     }
   };
 
-  const downloadSampleCSV = () => {
+  const downloadCsvTemplate = () => {
     const headers = [
         "FullName*", 
         "Email*", 
@@ -167,24 +167,7 @@ const EnhancedTeacherRegistration = ({ schoolId, onSuccess }) => {
         "BloodGroup"
     ];
     
-    const sampleData = [
-        "Sarah Smith", 
-        "sarah.smith@example.com", 
-        "Debate & Public Speaking", 
-        "9800000000", 
-        "M.Sc. Math", 
-        "FEMALE", 
-        "Kathmandu",
-        "2023-01-15",
-        "Senior Teacher",
-        "5",
-        "A+"
-    ];
-    
-    const csvContent = [
-      headers.join(","),
-      sampleData.join(",")
-    ].join("\n");
+    const csvContent = `${headers.join(",")}\n`;
 
     const blob = new Blob([csvContent], { type: "text/csv" });
     const url = window.URL.createObjectURL(blob);
@@ -289,7 +272,7 @@ const EnhancedTeacherRegistration = ({ schoolId, onSuccess }) => {
                 <label className="block text-sm font-medium text-slate-300 mb-1">Email *</label>
                 <input
                   type="email"
-                  placeholder="teacher@example.com"
+                  placeholder="teacher@school.edu.np"
                   value={formData.email}
                   onChange={(e) => setFormData({...formData, email: e.target.value})}
                   className="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500 outline-none"
@@ -310,7 +293,7 @@ const EnhancedTeacherRegistration = ({ schoolId, onSuccess }) => {
                 <label className="block text-sm font-medium text-slate-300 mb-1">Focus Area *</label>
                 <input
                   type="text"
-                  placeholder="e.g. Dance, Debate, Music, Robotics"
+                  placeholder="Activity area or subject"
                   value={formData.focusArea}
                   onChange={(e) => setFormData({...formData, focusArea: e.target.value})}
                   className="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500 outline-none"
@@ -321,7 +304,7 @@ const EnhancedTeacherRegistration = ({ schoolId, onSuccess }) => {
                 <label className="block text-sm font-medium text-slate-300 mb-1">Qualification</label>
                 <input
                   type="text"
-                  placeholder="e.g. M.Sc. Physics"
+                  placeholder="Academic qualification"
                   value={formData.qualification}
                   onChange={(e) => setFormData({...formData, qualification: e.target.value})}
                   className="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500 outline-none"
@@ -332,7 +315,7 @@ const EnhancedTeacherRegistration = ({ schoolId, onSuccess }) => {
                 <label className="block text-sm font-medium text-slate-300 mb-1">Designation</label>
                 <input
                   type="text"
-                  placeholder="e.g. Senior Teacher"
+                  placeholder="Role or designation"
                   value={formData.designation}
                   onChange={(e) => setFormData({...formData, designation: e.target.value})}
                   className="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500 outline-none"
@@ -343,7 +326,7 @@ const EnhancedTeacherRegistration = ({ schoolId, onSuccess }) => {
                 <label className="block text-sm font-medium text-slate-300 mb-1">Experience (Years)</label>
                 <input
                   type="number"
-                  placeholder="e.g. 5"
+                  placeholder="Years"
                   value={formData.experience}
                   onChange={(e) => setFormData({...formData, experience: e.target.value})}
                   className="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500 outline-none"
@@ -444,7 +427,7 @@ const EnhancedTeacherRegistration = ({ schoolId, onSuccess }) => {
                         </div>
                     </div>
                     <button
-                        onClick={downloadSampleCSV}
+                        onClick={downloadCsvTemplate}
                         className="flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm transition shrink-0 ml-4"
                     >
                         <Download size={16} /> Download Template

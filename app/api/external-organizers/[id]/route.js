@@ -102,18 +102,20 @@ export async function PUT(req, props) {
     }
 
     if (
-      organizer.spotlightStatus === "ACTIVE" &&
-      (organizer.verificationStatus !== "VERIFIED" ||
-        organizer.profileVisibility !== "PUBLIC")
+      organizer.spotlightStatus !== "OFF" &&
+      organizer.verificationStatus !== "VERIFIED"
     ) {
-      return NextResponse.json(
-        {
-          success: false,
-          message:
-            "Partner Spotlight requires a verified partner with a public profile.",
-        },
-        { status: 400 }
-      );
+      if (body.spotlightStatus && body.spotlightStatus !== "OFF") {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Approve this partner before showing it on the homepage.",
+          },
+          { status: 400 }
+        );
+      }
+
+      organizer.spotlightStatus = "OFF";
     }
 
     await organizer.save();

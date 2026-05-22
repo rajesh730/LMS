@@ -295,7 +295,7 @@ export default function AdminDailyOverview({
                 ? `${proposals.length} proposal links ready`
                 : "Partner network"
             }
-            description="Manage event partners and approved proposals for platform promotion."
+            description="Manage event partners, approved proposals, and partner spotlight visibility."
             actionLabel="Open partners"
             tone="cyan"
           />

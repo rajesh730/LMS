@@ -165,7 +165,7 @@ export default function EventProposalForm() {
           <input
             value={form.website}
             onChange={(e) => update("website", e.target.value)}
-            placeholder="Website or social link"
+            placeholder="Website or public profile link"
             className="rounded-xl border border-slate-800 bg-slate-950 p-3 text-white md:col-span-2"
           />
         </div>
@@ -189,7 +189,7 @@ export default function EventProposalForm() {
             required
             value={form.eventDescription}
             onChange={(e) => update("eventDescription", e.target.value)}
-            placeholder="Briefly describe the event, format, and what schools should expect"
+            placeholder="Describe the event purpose, format, student audience, and what schools should expect"
             rows={5}
             className="w-full rounded-xl border border-slate-800 bg-slate-950 p-3 text-white"
           />
@@ -253,9 +253,9 @@ export default function EventProposalForm() {
               Prize or support details
             </label>
             <input
-              value={form.prizeDetails}
-              onChange={(e) => update("prizeDetails", e.target.value)}
-              placeholder="Prizes, certificates, sponsorship support"
+            value={form.prizeDetails}
+            onChange={(e) => update("prizeDetails", e.target.value)}
+              placeholder="Awards, certificates, resources, or other support offered"
               className="w-full rounded-xl border border-slate-800 bg-slate-950 p-3 text-white"
             />
           </div>

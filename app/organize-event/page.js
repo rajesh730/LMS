@@ -1,15 +1,18 @@
 import Link from "next/link";
 import EventProposalForm from "@/components/partners/EventProposalForm";
+import PublicSiteNav from "@/components/public/PublicSiteNav";
 
 export const metadata = {
-  title: "Request a School Competition Partnership",
+  title: "Request a Partner Event Review",
   description:
-    "Submit a proposal for a partner-backed student competition, showcase, or talent event.",
+    "Submit a proposal for a partner-led student competition, showcase, or school activity event.",
 };
 
 export default function OrganizeEventPage() {
   return (
     <main className="min-h-screen bg-slate-950 text-white">
+      <PublicSiteNav active="partners" />
+
       <section className="border-b border-slate-800 bg-slate-900/50">
         <div className="max-w-6xl mx-auto px-6 py-6">
           <Link
@@ -29,38 +32,41 @@ export default function OrganizeEventPage() {
                 Partner Event Request
               </p>
               <h1 className="text-4xl md:text-5xl font-black tracking-tight">
-                Bring a verified competition to schools.
+                Bring a trusted student opportunity to schools.
               </h1>
               <p className="text-slate-400 mt-5 leading-8">
-                If an organization like ECA Academy wants to run a singing
-                competition, this is the first step. Share the idea, audience,
-                safety needs, and expected scale. The platform reviews it before
-                any school sees the event.
+                Share your event concept, audience, format, timeline, and
+                support details. The Pratyo team reviews each request before it
+                becomes visible to schools.
               </p>
             </div>
 
             <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6">
-              <h2 className="text-xl font-bold mb-4">Process Flow</h2>
+              <h2 className="text-xl font-bold mb-4">How review works</h2>
               <div className="space-y-4 text-sm text-slate-300">
                 <p>
-                  <strong className="text-white">1. Request:</strong> ECA
-                  Academy submits the singing competition proposal.
+                  <strong className="text-white">1. Submit:</strong> share the
+                  event purpose, contact details, audience, preferred schedule,
+                  and support offered.
                 </p>
                 <p>
                   <strong className="text-white">2. Review:</strong> platform
-                  admin checks fit, safety, timeline, and data access.
+                  admins check school relevance, safety, timeline, and
+                  operational fit.
                 </p>
                 <p>
-                  <strong className="text-white">3. Publish:</strong> if
-                  approved, admin creates a platform event with ECA as partner.
+                  <strong className="text-white">3. Prepare:</strong> approved
+                  requests are converted into platform events with clear partner
+                  attribution.
                 </p>
                 <p>
-                  <strong className="text-white">4. School opt-in:</strong>{" "}
-                  schools approve the invitation and register students.
+                  <strong className="text-white">4. Invite schools:</strong>{" "}
+                  schools review the event and decide whether to participate.
                 </p>
                 <p>
-                  <strong className="text-white">5. Results:</strong> winners
-                  and certificates can be published after approval.
+                  <strong className="text-white">5. Publish outcomes:</strong>{" "}
+                  results, certificates, and selected highlights can be shared
+                  after the event is completed.
                 </p>
               </div>
             </div>

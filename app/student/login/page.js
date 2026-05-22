@@ -239,12 +239,9 @@ export default function StudentLogin() {
               <p className="text-sm text-gray-600">
                 Session stays active on this device.
               </p>
-              <a
-                href="mailto:support@egrantha.com"
-                className="text-sm text-blue-600 hover:text-blue-700 font-medium transition"
-              >
-                Need help logging in?
-              </a>
+              <p className="text-right text-sm font-medium text-blue-700">
+                Need help? Ask your school admin.
+              </p>
             </div>
 
             {/* Login Button */}
@@ -299,10 +296,7 @@ export default function StudentLogin() {
 
         {/* Footer */}
         <p className="text-center text-[#52657d]">
-          Need help?{" "}
-          <a href="mailto:support@egrantha.com" className="font-semibold text-[#0a2f66] hover:underline">
-            Contact support
-          </a>
+          Need help? Contact your school administrator for account support.
         </p>
       </div>
 

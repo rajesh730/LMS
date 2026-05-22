@@ -113,6 +113,7 @@ export async function GET() {
       .populate("organizer", "organizationName slug verificationStatus profileVisibility")
       .populate("linkedEvent", "title date visibility lifecycleStatus")
       .populate("reviewedBy", "name email")
+      .populate("statusHistory.changedBy", "name email")
       .lean();
 
     return NextResponse.json({ success: true, data: proposals }, { status: 200 });

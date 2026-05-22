@@ -253,7 +253,7 @@ export default function ShowcaseProfileManager() {
                   setProfile((prev) => ({ ...prev, websiteUrl: e.target.value }))
                 }
                 className="w-full bg-slate-800 text-white rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="https://your-school-site.example"
+                placeholder="https://schoolname.edu.np"
               />
             </div>
           </div>

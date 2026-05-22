@@ -79,6 +79,70 @@ async function getHomepageData() {
   };
 }
 
+function PartnerSpotlightPanel({ partnerSpotlight }) {
+  const portfolioHref =
+    partnerSpotlight.isPortfolioPublic && partnerSpotlight.slug
+      ? `/partners/${partnerSpotlight.slug}`
+      : "";
+  const Shell = portfolioHref ? Link : "div";
+  const shellProps = portfolioHref ? { href: portfolioHref } : {};
+  const partnerLabel =
+    partnerSpotlight.primaryEvent?.title || "Approved platform partner";
+  const hasEvents = partnerSpotlight.activeEventCount > 0;
+
+  return (
+    <Shell
+      {...shellProps}
+      className={`group flex h-full flex-col overflow-hidden rounded-[30px] border border-[#d7cdbb] bg-[#0f2c5c] text-white shadow-sm ${
+        portfolioHref
+          ? "transition hover:-translate-y-0.5 hover:shadow-lg"
+          : ""
+      }`}
+    >
+      <div className="flex flex-1 flex-col justify-between p-6">
+        <div>
+          <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-black uppercase tracking-[0.16em] text-[#d7e9ff]">
+            <FaHandshake />
+            Partner Spotlight
+          </div>
+          <h2 className="mt-4 text-2xl font-black tracking-tight">
+            {partnerSpotlight.name}
+          </h2>
+          <p className="mt-2 text-sm font-semibold text-[#b8d7ff]">
+            {partnerLabel}
+          </p>
+          <p className="mt-3 line-clamp-4 text-sm leading-6 text-slate-200">
+            {partnerSpotlight.description}
+          </p>
+        </div>
+        <div className="mt-6">
+          <div className="rounded-2xl bg-white/10 p-4">
+            <p className="text-xs font-black uppercase tracking-[0.14em] text-[#d7e9ff]">
+              {hasEvents ? "Active public events" : "Partner status"}
+            </p>
+            <p className="mt-2 text-sm text-white">
+              {hasEvents
+                ? `${partnerSpotlight.activeEventCount} public event${
+                    partnerSpotlight.activeEventCount === 1 ? "" : "s"
+                  }`
+                : "Selected for homepage visibility"}
+            </p>
+            <p className="mt-1 text-xs text-slate-200">
+              {hasEvents
+                ? "Shown by admin selection with event context when available."
+                : "This partner can be highlighted before a public event is attached."}
+            </p>
+          </div>
+          <span className="mt-4 inline-flex items-center gap-2 text-sm font-black text-white">
+            {portfolioHref ? "View portfolio" : "Homepage partner"}
+            {portfolioHref && <FaArrowRight />}
+          </span>
+        </div>
+      </div>
+    </Shell>
+  );
+}
+
 export default async function Home() {
   const { winnerHighlights, feed, partnerSpotlights, homeSpotlights } =
     await getHomepageData();
@@ -123,47 +187,7 @@ export default async function Home() {
             </div>
 
             {partnerSpotlight ? (
-              <Link
-                href={`/partners/${partnerSpotlight.slug}`}
-                className="group flex h-full flex-col overflow-hidden rounded-[30px] border border-[#d7cdbb] bg-[#0f2c5c] text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"
-              >
-                <div className="flex flex-1 flex-col justify-between p-6">
-                  <div>
-                    <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-black uppercase tracking-[0.16em] text-[#d7e9ff]">
-                      <FaHandshake />
-                      Partner Spotlight
-                    </div>
-                    <h2 className="mt-4 text-2xl font-black tracking-tight">
-                      {partnerSpotlight.name}
-                    </h2>
-                    <p className="mt-2 text-sm font-semibold text-[#b8d7ff]">
-                      {partnerSpotlight.primaryEvent?.title || "Active organizer"}
-                    </p>
-                    <p className="mt-3 line-clamp-4 text-sm leading-6 text-slate-200">
-                      {partnerSpotlight.description}
-                    </p>
-                  </div>
-                  <div className="mt-6">
-                    <div className="rounded-2xl bg-white/10 p-4">
-                      <p className="text-xs font-black uppercase tracking-[0.14em] text-[#d7e9ff]">
-                        Active public events
-                      </p>
-                      <p className="mt-2 text-sm text-white">
-                        {partnerSpotlight.activeEventCount} public event
-                        {partnerSpotlight.activeEventCount === 1 ? "" : "s"}
-                      </p>
-                      <p className="mt-1 text-xs text-slate-200">
-                        Rotates across selected partners helping run public
-                        events.
-                      </p>
-                    </div>
-                    <span className="mt-4 inline-flex items-center gap-2 text-sm font-black text-white">
-                      View partner
-                      <FaArrowRight />
-                    </span>
-                  </div>
-                </div>
-              </Link>
+              <PartnerSpotlightPanel partnerSpotlight={partnerSpotlight} />
             ) : (
               <div className="rounded-[30px] border border-[#d7cdbb] bg-white p-6 shadow-sm">
                 <div className="inline-flex items-center gap-2 rounded-full bg-[#eaf2ff] px-3 py-1 text-xs font-black uppercase tracking-[0.16em] text-[#0a2f66]">
@@ -171,11 +195,11 @@ export default async function Home() {
                   Partner Spotlight
                 </div>
                 <h2 className="mt-4 text-2xl font-black text-slate-950">
-                  Selected partners appear here
+                  Partner highlights appear here
                 </h2>
                 <p className="mt-3 text-sm leading-6 text-slate-600">
-                  Admin can highlight verified partners connected to active
-                  public events.
+                  Admin can highlight approved event partners here. Public
+                  portfolio and event links stay optional.
                 </p>
               </div>
             )}

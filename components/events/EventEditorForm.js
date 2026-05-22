@@ -414,7 +414,7 @@ export default function EventEditorForm({
       ? "Teachers register students. Set only the deadline, total capacity, and team size if needed."
       : "Schools register on behalf of students. Set total capacity and optional per-school limits.",
     partners:
-      "Use this only when a platform event needs public promotion or partner branding.",
+      "Use this when a platform event should show approved partner attribution.",
     review: "Confirm the summary. After creation, manage registration, notices, rounds, results, and certificates from the event page.",
   };
 

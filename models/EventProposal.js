@@ -107,7 +107,15 @@ const EventProposalSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["NEW", "UNDER_REVIEW", "APPROVED", "REJECTED", "CONVERTED_TO_EVENT"],
+      enum: [
+        "NEW",
+        "UNDER_REVIEW",
+        "APPROVED",
+        "DECLINED",
+        "REJECTED",
+        "CONVERTED_TO_EVENT",
+        "ARCHIVED",
+      ],
       default: "NEW",
     },
     organizer: {
@@ -134,6 +142,24 @@ const EventProposalSchema = new mongoose.Schema(
       default: "",
       trim: true,
     },
+    archivedAt: {
+      type: Date,
+      default: null,
+    },
+    statusHistory: [
+      {
+        from: { type: String, default: "" },
+        to: { type: String, default: "" },
+        action: { type: String, default: "" },
+        note: { type: String, default: "" },
+        changedBy: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+          default: null,
+        },
+        changedAt: { type: Date, default: Date.now },
+      },
+    ],
   },
   { timestamps: true }
 );

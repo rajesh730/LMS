@@ -757,7 +757,7 @@ export default function SuperAdminSettingsManager() {
                     updateAdminForm("email", event.target.value)
                   }
                   className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-white"
-                  placeholder="admin@example.com"
+                  placeholder="admin@yourdomain.com"
                 />
               </div>
               <div className="flex flex-col">

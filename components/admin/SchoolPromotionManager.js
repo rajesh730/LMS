@@ -90,14 +90,14 @@ export default function SchoolPromotionManager() {
 
       if (!res.ok) {
         throw new Error(
-          payload.message || "Failed to load school spotlight campaigns"
+          payload.message || "Failed to load school spotlights"
         );
       }
 
       setPromotions(Array.isArray(payload.promotions) ? payload.promotions : []);
       setSchools(Array.isArray(payload.schools) ? payload.schools : []);
     } catch (loadError) {
-      setError(loadError.message || "Failed to load school spotlight campaigns");
+      setError(loadError.message || "Failed to load school spotlights");
     } finally {
       setLoading(false);
     }
@@ -155,14 +155,14 @@ export default function SchoolPromotionManager() {
       const payload = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        throw new Error(payload.message || "Failed to save spotlight campaign");
+        throw new Error(payload.message || "Failed to save school spotlight");
       }
 
-      setSuccess(payload.message || "Spotlight campaign saved");
+      setSuccess(payload.message || "School spotlight saved");
       resetForm();
       await loadData();
     } catch (saveError) {
-      setError(saveError.message || "Failed to save spotlight campaign");
+      setError(saveError.message || "Failed to save school spotlight");
     } finally {
       setSaving(false);
     }
@@ -180,15 +180,15 @@ export default function SchoolPromotionManager() {
       const payload = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        throw new Error(payload.message || "Failed to archive campaign");
+        throw new Error(payload.message || "Failed to archive spotlight");
       }
 
-      setSuccess(payload.message || "Campaign archived");
+      setSuccess(payload.message || "School spotlight archived");
       setArchiveTarget(null);
       if (form.id === promotionId) resetForm();
       await loadData();
     } catch (archiveError) {
-      setError(archiveError.message || "Failed to archive campaign");
+      setError(archiveError.message || "Failed to archive spotlight");
       setArchiveTarget(null);
     } finally {
       setBusyId("");
@@ -242,14 +242,14 @@ export default function SchoolPromotionManager() {
       const payload = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        throw new Error(payload.message || "Failed to update campaign status");
+        throw new Error(payload.message || "Failed to update spotlight status");
       }
 
-      setSuccess(payload.message || "Campaign status updated");
+      setSuccess(payload.message || "School spotlight status updated");
       resetForm();
       await loadData();
     } catch (statusError) {
-      setError(statusError.message || "Failed to update campaign status");
+      setError(statusError.message || "Failed to update spotlight status");
     } finally {
       setBusyId("");
     }
@@ -276,7 +276,7 @@ export default function SchoolPromotionManager() {
           <div className="mb-5 flex items-start justify-between gap-3">
             <div>
               <h3 className="text-xl font-bold text-white">
-                {form.id ? "Edit Spotlight Campaign" : "Create Spotlight Campaign"}
+                {form.id ? "Edit School Spotlight" : "Create School Spotlight"}
               </h3>
               <p className="mt-1 text-sm text-slate-400">
                 Choose the school and decide where its spotlight appears.
@@ -340,7 +340,7 @@ export default function SchoolPromotionManager() {
                   className="w-full rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-white outline-none transition focus:border-blue-500"
                 >
                   <option value="STANDARD">Standard rotation</option>
-                  <option value="PREMIUM">Premium rotation</option>
+                  <option value="PREMIUM">Featured rotation</option>
                 </select>
               </label>
             </div>
@@ -399,7 +399,7 @@ export default function SchoolPromotionManager() {
             <div className="mb-5 flex items-center justify-between gap-3">
               <div>
                 <h3 className="text-xl font-bold text-white">
-                  Active Campaign Board
+                  Active Spotlight Board
                 </h3>
                 <p className="mt-1 text-sm text-slate-400">
                   Active school spotlights. Rotation is based on priority and least
@@ -413,7 +413,7 @@ export default function SchoolPromotionManager() {
 
             {loading ? (
               <LoadingState
-                title="Loading spotlight campaigns"
+                title="Loading school spotlights"
                 message="Preparing school spotlight records."
               />
             ) : activePromotions.length === 0 ? (

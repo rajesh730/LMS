@@ -4,7 +4,10 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 
 function label(value) {
-  return String(value || "").replaceAll("_", " ");
+  return String(value || "")
+    .toLowerCase()
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 function normalizeEmail(value) {
@@ -20,11 +23,13 @@ function formatDate(value) {
   });
 }
 
+function dateInputValue(value) {
+  if (!value) return "";
+  return String(value).split("T")[0];
+}
+
 function canUsePartnerSpotlight(partner) {
-  return (
-    partner.verificationStatus === "VERIFIED" &&
-    partner.profileVisibility === "PUBLIC"
-  );
+  return partner.verificationStatus === "VERIFIED";
 }
 
 function spotlightLabel(status) {
@@ -33,12 +38,122 @@ function spotlightLabel(status) {
   return "Off";
 }
 
+function proposalStatusLabel(status) {
+  if (status === "REJECTED") return "Declined";
+  if (status === "UNDER_REVIEW") return "Under review";
+  if (status === "CONVERTED_TO_EVENT") return "Event published";
+  return label(status);
+}
+
+function partnerStatusSummary(partner) {
+  const verification =
+    partner.verificationStatus === "VERIFIED"
+      ? "Approved"
+      : label(partner.verificationStatus || "Pending");
+  const visibility =
+    partner.profileVisibility === "PUBLIC"
+      ? "Public portfolio"
+      : "Private portfolio";
+  const trust =
+    partner.trustLevel === "FEATURED_PARTNER"
+      ? "Featured partner"
+      : partner.trustLevel === "APPROVED_PARTNER"
+      ? "Standard partner"
+      : "Request only";
+
+  return `${verification} - ${visibility} - ${trust}`;
+}
+
+const PROPOSAL_FILTERS = [
+  {
+    id: "ACTIVE",
+    label: "Active Work",
+    matches: (proposal) =>
+      ["NEW", "UNDER_REVIEW", "APPROVED"].includes(proposal.status),
+  },
+  {
+    id: "PUBLISHED",
+    label: "Published",
+    matches: (proposal) =>
+      proposal.status !== "ARCHIVED" &&
+      (proposal.status === "CONVERTED_TO_EVENT" || Boolean(proposal.linkedEvent)),
+  },
+  {
+    id: "DECLINED",
+    label: "Declined",
+    matches: (proposal) =>
+      ["DECLINED", "REJECTED"].includes(proposal.status) &&
+      proposal.status !== "ARCHIVED",
+  },
+  {
+    id: "ARCHIVED",
+    label: "Archived",
+    matches: (proposal) => proposal.status === "ARCHIVED",
+  },
+  {
+    id: "ALL",
+    label: "All",
+    matches: () => true,
+  },
+];
+
+const ORGANIZATION_TYPES = ["COMPANY", "ACADEMY", "NGO", "INDIVIDUAL", "OTHER"];
+
+const PROPOSAL_ROLE_OPTIONS = [
+  "ORGANIZER_PARTNER",
+  "CHALLENGE_PARTNER",
+  "SPONSOR",
+  "VENUE_PARTNER",
+  "MENTOR_PARTNER",
+  "MEDIA_PARTNER",
+  "PRESENTED_BY",
+  "OTHER",
+];
+
+const EVENT_MODES = ["UNDECIDED", "ONLINE", "ONSITE", "HYBRID"];
+
+function proposalStatusClass(status) {
+  if (status === "CONVERTED_TO_EVENT") {
+    return "border-emerald-500/25 bg-emerald-500/10 text-emerald-300";
+  }
+  if (status === "APPROVED") {
+    return "border-cyan-500/25 bg-cyan-500/10 text-cyan-300";
+  }
+  if (status === "UNDER_REVIEW") {
+    return "border-blue-500/25 bg-blue-500/10 text-blue-300";
+  }
+  if (["DECLINED", "REJECTED"].includes(status)) {
+    return "border-rose-500/25 bg-rose-500/10 text-rose-300";
+  }
+  if (status === "ARCHIVED") {
+    return "border-slate-700 bg-slate-900 text-slate-400";
+  }
+  return "border-amber-500/25 bg-amber-500/10 text-amber-300";
+}
+
+function proposalActionMessage(action) {
+  if (action === "mark_reviewing") return "Proposal moved to review.";
+  if (action === "approve_partner" || action === "approve") {
+    return "Partner approved. You can publish the event when ready.";
+  }
+  if (action === "publish_event") {
+    return "Platform event published from this proposal.";
+  }
+  if (action === "decline" || action === "reject") return "Proposal declined.";
+  if (action === "reopen") return "Proposal reopened for review.";
+  if (action === "archive") return "Proposal archived.";
+  if (action === "update") return "Proposal updated successfully.";
+  return "Proposal updated.";
+}
+
 export default function AdminPartnerWorkspace({ onChanged }) {
   const [proposals, setProposals] = useState([]);
   const [partners, setPartners] = useState([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [editingProposal, setEditingProposal] = useState(null);
+  const [publishingProposal, setPublishingProposal] = useState(null);
+  const [proposalFilter, setProposalFilter] = useState("ACTIVE");
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -78,13 +193,6 @@ export default function AdminPartnerWorkspace({ onChanged }) {
     setMessage("");
     try {
       const payload = { action, ...extraPayload };
-      if (action === "approve" && !proposal.preferredDate && !extraPayload.eventDate) {
-        const eventDate = window.prompt(
-          "Enter the event date to publish this as a platform event (YYYY-MM-DD):"
-        );
-        if (!eventDate) return;
-        payload.eventDate = eventDate;
-      }
 
       const res = await fetch(`/api/event-proposals/${proposal._id}`, {
         method: "PUT",
@@ -93,19 +201,25 @@ export default function AdminPartnerWorkspace({ onChanged }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed to update proposal");
-      setMessage(
-        action === "approve"
-          ? "Proposal approved and published as a platform event."
-          : action === "update" 
-          ? "Proposal updated successfully."
-          : "Proposal updated."
-      );
+      setMessage(proposalActionMessage(action));
       setEditingProposal(null);
+      setPublishingProposal(null);
       await refreshAll();
     } catch (error) {
       setMessage(error.message);
     }
   };
+
+  const selectedProposalFilter =
+    PROPOSAL_FILTERS.find((filter) => filter.id === proposalFilter) ||
+    PROPOSAL_FILTERS[0];
+  const filteredProposals = proposals.filter(selectedProposalFilter.matches);
+  const proposalFilterCounts = Object.fromEntries(
+    PROPOSAL_FILTERS.map((filter) => [
+      filter.id,
+      proposals.filter(filter.matches).length,
+    ])
+  );
 
   const updatePartner = async (partnerId, patch) => {
     setMessage("");
@@ -122,6 +236,33 @@ export default function AdminPartnerWorkspace({ onChanged }) {
     } catch (error) {
       setMessage(error.message);
     }
+  };
+
+  const handleEditProposalSubmit = (event) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const updates = Object.fromEntries(formData.entries());
+
+    updates.proposedRoles = formData.getAll("proposedRoles").filter(Boolean);
+    updates.targetGrades = String(updates.targetGrades || "")
+      .split(",")
+      .map((grade) => grade.trim())
+      .filter(Boolean);
+    updates.preferredDate = updates.preferredDate || null;
+    updates.expectedStudents = updates.expectedStudents || null;
+    updates.expectedSchools = updates.expectedSchools || null;
+
+    updateProposal(editingProposal, "update", updates);
+  };
+
+  const handlePublishProposalSubmit = (event) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const payload = Object.fromEntries(formData.entries());
+
+    payload.registrationDeadline = payload.registrationDeadline || null;
+
+    updateProposal(publishingProposal, "publish_event", payload);
   };
 
   if (loading) {
@@ -141,24 +282,38 @@ export default function AdminPartnerWorkspace({ onChanged }) {
               Partner Proposals
             </h2>
             <p className="text-sm text-slate-400 mt-1">
-              Outside organizers submit here first. Approve them before creating partner-branded platform events.
+              Review organizer requests, approve partner profiles, and publish
+              events only when they are ready.
             </p>
           </div>
-          <Link
-            href="/organize-event"
-            className="rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-100 px-4 py-2 text-sm"
-          >
-            View public proposal form
-          </Link>
         </div>
 
         {message && <p className="text-sm text-emerald-300 mt-4">{message}</p>}
 
+        <div className="mt-6 flex flex-wrap gap-2">
+          {PROPOSAL_FILTERS.map((filter) => (
+            <button
+              key={filter.id}
+              type="button"
+              onClick={() => setProposalFilter(filter.id)}
+              className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                proposalFilter === filter.id
+                  ? "bg-blue-600 text-white shadow-lg shadow-blue-950/20"
+                  : "bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white"
+              }`}
+            >
+              {filter.label} ({proposalFilterCounts[filter.id] || 0})
+            </button>
+          ))}
+        </div>
+
         <div className="grid gap-4 mt-6">
-          {proposals.length === 0 ? (
-            <p className="text-slate-500 italic">No partner proposals yet.</p>
+          {filteredProposals.length === 0 ? (
+            <p className="rounded-2xl border border-slate-800 bg-slate-950/70 p-5 text-slate-500">
+              No partner proposals in this view.
+            </p>
           ) : (
-            proposals.map((proposal) => {
+            filteredProposals.map((proposal) => {
               const emailMatchedPartner = partners.find(
                 (partner) =>
                   normalizeEmail(partner.contactEmail) &&
@@ -166,8 +321,25 @@ export default function AdminPartnerWorkspace({ onChanged }) {
                     normalizeEmail(proposal.contactEmail)
               );
               const resolvedPartner = proposal.organizer || emailMatchedPartner;
+              const isDeclined = ["DECLINED", "REJECTED"].includes(
+                proposal.status
+              );
+              const isPublished =
+                proposal.status === "CONVERTED_TO_EVENT" ||
+                Boolean(proposal.linkedEvent);
+              const isArchived = proposal.status === "ARCHIVED";
+              const canEditProposal = !isPublished && !isArchived;
+              const canApprovePartner =
+                ["NEW", "UNDER_REVIEW"].includes(proposal.status) ||
+                (proposal.status === "APPROVED" && !proposal.organizer);
               const canPublishProposal =
-                proposal.status !== "CONVERTED_TO_EVENT" && !proposal.linkedEvent;
+                proposal.status === "APPROVED" && !proposal.linkedEvent;
+              const canDeclineProposal =
+                ["NEW", "UNDER_REVIEW", "APPROVED"].includes(proposal.status) &&
+                !proposal.linkedEvent;
+              const canReopenProposal =
+                (isDeclined || isArchived) && !proposal.linkedEvent;
+              const canArchiveProposal = !isArchived;
 
               return (
                 <article
@@ -180,8 +352,12 @@ export default function AdminPartnerWorkspace({ onChanged }) {
                         <h3 className="text-lg font-bold text-white">
                           {proposal.eventTitle}
                         </h3>
-                        <span className="rounded-full border border-blue-500/20 bg-blue-500/10 px-3 py-1 text-xs text-blue-300">
-                          {proposal.status}
+                        <span
+                          className={`rounded-full border px-3 py-1 text-xs font-semibold ${proposalStatusClass(
+                            proposal.status
+                          )}`}
+                        >
+                          {proposalStatusLabel(proposal.status)}
                         </span>
                         {emailMatchedPartner && !proposal.organizer && (
                           <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs text-emerald-300">
@@ -213,6 +389,9 @@ export default function AdminPartnerWorkspace({ onChanged }) {
                         <div>
                           Linked event: {proposal.linkedEvent?.title || "Not yet"}
                         </div>
+                        <div>
+                          Last reviewed: {formatDate(proposal.reviewedAt)}
+                        </div>
                       </div>
                       {resolvedPartner && (
                         <p className="text-xs text-emerald-300">
@@ -230,7 +409,7 @@ export default function AdminPartnerWorkspace({ onChanged }) {
                     </div>
 
                     <div className="flex flex-wrap gap-2 lg:justify-end">
-                      {canPublishProposal && (
+                      {canEditProposal && (
                         <button
                           type="button"
                           onClick={() => setEditingProposal(proposal)}
@@ -250,26 +429,59 @@ export default function AdminPartnerWorkspace({ onChanged }) {
                           Review
                         </button>
                       )}
+                      {canApprovePartner && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            updateProposal(proposal, "approve_partner")
+                          }
+                          className="rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 text-sm"
+                        >
+                          Approve Partner
+                        </button>
+                      )}
                       {canPublishProposal && (
                         <button
                           type="button"
-                          onClick={() => updateProposal(proposal, "approve")}
-                          className="rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 text-sm"
+                          onClick={() => setPublishingProposal(proposal)}
+                          className="rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white px-3 py-2 text-sm"
                         >
-                          {proposal.status === "APPROVED"
-                            ? "Publish Event"
-                            : emailMatchedPartner
-                            ? "Approve & Publish Event"
-                            : "Approve & Publish"}
+                          Publish Event
                         </button>
                       )}
-                      {proposal.status !== "REJECTED" && (
+                      {proposal.linkedEvent && (
+                        <Link
+                          href={`/admin/events/${proposal.linkedEvent._id}/manage`}
+                          className="rounded-lg bg-slate-700 hover:bg-slate-600 text-white px-3 py-2 text-sm"
+                        >
+                          View Event
+                        </Link>
+                      )}
+                      {canDeclineProposal && (
                         <button
                           type="button"
-                          onClick={() => updateProposal(proposal, "reject")}
+                          onClick={() => updateProposal(proposal, "decline")}
                           className="rounded-lg bg-red-600 hover:bg-red-500 text-white px-3 py-2 text-sm"
                         >
-                          Reject
+                          Decline
+                        </button>
+                      )}
+                      {canReopenProposal && (
+                        <button
+                          type="button"
+                          onClick={() => updateProposal(proposal, "reopen")}
+                          className="rounded-lg bg-blue-600 hover:bg-blue-500 text-white px-3 py-2 text-sm"
+                        >
+                          Reopen
+                        </button>
+                      )}
+                      {canArchiveProposal && (
+                        <button
+                          type="button"
+                          onClick={() => updateProposal(proposal, "archive")}
+                          className="rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-2 text-sm"
+                        >
+                          Archive
                         </button>
                       )}
                     </div>
@@ -284,7 +496,7 @@ export default function AdminPartnerWorkspace({ onChanged }) {
       <div>
         <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6">
           <h2 className="text-xl font-semibold text-white mb-4">
-            Approved Partner Profiles
+            Partner Profiles
           </h2>
           <div className="grid gap-4">
             {partners.length === 0 ? (
@@ -316,15 +528,14 @@ export default function AdminPartnerWorkspace({ onChanged }) {
                                 : "border border-slate-700 bg-slate-900 text-slate-400"
                             }`}
                           >
-                            Spotlight {spotlightLabel(spotlightStatus)}
+                            Homepage {spotlightLabel(spotlightStatus)}
                           </span>
                         </div>
                         <p className="text-sm text-slate-400 mt-1">
                           {(partner.partnerRoles || []).map(label).join(", ")}
                         </p>
                         <p className="text-xs text-slate-500 mt-2">
-                          {partner.verificationStatus} - {partner.profileVisibility} -{" "}
-                          {partner.trustLevel}
+                          {partnerStatusSummary(partner)}
                         </p>
                         {partner.description && (
                           <p className="text-sm text-slate-400 mt-3 max-w-2xl">
@@ -342,16 +553,13 @@ export default function AdminPartnerWorkspace({ onChanged }) {
                                 : "PUBLIC";
                             updatePartner(partner._id, {
                               profileVisibility: nextVisibility,
-                              ...(nextVisibility === "PRIVATE"
-                                ? { spotlightStatus: "OFF" }
-                                : {}),
                             });
                           }}
                           className="rounded-lg bg-slate-700 hover:bg-slate-600 text-white px-3 py-2 text-sm"
                         >
                           {partner.profileVisibility === "PUBLIC"
-                            ? "Make Private"
-                            : "Make Public"}
+                            ? "Hide Portfolio"
+                            : "Show Portfolio"}
                         </button>
                         <button
                           type="button"
@@ -366,8 +574,8 @@ export default function AdminPartnerWorkspace({ onChanged }) {
                           className="rounded-lg bg-blue-600 hover:bg-blue-500 text-white px-3 py-2 text-sm"
                         >
                           {partner.trustLevel === "FEATURED_PARTNER"
-                            ? "Unfeature"
-                            : "Feature"}
+                            ? "Standard Partner"
+                            : "Featured Partner"}
                         </button>
                         {partner.profileVisibility === "PUBLIC" && (
                           <Link
@@ -384,17 +592,17 @@ export default function AdminPartnerWorkspace({ onChanged }) {
                       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                         <div>
                           <h4 className="text-sm font-bold text-white">
-                            Partner Spotlight
+                            Homepage Spotlight
                           </h4>
                           <p className="mt-1 text-xs leading-5 text-slate-400">
-                            Highlight this partner in the homepage partner panel.
-                            They must be verified, public, and connected to at
-                            least one active public event.
+                            Show this approved partner in the homepage partner
+                            panel. Public portfolio and active event connection
+                            are separate optional settings.
                           </p>
                           {!spotlightReady && (
                             <p className="mt-2 text-xs text-amber-300">
-                              Make this partner verified and public before turning
-                              on spotlight.
+                              Approve this partner before showing it on the
+                              homepage.
                             </p>
                           )}
                         </div>
@@ -409,8 +617,8 @@ export default function AdminPartnerWorkspace({ onChanged }) {
                             }
                             className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white disabled:cursor-not-allowed disabled:opacity-50"
                           >
-                            <option value="STANDARD">Standard rotation</option>
-                            <option value="FEATURED">Featured rotation</option>
+                            <option value="STANDARD">Normal visibility</option>
+                            <option value="FEATURED">Priority visibility</option>
                           </select>
                           <button
                             type="button"
@@ -423,10 +631,10 @@ export default function AdminPartnerWorkspace({ onChanged }) {
                             className="rounded-lg bg-cyan-600 px-3 py-2 text-sm font-semibold text-white hover:bg-cyan-500 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500"
                           >
                             {spotlightStatus === "ACTIVE"
-                              ? "Pause Spotlight"
+                              ? "Pause Homepage"
                               : spotlightStatus === "PAUSED"
-                              ? "Resume Spotlight"
-                              : "Start Spotlight"}
+                              ? "Resume Homepage"
+                              : "Show on Homepage"}
                           </button>
                           {spotlightStatus !== "OFF" && (
                             <button
@@ -438,7 +646,7 @@ export default function AdminPartnerWorkspace({ onChanged }) {
                               }
                               className="rounded-lg bg-slate-800 px-3 py-2 text-sm font-semibold text-slate-200 hover:bg-slate-700"
                             >
-                              Remove
+                              Remove from Homepage
                             </button>
                           )}
                         </div>
@@ -459,7 +667,7 @@ export default function AdminPartnerWorkspace({ onChanged }) {
               <h2 className="text-xl font-bold text-white">Edit Event Proposal</h2>
               <button
                 onClick={() => setEditingProposal(null)}
-                className="text-slate-400 hover:text-white"
+                className="rounded-full px-3 py-1 text-[0px] text-slate-400 after:text-sm after:content-['x'] hover:bg-slate-800 hover:text-white"
               >
                 ✕
               </button>
@@ -468,12 +676,7 @@ export default function AdminPartnerWorkspace({ onChanged }) {
             <div className="p-6 overflow-y-auto overflow-x-hidden flex-1 custom-scrollbar">
               <form
                 id="edit-proposal-form"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  const formData = new FormData(e.target);
-                  const updates = Object.fromEntries(formData.entries());
-                  updateProposal(editingProposal, "update", updates);
-                }}
+                onSubmit={handleEditProposalSubmit}
                 className="space-y-5"
               >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -494,6 +697,53 @@ export default function AdminPartnerWorkspace({ onChanged }) {
                       className="w-full rounded-lg bg-slate-950 border border-slate-800 p-2.5 text-sm text-white"
                       required
                     />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-slate-400">Organization Type</label>
+                    <select
+                      name="organizationType"
+                      defaultValue={editingProposal.organizationType || "COMPANY"}
+                      className="w-full rounded-lg bg-slate-950 border border-slate-800 p-2.5 text-sm text-white"
+                    >
+                      {ORGANIZATION_TYPES.map((type) => (
+                        <option key={type} value={type}>
+                          {label(type)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-slate-400">Partner Role</label>
+                    <select
+                      name="proposedRoles"
+                      defaultValue={
+                        editingProposal.proposedRoles?.[0] || "ORGANIZER_PARTNER"
+                      }
+                      className="w-full rounded-lg bg-slate-950 border border-slate-800 p-2.5 text-sm text-white"
+                    >
+                      {PROPOSAL_ROLE_OPTIONS.map((role) => (
+                        <option key={role} value={role}>
+                          {label(role)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-slate-400">Event Mode</label>
+                    <select
+                      name="eventMode"
+                      defaultValue={editingProposal.eventMode || "UNDECIDED"}
+                      className="w-full rounded-lg bg-slate-950 border border-slate-800 p-2.5 text-sm text-white"
+                    >
+                      {EVENT_MODES.map((mode) => (
+                        <option key={mode} value={mode}>
+                          {label(mode)}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
 
@@ -541,27 +791,33 @@ export default function AdminPartnerWorkspace({ onChanged }) {
                       className="w-full rounded-lg bg-slate-950 border border-slate-800 p-2.5 text-sm text-white"
                     />
                   </div>
+                  <div className="space-y-1 md:col-span-2">
+                    <label className="text-xs font-semibold text-slate-400">Location</label>
+                    <input
+                      name="location"
+                      defaultValue={editingProposal.location}
+                      className="w-full rounded-lg bg-slate-950 border border-slate-800 p-2.5 text-sm text-white"
+                    />
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-slate-400">Event Mode</label>
-                    <select
-                      name="eventMode"
-                      defaultValue={editingProposal.eventMode}
-                      className="w-full rounded-lg bg-slate-950 border border-slate-800 p-2.5 text-sm text-white"
-                    >
-                      <option value="ONLINE">Online</option>
-                      <option value="ONSITE">Onsite</option>
-                      <option value="HYBRID">Hybrid</option>
-                    </select>
-                  </div>
                   <div className="space-y-1">
                     <label className="text-xs font-semibold text-slate-400">Preferred Date</label>
                     <input
                       type="date"
                       name="preferredDate"
-                      defaultValue={editingProposal.preferredDate ? editingProposal.preferredDate.split('T')[0] : ""}
+                      defaultValue={dateInputValue(editingProposal.preferredDate)}
+                      className="w-full rounded-lg bg-slate-950 border border-slate-800 p-2.5 text-sm text-white"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-slate-400">Expected Schools</label>
+                    <input
+                      type="number"
+                      min="1"
+                      name="expectedSchools"
+                      defaultValue={editingProposal.expectedSchools || ""}
                       className="w-full rounded-lg bg-slate-950 border border-slate-800 p-2.5 text-sm text-white"
                     />
                   </div>
@@ -569,11 +825,69 @@ export default function AdminPartnerWorkspace({ onChanged }) {
                     <label className="text-xs font-semibold text-slate-400">Expected Students</label>
                     <input
                       type="number"
+                      min="1"
                       name="expectedStudents"
-                      defaultValue={editingProposal.expectedStudents}
+                      defaultValue={editingProposal.expectedStudents || ""}
                       className="w-full rounded-lg bg-slate-950 border border-slate-800 p-2.5 text-sm text-white"
                     />
                   </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-slate-400">Venue</label>
+                    <input
+                      name="venue"
+                      defaultValue={editingProposal.venue || ""}
+                      className="w-full rounded-lg bg-slate-950 border border-slate-800 p-2.5 text-sm text-white"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-slate-400">Target Grades</label>
+                    <input
+                      name="targetGrades"
+                      defaultValue={(editingProposal.targetGrades || []).join(", ")}
+                      placeholder="Grade 6, Grade 7, Grade 8"
+                      className="w-full rounded-lg bg-slate-950 border border-slate-800 p-2.5 text-sm text-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-slate-400">Prize / Recognition Details</label>
+                    <textarea
+                      name="prizeDetails"
+                      defaultValue={editingProposal.prizeDetails || ""}
+                      className="w-full rounded-lg bg-slate-950 border border-slate-800 p-2.5 text-sm text-white min-h-[96px]"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-slate-400">Safety / Operations Notes</label>
+                    <textarea
+                      name="safetyNotes"
+                      defaultValue={editingProposal.safetyNotes || ""}
+                      className="w-full rounded-lg bg-slate-950 border border-slate-800 p-2.5 text-sm text-white min-h-[96px]"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-400">Data Access Needs</label>
+                  <textarea
+                    name="dataAccessNeeds"
+                    defaultValue={editingProposal.dataAccessNeeds || ""}
+                    className="w-full rounded-lg bg-slate-950 border border-slate-800 p-2.5 text-sm text-white min-h-[80px]"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-400">Internal Admin Notes</label>
+                  <textarea
+                    name="adminNotes"
+                    defaultValue={editingProposal.adminNotes || ""}
+                    className="w-full rounded-lg bg-slate-950 border border-slate-800 p-2.5 text-sm text-white min-h-[90px]"
+                  />
                 </div>
               </form>
             </div>
@@ -592,6 +906,101 @@ export default function AdminPartnerWorkspace({ onChanged }) {
                 className="rounded-lg bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 text-sm font-semibold"
               >
                 Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {publishingProposal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-2xl my-8 overflow-hidden shadow-2xl">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-800 p-6">
+              <div>
+                <h2 className="text-xl font-bold text-white">Publish Platform Event</h2>
+                <p className="mt-1 text-sm text-slate-400">
+                  Confirm the final public event details before schools can see it.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPublishingProposal(null)}
+                className="rounded-full px-3 py-1 text-sm text-slate-400 hover:bg-slate-800 hover:text-white"
+              >
+                x
+              </button>
+            </div>
+
+            <form
+              id="publish-proposal-form"
+              onSubmit={handlePublishProposalSubmit}
+              className="space-y-5 p-6"
+            >
+              <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-300">
+                  Ready to publish
+                </p>
+                <h3 className="mt-2 text-lg font-bold text-white">
+                  {publishingProposal.eventTitle}
+                </h3>
+                <p className="mt-2 text-sm leading-6 text-slate-400">
+                  {publishingProposal.organizationName} will be attached as the
+                  event partner. You can still edit the proposal before
+                  publishing if anything needs cleanup.
+                </p>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-400">
+                    Event Date
+                  </label>
+                  <input
+                    type="date"
+                    name="eventDate"
+                    defaultValue={dateInputValue(publishingProposal.preferredDate)}
+                    required
+                    className="w-full rounded-lg border border-slate-800 bg-slate-950 p-2.5 text-sm text-white"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-400">
+                    Registration Deadline
+                  </label>
+                  <input
+                    type="date"
+                    name="registrationDeadline"
+                    className="w-full rounded-lg border border-slate-800 bg-slate-950 p-2.5 text-sm text-white"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-400">
+                  Internal Publishing Note
+                </label>
+                <textarea
+                  name="adminNotes"
+                  defaultValue={publishingProposal.adminNotes || ""}
+                  className="min-h-[90px] w-full rounded-lg border border-slate-800 bg-slate-950 p-2.5 text-sm text-white"
+                />
+              </div>
+            </form>
+
+            <div className="flex justify-end gap-3 border-t border-slate-800 bg-slate-900 p-6">
+              <button
+                type="button"
+                onClick={() => setPublishingProposal(null)}
+                className="px-4 py-2.5 text-sm font-medium text-slate-300 hover:text-white"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                form="publish-proposal-form"
+                className="rounded-lg bg-cyan-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-cyan-500"
+              >
+                Publish Event
               </button>
             </div>
           </div>
