@@ -151,11 +151,11 @@ export default function SchoolOwnedEventsManager({
   };
 
   return (
-    <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800 space-y-6">
+    <div className="space-y-6 rounded-2xl border border-[#d7cdbb] bg-white p-6 shadow-[0_14px_36px_rgba(10,47,102,0.06)]">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold text-white">My School Events</h2>
-          <p className="text-sm text-slate-400 mt-1">
+          <h2 className="text-xl font-semibold text-[#17120a]">My School Events</h2>
+          <p className="mt-1 text-sm text-[#344f77]">
             Manage school-created events, student registration, rounds, results, and certificates.
           </p>
         </div>
@@ -168,8 +168,8 @@ export default function SchoolOwnedEventsManager({
               onClick={() => setActiveFilter(status)}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
                 activeFilter === status
-                  ? "bg-blue-600 text-white"
-                  : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                  ? "bg-[#0a2f66] text-white"
+                  : "border border-[#d7cdbb] bg-white text-[#0a2f66] hover:bg-[#eaf2ff]"
               }`}
             >
               {status === "ACTIVE"
@@ -189,7 +189,7 @@ export default function SchoolOwnedEventsManager({
           message={feedback.message}
         />
       ) : (
-        statusMessage && <p className="text-sm text-emerald-300">{statusMessage}</p>
+        statusMessage && <p className="text-sm font-semibold text-[#17643a]">{statusMessage}</p>
       )}
 
       {loading ? (
@@ -227,25 +227,25 @@ export default function SchoolOwnedEventsManager({
             return (
               <div
                 key={event._id}
-                className="rounded-2xl border border-slate-800 bg-slate-950/60 overflow-hidden"
+                className="overflow-hidden rounded-2xl border border-[#d7cdbb] bg-white shadow-[0_10px_26px_rgba(10,47,102,0.06)]"
               >
                 <div className="p-5">
                   <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
                     <div className="space-y-3">
                       <div className="flex flex-wrap items-center gap-3">
-                        <h3 className="text-lg font-semibold text-white">{event.title}</h3>
-                        <span className="px-2.5 py-1 rounded-full text-xs bg-slate-800 text-slate-300 border border-slate-700">
+                        <h3 className="text-lg font-semibold text-[#17120a]">{event.title}</h3>
+                        <span className="rounded-full border border-[#d7cdbb] bg-white px-2.5 py-1 text-xs font-semibold text-[#0a2f66]">
                           {formatType(event.eventType)}
                         </span>
-                        <span className="px-2.5 py-1 rounded-full text-xs bg-slate-800 text-slate-300 border border-slate-700">
+                        <span className="rounded-full border border-[#d7cdbb] bg-white px-2.5 py-1 text-xs font-semibold text-[#0a2f66]">
                           {isTeamEvent ? "Group event" : "Individual event"}
                         </span>
-                        <span className="px-2.5 py-1 rounded-full text-xs bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
+                        <span className="rounded-full border border-[#bfd7f7] bg-[#eaf2ff] px-2.5 py-1 text-xs font-semibold text-[#0a2f66]">
                           Visible to school students
                         </span>
                       </div>
 
-                      <p className="text-sm text-slate-400 max-w-3xl">{event.description}</p>
+                      <p className="max-w-3xl text-sm text-[#344f77]">{event.description}</p>
 
                       <div
                         className={`max-w-3xl rounded-xl border px-3 py-2 text-sm ${getStageClasses(
@@ -258,13 +258,13 @@ export default function SchoolOwnedEventsManager({
                         </div>
                       </div>
 
-                      <div className="flex flex-wrap gap-4 text-sm text-slate-300">
+                      <div className="flex flex-wrap gap-4 text-sm text-[#27344a]">
                         <span className="inline-flex items-center gap-2">
-                          <FaCalendarAlt className="text-blue-400" />
+                          <FaCalendarAlt className="text-[#0a2f66]" />
                           {new Date(event.date).toLocaleDateString()}
                         </span>
                         <span className="inline-flex items-center gap-2">
-                          <FaUsers className="text-emerald-400" />
+                          <FaUsers className="text-[#0a2f66]" />
                           {isTeamEvent
                             ? `${event.teamCount || 0} team registrations`
                             : `${event.studentCount || 0} student registrations`}
@@ -282,21 +282,21 @@ export default function SchoolOwnedEventsManager({
                       {event.visibility === "PUBLIC" && (
                         <Link
                           href={`/events/${event._id}`}
-                          className="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-100 text-sm transition"
+                          className="rounded-lg border border-[#d7cdbb] bg-white px-3 py-2 text-sm font-semibold text-[#0a2f66] transition hover:bg-[#eaf2ff]"
                         >
                           View Public Page
                         </Link>
                       )}
                       <Link
                         href={`/school/events/${event._id}/manage`}
-                        className="px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm transition inline-flex items-center gap-2"
+                        className="inline-flex items-center gap-2 rounded-lg bg-[#0a2f66] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#123f7d]"
                       >
                         <FaCog />
                         Manage Event
                       </Link>
                       <Link
                         href={`/school/events/${event._id}/manage?tab=notices`}
-                        className="px-3 py-2 rounded-lg bg-[#0a2f66] hover:bg-[#1150a1] text-white text-sm transition inline-flex items-center gap-2"
+                        className="inline-flex items-center gap-2 rounded-lg bg-[#0a2f66] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#123f7d]"
                       >
                         <FaBell />
                         Notices
@@ -304,7 +304,7 @@ export default function SchoolOwnedEventsManager({
                       <button
                         type="button"
                         onClick={() => setEditingEvent(event)}
-                        className="px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm transition inline-flex items-center gap-2"
+                        className="inline-flex items-center gap-2 rounded-lg bg-[#0a2f66] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#123f7d]"
                       >
                         <FaEdit />
                         Edit
@@ -315,7 +315,7 @@ export default function SchoolOwnedEventsManager({
                           onClick={() =>
                             handleStatusChange(event._id, "COMPLETED")
                           }
-                          className="px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm transition inline-flex items-center gap-2"
+                          className="inline-flex items-center gap-2 rounded-lg bg-[#0a2f66] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#123f7d]"
                         >
                           <FaCheckCircle />
                           Close Event
@@ -325,7 +325,7 @@ export default function SchoolOwnedEventsManager({
                         <button
                           type="button"
                           onClick={() => setArchiveTarget(event)}
-                          className="px-3 py-2 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-100 border border-rose-500/20 text-sm transition inline-flex items-center gap-2"
+                          className="inline-flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-800 transition hover:bg-rose-100"
                         >
                           <FaArchive />
                           Archive
@@ -334,7 +334,7 @@ export default function SchoolOwnedEventsManager({
                         <button
                           type="button"
                           onClick={() => handleStatusChange(event._id, "ACTIVE")}
-                          className="px-3 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-sm transition inline-flex items-center gap-2"
+                          className="inline-flex items-center gap-2 rounded-lg border border-[#bfd7f7] bg-[#eaf2ff] px-3 py-2 text-sm font-semibold text-[#0a2f66] transition hover:bg-[#dbeaff]"
                         >
                           <FaHistory />
                           Restore
@@ -344,7 +344,7 @@ export default function SchoolOwnedEventsManager({
                         type="button"
                         disabled={!canQuickRegister}
                         onClick={() => setExpandedId(isExpanded ? null : event._id)}
-                        className="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-100 text-sm transition inline-flex items-center gap-2 disabled:cursor-not-allowed disabled:bg-slate-800/50 disabled:text-slate-500"
+                        className="inline-flex items-center gap-2 rounded-lg border border-[#d7cdbb] bg-white px-3 py-2 text-sm font-semibold text-[#0a2f66] transition hover:bg-[#eaf2ff] disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-[#52657d]"
                         title={
                           canQuickRegister
                             ? isTeamEvent
@@ -365,7 +365,7 @@ export default function SchoolOwnedEventsManager({
                 </div>
 
                 {isExpanded && (
-                  <div className="border-t border-slate-800 p-5 bg-slate-900/60">
+                  <div className="border-t border-[#d7cdbb] bg-[#f8fbff] p-5">
                     <EventParticipationForm
                       event={event}
                       isEditing
@@ -384,7 +384,7 @@ export default function SchoolOwnedEventsManager({
 
       {editingEvent && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto bg-slate-900 rounded-2xl shadow-2xl border border-slate-700">
+          <div className="relative max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-2xl border border-[#d7cdbb] bg-white shadow-2xl">
             <div className="p-1">
               <EventEditorForm
                 teachers={teachers}

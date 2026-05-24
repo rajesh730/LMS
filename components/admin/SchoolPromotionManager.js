@@ -35,10 +35,10 @@ const emptyForm = {
 };
 
 const STATUS_STYLES = {
-  ACTIVE: "bg-emerald-500/15 text-emerald-200 border-emerald-500/25",
-  DRAFT: "bg-slate-700/80 text-slate-200 border-slate-600",
-  PAUSED: "bg-blue-500/15 text-blue-200 border-blue-500/25",
-  ARCHIVED: "bg-rose-500/15 text-rose-200 border-rose-500/25",
+  ACTIVE: "bg-[#eaf2ff] text-[#0a2f66] border-[#bfd7f7]",
+  DRAFT: "bg-white text-[#52657d] border-[#d7cdbb]",
+  PAUSED: "bg-[#eaf2ff] text-[#0a2f66] border-[#bfd7f7]",
+  ARCHIVED: "bg-rose-50 text-rose-800 border-rose-200",
 };
 
 function toDateInputValue(value) {
@@ -471,7 +471,7 @@ export default function SchoolPromotionManager() {
                           <button
                             type="button"
                             onClick={() => startEdit(promotion)}
-                            className="inline-flex items-center gap-2 rounded-lg bg-slate-800 px-3 py-2 text-sm font-semibold text-slate-100 transition hover:bg-slate-700"
+                            className="inline-flex items-center gap-2 rounded-lg border border-[#d7cdbb] bg-white px-3 py-2 text-sm font-black text-[#0a2f66] transition hover:bg-[#eaf2ff]"
                           >
                             <FaEdit /> Edit
                           </button>
@@ -480,7 +480,7 @@ export default function SchoolPromotionManager() {
                               type="button"
                               disabled={busyId === promotion.id}
                               onClick={() => quickStatus(promotion, "PAUSED")}
-                              className="inline-flex items-center gap-2 rounded-lg bg-blue-500/15 px-3 py-2 text-sm font-semibold text-blue-100 transition hover:bg-blue-500/25 disabled:opacity-60"
+                              className="inline-flex items-center gap-2 rounded-lg bg-[#eaf2ff] px-3 py-2 text-sm font-black text-[#0a2f66] transition hover:bg-[#dcecff] disabled:opacity-60"
                             >
                               <FaPause /> Pause
                             </button>
@@ -489,7 +489,7 @@ export default function SchoolPromotionManager() {
                               type="button"
                               disabled={busyId === promotion.id}
                               onClick={() => quickStatus(promotion, "ACTIVE")}
-                              className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:opacity-60"
+                              className="inline-flex items-center gap-2 rounded-lg bg-[#0a2f66] px-3 py-2 text-sm font-black text-white transition hover:bg-[#123f82] disabled:opacity-60"
                             >
                               <FaPlay /> Activate
                             </button>
@@ -498,7 +498,7 @@ export default function SchoolPromotionManager() {
                             type="button"
                             disabled={busyId === promotion.id}
                             onClick={() => setArchiveTarget(promotion)}
-                            className="inline-flex items-center gap-2 rounded-lg bg-red-500/10 px-3 py-2 text-sm font-semibold text-red-200 transition hover:bg-red-500/20 disabled:opacity-60"
+                            className="inline-flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-black text-rose-800 transition hover:border-rose-300 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
                           >
                             <FaTrash /> Archive
                           </button>

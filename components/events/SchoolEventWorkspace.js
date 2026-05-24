@@ -54,7 +54,7 @@ export default function SchoolEventWorkspace({ mode = "platform" }) {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-2">
+      <div className="rounded-2xl border border-[#d7cdbb] bg-white p-2 shadow-[0_10px_26px_rgba(10,47,102,0.05)]">
         <div className="flex flex-wrap gap-2">
           {tabs.map((tab) => (
             <button
@@ -63,8 +63,8 @@ export default function SchoolEventWorkspace({ mode = "platform" }) {
               onClick={() => setActiveSection(tab.id)}
               className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
                 selectedSection === tab.id
-                  ? "bg-emerald-600 text-white"
-                  : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                  ? "bg-[#0a2f66] text-white"
+                  : "text-[#0a2f66] hover:bg-[#eaf2ff]"
               }`}
             >
               {tab.label}

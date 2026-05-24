@@ -24,9 +24,9 @@ const FILTERS = [
 ];
 
 const STATUS_STYLES = {
-  PENDING: "bg-amber-500/15 text-amber-200 border-amber-500/30",
-  APPROVED: "bg-emerald-500/15 text-emerald-200 border-emerald-500/30",
-  DISAPPROVED: "bg-rose-500/15 text-rose-200 border-rose-500/30",
+  PENDING: "bg-[#fff7e6] text-[#7a4d00] border-[#f4d28a]",
+  APPROVED: "bg-[#e8f8ef] text-[#17643a] border-[#9ed8b5]",
+  DISAPPROVED: "bg-rose-50 text-rose-800 border-rose-200",
 };
 
 function formatDate(value) {
@@ -170,18 +170,18 @@ export default function SchoolEventInvitations({ refreshKey = 0, onChanged }) {
   };
 
   return (
-    <section className="rounded-2xl border border-slate-700 bg-slate-900/80 p-6 shadow-xl shadow-slate-950/20">
+    <section className="rounded-2xl border border-[#d7cdbb] bg-white p-6 shadow-[0_14px_36px_rgba(10,47,102,0.06)]">
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
           <div className="flex items-center gap-3">
-            <div className="rounded-2xl bg-emerald-500/15 p-3 text-emerald-300">
+            <div className="rounded-2xl bg-[#eaf2ff] p-3 text-[#0a2f66]">
               <FaBell />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-white">
+              <h2 className="text-2xl font-bold text-[#17120a]">
                 Platform Event Notifications
               </h2>
-              <p className="text-sm text-slate-400">
+              <p className="text-sm text-[#344f77]">
                 Approve partner or platform events before your students can see
                 or join them.
               </p>
@@ -189,7 +189,7 @@ export default function SchoolEventInvitations({ refreshKey = 0, onChanged }) {
           </div>
         </div>
 
-        <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
+        <div className="rounded-xl border border-[#bfd7f7] bg-[#eaf2ff] px-4 py-3 text-sm font-semibold text-[#0a2f66]">
           {counts.PENDING} waiting for school decision
         </div>
       </div>
@@ -201,8 +201,8 @@ export default function SchoolEventInvitations({ refreshKey = 0, onChanged }) {
             onClick={() => setFilter(item.id)}
             className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
               filter === item.id
-                ? "bg-emerald-500 text-white"
-                : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                ? "bg-[#0a2f66] text-white"
+                : "border border-[#d7cdbb] bg-white text-[#0a2f66] hover:bg-[#eaf2ff]"
             }`}
           >
             {item.label} ({counts[item.id]})
@@ -212,34 +212,34 @@ export default function SchoolEventInvitations({ refreshKey = 0, onChanged }) {
 
       <div className="mt-4 max-w-xl">
         <div className="relative">
-          <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+          <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-[#52657d]" />
           <input
             type="text"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Search platform event invitations..."
-            className="w-full rounded-xl border border-slate-700 bg-slate-950/70 py-3 pl-10 pr-4 text-white outline-none transition focus:border-emerald-500"
+            className="w-full rounded-xl border border-[#d7cdbb] bg-[#f8fbff] py-3 pl-10 pr-4 text-[#17120a] outline-none transition focus:border-[#2f7fdb]"
           />
         </div>
       </div>
 
       {message && (
-        <div className="mt-4 rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-sm text-slate-200">
+        <div className="mt-4 rounded-xl border border-[#bfd7f7] bg-[#eaf2ff] px-4 py-3 text-sm text-[#0a2f66]">
           {message}
         </div>
       )}
 
       <div className="mt-5 space-y-3">
         {loading ? (
-          <div className="rounded-xl border border-slate-700 bg-slate-800/70 p-6 text-center text-slate-400">
+          <div className="rounded-xl border border-[#d7cdbb] bg-[#f8fbff] p-6 text-center text-[#52657d]">
             Loading platform event notifications...
           </div>
         ) : invitations.length === 0 ? (
-          <div className="rounded-xl border border-slate-700 bg-slate-800/70 p-6 text-center text-slate-400">
-            <p className="font-semibold text-slate-300">
+          <div className="rounded-xl border border-[#d7cdbb] bg-[#f8fbff] p-6 text-center text-[#52657d]">
+            <p className="font-semibold text-[#17120a]">
               No {filter.toLowerCase()} platform invitations right now.
             </p>
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 text-sm text-[#52657d]">
               Platform events sent to your school will appear here for approval before students can join.
             </p>
           </div>
@@ -257,7 +257,7 @@ export default function SchoolEventInvitations({ refreshKey = 0, onChanged }) {
             return (
               <article
                 key={invitation._id}
-                className="rounded-xl border border-slate-700 bg-slate-800/70 p-5"
+                className="rounded-xl border border-[#d7cdbb] bg-white p-5 shadow-[0_10px_26px_rgba(10,47,102,0.05)]"
               >
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                   <div className="min-w-0 flex-1">
@@ -269,26 +269,26 @@ export default function SchoolEventInvitations({ refreshKey = 0, onChanged }) {
                       >
                         {invitation.status}
                       </span>
-                      <span className="rounded-full border border-slate-600 px-3 py-1 text-xs text-slate-300">
+                      <span className="rounded-full border border-[#d7cdbb] px-3 py-1 text-xs font-semibold text-[#0a2f66]">
                         {event.eventType || "EVENT"}
                       </span>
                       {event.partnerBrandingEnabled && (
-                        <span className="rounded-full border border-sky-500/30 bg-sky-500/10 px-3 py-1 text-xs text-sky-200">
+                        <span className="rounded-full border border-[#bdefff] bg-[#e8fbff] px-3 py-1 text-xs font-semibold text-[#07576b]">
                           Partner: {getPartnerName(event)}
                         </span>
                       )}
                       {hasParticipation && (
-                        <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-200">
+                        <span className="rounded-full border border-[#9ed8b5] bg-[#e8f8ef] px-3 py-1 text-xs font-semibold text-[#17643a]">
                           Team registered:{" "}
                           {participation.registeredStudentCount || 0} students
                         </span>
                       )}
                     </div>
 
-                    <h3 className="text-xl font-bold text-white">
+                    <h3 className="text-xl font-bold text-[#17120a]">
                       {event.title}
                     </h3>
-                    <p className="mt-2 line-clamp-2 text-sm text-slate-400">
+                    <p className="mt-2 line-clamp-2 text-sm text-[#344f77]">
                       {event.description}
                     </p>
 
@@ -301,7 +301,7 @@ export default function SchoolEventInvitations({ refreshKey = 0, onChanged }) {
                               current === invitation._id ? null : invitation._id
                             )
                           }
-                          className="inline-flex items-center gap-2 rounded-full border border-sky-500/25 bg-sky-500/10 px-3 py-2 text-xs font-bold uppercase tracking-wide text-sky-200 transition hover:bg-sky-500/20"
+                          className="inline-flex items-center gap-2 rounded-full border border-[#bdefff] bg-[#e8fbff] px-3 py-2 text-xs font-bold uppercase tracking-wide text-[#07576b] transition hover:bg-[#d8f6ff]"
                         >
                           <FaBell />
                           {invitation.eventNoticeCount > 1
@@ -309,14 +309,14 @@ export default function SchoolEventInvitations({ refreshKey = 0, onChanged }) {
                             : "1 Notice"}
                         </button>
                         {openNoticeInvitationId === invitation._id && (
-                          <div className="mt-3 rounded-xl border border-sky-500/25 bg-sky-500/10 px-4 py-3">
-                            <p className="text-sm font-semibold text-white">
+                          <div className="mt-3 rounded-xl border border-[#bdefff] bg-[#e8fbff] px-4 py-3">
+                            <p className="text-sm font-semibold text-[#17120a]">
                               {invitation.latestEventNotice.title}
                             </p>
-                            <p className="mt-1 line-clamp-3 text-sm text-sky-100/85">
+                            <p className="mt-1 line-clamp-3 text-sm text-[#344f77]">
                               {invitation.latestEventNotice.message}
                             </p>
-                            <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-sky-100/80">
+                            <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-[#52657d]">
                               {invitation.eventNoticeCount > 1 && (
                                 <span>
                                   {invitation.eventNoticeCount - 1} older notice
@@ -325,7 +325,7 @@ export default function SchoolEventInvitations({ refreshKey = 0, onChanged }) {
                               )}
                               <Link
                                 href={`/events/${event._id}`}
-                                className="font-semibold text-white underline underline-offset-2 hover:text-sky-100"
+                                className="font-semibold text-[#0a2f66] underline underline-offset-2 hover:text-[#123f7d]"
                               >
                                 View all notices
                               </Link>
@@ -354,13 +354,13 @@ export default function SchoolEventInvitations({ refreshKey = 0, onChanged }) {
                       />
                     </div>
 
-                    <div className="mt-4 flex flex-wrap gap-4 text-sm text-slate-300">
+                    <div className="mt-4 flex flex-wrap gap-4 text-sm text-[#27344a]">
                       <span className="flex items-center gap-2">
-                        <FaCalendarAlt className="text-slate-500" />
+                        <FaCalendarAlt className="text-[#52657d]" />
                         Event: {formatDate(event.date)}
                       </span>
                       <span className="flex items-center gap-2">
-                        <FaUsers className="text-slate-500" />
+                        <FaUsers className="text-[#52657d]" />
                         Grades:{" "}
                         {event.eligibleGrades?.length
                           ? event.eligibleGrades.join(", ")
@@ -377,7 +377,7 @@ export default function SchoolEventInvitations({ refreshKey = 0, onChanged }) {
                       <button
                         disabled={isRegistrationClosed(event)}
                         onClick={() => setParticipationEvent(event)}
-                        className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
+                        className="inline-flex items-center gap-2 rounded-lg bg-[#0a2f66] px-4 py-2 font-semibold text-white transition hover:bg-[#123f7d] disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-[#52657d]"
                       >
                         <FaUsers />
                         {isRegistrationClosed(event)
@@ -391,7 +391,7 @@ export default function SchoolEventInvitations({ refreshKey = 0, onChanged }) {
                       <button
                         disabled={actioningId === invitation._id}
                         onClick={() => updateInvitation(invitation, "approve")}
-                        className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="inline-flex items-center gap-2 rounded-lg bg-[#0a2f66] px-4 py-2 font-semibold text-white transition hover:bg-[#123f7d] disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         <FaCheckCircle />
                         Approve
@@ -403,7 +403,7 @@ export default function SchoolEventInvitations({ refreshKey = 0, onChanged }) {
                         onClick={() =>
                           updateInvitation(invitation, "disapprove")
                         }
-                        className="inline-flex items-center gap-2 rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-2 font-semibold text-rose-100 transition hover:bg-rose-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="inline-flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-4 py-2 font-semibold text-rose-800 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         <FaTimesCircle />
                         Disapprove
@@ -430,10 +430,10 @@ export default function SchoolEventInvitations({ refreshKey = 0, onChanged }) {
 
       {participationEvent && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
-          <div className="max-h-[90vh] w-full max-w-6xl overflow-y-auto rounded-2xl border border-slate-700 bg-slate-900 p-6 shadow-2xl">
+          <div className="max-h-[90vh] w-full max-w-6xl overflow-y-auto rounded-2xl border border-[#d7cdbb] bg-white p-6 shadow-2xl">
             <div className="mb-4 flex items-start justify-between gap-4">
               <div>
-                <h3 className="text-xl font-bold text-white">
+                <h3 className="text-xl font-bold text-[#17120a]">
                   {invitations.find(
                     (invitation) =>
                       invitation.event?._id === participationEvent._id
@@ -442,7 +442,7 @@ export default function SchoolEventInvitations({ refreshKey = 0, onChanged }) {
                     : "Take Part"}
                   : {participationEvent.title}
                 </h3>
-                <p className="mt-1 text-sm text-slate-400">
+                <p className="mt-1 text-sm text-[#344f77]">
                   Only eligible students for{" "}
                   {participationEvent.eligibleGrades?.length
                     ? participationEvent.eligibleGrades.join(", ")
@@ -453,7 +453,7 @@ export default function SchoolEventInvitations({ refreshKey = 0, onChanged }) {
               <button
                 type="button"
                 onClick={() => setParticipationEvent(null)}
-                className="rounded-lg bg-slate-800 px-3 py-2 text-sm font-semibold text-slate-300 transition hover:bg-slate-700 hover:text-white"
+                className="rounded-lg border border-[#d7cdbb] bg-white px-3 py-2 text-sm font-semibold text-[#0a2f66] transition hover:bg-[#eaf2ff]"
               >
                 Close
               </button>

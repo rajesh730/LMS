@@ -104,10 +104,10 @@ export default function TeacherManager() {
       </div>
 
       {/* Table */}
-      <div className="bg-slate-900/50 rounded-2xl border border-slate-800 overflow-hidden">
+      <div className="overflow-hidden rounded-2xl border border-[#d7cdbb] bg-white shadow-[0_12px_30px_rgba(10,47,102,0.06)]">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm text-slate-300">
-            <thead className="bg-slate-800 text-slate-400 uppercase text-xs">
+          <table className="w-full text-left text-sm text-[#27344a]">
+            <thead className="bg-[#eaf2ff] text-[#52657d] uppercase text-xs">
               <tr>
                 <th className="p-4">Teacher</th>
                 <th className="p-4">Contact</th>
@@ -116,7 +116,7 @@ export default function TeacherManager() {
                 <th className="p-4">Status</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800">
+            <tbody className="divide-y divide-[#d7cdbb]">
               {loading ? (
                 <tr>
                   <td colSpan="5" className="p-8 text-center text-slate-500">
@@ -131,32 +131,32 @@ export default function TeacherManager() {
                 </tr>
               ) : (
                 teachers.map((teacher) => (
-                  <tr key={teacher._id} className="hover:bg-slate-800/50 transition-colors">
+                  <tr key={teacher._id} className="transition-colors hover:bg-[#f8fbff]">
                     <td className="p-4">
-                      <div className="font-bold text-white">{teacher.name}</div>
-                      <div className="text-xs text-slate-500">{teacher.designation || "Teacher"}</div>
-                      <div className="text-xs text-slate-600 mt-1">Joined: {teacher.dateOfJoining ? new Date(teacher.dateOfJoining).toLocaleDateString() : 'N/A'}</div>
+                      <div className="font-bold text-[#17120a]">{teacher.name}</div>
+                      <div className="text-xs text-[#52657d]">{teacher.designation || "Teacher"}</div>
+                      <div className="mt-1 text-xs text-[#52657d]">Joined: {teacher.dateOfJoining ? new Date(teacher.dateOfJoining).toLocaleDateString() : 'N/A'}</div>
                     </td>
                     <td className="p-4">
-                      <div className="text-white">{teacher.email}</div>
-                      <div className="text-xs text-slate-500">{teacher.phone}</div>
-                      <div className="text-xs text-slate-600 mt-1">{teacher.address}</div>
+                      <div className="text-[#27344a]">{teacher.email}</div>
+                      <div className="text-xs text-[#52657d]">{teacher.phone}</div>
+                      <div className="mt-1 text-xs text-[#52657d]">{teacher.address}</div>
                     </td>
                     <td className="p-4">
-                      <div className="text-xs text-slate-400">
-                        <span className="text-slate-500">Qual:</span> {teacher.qualification || 'N/A'}
+                      <div className="text-xs text-[#344f77]">
+                        <span className="text-[#52657d]">Qual:</span> {teacher.qualification || 'N/A'}
                       </div>
-                      <div className="text-xs text-slate-400">
-                        <span className="text-slate-500">Exp:</span> {teacher.experience ? `${teacher.experience} yrs` : 'N/A'}
+                      <div className="text-xs text-[#344f77]">
+                        <span className="text-[#52657d]">Exp:</span> {teacher.experience ? `${teacher.experience} yrs` : 'N/A'}
                       </div>
-                      <div className="text-xs text-slate-400">
-                        <span className="text-slate-500">Type:</span> {teacher.employmentType || 'N/A'}
+                      <div className="text-xs text-[#344f77]">
+                        <span className="text-[#52657d]">Type:</span> {teacher.employmentType || 'N/A'}
                       </div>
                     </td>
                     <td className="p-4">
                       <div className="flex flex-wrap gap-1 mb-1">
                         {teacher.roles.map((role, i) => (
-                          <span key={i} className="bg-slate-700 px-2 py-0.5 rounded text-xs">
+                          <span key={i} className="rounded-full border border-[#bfd7f7] bg-[#eaf2ff] px-2 py-0.5 text-xs font-semibold text-[#0a2f66]">
                             {role}
                           </span>
                         ))}
@@ -183,7 +183,7 @@ export default function TeacherManager() {
         
         {/* Pagination */}
         {!loading && teachers.length > 0 && (
-            <div className="p-4 border-t border-slate-800">
+            <div className="border-t border-[#d7cdbb] p-4">
                 <PaginationControls
                     currentPage={pagination.page}
                     totalPages={pagination.totalPages}

@@ -339,10 +339,10 @@ export default function StudentManager({ initialGrade, hideGradeFilter = false }
       )}
 
       {/* Table */}
-      <div className="bg-slate-900/50 rounded-2xl border border-slate-800 overflow-hidden">
+      <div className="overflow-hidden rounded-2xl border border-[#d7cdbb] bg-white shadow-[0_12px_30px_rgba(10,47,102,0.06)]">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm text-slate-300">
-            <thead className="bg-slate-800 text-slate-400 uppercase text-xs">
+          <table className="w-full text-left text-sm text-[#27344a]">
+            <thead className="bg-[#eaf2ff] text-[#52657d] uppercase text-xs">
               <tr>
                 <th className="p-4">Student</th>
                 <th className="p-4">Grade</th>
@@ -352,7 +352,7 @@ export default function StudentManager({ initialGrade, hideGradeFilter = false }
                 <th className="p-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800">
+            <tbody className="divide-y divide-[#d7cdbb]">
               {loading ? (
                 <tr>
                   <td colSpan="6" className="p-8 text-center text-slate-500">
@@ -374,50 +374,50 @@ export default function StudentManager({ initialGrade, hideGradeFilter = false }
                 </tr>
               ) : (
                 students.map((student) => (
-                  <tr key={student._id} className="hover:bg-slate-800/50 transition-colors">
+                  <tr key={student._id} className="transition-colors hover:bg-[#f8fbff]">
                     <td className="p-4">
-                      <div className="font-bold text-white">{student.name}</div>
-                      <div className="text-xs text-slate-500">
+                      <div className="font-bold text-[#17120a]">{student.name}</div>
+                      <div className="text-xs text-[#52657d]">
                         {student.platformStudentId || "Student ID pending"}
                       </div>
                     </td>
                     <td className="p-4">
-                      <div className="text-white">Grade: {student.grade}</div>
-                      <div className="text-xs text-slate-500">Roll: {student.rollNumber}</div>
+                      <div className="text-[#27344a]">Grade: {student.grade}</div>
+                      <div className="text-xs text-[#52657d]">Roll: {student.rollNumber}</div>
                     </td>
                     <td className="p-4">
-                      <div className="text-white">{student.username || "Username pending"}</div>
-                      <div className="text-xs text-slate-500">
+                      <div className="text-[#27344a]">{student.username || "Username pending"}</div>
+                      <div className="text-xs text-[#52657d]">
                         Share this as the student login ID
                       </div>
                     </td>
                     <td className="p-4">
-                      <div className="text-white">{student.email}</div>
-                      <div className="text-xs text-slate-500">{student.phone}</div>
+                      <div className="text-[#27344a]">{student.email}</div>
+                      <div className="text-xs text-[#52657d]">{student.phone}</div>
                     </td>
                     <td className="p-4">
-                      <div className="text-white">{student.parentName}</div>
-                      <div className="text-xs text-slate-500">{student.parentPhone}</div>
+                      <div className="text-[#27344a]">{student.parentName}</div>
+                      <div className="text-xs text-[#52657d]">{student.parentPhone}</div>
                     </td>
                     <td className="p-4 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() => handleEdit(student)}
-                          className="p-2 text-slate-400 hover:text-blue-400 hover:bg-blue-400/10 rounded-lg transition-colors"
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#bfd7f7] bg-[#eaf2ff] text-[#0a2f66] transition hover:bg-[#dbeaff]"
                           title="Edit Student"
                         >
                           <FaEdit />
                         </button>
                         <button
                           onClick={() => requestResetPassword(student)}
-                          className="p-2 text-slate-400 hover:text-amber-400 hover:bg-amber-400/10 rounded-lg transition-colors"
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#0a2f66] bg-[#0a2f66] text-white transition hover:bg-[#123f7d]"
                           title="Reset Password"
                         >
                           <FaKey />
                         </button>
                         <button
                           onClick={() => requestDelete(student)}
-                          className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-rose-200 bg-rose-50 text-rose-800 transition hover:bg-rose-100"
                           title="Delete Student"
                         >
                           <FaTrash />
@@ -433,7 +433,7 @@ export default function StudentManager({ initialGrade, hideGradeFilter = false }
         
         {/* Pagination */}
         {!loading && students.length > 0 && (
-            <div className="p-4 border-t border-slate-800">
+            <div className="border-t border-[#d7cdbb] p-4">
                 <PaginationControls
                     currentPage={pagination.page}
                     totalPages={pagination.totalPages}

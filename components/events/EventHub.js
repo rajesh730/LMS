@@ -202,10 +202,10 @@ export default function EventHub({
   const getStatusBadge = (status) => {
     if (!status) return null;
     const styles = {
-      PENDING: "bg-yellow-900/40 text-yellow-200 border-yellow-700",
-      APPROVED: "bg-green-900/40 text-green-200 border-green-700",
-      REJECTED: "bg-red-900/40 text-red-200 border-red-700",
-      COMPLETED: "bg-blue-900/40 text-blue-200 border-blue-700",
+      PENDING: "bg-[#fff7e6] text-[#7a4d00] border-[#f4d28a]",
+      APPROVED: "bg-[#e8f8ef] text-[#17643a] border-[#9ed8b5]",
+      REJECTED: "bg-rose-50 text-rose-800 border-rose-200",
+      COMPLETED: "bg-[#eaf2ff] text-[#0a2f66] border-[#bfd7f7]",
     };
     const icons = {
       PENDING: <FaClock2 className="inline mr-2" />,
@@ -224,16 +224,16 @@ export default function EventHub({
   };
 
   const getCapacityColor = (current, max) => {
-    if (!max) return "text-slate-300";
+    if (!max) return "text-[#27344a]";
     const percentage = (current / max) * 100;
-    if (percentage >= 90) return "text-red-400";
-    if (percentage >= 70) return "text-yellow-400";
-    return "text-green-400";
+    if (percentage >= 90) return "text-rose-700";
+    if (percentage >= 70) return "text-amber-700";
+    return "text-emerald-700";
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 p-6">
+      <div className="rounded-2xl border border-[#d7cdbb] bg-white p-6">
         <div className="max-w-6xl mx-auto">
           <LoadingState
             title="Loading events"
@@ -245,15 +245,15 @@ export default function EventHub({
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 p-6">
+    <div className="rounded-2xl border border-[#d7cdbb] bg-white p-6 shadow-[0_14px_36px_rgba(10,47,102,0.06)]">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-4">
-            <FaCalendarAlt className="text-3xl text-emerald-400" />
-            <h1 className="text-4xl font-bold text-white">{title}</h1>
+            <FaCalendarAlt className="text-3xl text-[#0a2f66]" />
+            <h1 className="text-4xl font-bold text-[#17120a]">{title}</h1>
           </div>
-          <p className="text-slate-400">{description}</p>
+          <p className="text-[#344f77]">{description}</p>
         </div>
 
         {feedback && (
@@ -269,19 +269,19 @@ export default function EventHub({
         {/* Search & Filter */}
         <div className="mb-8 space-y-4">
           {/* Search Bar */}
-          <div className="flex items-center gap-3 bg-slate-800/50 rounded-lg px-4 py-3 border border-slate-700">
-            <FaSearch className="text-slate-500" />
+          <div className="flex items-center gap-3 rounded-lg border border-[#d7cdbb] bg-[#f8fbff] px-4 py-3">
+            <FaSearch className="text-[#52657d]" />
             <input
               type="text"
               placeholder="Search events..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="flex-1 bg-transparent outline-none text-white placeholder-slate-500"
+              className="flex-1 bg-transparent text-[#17120a] outline-none placeholder:text-[#75869b]"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery("")}
-                className="text-slate-500 hover:text-slate-300"
+                className="text-[#52657d] hover:text-[#0a2f66]"
               >
                 <FaTimes />
               </button>
@@ -296,8 +296,8 @@ export default function EventHub({
                 onClick={() => setFilterStatus(filter.id)}
                 className={`px-4 py-2 rounded-lg font-medium transition-all ${
                   filterStatus === filter.id
-                    ? "bg-emerald-600 text-white"
-                    : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                    ? "bg-[#0a2f66] text-white"
+                    : "border border-[#d7cdbb] bg-white text-[#0a2f66] hover:bg-[#eaf2ff]"
                 }`}
               >
                 {filter.label}
@@ -343,7 +343,7 @@ export default function EventHub({
                 return (
               <div
                 key={event._id}
-                className="bg-slate-800/50 border border-slate-700 rounded-xl overflow-hidden transition-all hover:border-slate-600"
+                className="overflow-hidden rounded-xl border border-[#d7cdbb] bg-white transition-all hover:border-[#bfd7f7] hover:shadow-[0_10px_26px_rgba(10,47,102,0.06)]"
               >
                 {/* Event Card - Clickable Header */}
                 <div
@@ -352,7 +352,7 @@ export default function EventHub({
                       expandedEventId === event._id ? null : event._id
                     )
                   }
-                  className="w-full text-left p-6 hover:bg-slate-800/80 transition-colors cursor-pointer"
+                  className="w-full cursor-pointer p-6 text-left transition-colors hover:bg-[#f8fbff]"
                   role="button"
                   tabIndex={0}
                 >
@@ -360,14 +360,14 @@ export default function EventHub({
                     {/* Left: Event Info */}
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-3">
-                        <h3 className="text-2xl font-bold text-white">
+                        <h3 className="text-2xl font-bold text-[#17120a]">
                           {event.title}
                         </h3>
                         <span
                           className={`rounded-full border px-3 py-1 text-xs font-bold ${
                             event.eventScope === "PLATFORM"
-                              ? "border-purple-500/30 bg-purple-500/10 text-purple-200"
-                              : "border-blue-500/30 bg-blue-500/10 text-blue-200"
+                              ? "border-[#bfd7f7] bg-[#eaf2ff] text-[#0a2f66]"
+                              : "border-[#bfd7f7] bg-white text-[#0a2f66]"
                           }`}
                         >
                           {event.eventScope === "PLATFORM"
@@ -386,7 +386,7 @@ export default function EventHub({
                           </span>
                         )}
                         {event.participationStatus && (
-                          <span className="rounded-full border border-slate-600 px-3 py-1 text-sm text-slate-300">
+                          <span className="rounded-full border border-[#d7cdbb] px-3 py-1 text-sm text-[#27344a]">
                             {getRegisteredStudentCount(event)}{" "}
                             {isTeamEventLike(event)
                               ? "teams registered"
@@ -395,7 +395,7 @@ export default function EventHub({
                         )}
                       </div>
 
-                      <p className="text-slate-400 mb-4 line-clamp-2">
+                      <p className="mb-4 line-clamp-2 text-[#344f77]">
                         {event.description}
                       </p>
 
@@ -409,7 +409,7 @@ export default function EventHub({
                                 current === event._id ? null : event._id
                               );
                             }}
-                            className="inline-flex items-center gap-2 rounded-full border border-sky-500/25 bg-sky-500/10 px-3 py-2 text-xs font-bold uppercase tracking-wide text-sky-200 transition hover:bg-sky-500/20"
+                            className="inline-flex items-center gap-2 rounded-full border border-[#bdefff] bg-[#e8fbff] px-3 py-2 text-xs font-bold uppercase tracking-wide text-[#07576b] transition hover:bg-[#d8f6ff]"
                           >
                             <FaBell />
                             {event.eventNoticeCount > 1
@@ -417,14 +417,14 @@ export default function EventHub({
                               : "1 Notice"}
                           </button>
                           {openNoticeEventId === event._id && (
-                            <div className="mt-3 rounded-xl border border-sky-500/25 bg-sky-500/10 px-4 py-3">
-                              <p className="text-sm font-semibold text-white">
+                            <div className="mt-3 rounded-xl border border-[#bdefff] bg-[#e8fbff] px-4 py-3">
+                              <p className="text-sm font-semibold text-[#17120a]">
                                 {event.latestEventNotice.title}
                               </p>
-                              <p className="mt-1 line-clamp-3 text-sm text-sky-100/85">
+                              <p className="mt-1 line-clamp-3 text-sm text-[#344f77]">
                                 {event.latestEventNotice.message}
                               </p>
-                              <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-sky-100/80">
+                              <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-[#52657d]">
                                 {event.eventNoticeCount > 1 && (
                                   <span>
                                     {event.eventNoticeCount - 1} older notice
@@ -434,7 +434,7 @@ export default function EventHub({
                                 <Link
                                   href={`/events/${event._id}`}
                                   onClick={(e) => e.stopPropagation()}
-                                  className="font-semibold text-white underline underline-offset-2 hover:text-sky-100"
+                                  className="font-semibold text-[#0a2f66] underline underline-offset-2 hover:text-[#123f7d]"
                                 >
                                   View all notices
                                 </Link>
@@ -459,12 +459,12 @@ export default function EventHub({
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         {/* Date */}
                         <div className="flex items-center gap-2">
-                          <FaCalendarAlt className="text-slate-500" />
+                          <FaCalendarAlt className="text-[#52657d]" />
                           <div>
-                            <p className="text-slate-500 text-xs uppercase">
+                            <p className="text-xs uppercase text-[#52657d]">
                               Date
                             </p>
-                            <p className="text-white font-medium">
+                            <p className="font-medium text-[#17120a]">
                               {new Date(event.date).toLocaleDateString(
                                 "en-US",
                                 {
@@ -479,17 +479,17 @@ export default function EventHub({
 
                         {/* Deadline */}
                         <div className="flex items-center gap-2">
-                          <FaClock className="text-slate-500" />
+                          <FaClock className="text-[#52657d]" />
                           <div>
-                            <p className="text-slate-500 text-xs uppercase">
+                            <p className="text-xs uppercase text-[#52657d]">
                               Deadline
                             </p>
                             <p
                               className={`font-medium ${
                                 event.deadline &&
                                 isDatePast(event.deadline, { endOfDay: true })
-                                  ? "text-red-400"
-                                  : "text-emerald-400"
+                                  ? "text-rose-700"
+                                  : "text-emerald-700"
                               }`}
                             >
                               {event.deadline
@@ -507,9 +507,9 @@ export default function EventHub({
 
                         {/* Capacity */}
                         <div className="flex items-center gap-2">
-                          <FaUsers className="text-slate-500" />
+                          <FaUsers className="text-[#52657d]" />
                           <div>
-                            <p className="text-slate-500 text-xs uppercase">
+                            <p className="text-xs uppercase text-[#52657d]">
                               Capacity
                             </p>
                             <p
@@ -527,12 +527,12 @@ export default function EventHub({
 
                         {/* Schools */}
                         <div className="flex items-center gap-2">
-                          <FaMapMarkerAlt className="text-slate-500" />
+                          <FaMapMarkerAlt className="text-[#52657d]" />
                           <div>
-                            <p className="text-slate-500 text-xs uppercase">
+                            <p className="text-xs uppercase text-[#52657d]">
                               Schools
                             </p>
-                            <p className="text-white font-medium">
+                            <p className="font-medium text-[#17120a]">
                               {event.schoolCount || 0} schools
                             </p>
                           </div>
@@ -542,7 +542,7 @@ export default function EventHub({
 
                     {/* Right: Expand Button & Status */}
                     <div className="flex flex-col items-end gap-3">
-                      <div className="text-3xl text-slate-600 hover:text-slate-400 transition-colors">
+                      <div className="text-3xl text-[#52657d] transition-colors hover:text-[#0a2f66]">
                         {expandedEventId === event._id ? (
                           <FaChevronUp />
                         ) : (
@@ -556,7 +556,7 @@ export default function EventHub({
                             <Link
                               href={`/events/${event._id}`}
                               onClick={(e) => e.stopPropagation()}
-                              className="bg-slate-700 hover:bg-slate-600 text-slate-100 px-3 py-2 rounded-lg transition-colors"
+                              className="rounded-lg border border-[#d7cdbb] bg-white px-3 py-2 font-semibold text-[#0a2f66] transition-colors hover:bg-[#eaf2ff]"
                               title="View public overall result"
                             >
                               Open Public Result
@@ -566,7 +566,7 @@ export default function EventHub({
                             <Link
                               href={`/events/${event._id}`}
                               onClick={(e) => e.stopPropagation()}
-                              className="bg-slate-700 hover:bg-slate-600 text-slate-100 px-3 py-2 rounded-lg transition-colors"
+                              className="rounded-lg border border-[#d7cdbb] bg-white px-3 py-2 font-semibold text-[#0a2f66] transition-colors hover:bg-[#eaf2ff]"
                               title="View public event page"
                             >
                               Open Public Event
@@ -580,7 +580,7 @@ export default function EventHub({
                                   e.stopPropagation();
                                   setWithdrawTarget(event);
                                 }}
-                                className="inline-flex items-center gap-2 bg-red-600/20 hover:bg-red-600/40 text-red-400 px-3 py-2 rounded-lg transition-colors disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-500"
+                                className="inline-flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 font-semibold text-rose-800 transition-colors hover:bg-rose-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-[#52657d]"
                                 title={
                                   registrationLocked
                                     ? "Registration closed"
@@ -600,7 +600,7 @@ export default function EventHub({
                                       : event._id
                                   );
                                 }}
-                                className="inline-flex items-center gap-2 bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 px-3 py-2 rounded-lg transition-colors"
+                                className="inline-flex items-center gap-2 rounded-lg bg-[#0a2f66] px-3 py-2 font-semibold text-white transition-colors hover:bg-[#123f7d]"
                                 title={
                                   registrationLocked
                                     ? `Track rounds and ${isTeamEvent ? "group" : "participant"} outcome`
@@ -624,7 +624,7 @@ export default function EventHub({
                                   expandedEventId === event._id ? null : event._id
                                 );
                               }}
-                              className="inline-flex items-center gap-2 bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 px-3 py-2 rounded-lg transition-colors"
+                              className="inline-flex items-center gap-2 rounded-lg bg-[#0a2f66] px-3 py-2 font-semibold text-white transition-colors hover:bg-[#123f7d]"
                               title="View school result and certificates"
                             >
                               <FaEdit />
@@ -635,7 +635,7 @@ export default function EventHub({
                             <Link
                               href={`/events/${event._id}`}
                               onClick={(e) => e.stopPropagation()}
-                              className="bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 px-3 py-2 rounded-lg transition-colors"
+                              className="rounded-lg bg-[#0a2f66] px-3 py-2 font-semibold text-white transition-colors hover:bg-[#123f7d]"
                               title="View published result"
                             >
                               View Result
@@ -648,7 +648,7 @@ export default function EventHub({
                             <Link
                               href={`/events/${event._id}`}
                               onClick={(e) => e.stopPropagation()}
-                              className="bg-slate-700 hover:bg-slate-600 text-slate-100 px-3 py-2 rounded-lg transition-colors"
+                              className="rounded-lg border border-[#d7cdbb] bg-white px-3 py-2 font-semibold text-[#0a2f66] transition-colors hover:bg-[#eaf2ff]"
                             >
                               Open Public Event
                             </Link>
@@ -661,8 +661,8 @@ export default function EventHub({
                             }}
                             className={`px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap ${
                               registrationLocked || needsSchoolApproval
-                                ? "bg-slate-700 text-slate-500 cursor-not-allowed"
-                                : "bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer"
+                                ? "cursor-not-allowed bg-slate-100 text-[#52657d]"
+                                : "cursor-pointer bg-[#0a2f66] text-white hover:bg-[#123f7d]"
                             }`}
                           >
                             {needsSchoolApproval
@@ -683,10 +683,10 @@ export default function EventHub({
 
                 {/* Expanded Section - Participation Form */}
                 {expandedEventId === event._id && !needsSchoolApproval && (
-                  <div className="space-y-6 border-t border-slate-700 bg-slate-900/50 p-6">
+                  <div className="space-y-6 border-t border-[#d7cdbb] bg-[#f8fbff] p-6">
                     {!completedView && !registrationLocked && (
-                      <div className="rounded-xl border border-slate-700 bg-slate-950/40 p-4">
-                        <h4 className="mb-3 text-lg font-semibold text-white">
+                      <div className="rounded-xl border border-[#d7cdbb] bg-white p-4">
+                        <h4 className="mb-3 text-lg font-semibold text-[#17120a]">
                           {isStudentView
                             ? event.participationStatus
                               ? "Registration Status"
@@ -700,8 +700,8 @@ export default function EventHub({
                             : "Register Participants"}
                         </h4>
                         {isStudentView ? (
-                          <div className="space-y-3 rounded-xl border border-slate-800 bg-slate-900/80 p-4 text-sm text-slate-300">
-                            <p className="font-semibold text-white">
+                          <div className="space-y-3 rounded-xl border border-[#d7cdbb] bg-[#f8fbff] p-4 text-sm text-[#27344a]">
+                            <p className="font-semibold text-[#17120a]">
                               Registration is managed by your school.
                             </p>
                             <p>
@@ -727,20 +727,20 @@ export default function EventHub({
                     {event.participationStatus && !completedView && isSchoolView && (
                       <>
                         {registrationLocked && (
-                          <div className="rounded-xl border border-blue-500/20 bg-blue-500/10 p-4">
-                            <h4 className="text-lg font-semibold text-white">
+                          <div className="rounded-xl border border-[#bfd7f7] bg-[#eaf2ff] p-4">
+                            <h4 className="text-lg font-semibold text-[#17120a]">
                               {event.finalOutcomeReady
                                 ? "Competition Outcome Ready"
                                 : isTeamEvent
                                 ? "Group Registration Locked"
                                 : "Participant Registration Locked"}
                             </h4>
-                            <p className="mt-2 text-sm text-blue-100/85">
+                            <p className="mt-2 text-sm text-[#344f77]">
                               {event.finalOutcomeReady
                                 ? "This event has moved into final-outcome mode. Use this area to review your school's result summary, public visibility, and certificates."
                                 : "Registration is closed for this competition. Your team is now in tracking mode, so this area focuses on rounds, results, and certificates instead of editing the roster."}
                             </p>
-                            <div className="mt-3 inline-flex rounded-full border border-slate-700 bg-slate-950/70 px-3 py-1 text-xs font-semibold text-slate-200">
+                            <div className="mt-3 inline-flex rounded-full border border-[#d7cdbb] bg-white px-3 py-1 text-xs font-semibold text-[#0a2f66]">
                               Registered{" "}
                               {isTeamEventLike(event)
                                 ? "teams"
@@ -756,7 +756,7 @@ export default function EventHub({
                           </div>
                         )}
                         <div>
-                          <h4 className="mb-3 text-lg font-semibold text-white">
+                          <h4 className="mb-3 text-lg font-semibold text-[#17120a]">
                             {event.finalOutcomeReady
                               ? "School Results & Certificates"
                               : registrationLocked
@@ -774,8 +774,8 @@ export default function EventHub({
                     )}
 
                     {isStudentView && event.participationStatus && (
-                      <div className="rounded-xl border border-slate-700 bg-slate-950/40 p-4">
-                        <h4 className="mb-3 text-lg font-semibold text-white">
+                      <div className="rounded-xl border border-[#d7cdbb] bg-white p-4">
+                        <h4 className="mb-3 text-lg font-semibold text-[#17120a]">
                           Your Event Status
                         </h4>
                         <div className={`rounded-xl border px-4 py-3 text-sm ${getStageClasses(stage.tone)}`}>
@@ -783,19 +783,19 @@ export default function EventHub({
                           <div className="mt-1 text-xs opacity-90">{stage.nextAction}</div>
                         </div>
                         <div className="mt-4 grid gap-3 md:grid-cols-3">
-                          <div className="rounded-lg border border-slate-700 bg-slate-900/80 px-4 py-3">
-                            <div className="text-xs uppercase tracking-wide text-slate-500">
+                          <div className="rounded-lg border border-[#d7cdbb] bg-[#f8fbff] px-4 py-3">
+                            <div className="text-xs uppercase tracking-wide text-[#52657d]">
                               Registration
                             </div>
-                            <div className="mt-1 text-sm font-semibold text-white">
+                            <div className="mt-1 text-sm font-semibold text-[#17120a]">
                               {event.participationStatus}
                             </div>
                           </div>
-                          <div className="rounded-lg border border-slate-700 bg-slate-900/80 px-4 py-3">
-                            <div className="text-xs uppercase tracking-wide text-slate-500">
+                          <div className="rounded-lg border border-[#d7cdbb] bg-[#f8fbff] px-4 py-3">
+                            <div className="text-xs uppercase tracking-wide text-[#52657d]">
                               Event Mode
                             </div>
-                            <div className="mt-1 text-sm font-semibold text-white">
+                            <div className="mt-1 text-sm font-semibold text-[#17120a]">
                               {event.schoolViewMode === "results"
                                 ? "Final Outcome"
                                 : event.schoolViewMode === "tracking"
@@ -803,11 +803,11 @@ export default function EventHub({
                                 : "Registered"}
                             </div>
                           </div>
-                          <div className="rounded-lg border border-slate-700 bg-slate-900/80 px-4 py-3">
-                            <div className="text-xs uppercase tracking-wide text-slate-500">
+                          <div className="rounded-lg border border-[#d7cdbb] bg-[#f8fbff] px-4 py-3">
+                            <div className="text-xs uppercase tracking-wide text-[#52657d]">
                               Public Result
                             </div>
-                            <div className="mt-1 text-sm font-semibold text-white">
+                            <div className="mt-1 text-sm font-semibold text-[#17120a]">
                               {event.isPublicResultAvailable ? "Available" : "Not public yet"}
                             </div>
                           </div>
@@ -816,7 +816,7 @@ export default function EventHub({
                           <div className="mt-4">
                             <Link
                               href={`/events/${event._id}`}
-                              className="inline-flex items-center gap-2 rounded-lg bg-slate-800 px-3 py-2 text-sm font-semibold text-slate-100 hover:bg-slate-700"
+                              className="inline-flex items-center gap-2 rounded-lg border border-[#d7cdbb] bg-white px-3 py-2 text-sm font-semibold text-[#0a2f66] hover:bg-[#eaf2ff]"
                             >
                               Open Public Event
                             </Link>

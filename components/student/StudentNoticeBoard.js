@@ -96,7 +96,7 @@ export default function StudentNoticeBoard() {
           {notifications.map((notification) => (
             <article
               key={`${notification.noticeType}-${notification.id}`}
-              className="rounded-xl border border-slate-800 bg-slate-900/70 p-6"
+              className="rounded-xl border border-[#d7cdbb] bg-white p-6 shadow-[0_10px_26px_rgba(10,47,102,0.05)]"
             >
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="min-w-0 flex-1">
@@ -104,8 +104,8 @@ export default function StudentNoticeBoard() {
                     <span
                       className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${
                         notification.noticeType === "EVENT"
-                          ? "bg-sky-500/15 text-sky-200"
-                          : "bg-emerald-500/15 text-emerald-200"
+                          ? "border border-[#bdefff] bg-[#e8fbff] text-[#07576b]"
+                          : "border border-[#bfd7f7] bg-[#eaf2ff] text-[#0a2f66]"
                       }`}
                     >
                       {notification.noticeType === "EVENT"
@@ -113,22 +113,22 @@ export default function StudentNoticeBoard() {
                         : "School Notice"}
                     </span>
                   </div>
-                  <h3 className="mt-4 text-xl font-bold text-white">
+                  <h3 className="mt-4 text-xl font-bold text-[#17120a]">
                     {notification.title}
                   </h3>
-                  <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-slate-300">
+                  <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-[#27344a]">
                     {notification.message}
                   </p>
                 </div>
 
-                <div className="text-right text-sm text-slate-400">
+                <div className="text-right text-sm text-[#52657d]">
                   <div className="inline-flex items-center gap-2">
-                    <FaCalendarAlt className="text-slate-500" />
+                    <FaCalendarAlt className="text-[#52657d]" />
                     <span>{formatDate(notification.publishedAt)}</span>
                   </div>
                   {notification.event && (
-                    <div className="mt-3 inline-flex items-center gap-2 text-slate-300">
-                      <FaSchool className="text-slate-500" />
+                    <div className="mt-3 inline-flex items-center gap-2 text-[#27344a]">
+                      <FaSchool className="text-[#52657d]" />
                       <span>{notification.event.title}</span>
                     </div>
                   )}
@@ -138,7 +138,7 @@ export default function StudentNoticeBoard() {
               <div className="mt-5">
                 <Link
                   href={notification.href}
-                  className="inline-flex items-center rounded-lg bg-slate-800 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:bg-slate-700"
+                  className="inline-flex items-center rounded-lg bg-[#0a2f66] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#123f7d]"
                 >
                   {notification.noticeType === "EVENT"
                     ? "Open Event"

@@ -185,24 +185,6 @@ export default function DashboardOverview() {
         </div>
       </div>
 
-      <div className="bg-blue-900/20 border border-blue-500/30 p-6 rounded-xl">
-        <h4 className="mb-2 font-black text-[#17120a]">School snapshot</h4>
-        <ul className="text-blue-200 text-sm space-y-1">
-          <li>
-            You currently have{" "}
-            <strong>
-              {stats.students?.byStatus?.SUSPENDED || 0} suspended{" "}
-              {(stats.students?.byStatus?.SUSPENDED || 0) === 1
-                ? "student"
-                : "students"}
-            </strong>
-          </li>
-          <li>
-            {stats.overview?.totalEvents || 0} school event
-            {(stats.overview?.totalEvents || 0) !== 1 ? "s" : ""} planned
-          </li>
-        </ul>
-      </div>
     </div>
   );
 }

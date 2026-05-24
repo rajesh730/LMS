@@ -126,31 +126,31 @@ function QuickActionCard({
   tone = "blue",
 }) {
   const toneMap = {
-    blue: "text-blue-200 bg-blue-500/10 border-blue-500/20 hover:border-blue-400/50",
+    blue: "border-[#b9d5f6] bg-[#eaf2ff] text-[#0a2f66] hover:border-[#7fb1ee]",
     emerald:
-      "text-emerald-200 bg-emerald-500/10 border-emerald-500/20 hover:border-emerald-400/50",
+      "border-[#b9d5f6] bg-[#eaf2ff] text-[#0a2f66] hover:border-[#7fb1ee]",
     amber:
-      "text-blue-200 bg-blue-500/10 border-blue-500/20 hover:border-blue-400/50",
+      "border-[#b9d5f6] bg-[#eaf2ff] text-[#0a2f66] hover:border-[#7fb1ee]",
     purple:
-      "text-purple-200 bg-purple-500/10 border-purple-500/20 hover:border-purple-400/50",
-    cyan: "text-cyan-200 bg-cyan-500/10 border-cyan-500/20 hover:border-cyan-400/50",
+      "border-[#b9d5f6] bg-[#eaf2ff] text-[#0a2f66] hover:border-[#7fb1ee]",
+    cyan: "border-[#b9d5f6] bg-white text-[#0a2f66] hover:border-[#7fb1ee]",
   };
 
   return (
     <Link
       href={href}
-      className={`group rounded-2xl border bg-slate-900/70 p-5 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-900 ${
+      className={`group rounded-2xl border p-5 shadow-[0_10px_28px_rgba(10,47,102,0.08)] transition hover:-translate-y-0.5 ${
         toneMap[tone] || toneMap.blue
       }`}
     >
       <div className="flex items-start justify-between gap-4">
-        <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-current/10">
+        <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#dbeaff] text-[#0a2f66]">
           <Icon className="text-xl" />
         </span>
-        <FaArrowRight className="mt-2 text-slate-500 transition group-hover:translate-x-1 group-hover:text-white" />
+        <FaArrowRight className="mt-2 text-[#17120a] transition group-hover:translate-x-1 group-hover:text-[#0a2f66]" />
       </div>
-      <h3 className="mt-5 text-lg font-bold text-white">{title}</h3>
-      <p className="mt-2 text-sm leading-6 text-slate-400">{description}</p>
+      <h3 className="mt-5 text-lg font-bold text-[#17120a]">{title}</h3>
+      <p className="mt-2 text-sm leading-6 text-[#344f77]">{description}</p>
     </Link>
   );
 }
@@ -646,17 +646,17 @@ function SchoolDashboardContent() {
             <DashboardOverview />
             </div>
 
-            <section className="mt-8 rounded-2xl border border-slate-800 bg-slate-900/50 p-6">
+            <section className="mt-8 rounded-2xl border border-[#d7cdbb] bg-white p-6 shadow-[0_14px_36px_rgba(10,47,102,0.06)]">
               <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
+                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#52657d]">
                     Quick actions
                   </p>
-                  <h2 className="mt-2 text-2xl font-bold text-white">
+                  <h2 className="mt-2 text-2xl font-bold text-[#17120a]">
                     Pick the work area you need
                   </h2>
                 </div>
-                <p className="max-w-xl text-sm leading-6 text-slate-400">
+                <p className="max-w-xl text-sm leading-6 text-[#344f77]">
                   These shortcuts match the real school workflow: students,
                   events, student notices, publishing, and school spotlight.
                 </p>
