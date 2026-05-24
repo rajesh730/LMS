@@ -168,6 +168,8 @@ table,
 }
 
 [class*="bg-slate-800"],
+[class*="bg-slate-700"],
+[class*="bg-slate-600"],
 [class*="bg-[#0f2953]"],
 [class*="bg-[#081b39]"] {
   background-color: rgba(248, 251, 255, 0.9) !important;

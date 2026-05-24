@@ -6,6 +6,26 @@ import User from "@/models/User";
 import SchoolConfig from "@/models/SchoolConfig";
 import { buildGradeLabels, normalizeSchoolLevelConfig } from "@/lib/schoolGrades";
 
+function getCurrentNepaliYearApprox() {
+  const today = new Date();
+  const nepaliNewYearHasStarted =
+    today.getMonth() > 3 || (today.getMonth() === 3 && today.getDate() >= 14);
+  return today.getFullYear() + (nepaliNewYearHasStarted ? 57 : 56);
+}
+
+function isValidEstablishedYear(value) {
+  const cleanedValue = String(value || "").trim();
+  if (!/^\d{4}$/.test(cleanedValue)) return false;
+
+  const year = Number.parseInt(cleanedValue, 10);
+  const currentAdYear = new Date().getFullYear();
+  const currentBsYear = getCurrentNepaliYearApprox();
+  return (
+    (year >= 1900 && year <= currentAdYear) ||
+    (year >= 1957 && year <= currentBsYear)
+  );
+}
+
 export async function POST(req) {
   try {
     const {
@@ -45,6 +65,13 @@ export async function POST(req) {
     ) {
       return NextResponse.json(
         { message: "Required fields are missing" },
+        { status: 400 }
+      );
+    }
+
+    if (establishedYear && !isValidEstablishedYear(establishedYear)) {
+      return NextResponse.json(
+        { message: "Established year cannot be in the future." },
         { status: 400 }
       );
     }

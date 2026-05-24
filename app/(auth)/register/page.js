@@ -10,13 +10,11 @@ import {
   schoolTypes,
   affiliationBoards,
   getAvailableDistricts,
-  getAvailableMunicipalities,
 } from "@/lib/nepalLocationData";
 import {
   FaSchool,
   FaMapMarkerAlt,
   FaUserTie,
-  FaPalette,
   FaLock,
   FaHome,
 } from "react-icons/fa";
@@ -26,8 +24,32 @@ const STEPS = [
   { id: "location", title: "Location", icon: FaMapMarkerAlt },
   { id: "principal", title: "Principal", icon: FaUserTie },
   { id: "login", title: "Login Info", icon: FaLock },
-  { id: "theme", title: "Theme", icon: FaPalette },
 ];
+
+const getCurrentNepaliYearApprox = () => {
+  const today = new Date();
+  const nepaliNewYearHasStarted = today.getMonth() > 3 || (today.getMonth() === 3 && today.getDate() >= 14);
+  return today.getFullYear() + (nepaliNewYearHasStarted ? 57 : 56);
+};
+
+const validateEstablishedYear = (value) => {
+  const cleanedValue = String(value || "").trim();
+  if (!/^\d{4}$/.test(cleanedValue)) {
+    return "Enter a 4-digit established year";
+  }
+
+  const year = Number.parseInt(cleanedValue, 10);
+  const currentAdYear = new Date().getFullYear();
+  const currentBsYear = getCurrentNepaliYearApprox();
+  const isAdYear = year >= 1900 && year <= currentAdYear;
+  const isBsYear = year >= 1957 && year <= currentBsYear;
+
+  if (!isAdYear && !isBsYear) {
+    return `Enter a valid AD year up to ${currentAdYear} or BS year up to ${currentBsYear}`;
+  }
+
+  return "";
+};
 
 
 
@@ -78,11 +100,6 @@ export default function RegisterPage() {
         maxGrade: 10,
       },
     },
-
-    // Theme
-    primaryColor: "#10b981",
-    secondaryColor: "#6b7280",
-    useDefaultTheme: true,
   });
 
   const [stepErrors, setStepErrors] = useState({});
@@ -119,14 +136,9 @@ export default function RegisterPage() {
         ) {
           errors.customAffiliation = "Custom affiliation is required";
         }
-        const year = parseInt(formData.establishedYear);
-        if (
-          !formData.establishedYear ||
-          isNaN(year) ||
-          year < 1900 ||
-          year > new Date().getFullYear()
-        ) {
-          errors.establishedYear = "Valid established year is required";
+        {
+          const yearError = validateEstablishedYear(formData.establishedYear);
+          if (yearError) errors.establishedYear = yearError;
         }
         if (!formData.schoolPhone.trim())
           errors.schoolPhone = "School phone is required";
@@ -146,14 +158,8 @@ export default function RegisterPage() {
       case 1: // Location
         if (!formData.province) errors.province = "Province is required";
         if (!formData.district) errors.district = "District is required";
-        if (!formData.municipality)
+        if (!formData.municipality.trim())
           errors.municipality = "Municipality is required";
-        if (
-          formData.municipality === "Other (Specify)" &&
-          !formData.customMunicipality.trim()
-        ) {
-          errors.customMunicipality = "Custom municipality is required";
-        }
         if (!formData.ward) errors.ward = "Ward number is required";
         break;
 
@@ -172,9 +178,6 @@ export default function RegisterPage() {
         if (formData.password !== formData.confirmPassword) {
           errors.confirmPassword = "Passwords do not match";
         }
-        break;
-
-      case 4: // Theme
         break;
     }
 
@@ -241,13 +244,25 @@ export default function RegisterPage() {
         },
       };
 
+      const municipality = formData.municipality.trim();
+      const locationParts = [
+        formData.streetAddress,
+        formData.tole,
+        municipality,
+        formData.ward ? `Ward ${formData.ward}` : "",
+        formData.district,
+        formData.province,
+        formData.postalCode ? `Postal Code ${formData.postalCode}` : "",
+      ].filter(Boolean);
+
       // Prepare final form data
       const submitData = {
         ...formData,
+        municipality,
         educationLevels,
         email: formData.schoolEmail, // Use school email for login
         establishedYear: parseInt(formData.establishedYear), // Convert to number
-        schoolLocation: `${formData.municipality}, Ward ${formData.ward}, ${formData.district}, ${formData.province}`,
+        schoolLocation: locationParts.join(", "),
         schoolConfig,
       };
 
@@ -403,10 +418,11 @@ export default function RegisterPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label className="block text-sm font-medium text-white mb-2">
-              Established Year <span className="text-red-400">*</span>
+              Established Year (AD or BS) <span className="text-red-400">*</span>
             </label>
             <input
-              type="number"
+              type="text"
+              inputMode="numeric"
               className={`w-full border rounded-lg p-3 bg-slate-700 text-white placeholder-slate-400 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 ${
                 errors.establishedYear ? "border-red-400" : "border-slate-600"
               }`}
@@ -414,10 +430,12 @@ export default function RegisterPage() {
               onChange={(e) =>
                 updateFormData({ establishedYear: e.target.value })
               }
-              placeholder="2000"
-              min="1900"
-              max={new Date().getFullYear()}
+              placeholder="2000 AD or 2057 BS"
+              maxLength={4}
             />
+            <p className="mt-1 text-sm text-slate-400">
+              Future years are not allowed. You can enter either AD or BS.
+            </p>
             {errors.establishedYear && (
               <p className="text-red-500 text-sm mt-1">
                 {errors.establishedYear}
@@ -521,9 +539,6 @@ export default function RegisterPage() {
   const renderLocationStep = () => {
     const errors = stepErrors[1] || {};
     const availableDistricts = getAvailableDistricts(formData.province);
-    const availableMunicipalities = getAvailableMunicipalities(
-      formData.district
-    );
 
     return (
       <div className="space-y-6">
@@ -538,6 +553,7 @@ export default function RegisterPage() {
               onChange={(value) => handleLocationChange("province", value)}
               placeholder="Select Province"
               error={errors.province}
+              allowCustom
             />
           </div>
 
@@ -552,6 +568,7 @@ export default function RegisterPage() {
               placeholder="Select District"
               disabled={!formData.province}
               error={errors.district}
+              allowCustom
             />
           </div>
         </div>
@@ -561,36 +578,17 @@ export default function RegisterPage() {
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Municipality/VDC <span className="text-red-500">*</span>
             </label>
-            <SearchableDropdown
-              options={availableMunicipalities}
+            <input
+              type="text"
+              className={`w-full rounded-lg border p-3 ${
+                errors.municipality ? "border-red-400" : "border-gray-300"
+              }`}
               value={formData.municipality}
-              onChange={(value) => updateFormData({ municipality: value })}
-              placeholder="Select Municipality"
-              disabled={!formData.district}
-              error={errors.municipality}
-              showType={true}
+              onChange={(e) => updateFormData({ municipality: e.target.value })}
+              placeholder="Enter municipality, rural municipality, or VDC"
             />
-            {formData.municipality === "Other (Specify)" && (
-              <div className="mt-3">
-                <input
-                  type="text"
-                  className={`w-full border rounded-lg p-3 ${
-                    errors.customMunicipality
-                      ? "border-red-400"
-                      : "border-gray-300"
-                  }`}
-                  value={formData.customMunicipality}
-                  onChange={(e) =>
-                    updateFormData({ customMunicipality: e.target.value })
-                  }
-                  placeholder="Specify municipality name"
-                />
-                {errors.customMunicipality && (
-                  <p className="text-red-500 text-sm mt-1">
-                    {errors.customMunicipality}
-                  </p>
-                )}
-              </div>
+            {errors.municipality && (
+              <p className="text-red-500 text-sm mt-1">{errors.municipality}</p>
             )}
           </div>
 
@@ -809,150 +807,6 @@ export default function RegisterPage() {
     );
   };
 
-  const renderThemeStep = () => {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h3 className="text-lg font-semibold text-white mb-4">
-            School Theme Colors
-          </h3>
-          <p className="text-slate-300 mb-6">
-            Choose colors that represent your school&apos;s identity
-          </p>
-
-          <div className="mb-6">
-            <div className="space-y-3">
-              <label className="flex items-center space-x-3">
-                <input
-                  type="radio"
-                  name="themeChoice"
-                  className="w-4 h-4 text-emerald-600 bg-slate-700 border-slate-600 focus:ring-emerald-500 focus:ring-2"
-                  checked={formData.useDefaultTheme || false}
-                  onChange={() =>
-                    updateFormData({
-                      useDefaultTheme: true,
-                      primaryColor: "#10b981",
-                      secondaryColor: "#6b7280",
-                    })
-                  }
-                />
-                <span className="text-white font-medium">
-                  Use Default Theme Colors
-                </span>
-              </label>
-              <p className="text-slate-400 text-sm ml-7">
-                Keep the professional dark theme with emerald accents
-              </p>
-
-              <label className="flex items-center space-x-3">
-                <input
-                  type="radio"
-                  name="themeChoice"
-                  className="w-4 h-4 text-emerald-600 bg-slate-700 border-slate-600 focus:ring-emerald-500 focus:ring-2"
-                  checked={!formData.useDefaultTheme}
-                  onChange={() => updateFormData({ useDefaultTheme: false })}
-                />
-                <span className="text-white font-medium">
-                  Choose Custom Colors
-                </span>
-              </label>
-              <p className="text-slate-400 text-sm ml-7">
-                Customize colors to match your school&apos;s branding
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm font-medium text-white mb-2">
-              Primary Color <span className="text-red-400">*</span>
-            </label>
-            <div className="flex items-center space-x-3">
-              <input
-                type="color"
-                className="w-16 h-12 border border-slate-600 bg-slate-700 rounded-lg cursor-pointer"
-                value={formData.primaryColor}
-                onChange={(e) =>
-                  updateFormData({ primaryColor: e.target.value })
-                }
-                disabled={formData.useDefaultTheme}
-              />
-              <input
-                type="text"
-                className="flex-1 border border-slate-600 bg-slate-700 text-white placeholder-slate-400 rounded-lg p-3 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                value={formData.primaryColor}
-                onChange={(e) =>
-                  updateFormData({ primaryColor: e.target.value })
-                }
-                placeholder="#10b981"
-                disabled={formData.useDefaultTheme}
-              />
-            </div>
-            <p className="text-slate-400 text-sm mt-1">
-              Used for headers, buttons, and main branding
-            </p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-white mb-2">
-              Secondary Color (Optional)
-            </label>
-            <div className="flex items-center space-x-3">
-              <input
-                type="color"
-                className="w-16 h-12 border border-slate-600 bg-slate-700 rounded-lg cursor-pointer"
-                value={formData.secondaryColor || "#6B7280"}
-                onChange={(e) =>
-                  updateFormData({ secondaryColor: e.target.value })
-                }
-                disabled={formData.useDefaultTheme}
-              />
-              <input
-                type="text"
-                className="flex-1 border border-slate-600 bg-slate-700 text-white placeholder-slate-400 rounded-lg p-3 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                value={formData.secondaryColor}
-                onChange={(e) =>
-                  updateFormData({ secondaryColor: e.target.value })
-                }
-                placeholder="#6b7280"
-                disabled={formData.useDefaultTheme}
-              />
-            </div>
-            <p className="text-slate-400 text-sm mt-1">
-              Used for accents and secondary elements
-            </p>
-          </div>
-        </div>
-
-        <div className="bg-slate-700 rounded-lg p-6 border border-slate-600">
-          <h4 className="font-medium text-white mb-3">Color Preview</h4>
-          <div className="flex items-center space-x-4">
-            <div
-              className="w-20 h-12 rounded-lg border border-slate-500"
-              style={{ backgroundColor: formData.primaryColor }}
-            ></div>
-            <span className="text-sm text-slate-300">Primary</span>
-            {formData.secondaryColor && (
-              <>
-                <div
-                  className="w-20 h-12 rounded-lg border border-slate-500"
-                  style={{ backgroundColor: formData.secondaryColor }}
-                ></div>
-                <span className="text-sm text-slate-300">Secondary</span>
-              </>
-            )}
-          </div>
-          {formData.useDefaultTheme && (
-            <p className="text-emerald-400 text-sm mt-3">
-              Using default professional theme
-            </p>
-          )}
-        </div>
-      </div>
-    );
-  };
-
   const getCurrentStepComponent = () => {
     switch (currentStep) {
       case 0:
@@ -963,8 +817,6 @@ export default function RegisterPage() {
         return renderPrincipalStep();
       case 3:
         return renderLoginStep();
-      case 4:
-        return renderThemeStep();
       default:
         return null;
     }
@@ -1033,7 +885,6 @@ export default function RegisterPage() {
                     "Provide your school's location details"}
                   {currentStep === 2 && "Enter principal information"}
                   {currentStep === 3 && "Set up login password"}
-                  {currentStep === 4 && "Customize your school's theme colors"}
                 </p>
               </div>
             </div>
