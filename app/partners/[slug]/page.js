@@ -95,7 +95,7 @@ export default async function PartnerPortfolioPage({ params }) {
 
   if (!data) {
     return (
-      <main className="min-h-screen bg-slate-950 text-white p-8">
+      <main className="pratyo-public-shell min-h-screen bg-[#f5f1e8] p-8 pb-32 text-slate-950 md:pb-8">
         <div className="max-w-5xl mx-auto text-slate-400">
           Partner portfolio not found.
         </div>
@@ -107,7 +107,7 @@ export default async function PartnerPortfolioPage({ params }) {
     data;
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white">
+    <main className="pratyo-public-shell min-h-screen bg-[#f5f1e8] pb-32 text-slate-950 md:pb-0">
       <PublicSiteNav active="partners" />
 
       <section className="max-w-6xl mx-auto px-6 py-14">

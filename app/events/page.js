@@ -3,6 +3,15 @@ import connectDB from "@/lib/db";
 import Event from "@/models/Event";
 import EventProposal from "@/models/EventProposal";
 import PublicSiteNav from "@/components/public/PublicSiteNav";
+import {
+  PublicBadge,
+  PublicCard,
+  PublicContainer,
+  PublicHero,
+  PublicPageShell,
+  PublicSectionHeader,
+  PublicStatTile,
+} from "@/components/public/PublicLayout";
 import "@/models/ExternalOrganizer";
 import {
   FaBullhorn,
@@ -52,21 +61,13 @@ function formatDate(value) {
 
 function EventBadge({ children, tone = "slate" }) {
   const toneMap = {
-    blue: "border-blue-500/30 bg-blue-500/15 text-blue-200",
-    emerald: "border-emerald-500/30 bg-emerald-500/15 text-emerald-200",
-    amber: "border-amber-500/30 bg-amber-500/15 text-amber-200",
-    slate: "border-white/10 bg-white/10 text-slate-300",
+    blue: "soft",
+    emerald: "success",
+    amber: "result",
+    slate: "white",
   };
 
-  return (
-    <span
-      className={`inline-flex max-w-full items-center rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-wide sm:text-xs ${
-        toneMap[tone] || toneMap.slate
-      }`}
-    >
-      {children}
-    </span>
-  );
+  return <PublicBadge tone={toneMap[tone] || "white"}>{children}</PublicBadge>;
 }
 
 export default async function PublicEventsPage() {
@@ -122,88 +123,37 @@ export default async function PublicEventsPage() {
   const resultCount = publicEvents.filter((event) => event.resultsPublished).length;
 
   return (
-    <main className="min-h-screen w-full overflow-x-hidden bg-[#08111f] text-white">
+    <PublicPageShell>
       <PublicSiteNav active="events" />
-      <section className="relative overflow-hidden border-b border-white/10 px-4 py-10 sm:px-6 sm:py-14 md:px-12">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(56,189,248,.22),transparent_32%),radial-gradient(circle_at_76%_18%,rgba(167,139,250,.18),transparent_30%)]" />
-        <div className="relative mx-auto grid w-full max-w-6xl gap-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-center">
-          <div className="min-w-0 max-w-3xl">
-            <p className="mb-4 text-xs uppercase tracking-[0.18em] text-sky-300 sm:text-sm">
-              Public Events
-            </p>
-            <h1 className="break-words text-3xl font-black tracking-tight sm:text-4xl md:text-5xl">
-              Discover talent showcases, competitions, and school events before login
-            </h1>
-            <p className="mt-4 text-base leading-7 text-slate-300 sm:text-lg sm:leading-8">
-              Explore what schools and the platform are organizing across music,
-              debate, arts, innovation, and more.
-            </p>
-            <div className="mt-6 grid max-w-2xl gap-3 sm:grid-cols-3">
-              <div className="rounded-xl border border-white/10 bg-slate-950/60 p-4">
-                <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-                  Public Events
-                </p>
-                <p className="mt-1 text-2xl font-black text-white">
-                  {publicEvents.length}
-                </p>
-              </div>
-              <div className="rounded-xl border border-white/10 bg-slate-950/60 p-4">
-                <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-                  Featured
-                </p>
-                <p className="mt-1 text-2xl font-black text-white">
-                  {featuredEvents.length}
-                </p>
-              </div>
-              <div className="rounded-xl border border-white/10 bg-slate-950/60 p-4">
-                <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-                  Results
-                </p>
-                <p className="mt-1 text-2xl font-black text-white">
-                  {resultCount}
-                </p>
-              </div>
-            </div>
+      <PublicHero
+        eyebrow="Public Events"
+        title="Competitions, showcases, and school events"
+        description="Browse public events, partner announcements, and published results before login."
+        stats={
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-1">
+            <PublicStatTile label="Public events" value={publicEvents.length} icon={FaCalendarAlt} />
+            <PublicStatTile label="Featured" value={featuredEvents.length} icon={FaBullhorn} />
+            <PublicStatTile label="Results" value={resultCount} icon={FaTrophy} className="col-span-2 lg:col-span-1" />
           </div>
-          <svg
-            viewBox="0 0 360 260"
-            aria-hidden="true"
-            className="hidden h-64 w-full lg:block"
-          >
-            <defs>
-              <linearGradient id="eventPageAccent" x1="0" x2="1" y1="0" y2="1">
-                <stop offset="0%" stopColor="#38bdf8" />
-                <stop offset="100%" stopColor="#34d399" />
-              </linearGradient>
-            </defs>
-            <rect x="22" y="24" width="316" height="214" rx="28" fill="#0f1b2d" stroke="#334155" />
-            <path d="M65 75h165M65 116h230M65 157h128" stroke="#64748b" strokeLinecap="round" strokeWidth="16" />
-            <circle cx="278" cy="80" r="34" fill="url(#eventPageAccent)" />
-            <path d="M252 172l23 22 50-62" fill="none" stroke="#f8fafc" strokeLinecap="round" strokeLinejoin="round" strokeWidth="13" />
-          </svg>
-        </div>
-      </section>
+        }
+      />
 
-      <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 sm:py-12 md:px-12">
+      <PublicContainer className="py-6 sm:py-8">
         {featuredEvents.length > 0 && (
-          <section className="mb-14">
-            <div className="mb-6 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.25em] text-sky-300">
-                  Recommended
-                </p>
-                <h2 className="mt-2 text-2xl font-bold">Featured Events</h2>
-              </div>
-              <p className="max-w-xl text-sm leading-6 text-slate-400">
-                Highlighted public competitions and school activity records.
-              </p>
-            </div>
+          <section className="mb-10">
+            <PublicSectionHeader
+              eyebrow="Recommended"
+              title="Featured Events"
+              description="Highlighted competitions and school activity records."
+            />
             <div className="grid min-w-0 gap-5 lg:grid-cols-2 lg:gap-6">
               {featuredEvents.map((event) => (
-                <Link
+                <PublicCard
+                  as={Link}
                   key={String(event._id)}
                   href={`/events/${event._id}`}
-                  className="min-w-0 rounded-2xl border border-white/10 bg-white/[0.05] p-5 transition hover:border-sky-400/50 hover:bg-white/[0.08] sm:p-6"
+                  flushMobile
+                  className="hover:-translate-y-0.5 hover:border-[#2f7fdb]/45"
                 >
                   {(() => {
                     const partnerName = getVisiblePartnerName(event);
@@ -218,13 +168,13 @@ export default async function PublicEventsPage() {
                       <EventBadge>{event.eventType}</EventBadge>
                     </div>
                   </div>
-                  <h3 className="break-words text-xl font-bold sm:text-2xl">{event.title}</h3>
-                  <p className="mt-3 line-clamp-3 break-words text-slate-400">
+                  <h3 className="break-words text-xl font-black text-slate-950 sm:text-2xl">{event.title}</h3>
+                  <p className="mt-3 line-clamp-3 break-words text-sm leading-6 text-slate-600">
                     {event.description}
                   </p>
-                  <div className="mt-5 text-sm text-slate-300 space-y-1">
+                  <div className="mt-5 space-y-2 text-sm font-semibold text-slate-600">
                     <div className="flex items-center gap-2">
-                      <FaCalendarAlt className="text-slate-500" />
+                      <FaCalendarAlt className="text-[#0a2f66]" />
                       {formatDate(event.date)}
                     </div>
                     {partnerName && (
@@ -242,38 +192,32 @@ export default async function PublicEventsPage() {
                       </>
                     );
                   })()}
-                </Link>
+                </PublicCard>
               ))}
             </div>
           </section>
         )}
 
         <section>
-          <div className="mb-6 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.25em] text-emerald-300">
-                Browse
-              </p>
-              <h2 className="mt-2 text-2xl font-bold">All Public Events</h2>
-            </div>
-            <p className="max-w-xl text-sm leading-6 text-slate-400">
-              Events here are visible before login so schools and visitors can
-              understand what is happening on the platform.
-            </p>
-          </div>
+          <PublicSectionHeader
+            eyebrow="Browse"
+            title="All Public Events"
+            description="Events here are visible before login so schools and visitors can understand what is happening on the platform."
+          />
           {publicEvents.length === 0 && visibleAnnouncements.length === 0 ? (
-            <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-8 text-slate-400">
+            <PublicCard flushMobile className="text-slate-600">
               Public events will appear here after they are published or approved as partner announcements.
-            </div>
+            </PublicCard>
           ) : (
             <div className="grid min-w-0 gap-5 lg:grid-cols-2 lg:gap-6">
               {visibleAnnouncements.map((proposal) => {
                 const partnerName = getVisibleProposalPartnerName(proposal);
 
                 return (
-                  <article
+                  <PublicCard
                     key={String(proposal._id)}
-                    className="min-w-0 rounded-2xl border border-sky-400/20 bg-sky-400/[0.06] p-5 sm:p-6"
+                    flushMobile
+                    className="border-[#bfd7f7] bg-[#f8fbff]"
                   >
                     <div className="mb-3 flex min-w-0 flex-wrap items-center justify-between gap-2 sm:gap-4">
                       <EventBadge tone="blue">
@@ -284,29 +228,31 @@ export default async function PublicEventsPage() {
                       </EventBadge>
                       <EventBadge>{proposal.eventMode || "Event"}</EventBadge>
                     </div>
-                    <h3 className="break-words text-xl font-bold">{proposal.eventTitle}</h3>
-                    <p className="mt-3 line-clamp-3 break-words text-slate-400">
+                    <h3 className="break-words text-xl font-black text-slate-950">{proposal.eventTitle}</h3>
+                    <p className="mt-3 line-clamp-3 break-words text-sm leading-6 text-slate-600">
                       {proposal.eventDescription}
                     </p>
-                    <div className="mt-5 text-sm text-slate-300">
+                    <div className="mt-5 text-sm font-semibold text-slate-600">
                       <div>
                         Date: {formatDate(proposal.preferredDate)}
                       </div>
                       {partnerName && (
-                        <div className="mt-1 text-emerald-300">
+                        <div className="mt-1 text-[#0a2f66]">
                           Organized by {partnerName}
                         </div>
                       )}
                     </div>
-                  </article>
+                  </PublicCard>
                 );
               })}
 
               {publicEvents.map((event) => (
-              <Link
+              <PublicCard
+                as={Link}
                 key={String(event._id)}
                 href={`/events/${event._id}`}
-                className="min-w-0 rounded-2xl border border-white/10 bg-white/[0.05] p-5 transition hover:border-emerald-400/50 hover:bg-white/[0.08] sm:p-6"
+                flushMobile
+                className="hover:-translate-y-0.5 hover:border-[#2f7fdb]/45"
               >
                 {(() => {
                   const partnerName = getVisiblePartnerName(event);
@@ -328,23 +274,23 @@ export default async function PublicEventsPage() {
                     <EventBadge>{event.eventType}</EventBadge>
                   </div>
                 </div>
-                <h3 className="break-words text-xl font-bold">{event.title}</h3>
-                <p className="mt-3 line-clamp-3 break-words text-slate-400">{event.description}</p>
-                <div className="mt-5 text-sm text-slate-300">
+                <h3 className="break-words text-xl font-black text-slate-950">{event.title}</h3>
+                <p className="mt-3 line-clamp-3 break-words text-sm leading-6 text-slate-600">{event.description}</p>
+                <div className="mt-5 text-sm font-semibold text-slate-600">
                   <div className="flex items-center gap-2">
-                    <FaCalendarAlt className="text-slate-500" />
+                    <FaCalendarAlt className="text-[#0a2f66]" />
                     {formatDate(event.date)}
                   </div>
                   {event.eligibleGrades?.length > 0 && (
-                    <div className="mt-2 flex min-w-0 items-start gap-2 break-words text-slate-400">
-                      <FaUsers className="text-slate-500" />
+                    <div className="mt-2 flex min-w-0 items-start gap-2 break-words text-slate-600">
+                      <FaUsers className="mt-1 text-[#0a2f66]" />
                       <span className="min-w-0 break-words">
                         {event.eligibleGrades.join(", ")}
                       </span>
                     </div>
                   )}
                   {partnerName && (
-                    <div className="mt-1 break-words text-emerald-300">
+                    <div className="mt-2 break-words text-[#0a2f66]">
                       In partnership with {partnerName}
                     </div>
                   )}
@@ -352,12 +298,12 @@ export default async function PublicEventsPage() {
                     </>
                   );
                 })()}
-              </Link>
+              </PublicCard>
               ))}
             </div>
           )}
         </section>
-      </div>
-    </main>
+      </PublicContainer>
+    </PublicPageShell>
   );
 }

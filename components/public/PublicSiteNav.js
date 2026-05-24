@@ -7,6 +7,7 @@ import {
   FaCalendarAlt,
   FaHandshake,
   FaHome,
+  FaSearch,
   FaSchool,
   FaTimes,
   FaUsers,
@@ -91,17 +92,21 @@ export default function PublicSiteNav({ active = "home" }) {
 
   return (
     <>
-      <nav className="pratyo-dark-shell sticky top-0 z-50 border-b shadow-lg shadow-black/20 backdrop-blur-xl">
+      <nav
+        className="sticky top-0 z-50 border-b border-[#d7cdbb] bg-white/95 shadow-sm backdrop-blur-xl"
+      >
         <div className="mx-auto flex min-h-16 max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
           <div className="flex items-center gap-3">
             <Link
               href="/"
               onClick={() => setIsOpen(false)}
-              className="flex items-center gap-3 rounded-lg pr-2 text-white transition hover:text-[#f6fbff]"
+              className="flex items-center gap-3 rounded-lg pr-2 text-[#0a2f66] transition hover:text-[#123f82]"
             >
               <PratyoLogo variant="icon" compact withSurface />
-              <span className="hidden sm:block">
-                <span className="pratyo-muted block text-xs font-bold uppercase tracking-[0.16em]">
+              <span className="block">
+                <span
+                  className="block text-[10px] font-bold uppercase tracking-[0.16em] text-[#52657d]"
+                >
                   Pratyo
                 </span>
                 <span className="block text-sm font-bold">Public Hub</span>
@@ -112,7 +117,7 @@ export default function PublicSiteNav({ active = "home" }) {
           <div className="hidden items-center gap-2 md:flex">
             <Link
               href="/login"
-              className="rounded-full border border-[#2f7fdb]/30 px-3 py-2 text-sm font-semibold text-[#eef5ff] transition hover:bg-white/10"
+              className="rounded-full border border-[#d7cdbb] bg-white px-3 py-2 text-sm font-black text-[#0a2f66] transition hover:bg-[#eaf2ff]"
             >
               Login
             </Link>
@@ -125,31 +130,49 @@ export default function PublicSiteNav({ active = "home" }) {
             </Link>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setIsOpen((value) => !value)}
-            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border border-white/15 text-white transition hover:bg-white/10 md:hidden"
-            aria-expanded={isOpen}
-            aria-controls="public-mobile-nav"
-            aria-label={
-              isOpen ? "Close public navigation" : "Open public navigation"
-            }
-          >
-            {isOpen ? <FaTimes /> : <FaBars />}
-          </button>
+          <div className="flex items-center gap-2 md:hidden">
+            <Link
+              href="/schools"
+              className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-full border border-[#d7cdbb] text-[#0a2f66] transition hover:bg-[#f8fbff]"
+              aria-label="Explore schools"
+            >
+              <FaSchool />
+            </Link>
+            <Link
+              href="/partners"
+              className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-full border border-[#d7cdbb] text-[#0a2f66] transition hover:bg-[#f8fbff]"
+              aria-label="Explore partners"
+            >
+              <FaSearch />
+            </Link>
+            <button
+              type="button"
+              onClick={() => setIsOpen((value) => !value)}
+              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border border-[#d7cdbb] text-[#0a2f66] transition hover:bg-[#f8fbff]"
+              aria-expanded={isOpen}
+              aria-controls="public-mobile-nav"
+              aria-label={
+                isOpen ? "Close public navigation" : "Open public navigation"
+              }
+            >
+              {isOpen ? <FaTimes /> : <FaBars />}
+            </button>
+          </div>
         </div>
 
         {isOpen && (
           <div
             id="public-mobile-nav"
-            className="border-t border-white/10 px-4 pb-4 md:hidden"
+            className="border-t border-[#d7cdbb] px-4 pb-4 md:hidden"
           >
-            <div className="grid gap-2 rounded-2xl bg-white/10 p-2">
+            <div
+              className="grid gap-2 rounded-2xl bg-[#f8fbff] p-2"
+            >
               <div className="grid grid-cols-2 gap-2 pt-1">
                 <Link
                   href="/login"
                   onClick={() => setIsOpen(false)}
-                  className="flex min-h-12 items-center justify-center rounded-xl border border-white/15 text-sm font-semibold text-[#eef5ff] transition hover:bg-white/10"
+                  className="flex min-h-12 items-center justify-center rounded-xl border border-[#d7cdbb] text-sm font-semibold text-[#0a2f66] transition hover:bg-white"
                 >
                   Login
                 </Link>

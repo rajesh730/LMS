@@ -57,15 +57,15 @@ export default function DashboardLayout({ children }) {
                 onNavigate={() => setIsNavOpen(false)}
             />
 
-            <header className="pratyo-dark-shell sticky top-0 z-30 border-b px-4 py-3 backdrop-blur-xl lg:hidden">
+            <header className="sticky top-0 z-30 border-b border-[#d7cdbb] bg-white/95 px-4 py-3 text-[#0a2f66] shadow-sm backdrop-blur-xl lg:hidden">
                 <div className="flex items-center justify-between gap-3">
                     <div className="flex min-w-0 items-center gap-3">
                         <PratyoLogo variant="icon" compact withSurface />
                         <div className="min-w-0">
-                            <p className="truncate text-sm font-bold text-white">
+                            <p className="truncate text-sm font-bold text-[#0a2f66]">
                                 {session?.user?.name || "Pratyo"}
                             </p>
-                            <p className="pratyo-muted text-xs uppercase tracking-wide">
+                            <p className="text-xs font-black uppercase tracking-wide text-[#52657d]">
                                 {String(session?.user?.role || "Dashboard").replaceAll("_", " ")}
                             </p>
                         </div>
@@ -73,7 +73,7 @@ export default function DashboardLayout({ children }) {
                     <button
                         type="button"
                         onClick={() => setIsNavOpen(true)}
-                        className="rounded-lg border border-white/15 p-3 transition hover:bg-white/10"
+                        className="rounded-full border border-[#d7cdbb] p-3 text-[#0a2f66] transition hover:bg-[#f8fbff]"
                         aria-label="Open navigation"
                     >
                         <FaBars />
@@ -82,7 +82,7 @@ export default function DashboardLayout({ children }) {
             </header>
 
             <main className="min-h-screen overflow-x-hidden transition-all duration-300 lg:ml-64">
-                <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-6 lg:p-8">
+                <div className="mx-auto max-w-7xl px-4 py-5 pb-10 sm:px-6 sm:py-6 lg:p-8">
                     {children}
                 </div>
             </main>

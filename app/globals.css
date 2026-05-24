@@ -196,8 +196,30 @@ table,
   color: var(--brand-muted) !important;
 }
 
+[class*="text-blue-300"],
+[class*="text-blue-400"],
+[class*="text-sky-300"],
+[class*="text-sky-400"],
+[class*="text-emerald-50"],
+[class*="text-emerald-100"],
+[class*="text-emerald-200"],
+[class*="text-emerald-300"],
+[class*="text-emerald-400"],
+[class*="text-yellow-300"],
+[class*="text-yellow-400"],
+[class*="text-amber-300"],
+[class*="text-amber-400"] {
+  color: var(--brand-navy) !important;
+}
+
 [class*="text-white"] {
   color: var(--brand-ink) !important;
+}
+
+.top-school-badge {
+  background-color: rgba(255, 255, 255, 0.95);
+  color: #0a2f66 !important;
+  text-shadow: none;
 }
 
 [class~="bg-[#0a2f66]"],
@@ -343,9 +365,73 @@ table tbody tr:hover {
 }
 
 @media (max-width: 640px) {
+  h1[class*="text-5xl"],
+  h1[class*="text-4xl"],
+  h1[class*="text-3xl"],
+  h1[class*="text-[2rem]"],
+  .pratyo-heading[class*="text-"] {
+    font-size: 1.55rem !important;
+    line-height: 1.12 !important;
+    letter-spacing: -0.03em !important;
+  }
+
+  h2[class*="text-3xl"],
+  h2[class*="text-2xl"],
+  h2[class*="text-xl"] {
+    font-size: 1.18rem !important;
+    line-height: 1.2 !important;
+    letter-spacing: -0.02em !important;
+  }
+
+  h3[class*="text-2xl"],
+  h3[class*="text-xl"],
+  h4[class*="text-xl"] {
+    font-size: 1.05rem !important;
+    line-height: 1.28 !important;
+    letter-spacing: -0.015em !important;
+  }
+
+  p[class*="text-3xl"],
+  p[class*="text-2xl"],
+  div[class*="text-4xl"],
+  div[class*="text-3xl"],
+  div[class*="text-2xl"] {
+    font-size: 1.35rem !important;
+    line-height: 1.2 !important;
+  }
+
+  p[class*="text-xl"],
+  div[class*="text-xl"]:not([class*="h-"]):not([class*="w-"]) {
+    font-size: 1rem !important;
+    line-height: 1.45 !important;
+  }
+
   .pratyo-card {
     border-radius: 1rem;
     box-shadow: 0 10px 28px rgba(10, 47, 102, 0.08);
+  }
+
+  .pratyo-public-shell > section,
+  .pratyo-public-shell > div,
+  .pratyo-public-shell section[class*="rounded-3xl"],
+  .pratyo-public-shell section[class*="rounded-2xl"],
+  .pratyo-public-shell article[class*="rounded-2xl"],
+  .pratyo-public-shell a[class*="rounded-2xl"]:not([class*="rounded-full"]) {
+    border-left-width: 0 !important;
+    border-right-width: 0 !important;
+    border-radius: 0 !important;
+  }
+
+  .pratyo-public-shell > :not(nav),
+  .pratyo-public-shell > :not(nav) * {
+    min-width: 0;
+  }
+
+  .pratyo-public-shell > :not(nav) p,
+  .pratyo-public-shell > :not(nav) h1,
+  .pratyo-public-shell > :not(nav) h2,
+  .pratyo-public-shell > :not(nav) h3 {
+    overflow-wrap: anywhere;
   }
 
   table {
@@ -393,6 +479,22 @@ table tbody tr:hover {
 .pratyo-dark-shell .pratyo-active {
   background-color: rgba(47, 127, 219, 0.22) !important;
   border-color: rgba(143, 196, 255, 0.44) !important;
+  color: #d7e9ff !important;
+}
+
+.pratyo-dark-shell [class*="text-blue-300"],
+.pratyo-dark-shell [class*="text-blue-400"],
+.pratyo-dark-shell [class*="text-sky-300"],
+.pratyo-dark-shell [class*="text-sky-400"],
+.pratyo-dark-shell [class*="text-emerald-50"],
+.pratyo-dark-shell [class*="text-emerald-100"],
+.pratyo-dark-shell [class*="text-emerald-200"],
+.pratyo-dark-shell [class*="text-emerald-300"],
+.pratyo-dark-shell [class*="text-emerald-400"],
+.pratyo-dark-shell [class*="text-yellow-300"],
+.pratyo-dark-shell [class*="text-yellow-400"],
+.pratyo-dark-shell [class*="text-amber-300"],
+.pratyo-dark-shell [class*="text-amber-400"] {
   color: #d7e9ff !important;
 }
 

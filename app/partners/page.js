@@ -4,6 +4,16 @@ import ExternalOrganizer from "@/models/ExternalOrganizer";
 import Event from "@/models/Event";
 import ParticipationRequest from "@/models/ParticipationRequest";
 import PublicSiteNav from "@/components/public/PublicSiteNav";
+import {
+  PublicBadge,
+  PublicCard,
+  PublicContainer,
+  PublicHero,
+  PublicPageShell,
+  PublicStatTile,
+  PublicTextLink,
+} from "@/components/public/PublicLayout";
+import { FaCalendarAlt, FaHandshake, FaSchool, FaUsers } from "react-icons/fa";
 
 export const dynamic = "force-dynamic";
 
@@ -59,45 +69,50 @@ async function getPartners() {
 
 export default async function PartnersPage() {
   const partners = await getPartners();
+  const totals = partners.reduce(
+    (summary, partner) => ({
+      events: summary.events + partner.eventCount,
+      schools: summary.schools + partner.schoolCount,
+      students: summary.students + partner.studentCount,
+    }),
+    { events: 0, schools: 0, students: 0 }
+  );
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white">
+    <PublicPageShell>
       <PublicSiteNav active="partners" />
 
-      <section className="max-w-6xl mx-auto px-6 py-14">
-        <div className="max-w-3xl mb-12">
-          <p className="text-sm uppercase tracking-[0.35em] text-emerald-400 mb-4">
-            Partner Portfolio
-          </p>
-          <h1 className="text-4xl md:text-5xl font-black tracking-tight">
-            Organizations helping schools create student opportunities.
-          </h1>
-          <p className="text-slate-400 mt-4 text-lg">
-            These are platform-approved partners connected to public student
-            events, competitions, sponsorships, and published outcomes.
-          </p>
-          <Link
-            href="/organize-event"
-            className="mt-7 inline-flex items-center justify-center rounded-xl bg-[#0a2f66] px-6 py-3 text-sm font-black text-white transition hover:bg-[#123f82]"
-          >
-            Propose an event
-          </Link>
-        </div>
-
-        {partners.length === 0 ? (
-          <div className="rounded-3xl border border-slate-800 bg-slate-900/70 p-8 text-slate-400">
-            Public partner portfolios will appear here after admin approval.
+      <PublicHero
+        eyebrow="Partner Portfolio"
+        title="Organizations helping schools create opportunities"
+        description="Platform-approved partners connected to public student events, competitions, sponsorships, and published outcomes."
+        action={<PublicTextLink href="/organize-event">Propose an event</PublicTextLink>}
+        stats={
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-1">
+            <PublicStatTile label="Partners" value={partners.length} icon={FaHandshake} />
+            <PublicStatTile label="Events" value={totals.events} icon={FaCalendarAlt} />
+            <PublicStatTile label="Schools" value={totals.schools} icon={FaSchool} className="col-span-2 lg:col-span-1" />
           </div>
+        }
+      />
+
+      <PublicContainer className="py-6 sm:py-8">
+        {partners.length === 0 ? (
+          <PublicCard flushMobile className="p-8 text-slate-600">
+            Public partner portfolios will appear here after admin approval.
+          </PublicCard>
         ) : (
           <div className="grid lg:grid-cols-2 gap-6">
             {partners.map((partner) => (
-              <Link
+              <PublicCard
+                as={Link}
                 key={String(partner._id)}
                 href={`/partners/${partner.slug}`}
-                className="rounded-3xl border border-slate-800 bg-slate-900/70 p-6 transition hover:border-blue-500/40"
+                flushMobile
+                className="hover:-translate-y-0.5 hover:border-[#2f7fdb]/45"
               >
                 <div className="flex items-start gap-4">
-                  <div className="h-16 w-16 rounded-2xl bg-slate-800 border border-slate-700 overflow-hidden flex items-center justify-center shrink-0">
+                  <div className="h-16 w-16 rounded-2xl bg-[#eaf2ff] border border-[#cfe0f6] overflow-hidden flex items-center justify-center shrink-0 text-[#0a2f66]">
                     {partner.logoUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
@@ -106,25 +121,23 @@ export default async function PartnersPage() {
                         className="h-full w-full object-cover"
                       />
                     ) : (
-                      <span className="text-xl font-black text-emerald-300">
+                      <span className="text-xl font-black">
                         {partner.organizationName.charAt(0)}
                       </span>
                     )}
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2 mb-2">
-                      <h2 className="text-2xl font-bold">
+                      <h2 className="break-words text-2xl font-black text-slate-950">
                         {partner.organizationName}
                       </h2>
-                      <span className="rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 px-3 py-1 text-xs">
-                        Verified
-                      </span>
+                      <PublicBadge tone="success">Verified</PublicBadge>
                     </div>
-                    <p className="text-sm text-slate-400">
+                    <p className="text-sm font-semibold text-slate-500">
                       {(partner.partnerRoles || []).map(label).join(", ")}
                     </p>
                     {partner.description && (
-                      <p className="text-slate-300 mt-4 line-clamp-3">
+                      <p className="text-slate-600 mt-4 line-clamp-3">
                         {partner.description}
                       </p>
                     )}
@@ -139,24 +152,24 @@ export default async function PartnersPage() {
                   ].map(([name, value]) => (
                     <div
                       key={name}
-                      className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4"
+                      className="rounded-2xl border border-[#d7e5f7] bg-[#f8fbff] p-4"
                     >
-                      <p className="text-xs text-slate-500 uppercase">{name}</p>
-                      <p className="text-2xl font-bold mt-1">{value}</p>
+                      <p className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-500">{name}</p>
+                      <p className="text-2xl font-black mt-1 text-slate-950">{value}</p>
                     </div>
                   ))}
                 </div>
 
                 {partner.latestEvent && (
-                  <p className="text-sm text-slate-400 mt-5">
+                  <p className="text-sm font-semibold text-[#0a2f66] mt-5">
                     Latest event: {partner.latestEvent.title}
                   </p>
                 )}
-              </Link>
+              </PublicCard>
             ))}
           </div>
         )}
-      </section>
-    </main>
+      </PublicContainer>
+    </PublicPageShell>
   );
 }

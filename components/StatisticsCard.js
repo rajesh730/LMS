@@ -34,10 +34,10 @@ export default function StatisticsCard({
 
   return (
     <div
-      className={`${colorMap[color]} p-6 rounded-xl border backdrop-blur-sm hover:border-opacity-100 transition`}
+      className={`${colorMap[color]} rounded-none border-x-0 border-y p-5 shadow-sm backdrop-blur-sm transition hover:-translate-y-0.5 hover:border-opacity-100 sm:rounded-[26px] sm:border sm:p-6`}
     >
       <div className="flex items-start justify-between mb-4">
-        <div className="rounded-xl bg-white/75 p-3 shadow-sm">
+        <div className="rounded-2xl bg-white/80 p-3 shadow-sm">
           <Icon className="text-xl" />
         </div>
         {trend !== undefined && (
@@ -48,8 +48,8 @@ export default function StatisticsCard({
         )}
       </div>
 
-      <p className="mb-1 text-sm font-semibold text-[#52657d]">{label}</p>
-      <p className="mb-2 text-3xl font-black text-[#17120a]">{value}</p>
+      <p className="mb-1 text-[11px] font-black uppercase tracking-[0.12em] text-[#52657d]">{label}</p>
+      <p className="mb-2 text-2xl font-black text-[#17120a] sm:text-3xl">{value}</p>
       {subtext && <p className="text-xs text-[#52657d]">{subtext}</p>}
     </div>
   );
@@ -61,6 +61,6 @@ export default function StatisticsCard({
  */
 export function StatisticsGrid({ children }) {
   return (
-    <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">{children}</div>
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 lg:gap-6">{children}</div>
   );
 }

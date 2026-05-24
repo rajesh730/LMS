@@ -1,6 +1,11 @@
 import Link from "next/link";
 import EventProposalForm from "@/components/partners/EventProposalForm";
 import PublicSiteNav from "@/components/public/PublicSiteNav";
+import {
+  PublicCard,
+  PublicContainer,
+  PublicPageShell,
+} from "@/components/public/PublicLayout";
 
 export const metadata = {
   title: "Request a Partner Event Review",
@@ -10,82 +15,82 @@ export const metadata = {
 
 export default function OrganizeEventPage() {
   return (
-    <main className="min-h-screen bg-slate-950 text-white">
+    <PublicPageShell>
       <PublicSiteNav active="partners" />
 
-      <section className="border-b border-slate-800 bg-slate-900/50">
-        <div className="max-w-6xl mx-auto px-6 py-6">
+      <section className="border-b border-[#d7cdbb] bg-[#f8fbff]">
+        <PublicContainer className="py-4">
           <Link
             href="/partners"
-            className="text-slate-400 hover:text-white transition"
+            className="text-sm font-black text-[#0a2f66] transition hover:text-[#123f82]"
           >
             Back to partners
           </Link>
-        </div>
+        </PublicContainer>
       </section>
 
-      <section className="max-w-6xl mx-auto px-6 py-14">
+      <PublicContainer className="py-6 sm:py-10">
         <div className="grid lg:grid-cols-[0.9fr_1.4fr] gap-10 items-start">
           <aside className="space-y-6 lg:sticky lg:top-8">
             <div>
-              <p className="text-sm uppercase tracking-[0.35em] text-blue-400 mb-4">
+              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[#0a2f66] mb-4">
                 Partner Event Request
               </p>
-              <h1 className="text-4xl md:text-5xl font-black tracking-tight">
+              <h1 className="text-[1.7rem] font-black leading-[1.08] tracking-tight text-slate-950 md:text-5xl">
                 Bring a trusted student opportunity to schools.
               </h1>
-              <p className="text-slate-400 mt-5 leading-8">
+              <p className="text-slate-600 mt-5 leading-8">
                 Share your event concept, audience, format, timeline, and
                 support details. The Pratyo team reviews each request before it
                 becomes visible to schools.
               </p>
             </div>
 
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6">
-              <h2 className="text-xl font-bold mb-4">How review works</h2>
-              <div className="space-y-4 text-sm text-slate-300">
+            <PublicCard>
+              <h2 className="mb-4 text-lg font-black text-slate-950 sm:text-xl">How review works</h2>
+              <div className="space-y-4 text-sm text-slate-600">
                 <p>
-                  <strong className="text-white">1. Submit:</strong> share the
+                  <strong className="text-slate-950">1. Submit:</strong> share the
                   event purpose, contact details, audience, preferred schedule,
                   and support offered.
                 </p>
                 <p>
-                  <strong className="text-white">2. Review:</strong> platform
+                  <strong className="text-slate-950">2. Review:</strong> platform
                   admins check school relevance, safety, timeline, and
                   operational fit.
                 </p>
                 <p>
-                  <strong className="text-white">3. Prepare:</strong> approved
+                  <strong className="text-slate-950">3. Prepare:</strong> approved
                   requests are converted into platform events with clear partner
                   attribution.
                 </p>
                 <p>
-                  <strong className="text-white">4. Invite schools:</strong>{" "}
+                  <strong className="text-slate-950">4. Invite schools:</strong>{" "}
                   schools review the event and decide whether to participate.
                 </p>
                 <p>
-                  <strong className="text-white">5. Publish outcomes:</strong>{" "}
+                  <strong className="text-slate-950">5. Publish outcomes:</strong>{" "}
                   results, certificates, and selected highlights can be shared
                   after the event is completed.
                 </p>
               </div>
-            </div>
+            </PublicCard>
 
-            <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-6">
-              <h2 className="text-xl font-bold text-emerald-200 mb-3">
+            <PublicCard className="border-emerald-200 bg-emerald-50">
+              <h2 className="mb-3 text-lg font-black text-emerald-900 sm:text-xl">
                 Student safety first
               </h2>
-              <p className="text-sm text-emerald-50/80 leading-7">
+              <p className="text-sm text-emerald-800 leading-7">
                 External partners do not automatically receive student data.
                 Schools and platform admins control participation, visibility,
                 and public recognition.
               </p>
-            </div>
+            </PublicCard>
           </aside>
 
           <EventProposalForm />
         </div>
-      </section>
-    </main>
+      </PublicContainer>
+    </PublicPageShell>
   );
 }

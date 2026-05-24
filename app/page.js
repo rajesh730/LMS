@@ -67,7 +67,7 @@ async function getHomepageData() {
     await Promise.all([
       getRecentWinnerHighlights(),
       getPublicFeedItems({ limit: 8, types: ["pulse"] }),
-      getRotatingPartnerSpotlights(1),
+      getRotatingPartnerSpotlights(5),
       getActiveSchoolPromotions("HOME_SPOTLIGHT", 4, { randomize: true }),
     ]);
 
@@ -93,7 +93,7 @@ function PartnerSpotlightPanel({ partnerSpotlight }) {
   return (
     <Shell
       {...shellProps}
-      className={`group flex h-full flex-col overflow-hidden rounded-[30px] border border-[#d7cdbb] bg-[#0f2c5c] text-white shadow-sm ${
+      className={`group flex h-full flex-col overflow-hidden rounded-[30px] border border-[#c5d8f4] bg-[linear-gradient(180deg,#12386f_0%,#0d2a57_100%)] text-[#f9fbff] shadow-[0_18px_40px_rgba(8,24,51,0.18)] ${
         portfolioHref
           ? "transition hover:-translate-y-0.5 hover:shadow-lg"
           : ""
@@ -101,45 +101,107 @@ function PartnerSpotlightPanel({ partnerSpotlight }) {
     >
       <div className="flex flex-1 flex-col justify-between p-6">
         <div>
-          <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-black uppercase tracking-[0.16em] text-[#d7e9ff]">
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/12 px-3 py-1 text-xs font-black uppercase tracking-[0.16em] text-[#eef6ff] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
             <FaHandshake />
             Partner Spotlight
           </div>
-          <h2 className="mt-4 text-2xl font-black tracking-tight">
+          <h2
+            className="mt-4 text-2xl font-black tracking-tight"
+            style={{ color: "#f9fbff" }}
+          >
             {partnerSpotlight.name}
           </h2>
-          <p className="mt-2 text-sm font-semibold text-[#b8d7ff]">
+          <p className="mt-2 text-sm font-semibold text-[#cfe2ff]">
             {partnerLabel}
           </p>
-          <p className="mt-3 line-clamp-4 text-sm leading-6 text-slate-200">
+          <p className="mt-3 line-clamp-4 text-sm leading-6 text-[#e3ecf9]">
             {partnerSpotlight.description}
           </p>
         </div>
         <div className="mt-6">
-          <div className="rounded-2xl bg-white/10 p-4">
-            <p className="text-xs font-black uppercase tracking-[0.14em] text-[#d7e9ff]">
+          <div className="rounded-2xl border border-[#3c5f93] bg-[#315182] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+            <p className="text-xs font-black uppercase tracking-[0.14em] text-[#f1f6ff]">
               {hasEvents ? "Active public events" : "Partner status"}
             </p>
-            <p className="mt-2 text-sm text-white">
+            <p className="mt-2 text-sm font-semibold text-[#ffffff]">
               {hasEvents
                 ? `${partnerSpotlight.activeEventCount} public event${
                     partnerSpotlight.activeEventCount === 1 ? "" : "s"
                   }`
                 : "Selected for homepage visibility"}
             </p>
-            <p className="mt-1 text-xs text-slate-200">
+            <p className="mt-2 text-xs leading-5 text-[#dce7f7]">
               {hasEvents
                 ? "Shown by admin selection with event context when available."
                 : "This partner can be highlighted before a public event is attached."}
             </p>
           </div>
-          <span className="mt-4 inline-flex items-center gap-2 text-sm font-black text-white">
+          <span className="mt-4 inline-flex items-center gap-2 rounded-full border border-white/14 bg-white/8 px-3 py-2 text-sm font-black text-[#f7fbff]">
             {portfolioHref ? "View portfolio" : "Homepage partner"}
             {portfolioHref && <FaArrowRight />}
           </span>
         </div>
       </div>
     </Shell>
+  );
+}
+
+function MobileSectionHeader({ eyebrow, title, href, cta }) {
+  return (
+    <div className="flex items-end justify-between gap-3 px-1">
+      <div>
+        <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[#0a2f66]">
+          {eyebrow}
+        </p>
+        <h2 className="mt-1 text-xl font-black text-slate-950">{title}</h2>
+      </div>
+      {href && cta ? (
+        <Link
+          href={href}
+          className="inline-flex items-center gap-2 text-sm font-black text-[#0a2f66]"
+        >
+          {cta}
+          <FaArrowRight className="text-xs" />
+        </Link>
+      ) : null}
+    </div>
+  );
+}
+
+function MobileSchoolRailCard({ promotion }) {
+  const image = promotion.profile?.coverImageUrl;
+  const location = promotion.school.location || "";
+  const summary =
+    promotion.profile?.tagline || promotion.tagline || "Recognized on Pratyo";
+
+  return (
+    <Link
+      href={promotion.href}
+      className="group relative block h-[210px] w-[142px] shrink-0 overflow-hidden rounded-[24px] border border-[#cfe0f6] bg-[#0a2f66] shadow-[0_14px_28px_rgba(10,47,102,0.16)]"
+    >
+      <div
+        className="absolute inset-0 bg-cover bg-center"
+        style={{
+          backgroundImage: image
+            ? `linear-gradient(180deg, rgba(7,24,51,0.06) 0%, rgba(7,24,51,0.12) 34%, rgba(7,24,51,0.88) 100%), url(${image})`
+            : "linear-gradient(180deg, #2f7fdb 0%, #174488 48%, #0a2f66 100%)",
+        }}
+      />
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.06)_0%,rgba(255,255,255,0)_24%,rgba(255,255,255,0)_100%)]" />
+      <div className="top-school-badge absolute left-3 top-3 rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.12em]">
+        Top school
+      </div>
+      <div className="absolute inset-x-0 bottom-0 p-3.5 text-white">
+        <div className="pt-8">
+          <h3 className="line-clamp-2 text-[17px] font-black leading-[1.08] text-white">
+            {promotion.title}
+          </h3>
+          <p className="mt-2 line-clamp-1 text-[11px] font-semibold text-[#d8e8ff]">
+            {location || summary}
+          </p>
+        </div>
+      </div>
+    </Link>
   );
 }
 
@@ -152,7 +214,44 @@ export default async function Home() {
     <main className="min-h-screen bg-[#f5f1e8] text-slate-950 selection:bg-[#2f7fdb]/20">
       <PublicSiteNav active="home" />
 
-      <section className="border-b border-[#d7cdbb] bg-[#f8fbff]">
+      <section className="lg:hidden">
+        <div className="mx-auto max-w-7xl space-y-2 py-4 pb-32">
+          <div>
+            <div className="px-4 sm:px-6">
+              <MobileSectionHeader
+                eyebrow="Discover"
+                title="Top Schools"
+                href="/schools"
+                cta="See all"
+              />
+            </div>
+            <div className="mt-4 flex snap-x snap-mandatory gap-2.5 overflow-x-auto px-4 pb-1 sm:px-6">
+              {homeSpotlights.length > 0 ? (
+                homeSpotlights.map((promotion) => (
+                  <div key={promotion.id} className="snap-start">
+                    <MobileSchoolRailCard promotion={promotion} />
+                  </div>
+                ))
+              ) : (
+                <div className="w-full rounded-[24px] border border-slate-200 bg-white p-5 text-sm text-slate-600 shadow-sm">
+                  Highlighted schools will appear here after admin selection.
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="w-full">
+            <PublicFeedList
+              initialItems={feed.items}
+              initialCursor={feed.nextCursor}
+              initialHasMore={feed.hasMore}
+              feedType="pulse"
+            />
+          </div>
+        </div>
+      </section>
+
+      <section className="hidden border-b border-[#d7cdbb] bg-[#f8fbff] lg:block">
         <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-stretch">
             <div className="rounded-[30px] border border-[#d7cdbb] bg-white p-5 shadow-sm sm:p-7">
@@ -207,7 +306,7 @@ export default async function Home() {
         </div>
       </section>
 
-      <div className="mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-6 lg:h-[calc(100vh-7rem)] lg:grid-cols-[230px_minmax(0,1fr)_330px] lg:items-start">
+      <div className="mx-auto hidden max-w-7xl gap-6 px-4 py-6 sm:px-6 lg:grid lg:h-[calc(100vh-7rem)] lg:grid-cols-[230px_minmax(0,1fr)_330px] lg:items-start">
         <aside className="hidden lg:sticky lg:top-24 lg:block lg:h-full">
           <div className="flex h-full flex-col gap-5 pr-1">
             <div className="rounded-[26px] border border-slate-200 bg-white p-3 shadow-sm">
@@ -344,7 +443,7 @@ export default async function Home() {
         </aside>
       </div>
 
-      <footer className="border-t border-[#d7cdbb] px-4 py-8 text-center text-sm text-slate-500 sm:px-6">
+      <footer className="hidden border-t border-[#d7cdbb] px-4 py-8 pb-28 text-center text-sm text-slate-500 sm:px-6 lg:block lg:pb-8">
         <p>
           &copy; 2026 Pratyo. Student talent, school recognition, public events,
           and verified certificates.

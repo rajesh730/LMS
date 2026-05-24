@@ -58,7 +58,7 @@ export default async function PublicSchoolPage({ params }) {
 
   if (!data) {
     return (
-      <main className="min-h-screen bg-slate-950 text-white">
+      <main className="pratyo-public-shell min-h-screen bg-[#f5f1e8] pb-32 text-slate-950 md:pb-0">
         <PublicSiteNav active="schools" />
         <div className="max-w-5xl mx-auto p-8">
           <p className="text-slate-400">School not found.</p>
@@ -71,7 +71,7 @@ export default async function PublicSchoolPage({ params }) {
   const metrics = profile?.highlightMetrics || {};
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white">
+    <main className="pratyo-public-shell min-h-screen bg-[#f5f1e8] pb-32 text-slate-950 md:pb-0">
       <PublicSiteNav active="schools" />
 
       <section className="max-w-6xl mx-auto px-6 py-12">

@@ -108,11 +108,11 @@ export default function EventProposalForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <section className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6">
-        <p className="mb-2 text-xs uppercase tracking-[0.2em] text-blue-300">
+      <section className="rounded-[26px] border border-[#d7cdbb] bg-white p-5 shadow-sm sm:p-6">
+        <p className="mb-2 text-[11px] font-black uppercase tracking-[0.16em] text-[#0a2f66]">
           Step 1
         </p>
-        <h2 className="mb-5 text-2xl font-bold text-white">
+        <h2 className="mb-5 text-xl font-black text-slate-950 sm:text-2xl">
           Organizer Details
         </h2>
 
@@ -122,12 +122,12 @@ export default function EventProposalForm() {
             value={form.organizationName}
             onChange={(e) => update("organizationName", e.target.value)}
             placeholder="Organization name"
-            className="rounded-xl border border-slate-800 bg-slate-950 p-3 text-white"
+            className="rounded-xl border border-[#d7cdbb] bg-white p-3 text-slate-950"
           />
           <select
             value={form.organizationType}
             onChange={(e) => update("organizationType", e.target.value)}
-            className="rounded-xl border border-slate-800 bg-slate-950 p-3 text-white"
+            className="rounded-xl border border-[#d7cdbb] bg-white p-3 text-slate-950"
           >
             {ORGANIZATION_TYPES.map((type) => (
               <option key={type} value={type}>
@@ -140,7 +140,7 @@ export default function EventProposalForm() {
             value={form.contactName}
             onChange={(e) => update("contactName", e.target.value)}
             placeholder="Contact person"
-            className="rounded-xl border border-slate-800 bg-slate-950 p-3 text-white"
+            className="rounded-xl border border-[#d7cdbb] bg-white p-3 text-slate-950"
           />
           <input
             required
@@ -148,34 +148,34 @@ export default function EventProposalForm() {
             value={form.contactEmail}
             onChange={(e) => update("contactEmail", e.target.value)}
             placeholder="Contact email"
-            className="rounded-xl border border-slate-800 bg-slate-950 p-3 text-white"
+            className="rounded-xl border border-[#d7cdbb] bg-white p-3 text-slate-950"
           />
           <input
             value={form.contactPhone}
             onChange={(e) => update("contactPhone", e.target.value)}
             placeholder="Phone number"
-            className="rounded-xl border border-slate-800 bg-slate-950 p-3 text-white"
+            className="rounded-xl border border-[#d7cdbb] bg-white p-3 text-slate-950"
           />
           <input
             value={form.location}
             onChange={(e) => update("location", e.target.value)}
             placeholder="Location"
-            className="rounded-xl border border-slate-800 bg-slate-950 p-3 text-white"
+            className="rounded-xl border border-[#d7cdbb] bg-white p-3 text-slate-950"
           />
           <input
             value={form.website}
             onChange={(e) => update("website", e.target.value)}
             placeholder="Website or public profile link"
-            className="rounded-xl border border-slate-800 bg-slate-950 p-3 text-white md:col-span-2"
+            className="rounded-xl border border-[#d7cdbb] bg-white p-3 text-slate-950 md:col-span-2"
           />
         </div>
       </section>
 
-      <section className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6">
-        <p className="mb-2 text-xs uppercase tracking-[0.2em] text-blue-300">
+      <section className="rounded-[26px] border border-[#d7cdbb] bg-white p-5 shadow-sm sm:p-6">
+        <p className="mb-2 text-[11px] font-black uppercase tracking-[0.16em] text-[#0a2f66]">
           Step 2
         </p>
-        <h2 className="mb-5 text-2xl font-bold text-white">Event Proposal</h2>
+        <h2 className="mb-5 text-xl font-black text-slate-950 sm:text-2xl">Event Proposal</h2>
 
         <div className="space-y-4">
           <input
@@ -183,7 +183,7 @@ export default function EventProposalForm() {
             value={form.eventTitle}
             onChange={(e) => update("eventTitle", e.target.value)}
             placeholder="Event title"
-            className="w-full rounded-xl border border-slate-800 bg-slate-950 p-3 text-white"
+            className="w-full rounded-xl border border-[#d7cdbb] bg-white p-3 text-slate-950"
           />
           <textarea
             required
@@ -191,7 +191,7 @@ export default function EventProposalForm() {
             onChange={(e) => update("eventDescription", e.target.value)}
             placeholder="Describe the event purpose, format, student audience, and what schools should expect"
             rows={5}
-            className="w-full rounded-xl border border-slate-800 bg-slate-950 p-3 text-white"
+            className="w-full rounded-xl border border-[#d7cdbb] bg-white p-3 text-slate-950"
           />
           <div className="grid gap-4 md:grid-cols-3">
             <input
@@ -199,12 +199,12 @@ export default function EventProposalForm() {
               min={getTodayInputValue()}
               value={form.preferredDate}
               onChange={(e) => update("preferredDate", e.target.value)}
-              className="rounded-xl border border-slate-800 bg-slate-950 p-3 text-white"
+              className="rounded-xl border border-[#d7cdbb] bg-white p-3 text-slate-950"
             />
             <select
               value={form.eventMode}
               onChange={(e) => update("eventMode", e.target.value)}
-              className="rounded-xl border border-slate-800 bg-slate-950 p-3 text-white"
+              className="rounded-xl border border-[#d7cdbb] bg-white p-3 text-slate-950"
             >
               {EVENT_MODES.map((mode) => (
                 <option key={mode} value={mode}>
@@ -216,29 +216,29 @@ export default function EventProposalForm() {
               value={form.venue}
               onChange={(e) => update("venue", e.target.value)}
               placeholder="Venue, if known"
-              className="rounded-xl border border-slate-800 bg-slate-950 p-3 text-white"
+              className="rounded-xl border border-[#d7cdbb] bg-white p-3 text-slate-950"
             />
           </div>
         </div>
       </section>
 
-      <section className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6">
-        <p className="mb-2 text-xs uppercase tracking-[0.2em] text-blue-300">
+      <section className="rounded-[26px] border border-[#d7cdbb] bg-white p-5 shadow-sm sm:p-6">
+        <p className="mb-2 text-[11px] font-black uppercase tracking-[0.16em] text-[#0a2f66]">
           Step 3
         </p>
-        <h2 className="mb-5 text-2xl font-bold text-white">
+        <h2 className="mb-5 text-xl font-black text-slate-950 sm:text-2xl">
           Audience and Support
         </h2>
 
         <div className="grid gap-6 lg:grid-cols-2">
           <div>
-            <label className="mb-2 block text-sm text-slate-300">
+            <label className="mb-2 block text-sm font-bold text-slate-700">
               Organizer role
             </label>
             <select
               value={form.proposedRoles[0] || "ORGANIZER_PARTNER"}
               onChange={(e) => update("proposedRoles", [e.target.value])}
-              className="w-full rounded-xl border border-slate-800 bg-slate-950 p-3 text-white"
+              className="w-full rounded-xl border border-[#d7cdbb] bg-white p-3 text-slate-950"
             >
               {ROLE_OPTIONS.map((role) => (
                 <option key={role} value={role}>
@@ -249,20 +249,20 @@ export default function EventProposalForm() {
           </div>
 
           <div>
-            <label className="mb-2 block text-sm text-slate-300">
+            <label className="mb-2 block text-sm font-bold text-slate-700">
               Prize or support details
             </label>
             <input
             value={form.prizeDetails}
             onChange={(e) => update("prizeDetails", e.target.value)}
               placeholder="Awards, certificates, resources, or other support offered"
-              className="w-full rounded-xl border border-slate-800 bg-slate-950 p-3 text-white"
+              className="w-full rounded-xl border border-[#d7cdbb] bg-white p-3 text-slate-950"
             />
           </div>
         </div>
 
         <div className="mt-6">
-          <p className="mb-2 text-sm text-slate-300">Target grades</p>
+          <p className="mb-2 text-sm font-bold text-slate-700">Target grades</p>
           <p className="mb-3 text-xs text-slate-500">
             Leave empty if the event is open to all school grades.
           </p>
@@ -270,13 +270,13 @@ export default function EventProposalForm() {
             {GRADE_OPTIONS.map((grade) => (
               <label
                 key={grade}
-                className="flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-950/70 p-3 text-sm text-slate-200"
+                className="flex items-center gap-2 rounded-xl border border-[#d7cdbb] bg-[#f8fbff] p-3 text-sm font-semibold text-slate-700"
               >
                 <input
                   type="checkbox"
                   checked={form.targetGrades.includes(grade)}
                   onChange={() => toggleGrade(grade)}
-                  className="rounded border-slate-600 bg-slate-800"
+                  className="rounded border-[#bfd7f7] bg-white"
                 />
                 {grade}
               </label>
@@ -289,14 +289,14 @@ export default function EventProposalForm() {
         <button
           type="submit"
           disabled={status === "submitting"}
-          className="rounded-full bg-blue-600 px-8 py-4 font-bold text-white hover:bg-blue-500 disabled:opacity-60"
+          className="rounded-full bg-[#0a2f66] px-8 py-4 font-bold text-white hover:bg-[#123f82] disabled:opacity-60"
         >
           {status === "submitting" ? "Submitting..." : "Request Review"}
         </button>
         {message && (
           <p
             className={`text-sm ${
-              status === "success" ? "text-emerald-300" : "text-red-300"
+              status === "success" ? "text-emerald-700" : "text-red-700"
             }`}
           >
             {message}

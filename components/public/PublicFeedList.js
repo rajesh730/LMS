@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   FaArrowRight,
   FaAward,
   FaCalendarAlt,
-  FaFeatherAlt,
-  FaRegCommentDots,
+  FaEllipsisH,
   FaSchool,
+  FaThumbsUp,
   FaTrophy,
   FaUsers,
 } from "react-icons/fa";
@@ -20,6 +20,20 @@ function formatDate(value) {
     day: "numeric",
     year: "numeric",
   }).format(new Date(value));
+}
+
+function getInitials(value) {
+  const parts = String(value || "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  if (!parts.length) return "SC";
+
+  return parts
+    .slice(0, 4)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join("");
 }
 
 function SchoolSpotlightCard({ promotion, compact = false, className = "" }) {
@@ -73,61 +87,108 @@ function SchoolSpotlightCard({ promotion, compact = false, className = "" }) {
 
 function PulseFeedCard({ item }) {
   const [expanded, setExpanded] = useState(false);
+  const [liked, setLiked] = useState(false);
   const content = String(item.content || "");
-  const needsReadMore = content.length > 420;
+  const needsReadMore = content.length > 220;
+  const primaryLabel = item.challengeTitle || item.schoolName || "Pratyo Pulse";
+  const showTitle =
+    item.title &&
+    String(item.title).trim().toLowerCase() !==
+      String(primaryLabel).trim().toLowerCase();
+  const reactionCount = (item.reactionCount ?? 0) + (liked ? 1 : 0);
+  const schoolInitials = getInitials(item.schoolName);
+  const likeStorageKey = `pratyo:public-pulse-like:${item.id}`;
+
+  useEffect(() => {
+    setLiked(localStorage.getItem(likeStorageKey) === "1");
+  }, [likeStorageKey]);
+
+  const toggleLike = () => {
+    setLiked((current) => {
+      const next = !current;
+      if (next) {
+        localStorage.setItem(likeStorageKey, "1");
+      } else {
+        localStorage.removeItem(likeStorageKey);
+      }
+      return next;
+    });
+  };
 
   return (
-    <article className="rounded-[26px] border border-slate-200 bg-white p-5 shadow-sm transition hover:border-[#2f7fdb]/35 hover:shadow-xl hover:shadow-[#0a2f66]/10 sm:p-6">
-      <div className="flex items-start gap-4">
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#eaf2ff] text-[#0a2f66]">
-          <FaFeatherAlt />
+    <article className="bg-white px-5 py-3.5 sm:px-6">
+      <div className="flex items-start gap-3">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[#dce9fa] bg-[#f8fbff] text-[13px] font-black uppercase tracking-[0.08em] text-[#0a2f66]">
+          {schoolInitials}
         </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap gap-2">
-            <span className="rounded-full bg-[#eaf2ff] px-3 py-1 text-xs font-black uppercase tracking-[0.12em] text-[#0a2f66]">
-              {item.challengeTitle || "Platform"}
-            </span>
-            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black uppercase tracking-[0.12em] text-slate-600">
-              {item.category || "Writing"}
-            </span>
+        <div className="min-w-0 flex-1 flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="line-clamp-2 text-[15px] font-black leading-5 text-slate-950">
+              {primaryLabel}
+            </p>
+            <div className="mt-1 flex min-w-0 items-center gap-1.5 text-[11px] text-slate-500">
+              <span className="shrink-0 whitespace-nowrap">{formatDate(item.date)}</span>
+              <span className="shrink-0 text-slate-300">|</span>
+              <span className="truncate">{item.schoolName || "School community"}</span>
+            </div>
           </div>
-          <h3 className="mt-4 text-2xl font-black tracking-tight text-slate-950">
-            {item.title}
-          </h3>
-          <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-500">
-            <span>{item.studentLabel || "Student"}</span>
-            <span className="hidden text-slate-300 sm:inline">|</span>
-            <span>{item.schoolName || "School community"}</span>
-            <span className="hidden text-slate-300 sm:inline">|</span>
-            <span>{formatDate(item.date)}</span>
-          </p>
-          <p
-            className={`mt-4 whitespace-pre-line break-words text-base leading-7 text-slate-700 ${
-              needsReadMore && !expanded ? "line-clamp-6" : ""
-            }`}
+          <button
+            type="button"
+            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+            aria-label="Post options"
           >
-            {content}
-          </p>
-          {needsReadMore && (
-            <button
-              type="button"
-              onClick={() => setExpanded((current) => !current)}
-              className="mt-3 text-sm font-black text-[#0a2f66] transition hover:text-[#123f82]"
-            >
-              {expanded ? "Show less" : "Read more"}
-            </button>
-          )}
-          <div className="mt-5 flex flex-wrap gap-3 text-sm font-bold text-slate-500">
-            <span className="inline-flex items-center gap-2">
-              <FaRegCommentDots />
-              Student response
-            </span>
-            <span className="inline-flex items-center gap-2">
-              <FaSchool />
-              School credit
-            </span>
-          </div>
+            <FaEllipsisH className="text-xs" />
+          </button>
         </div>
+      </div>
+      {showTitle ? (
+        <h3 className="mt-3 text-[18px] font-black leading-6 text-[#145ab2]">
+          {item.title}
+        </h3>
+      ) : null}
+      <p
+        className={`${showTitle ? "mt-3" : "mt-4"} whitespace-pre-line break-words text-[15px] leading-8 text-slate-800 ${
+          needsReadMore && !expanded ? "line-clamp-4" : ""
+        }`}
+      >
+        {content}
+        {needsReadMore && !expanded ? "..." : ""}
+      </p>
+      {needsReadMore && (
+        <button
+          type="button"
+          onClick={() => setExpanded((current) => !current)}
+          className="mt-2 text-sm font-semibold text-slate-500 transition hover:text-slate-700"
+        >
+          {expanded ? "Show less" : "Read more"}
+        </button>
+      )}
+      <div className="mt-4 flex items-center justify-between gap-3 border-t border-slate-200 pt-3 text-sm text-slate-500">
+        <button
+          type="button"
+          onClick={toggleLike}
+          className={`inline-flex items-center gap-2 transition ${
+            liked ? "text-[#145ab2]" : "hover:text-slate-700"
+          }`}
+          aria-pressed={liked}
+        >
+          <FaThumbsUp />
+          {reactionCount}
+        </button>
+        {item.schoolHref ? (
+          <a
+            href={item.schoolHref}
+            className="inline-flex items-center gap-2 rounded-full bg-[#f6f9ff] px-3 py-1.5 text-xs font-black uppercase tracking-[0.1em] text-[#0a2f66] transition hover:bg-[#eaf2ff]"
+          >
+            <FaSchool />
+            Visit school
+          </a>
+        ) : (
+          <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.12em] text-slate-400">
+            <FaSchool />
+            School
+          </span>
+        )}
       </div>
     </article>
   );
@@ -271,7 +332,7 @@ export default function PublicFeedList({
   if (items.length === 0) {
     return (
       <div className="rounded-[26px] border border-slate-200 bg-white p-8 text-center shadow-sm">
-        <FaFeatherAlt className="mx-auto text-3xl text-[#0a2f66]" />
+        <FaSchool className="mx-auto text-3xl text-[#0a2f66]" />
         <h2 className="mt-4 text-2xl font-black text-slate-950">
           The public feed is ready
         </h2>
@@ -284,9 +345,20 @@ export default function PublicFeedList({
   }
 
   return (
-    <div className="space-y-4">
-      {items.map((item) => (
-        <div key={item.id} className="space-y-4">
+    <div
+      className={
+        feedType === "pulse"
+          ? "overflow-hidden border-y border-slate-200 bg-white"
+          : "space-y-4"
+      }
+    >
+      {items.map((item, index) => (
+        <div
+          key={item.id}
+          className={
+            feedType === "pulse" && index > 0 ? "border-t border-slate-200" : ""
+          }
+        >
           <FeedCard item={item} />
         </div>
       ))}
