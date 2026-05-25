@@ -1,0 +1,95 @@
+import { NextResponse } from "next/server";
+import { subscribeRealtimeEvent } from "@/lib/realtimeBus";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+function formatSseEvent(event) {
+  return `data: ${JSON.stringify(event)}\n\n`;
+}
+
+function formatSseRetry(ms) {
+  return `retry: ${ms}\n\n`;
+}
+
+export async function GET(request) {
+  const { searchParams } = new URL(request.url);
+  const channels = Array.from(
+    new Set(
+      (searchParams.get("channels") || "")
+        .split(",")
+        .map((value) => value.trim())
+        .filter(Boolean)
+    )
+  );
+
+  if (channels.length === 0) {
+    return NextResponse.json(
+      { message: "At least one channel is required." },
+      { status: 400 }
+    );
+  }
+
+  const encoder = new TextEncoder();
+
+  const stream = new ReadableStream({
+    start(controller) {
+      let closed = false;
+      let closeStream = () => {};
+
+      const safeEnqueue = (message) => {
+        if (closed) return;
+        try {
+          controller.enqueue(encoder.encode(message));
+        } catch (error) {
+          closeStream(error);
+        }
+      };
+
+      safeEnqueue(formatSseRetry(3000));
+      safeEnqueue(
+        formatSseEvent({
+          channel: "system",
+          payload: { connected: true },
+          timestamp: new Date().toISOString(),
+        })
+      );
+
+      const unsubscribers = channels.map((channel) =>
+        subscribeRealtimeEvent(channel, (event) => {
+          safeEnqueue(formatSseEvent(event));
+        })
+      );
+
+      const pingId = setInterval(() => {
+        safeEnqueue(
+          formatSseEvent({
+            channel: "ping",
+            payload: {},
+            timestamp: new Date().toISOString(),
+          })
+        );
+      }, 20000);
+
+      closeStream = () => {
+        if (closed) return;
+        closed = true;
+        clearInterval(pingId);
+        unsubscribers.forEach((unsubscribe) => unsubscribe());
+        try {
+          controller.close();
+        } catch (_error) {}
+      };
+
+      request.signal.addEventListener("abort", closeStream, { once: true });
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache, no-transform",
+      Connection: "keep-alive",
+    },
+  });
+}

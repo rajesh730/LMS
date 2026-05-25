@@ -5,6 +5,8 @@ import connectDB from "@/lib/db";
 import Student from "@/models/Student";
 import PlatformChallenge from "@/models/PlatformChallenge";
 import PlatformChallengeSubmission from "@/models/PlatformChallengeSubmission";
+import { gradeListContains } from "@/lib/schoolGrades";
+import { publishWorkIndicatorsUpdate } from "@/lib/workIndicatorRealtime";
 
 const VALID_CATEGORIES = ["ESSAY", "POEM", "REPORT", "OPINION", "STORY", "OTHER"];
 
@@ -78,7 +80,7 @@ export async function POST(request) {
     }
 
     const targetGrades = challenge.targetGrades || [];
-    if (targetGrades.length > 0 && !targetGrades.includes(student.grade)) {
+    if (targetGrades.length > 0 && !gradeListContains(targetGrades, student.grade)) {
       return NextResponse.json(
         { message: "This challenge is not available for your grade" },
         { status: 403 }
@@ -105,6 +107,13 @@ export async function POST(request) {
       content,
       category,
       status: "SUBMITTED",
+    });
+
+    publishWorkIndicatorsUpdate("challenge-response-submitted", {
+      schoolId: String(student.school),
+      studentId: String(student._id),
+      challengeId: String(challenge._id),
+      submissionId: String(submission._id),
     });
 
     return NextResponse.json(

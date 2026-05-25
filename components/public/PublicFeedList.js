@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   FaArrowRight,
   FaAward,
@@ -11,6 +11,7 @@ import {
   FaTrophy,
   FaUsers,
 } from "react-icons/fa";
+import useRealtimeChannel from "@/lib/useRealtimeChannel";
 
 function formatDate(value) {
   if (!value) return "Date to be announced";
@@ -87,7 +88,9 @@ function SchoolSpotlightCard({ promotion, compact = false, className = "" }) {
 
 function PulseFeedCard({ item }) {
   const [expanded, setExpanded] = useState(false);
-  const [liked, setLiked] = useState(false);
+  const [liked, setLiked] = useState(Boolean(item.likedByViewer));
+  const [reactionCount, setReactionCount] = useState(item.reactionCount ?? 0);
+  const [likePending, setLikePending] = useState(false);
   const content = String(item.content || "");
   const needsReadMore = content.length > 220;
   const primaryLabel = item.challengeTitle || item.schoolName || "Pratyo Pulse";
@@ -95,24 +98,44 @@ function PulseFeedCard({ item }) {
     item.title &&
     String(item.title).trim().toLowerCase() !==
       String(primaryLabel).trim().toLowerCase();
-  const reactionCount = (item.reactionCount ?? 0) + (liked ? 1 : 0);
   const schoolInitials = getInitials(item.schoolName);
-  const likeStorageKey = `pratyo:public-pulse-like:${item.id}`;
 
   useEffect(() => {
-    setLiked(localStorage.getItem(likeStorageKey) === "1");
-  }, [likeStorageKey]);
+    setLiked(Boolean(item.likedByViewer));
+    setReactionCount(item.reactionCount ?? 0);
+  }, [item.likedByViewer, item.reactionCount]);
 
-  const toggleLike = () => {
-    setLiked((current) => {
-      const next = !current;
-      if (next) {
-        localStorage.setItem(likeStorageKey, "1");
-      } else {
-        localStorage.removeItem(likeStorageKey);
+  const toggleLike = async () => {
+    if (likePending) return;
+
+    const previousLiked = liked;
+    const previousReactionCount = reactionCount;
+    const optimisticLiked = !previousLiked;
+
+    setLikePending(true);
+    setLiked(optimisticLiked);
+    setReactionCount((current) =>
+      Math.max(0, current + (optimisticLiked ? 1 : -1))
+    );
+
+    try {
+      const res = await fetch(`/api/public/feed/${item.id}/like`, {
+        method: "POST",
+      });
+      const payload = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(payload.message || "Failed to update like");
       }
-      return next;
-    });
+
+      setLiked(Boolean(payload.liked));
+      setReactionCount(Math.max(0, Number(payload.reactionCount) || 0));
+    } catch (_error) {
+      setLiked(previousLiked);
+      setReactionCount(previousReactionCount);
+    } finally {
+      setLikePending(false);
+    }
   };
 
   return (
@@ -167,9 +190,10 @@ function PulseFeedCard({ item }) {
         <button
           type="button"
           onClick={toggleLike}
+          disabled={likePending}
           className={`inline-flex items-center gap-2 transition ${
             liked ? "text-[#145ab2]" : "hover:text-slate-700"
-          }`}
+          } ${likePending ? "cursor-wait opacity-70" : ""}`}
           aria-pressed={liked}
         >
           <FaThumbsUp />
@@ -299,6 +323,27 @@ export default function PublicFeedList({
   const [hasMore, setHasMore] = useState(initialHasMore);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  useRealtimeChannel(
+    "public-feed",
+    useCallback((payload) => {
+      if (payload.payload?.kind === "like-updated" && payload.payload?.itemId) {
+        setItems((current) =>
+          current.map((item) =>
+            item.id === payload.payload.itemId
+              ? {
+                  ...item,
+                  reactionCount: payload.payload.reactionCount,
+                }
+              : item
+          )
+        );
+      }
+    }, []),
+    {
+      enabled: feedType === "pulse" || feedType === "all",
+    }
+  );
 
   const loadMore = async () => {
     if (!hasMore || loading) return;

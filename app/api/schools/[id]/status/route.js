@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import connectDB from '@/lib/db';
 import User from '@/models/User';
+import { publishWorkIndicatorsUpdate } from '@/lib/workIndicatorRealtime';
 
 export async function PUT(req, { params }) {
     try {
@@ -36,6 +37,10 @@ export async function PUT(req, { params }) {
         }
 
         console.log("School updated successfully:", user._id, "New status:", user.status);
+        publishWorkIndicatorsUpdate("school-status-updated", {
+            schoolId: String(user._id),
+            status: user.status,
+        });
         return NextResponse.json({ message: 'Status updated', user }, { status: 200 });
     } catch (error) {
         console.error('❌ Error updating status:', error.message);

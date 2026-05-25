@@ -2,6 +2,7 @@ import dbConnect from "@/lib/db";
 import Notice from "@/models/Notice";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]/route";
+import { publishNoticeRealtimeEvent } from "@/lib/noticeRealtime";
 
 function canManageNotice(session, notice) {
   if (!session?.user?.id || !notice) return false;
@@ -87,6 +88,19 @@ export async function PATCH(request, props) {
     await notice.save();
     await notice.populate("author", "name email");
 
+    if (nextStatus === "PUBLISHED") {
+      publishNoticeRealtimeEvent({
+        scope: notice.scope,
+        targetAudience: notice.targetAudience,
+      });
+    } else {
+      publishNoticeRealtimeEvent({
+        scope: notice.scope,
+        targetAudience: notice.targetAudience,
+        isDeleted: true,
+      });
+    }
+
     return Response.json({ message: "Notice updated", notice });
   } catch (error) {
     console.error("PATCH /api/notices/[id] error:", error);
@@ -119,6 +133,12 @@ export async function DELETE(request, props) {
     notice.deletedAt = new Date();
     notice.deletedBy = session.user.id;
     await notice.save();
+
+    publishNoticeRealtimeEvent({
+      scope: notice.scope,
+      targetAudience: notice.targetAudience,
+      isDeleted: true,
+    });
 
     return Response.json({ message: "Notice archived" });
   } catch (error) {

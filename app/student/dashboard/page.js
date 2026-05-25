@@ -56,8 +56,8 @@ export default function StudentDashboard() {
           description="Start with today's updates, then explore achievements, certificates, school notices, writing tasks, and magazine articles from one simple place."
           action={<StudentNotificationCenter />}
           meta={
-            <div className="inline-flex items-center gap-2 rounded-full border border-slate-800 bg-slate-950/60 px-3 py-2 text-xs font-semibold text-slate-300">
-              <FaBell className="text-amber-300" />
+            <div className="inline-flex items-center gap-2 rounded-full border border-[#d7cdbb] bg-[#eaf2ff] px-3 py-2 text-xs font-semibold text-[#0a2f66]">
+              <FaBell className="text-[#0a2f66]" />
               Notices and event updates are kept in the left menu.
             </div>
           }

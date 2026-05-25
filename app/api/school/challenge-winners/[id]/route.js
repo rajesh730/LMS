@@ -5,6 +5,7 @@ import connectDB from "@/lib/db";
 import PlatformChallengeSubmission from "@/models/PlatformChallengeSubmission";
 import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
 import { recordLifecycleAudit } from "@/lib/lifecycle";
+import { publishWorkIndicatorsUpdate } from "@/lib/workIndicatorRealtime";
 import "@/models/PlatformChallenge";
 
 export async function PATCH(request, props) {
@@ -71,6 +72,12 @@ export async function PATCH(request, props) {
         addedToSchoolMagazine: submission.addedToSchoolMagazine,
         schoolMagazineArticle: submission.schoolMagazineArticle,
       },
+    });
+
+    publishWorkIndicatorsUpdate("challenge-response-added-to-magazine", {
+      schoolId: String(submission.school),
+      submissionId: String(submission._id),
+      articleId: String(article._id),
     });
 
     return NextResponse.json({

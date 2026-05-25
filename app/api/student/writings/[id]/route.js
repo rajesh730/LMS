@@ -4,6 +4,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import Student from "@/models/Student";
 import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
+import { publishWorkIndicatorsUpdate } from "@/lib/workIndicatorRealtime";
 
 function buildStudentLookup(session) {
   return {
@@ -93,6 +94,12 @@ export async function PATCH(request, props) {
 
     await article.save();
 
+    publishWorkIndicatorsUpdate("student-writing-updated", {
+      schoolId: String(student.school),
+      studentId: String(student._id),
+      status: article.status,
+    });
+
     return NextResponse.json({
       message:
         requestedStatus === "SUBMITTED"
@@ -159,6 +166,11 @@ export async function DELETE(request, props) {
     article.publishedAt = null;
     await article.save();
 
+    publishWorkIndicatorsUpdate("student-writing-deleted", {
+      schoolId: String(student.school),
+      studentId: String(student._id),
+    });
+
     return NextResponse.json({ message: "Writing deleted" });
   } catch (error) {
     console.error("DELETE /api/student/writings/[id] error:", error);
@@ -220,6 +232,12 @@ export async function POST(request, props) {
       category: article.category,
       submissionSource: "FREE_WRITE",
       status: "DRAFT",
+    });
+
+    publishWorkIndicatorsUpdate("student-writing-revision-created", {
+      schoolId: String(student.school),
+      studentId: String(student._id),
+      status: revision.status,
     });
 
     return NextResponse.json(

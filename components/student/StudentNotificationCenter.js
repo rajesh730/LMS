@@ -3,6 +3,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FaBell } from "react-icons/fa";
+import {
+  NotificationBulkActions,
+  NotificationMeta,
+  NotificationNewBadge,
+  NotificationReadToggleButton,
+  NotificationTypeBadge,
+} from "@/components/notifications/NotificationUi";
+import useNotificationInbox from "@/lib/useNotificationInbox";
 
 function formatDate(value) {
   if (!value) return "";
@@ -18,40 +26,26 @@ export default function StudentNotificationCenter() {
   const router = useRouter();
   const panelRef = useRef(null);
   const [isOpen, setIsOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [notifications, setNotifications] = useState([]);
-
-  const loadNotifications = useCallback(async () => {
-    try {
-      setLoading(true);
-      const res = await fetch("/api/student/notifications?limit=12", {
-        cache: "no-store",
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(data.message || "Failed to load notifications");
-      }
-      setNotifications(
-        Array.isArray(data.notifications) ? data.notifications : []
-      );
-    } catch (error) {
-      setNotifications([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadNotifications();
-  }, [loadNotifications]);
-
-  useEffect(() => {
-    const intervalId = setInterval(() => {
-      loadNotifications();
-    }, 30000);
-
-    return () => clearInterval(intervalId);
-  }, [loadNotifications]);
+  const {
+    loading,
+    error,
+    notifications,
+    unreadCount,
+    loadNotifications,
+    markNotificationsRead,
+    toggleNotificationReadState,
+    updateNotificationsReadState,
+  } = useNotificationInbox({
+    listUrl: "/api/student/notifications",
+    readUrl: "/api/student/notifications/read",
+    limit: 12,
+    realtimeChannel: "student-notifications",
+    enableRealtimeToast: true,
+    toastMessageBuilder: (notification) =>
+      notification.noticeType === "EVENT"
+        ? `New event notice: ${notification.title}`
+        : `New school notice: ${notification.title}`,
+  });
 
   useEffect(() => {
     const handleOutsideClick = (event) => {
@@ -74,12 +68,16 @@ export default function StudentNotificationCenter() {
     }
 
     setIsOpen(true);
-    await loadNotifications();
-  }, [isOpen, loadNotifications]);
+    const nextNotifications = await loadNotifications();
+    await markNotificationsRead(nextNotifications);
+  }, [isOpen, loadNotifications, markNotificationsRead]);
 
   const handleNotificationClick = (event, notification) => {
     event.preventDefault();
     setIsOpen(false);
+    if (!notification.isRead) {
+      void markNotificationsRead([notification]);
+    }
     router.push(notification.href);
   };
 
@@ -88,64 +86,109 @@ export default function StudentNotificationCenter() {
       <button
         type="button"
         onClick={handleTogglePanel}
-        className="relative rounded-full bg-slate-800 p-3 text-white transition hover:bg-slate-700"
+        className="relative inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border border-[#d7cdbb] bg-white text-[#0a2f66] shadow-sm transition hover:bg-[#eaf2ff]"
         aria-label="Toggle student notifications"
       >
         <FaBell />
+        {unreadCount > 0 && (
+          <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+            {unreadCount > 99 ? "99+" : unreadCount}
+          </span>
+        )}
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-14 z-50 w-[360px] rounded-2xl border border-slate-700 bg-slate-900/95 p-4 shadow-2xl shadow-black/50 backdrop-blur">
+        <div className="absolute right-0 top-14 z-50 w-[360px] rounded-2xl border border-[#d7cdbb] bg-white p-4 shadow-[0_20px_50px_rgba(10,47,102,0.15)]">
           <div className="mb-4">
-            <h3 className="text-sm font-bold uppercase tracking-[0.18em] text-slate-200">
-              Student Notices
-            </h3>
-            <p className="mt-1 text-xs text-slate-400">
-              School updates and event notices for your student dashboard
-            </p>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-bold uppercase tracking-[0.18em] text-[#0a2f66]">
+                  Student Notices
+                </h3>
+                <p className="mt-1 text-xs text-[#52657d]">
+                  School updates and event notices for your student dashboard
+                </p>
+              </div>
+              {notifications.length > 0 && (
+                <NotificationBulkActions
+                  compact
+                  onMarkAllUnread={() =>
+                    void updateNotificationsReadState("unread", notifications, {
+                      allVisible: true,
+                    })
+                  }
+                  onMarkAllRead={() =>
+                    void updateNotificationsReadState("read", notifications, {
+                      allVisible: true,
+                    })
+                  }
+                />
+              )}
+            </div>
           </div>
 
           {loading ? (
-            <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-4 text-sm text-slate-400">
+            <div className="rounded-xl border border-[#d7cdbb] bg-[#f8fbff] p-4 text-sm text-[#52657d]">
               Loading notices...
             </div>
+          ) : error ? (
+            <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+              <p className="font-semibold">Failed to load</p>
+              <p className="mt-1">{error}</p>
+              <button
+                type="button"
+                onClick={loadNotifications}
+                className="mt-2 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-500"
+              >
+                Retry
+              </button>
+            </div>
           ) : notifications.length === 0 ? (
-            <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-4 text-sm text-slate-400">
+            <div className="rounded-xl border border-[#d7cdbb] bg-[#f8fbff] p-4 text-sm text-[#52657d]">
               No notices yet.
             </div>
           ) : (
             <div className="max-h-[420px] space-y-3 overflow-y-auto pr-1">
               {notifications.map((notification) => (
-                <a
+                <div
                   key={`${notification.noticeType}-${notification.id}`}
-                  href={notification.href}
-                  onClick={(event) =>
-                    handleNotificationClick(event, notification)
-                  }
-                  className="block rounded-xl border border-slate-800 bg-slate-950/60 p-3 transition hover:border-slate-700 hover:bg-slate-900"
+                  className="rounded-xl border border-[#d7cdbb] bg-white p-3 transition hover:border-[#bfd7f7] hover:bg-[#f8fbff]"
                 >
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span
-                      className={`rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide ${
-                        notification.noticeType === "EVENT"
-                          ? "bg-sky-500/15 text-sky-200"
-                          : "bg-emerald-500/15 text-emerald-200"
-                      }`}
-                    >
-                      {notification.noticeType === "EVENT" ? "Event" : "School"}
-                    </span>
+                  <button
+                    type="button"
+                    onClick={(event) =>
+                      handleNotificationClick(event, notification)
+                    }
+                    className="block w-full text-left"
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      <NotificationTypeBadge
+                        noticeType={notification.noticeType}
+                      />
+                    </div>
+                    <p className="mt-2 text-sm font-semibold text-[#17120a]">
+                      {notification.title}
+                    </p>
+                    <p className="mt-1 line-clamp-2 text-sm text-[#344f77]">
+                      {notification.message}
+                    </p>
+                    <NotificationMeta
+                      className="mt-2"
+                      date={formatDate(notification.publishedAt)}
+                      eventTitle={notification.event?.title}
+                    />
+                    <div className="mt-2">
+                      <NotificationNewBadge isRead={notification.isRead} />
+                    </div>
+                  </button>
+                  <div className="mt-3 flex justify-end">
+                    <NotificationReadToggleButton
+                      notification={notification}
+                      onToggle={(item) => void toggleNotificationReadState(item)}
+                      size="xs"
+                    />
                   </div>
-                  <p className="mt-2 text-sm font-semibold text-white">
-                    {notification.title}
-                  </p>
-                  <p className="mt-1 line-clamp-2 text-sm text-slate-300">
-                    {notification.message}
-                  </p>
-                  <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-slate-500">
-                    <span>{formatDate(notification.publishedAt)}</span>
-                    {notification.event && <span>{notification.event.title}</span>}
-                  </div>
-                </a>
+                </div>
               ))}
 
               <a
@@ -153,9 +196,10 @@ export default function StudentNotificationCenter() {
                 onClick={(event) => {
                   event.preventDefault();
                   setIsOpen(false);
+                  void markNotificationsRead(notifications);
                   router.push("/student/notices");
                 }}
-                className="block rounded-xl border border-slate-800 bg-slate-950/70 px-4 py-3 text-center text-sm font-semibold text-slate-200 transition hover:border-slate-700 hover:bg-slate-900"
+                className="block rounded-xl border border-[#d7cdbb] bg-[#f8fbff] px-4 py-3 text-center text-sm font-semibold text-[#0a2f66] transition hover:border-[#bfd7f7] hover:bg-[#eaf2ff]"
               >
                 View all student notices
               </a>

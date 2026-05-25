@@ -56,7 +56,7 @@ export default function EventDetailDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#071833] to-[#0a2145] p-8 flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-[#f5f7fb] p-8">
         <LoadingState
           title="Loading event details"
           message="Preparing overview, participants, notices, rounds, and certificates."
@@ -67,16 +67,16 @@ export default function EventDetailDashboard() {
 
   if (!eventData) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#071833] to-[#0a2145] p-8">
-        <div className="mx-auto max-w-2xl rounded-2xl border border-[#ffb21c]/30 bg-[#ffb21c]/10 p-6 text-center">
-          <h1 className="text-xl font-bold text-white">Event could not load</h1>
-          <p className="mt-2 text-[#fff0c9]">
+      <div className="min-h-screen bg-[#f5f7fb] p-8">
+        <div className="mx-auto max-w-2xl rounded-2xl border border-[#d7cdbb] bg-white p-6 text-center shadow-[0_14px_36px_rgba(10,47,102,0.08)]">
+          <h1 className="text-xl font-bold text-[#17120a]">Event could not load</h1>
+          <p className="mt-2 text-[#344f77]">
             {loadError || "Event not found or you do not have access."}
           </p>
           <button
             type="button"
             onClick={fetchEventData}
-            className="mt-4 rounded-lg bg-[#ffb21c] px-4 py-2 text-sm font-semibold text-[#0a2f66] hover:bg-[#ffc44d]"
+            className="mt-4 rounded-lg bg-[#0a2f66] px-4 py-2 text-sm font-semibold text-white hover:bg-[#123f7d]"
           >
             Try Again
           </button>
@@ -96,7 +96,7 @@ export default function EventDetailDashboard() {
       : "Back to Dashboard";
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#071833] to-[#0a2145]">
+    <div className="event-manage-shell min-h-screen bg-[#f5f7fb]">
       {/* Header */}
       <EventInfoHeader event={event} capacityInfo={capacityInfo} />
 
@@ -105,7 +105,7 @@ export default function EventDetailDashboard() {
         <div className="mb-4">
           <Link
             href={backHref}
-            className="inline-flex items-center gap-2 rounded-lg border border-[#1c4a8d] bg-[#081b39]/70 px-4 py-2 text-sm font-semibold text-[#dce9ff] hover:bg-[#0f2953]"
+            className="inline-flex items-center gap-2 rounded-lg border border-[#d7cdbb] bg-white px-4 py-2 text-sm font-semibold text-[#0a2f66] shadow-sm transition hover:bg-[#eaf2ff]"
           >
             <FaArrowLeft />
             {backLabel}

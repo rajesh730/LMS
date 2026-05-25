@@ -1,10 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback } from "react";
 import { FaBell, FaSyncAlt } from "react-icons/fa";
 import EmptyState from "@/components/EmptyState";
+import {
+  NotificationBulkActions,
+  NotificationMeta,
+  NotificationNewBadge,
+  NotificationReadToggleButton,
+  NotificationTypeBadge,
+} from "@/components/notifications/NotificationUi";
 import LoadingState from "@/components/ui/LoadingState";
+import useNotificationInbox from "@/lib/useNotificationInbox";
 
 function formatDate(value) {
   if (!value) return "";
@@ -18,30 +26,28 @@ function formatDate(value) {
 }
 
 export default function SchoolNoticeBoard() {
-  const [loading, setLoading] = useState(true);
-  const [notifications, setNotifications] = useState([]);
+  const {
+    loading,
+    notifications,
+    loadNotifications,
+    toggleNotificationReadState,
+    updateNotificationsReadState: updateNotificationsReadStateBase,
+  } = useNotificationInbox({
+    listUrl: "/api/school/notifications",
+    readUrl: "/api/school/notifications/read",
+    limit: 100,
+    realtimeChannel: "school-notifications",
+    markVisibleOnLoad: true,
+  });
 
-  const loadNotifications = useCallback(async () => {
-    try {
-      setLoading(true);
-      const res = await fetch("/api/school/notifications?limit=100", {
-        cache: "no-store",
+  const updateNotificationsReadState = useCallback(
+    async (action) => {
+      await updateNotificationsReadStateBase(action, notifications, {
+        allVisible: true,
       });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(data.message || "Failed to load school notices");
-      }
-      setNotifications(Array.isArray(data.notifications) ? data.notifications : []);
-    } catch (error) {
-      setNotifications([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadNotifications();
-  }, [loadNotifications]);
+    },
+    [notifications, updateNotificationsReadStateBase]
+  );
 
   const platformNotices = notifications.filter(
     (notification) => notification.noticeType === "GENERAL"
@@ -63,14 +69,24 @@ export default function SchoolNoticeBoard() {
               View platform updates and event notices sent to your school dashboard.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={loadNotifications}
-            className="inline-flex items-center gap-2 rounded-lg bg-[#0a2f66] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#123f7d]"
-          >
-            <FaSyncAlt />
-            Refresh
-          </button>
+          <div className="flex flex-wrap gap-2">
+            {notifications.length > 0 && (
+              <NotificationBulkActions
+                onMarkAllUnread={() =>
+                  void updateNotificationsReadState("unread")
+                }
+                onMarkAllRead={() => void updateNotificationsReadState("read")}
+              />
+            )}
+            <button
+              type="button"
+              onClick={() => void loadNotifications()}
+              className="inline-flex items-center gap-2 rounded-lg bg-[#0a2f66] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#123f7d]"
+            >
+              <FaSyncAlt />
+              Refresh
+            </button>
+          </div>
         </div>
       </div>
 
@@ -102,9 +118,9 @@ export default function SchoolNoticeBoard() {
                 className="w-full rounded-xl border border-[#d7cdbb] bg-white p-4 text-left"
               >
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-full border border-[#bfd7f7] bg-[#eaf2ff] px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-[#0a2f66]">
-                    Platform
-                  </span>
+                  <NotificationTypeBadge
+                    noticeType={notification.noticeType}
+                  />
                 </div>
                 <p className="mt-3 text-lg font-semibold text-[#17120a]">
                   {notification.title}
@@ -112,8 +128,20 @@ export default function SchoolNoticeBoard() {
                 <p className="mt-2 whitespace-pre-wrap text-sm text-[#27344a]">
                   {notification.message}
                 </p>
-                <div className="mt-3 text-xs text-[#52657d]">
-                  {formatDate(notification.publishedAt)}
+                <NotificationMeta
+                  className="mt-3"
+                  date={formatDate(notification.publishedAt)}
+                />
+                {!notification.isRead && (
+                  <div className="mt-3">
+                    <NotificationNewBadge isRead={notification.isRead} />
+                  </div>
+                )}
+                <div className="mt-4">
+                  <NotificationReadToggleButton
+                    notification={notification}
+                    onToggle={(item) => void toggleNotificationReadState(item)}
+                  />
                 </div>
               </div>
             ))}
@@ -144,27 +172,40 @@ export default function SchoolNoticeBoard() {
         ) : (
           <div className="mt-4 space-y-4">
             {eventNotices.map((notification) => (
-              <Link
+              <article
                 key={`${notification.noticeType}-${notification.id}`}
-                href={notification.href}
-                className="block rounded-xl border border-[#d7cdbb] bg-white p-4 transition hover:border-[#bfd7f7] hover:bg-[#f8fbff]"
+                className="rounded-xl border border-[#d7cdbb] bg-white p-4 transition hover:border-[#bfd7f7] hover:bg-[#f8fbff]"
               >
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-full border border-[#bdefff] bg-[#e8fbff] px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-[#07576b]">
-                    Event
-                  </span>
+                <Link href={notification.href} className="block">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <NotificationTypeBadge
+                      noticeType={notification.noticeType}
+                    />
+                  </div>
+                  <p className="mt-3 text-lg font-semibold text-[#17120a]">
+                    {notification.title}
+                  </p>
+                  <p className="mt-2 whitespace-pre-wrap text-sm text-[#27344a]">
+                    {notification.message}
+                  </p>
+                  <NotificationMeta
+                    className="mt-3"
+                    date={formatDate(notification.publishedAt)}
+                    eventTitle={notification.event?.title}
+                  />
+                  {!notification.isRead && (
+                    <div className="mt-3">
+                      <NotificationNewBadge isRead={notification.isRead} />
+                    </div>
+                  )}
+                </Link>
+                <div className="mt-4">
+                  <NotificationReadToggleButton
+                    notification={notification}
+                    onToggle={(item) => void toggleNotificationReadState(item)}
+                  />
                 </div>
-                <p className="mt-3 text-lg font-semibold text-[#17120a]">
-                  {notification.title}
-                </p>
-                <p className="mt-2 whitespace-pre-wrap text-sm text-[#27344a]">
-                  {notification.message}
-                </p>
-                <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-[#52657d]">
-                  <span>{formatDate(notification.publishedAt)}</span>
-                  {notification.event && <span>{notification.event.title}</span>}
-                </div>
-              </Link>
+              </article>
             ))}
           </div>
         )}

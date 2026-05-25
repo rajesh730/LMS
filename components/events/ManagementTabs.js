@@ -33,32 +33,32 @@ export default function ManagementTabs({
       id: "manage",
       label: "PARTICIPANTS",
       count: allRequests.length,
-      color: "bg-[#1150a1]",
+      color: "bg-[#0a2f66]",
     },
     {
       id: "rounds",
       label: "ROUNDS",
       count: null,
-      color: "bg-[#2f7fdb]",
+      color: "bg-[#0a2f66]",
     },
     {
       id: "notices",
       label: "NOTICES",
       count: null,
-      color: "bg-[#1c4a8d]",
+      color: "bg-[#0a2f66]",
     },
     {
       id: "results",
       label: "RESULTS & CERTIFICATES",
       count: null,
-      color: "bg-[#ffb21c]",
+      color: "bg-[#0a2f66]",
     },
   ];
 
   return (
-    <div className="mb-8 overflow-hidden rounded-2xl border border-[#1c4a8d] bg-[#f7fbff] shadow-xl shadow-black/10">
+    <div className="mb-8 overflow-hidden rounded-2xl border border-[#d7cdbb] bg-white shadow-[0_14px_36px_rgba(10,47,102,0.08)]">
       {/* Tab Headers */}
-      <div className="flex flex-wrap gap-0 border-b border-[#d6e6fb] bg-white">
+      <div className="flex flex-wrap gap-0 border-b border-[#d7cdbb] bg-white">
         {tabs.map((tab) => (
           <button
             key={tab.id}
@@ -66,7 +66,7 @@ export default function ManagementTabs({
             className={`flex-1 px-4 py-4 font-semibold text-sm md:text-base transition-all border-b-2 ${
               activeTab === tab.id
                 ? `${tab.color} text-white border-b-transparent`
-                : "border-b-transparent text-[#2f558a] hover:bg-[#eef5ff] hover:text-[#0a2f66]"
+                : "border-b-transparent text-[#0a2f66] hover:bg-[#eaf2ff] hover:text-[#0a2f66]"
             }`}
           >
             {tab.label}
@@ -80,7 +80,7 @@ export default function ManagementTabs({
       </div>
 
       {/* Tab Content */}
-      <div className="bg-[#f7fbff] p-6 md:p-8">
+      <div className="bg-[#f8fbff] p-6 md:p-8">
         {activeTab === "overview" && (
           <EventOverviewTab
             event={event}

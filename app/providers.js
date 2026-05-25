@@ -5,7 +5,7 @@ import { NotificationProvider } from "@/components/NotificationSystem";
 
 export function Providers({ children }) {
   return (
-    <SessionProvider refetchInterval={2} refetchOnWindowFocus>
+    <SessionProvider refetchInterval={300} refetchOnWindowFocus>
       <NotificationProvider>{children}</NotificationProvider>
     </SessionProvider>
   );

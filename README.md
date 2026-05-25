@@ -48,6 +48,8 @@ NEXTAUTH_URL=http://localhost:3000
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 SUPER_ADMIN_BOOTSTRAP_TOKEN=change-this-token
 ENABLE_DEMO_SEED=false
+UPSTASH_REDIS_REST_URL=
+UPSTASH_REDIS_REST_TOKEN=
 ```
 
 3. Run development server:
@@ -68,6 +70,12 @@ npm run build
 - `components/`: dashboards, events, notices, magazine, challenge, and workflow components
 - `models/`: Mongoose schemas
 - `lib/`: shared utilities and services
+- `docs/`: internal architecture and operating notes
+
+## Internal Docs
+
+- [Realtime and Notices](docs/REALTIME_AND_NOTICES.md)
+- [Work Indicators](docs/WORK_INDICATORS.md)
 
 ## Quality Gate
 
@@ -85,6 +93,7 @@ Before pilot or release:
 - Set production environment variables from `.env.example`.
 - Use a strong random `NEXTAUTH_SECRET`.
 - Set `NEXTAUTH_URL` and `NEXT_PUBLIC_SITE_URL` to the production domain.
+- For multi-instance realtime delivery, set `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`.
 - Keep `ENABLE_DEMO_SEED=false` in production.
 - Run build check before each deployment.
 

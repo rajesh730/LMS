@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FaCalendarAlt, FaCheckCircle, FaSchool } from "react-icons/fa";
 import EventHub from "@/components/events/EventHub";
 import StudentNotificationCenter from "@/components/student/StudentNotificationCenter";
+import useWorkIndicators from "@/lib/useWorkIndicators";
 
 const REGISTERED_FILTERS = [
   { id: "participated", label: "All Registered" },
@@ -19,7 +20,12 @@ const DISCOVERY_FILTERS = [
 ];
 
 export default function StudentEventWorkspace() {
+  const { markSurfaceSeen } = useWorkIndicators();
   const [activeTab, setActiveTab] = useState("registered");
+
+  useEffect(() => {
+    void markSurfaceSeen("student.events");
+  }, [markSurfaceSeen]);
 
   const tabs = [
     {

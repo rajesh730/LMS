@@ -4,6 +4,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import PlatformChallengeSubmission from "@/models/PlatformChallengeSubmission";
 import { recordLifecycleAudit } from "@/lib/lifecycle";
+import { publishWorkIndicatorsUpdate } from "@/lib/workIndicatorRealtime";
 
 export async function PATCH(request, props) {
   try {
@@ -74,6 +75,13 @@ export async function PATCH(request, props) {
         publishedAt: submission.publishedAt,
         reviewNote: submission.reviewNote,
       },
+    });
+
+    publishWorkIndicatorsUpdate("challenge-response-reviewed", {
+      submissionId: String(submission._id),
+      schoolId: String(submission.school || ""),
+      status: submission.status,
+      isPublic: Boolean(submission.isPublic),
     });
 
     return NextResponse.json({

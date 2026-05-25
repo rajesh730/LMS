@@ -1,7 +1,9 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import connectDB from "@/lib/db";
 import Achievement from "@/models/Achievement";
 import { getPublicFeedItems } from "@/lib/publicFeed";
+import { PUBLIC_FEED_VIEWER_COOKIE } from "@/lib/publicFeedViewer";
 import { getRotatingPartnerSpotlights } from "@/lib/partnerSpotlights";
 import { getActiveSchoolPromotions } from "@/lib/schoolPromotions";
 import PublicFeedList, {
@@ -60,13 +62,13 @@ async function getRecentWinnerHighlights() {
   }));
 }
 
-async function getHomepageData() {
+async function getHomepageData(viewerId = "") {
   await connectDB();
 
   const [winnerHighlights, feed, partnerSpotlights, homeSpotlights] =
     await Promise.all([
       getRecentWinnerHighlights(),
-      getPublicFeedItems({ limit: 8, types: ["pulse"] }),
+      getPublicFeedItems({ limit: 8, types: ["pulse"], viewerId }),
       getRotatingPartnerSpotlights(5),
       getActiveSchoolPromotions("HOME_SPOTLIGHT", 4, { randomize: true }),
     ]);
@@ -206,8 +208,9 @@ function MobileSchoolRailCard({ promotion }) {
 }
 
 export default async function Home() {
+  const viewerId = (await cookies()).get(PUBLIC_FEED_VIEWER_COOKIE)?.value || "";
   const { winnerHighlights, feed, partnerSpotlights, homeSpotlights } =
-    await getHomepageData();
+    await getHomepageData(viewerId);
   const partnerSpotlight = partnerSpotlights[0] || null;
 
   return (

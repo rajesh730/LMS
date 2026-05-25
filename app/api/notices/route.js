@@ -3,6 +3,7 @@ import Notice from "@/models/Notice";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/route";
 import { buildPagination, escapeRegex, parsePagination } from "@/lib/pagination";
+import { publishNoticeRealtimeEvent } from "@/lib/noticeRealtime";
 
 export async function GET(request) {
   try {
@@ -42,27 +43,33 @@ export async function GET(request) {
     if (type) query.type = type.toUpperCase();
     if (priority) query.priority = priority.toUpperCase();
     if (status) query.status = status.toUpperCase();
-    if (search) {
-      const safeSearch = escapeRegex(search);
-      query.$and = [
-        ...(query.$and || []),
-        {
-          $or: [
-            { title: { $regex: safeSearch, $options: "i" } },
-            { content: { $regex: safeSearch, $options: "i" } },
-          ],
-        },
-      ];
-    }
-
     // Filter by audience
     if (audience) {
       query[`targetAudience.${audience}`] = true;
     }
 
+    // Build $and array for conditions that need combining
+    const andConditions = [];
+
+    if (search) {
+      const safeSearch = escapeRegex(search);
+      andConditions.push({
+        $or: [
+          { title: { $regex: safeSearch, $options: "i" } },
+          { content: { $regex: safeSearch, $options: "i" } },
+        ],
+      });
+    }
+
     // Only show non-expired notices by default
     if (active) {
-      query.$or = [{ expiryDate: null }, { expiryDate: { $gte: new Date() } }];
+      andConditions.push({
+        $or: [{ expiryDate: null }, { expiryDate: { $gte: new Date() } }],
+      });
+    }
+
+    if (andConditions.length > 0) {
+      query.$and = andConditions;
     }
 
     const [notices, total] = await Promise.all([
@@ -129,8 +136,8 @@ export async function POST(request) {
       normalizedScope === "PLATFORM"
         ? "PRIVATE"
         : String(visibility || "").toUpperCase() === "PUBLIC"
-        ? "PUBLIC"
-        : "PRIVATE";
+          ? "PUBLIC"
+          : "PRIVATE";
     const normalizedStatus =
       String(status || "").toUpperCase() === "DRAFT" ? "DRAFT" : "PUBLISHED";
 
@@ -180,6 +187,13 @@ export async function POST(request) {
 
     // Populate author for response
     await savedNotice.populate("author", "name email");
+
+    if (normalizedStatus === "PUBLISHED") {
+      publishNoticeRealtimeEvent({
+        scope: savedNotice.scope,
+        targetAudience: savedNotice.targetAudience,
+      });
+    }
 
     return Response.json(
       {

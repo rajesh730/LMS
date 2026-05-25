@@ -1,12 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback } from "react";
 import { FaBell, FaCalendarAlt, FaSchool } from "react-icons/fa";
 import EmptyState from "@/components/EmptyState";
+import {
+  NotificationBulkActions,
+  NotificationNewBadge,
+  NotificationReadToggleButton,
+  NotificationTypeBadge,
+} from "@/components/notifications/NotificationUi";
 import AlertBanner from "@/components/ui/AlertBanner";
 import LoadingState from "@/components/ui/LoadingState";
 import PageHeader from "@/components/ui/PageHeader";
+import useNotificationInbox from "@/lib/useNotificationInbox";
 
 function formatDate(value) {
   if (!value) return "";
@@ -20,48 +27,29 @@ function formatDate(value) {
 }
 
 export default function StudentNoticeBoard() {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [notifications, setNotifications] = useState([]);
+  const {
+    loading,
+    error,
+    notifications,
+    toggleNotificationReadState,
+    updateNotificationsReadState: updateNotificationsReadStateBase,
+  } =
+    useNotificationInbox({
+      listUrl: "/api/student/notifications",
+      readUrl: "/api/student/notifications/read",
+      limit: 100,
+      realtimeChannel: "student-notifications",
+      markVisibleOnLoad: true,
+    });
 
-  useEffect(() => {
-    let active = true;
-
-    const load = async () => {
-      try {
-        setLoading(true);
-        setError("");
-        const res = await fetch("/api/student/notifications?limit=100", {
-          cache: "no-store",
-        });
-        const payload = await res.json().catch(() => ({}));
-
-        if (!res.ok) {
-          throw new Error(payload.message || "Failed to load notices");
-        }
-
-        if (active) {
-          setNotifications(
-            Array.isArray(payload.notifications) ? payload.notifications : []
-          );
-        }
-      } catch (loadError) {
-        if (active) {
-          setError(loadError.message || "Failed to load notices");
-        }
-      } finally {
-        if (active) {
-          setLoading(false);
-        }
-      }
-    };
-
-    load();
-
-    return () => {
-      active = false;
-    };
-  }, []);
+  const updateNotificationsReadState = useCallback(
+    async (action) => {
+      await updateNotificationsReadStateBase(action, notifications, {
+        allVisible: true,
+      });
+    },
+    [notifications, updateNotificationsReadStateBase]
+  );
 
   if (loading) {
     return (
@@ -83,6 +71,16 @@ export default function StudentNoticeBoard() {
         eyebrow="Student Updates"
         title="Notices"
         description="Read school announcements and event updates from one simple place."
+        action={
+          notifications.length > 0 ? (
+            <NotificationBulkActions
+              onMarkAllUnread={() =>
+                void updateNotificationsReadState("unread")
+              }
+              onMarkAllRead={() => void updateNotificationsReadState("read")}
+            />
+          ) : null
+        }
       />
 
       {notifications.length === 0 ? (
@@ -101,17 +99,10 @@ export default function StudentNoticeBoard() {
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span
-                      className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${
-                        notification.noticeType === "EVENT"
-                          ? "border border-[#bdefff] bg-[#e8fbff] text-[#07576b]"
-                          : "border border-[#bfd7f7] bg-[#eaf2ff] text-[#0a2f66]"
-                      }`}
-                    >
-                      {notification.noticeType === "EVENT"
-                        ? "Event Notice"
-                        : "School Notice"}
-                    </span>
+                    <NotificationTypeBadge
+                      noticeType={notification.noticeType}
+                      detailed
+                    />
                   </div>
                   <h3 className="mt-4 text-xl font-bold text-[#17120a]">
                     {notification.title}
@@ -126,6 +117,11 @@ export default function StudentNoticeBoard() {
                     <FaCalendarAlt className="text-[#52657d]" />
                     <span>{formatDate(notification.publishedAt)}</span>
                   </div>
+                  {!notification.isRead && (
+                    <div className="mt-3">
+                      <NotificationNewBadge isRead={notification.isRead} />
+                    </div>
+                  )}
                   {notification.event && (
                     <div className="mt-3 inline-flex items-center gap-2 text-[#27344a]">
                       <FaSchool className="text-[#52657d]" />
@@ -136,14 +132,20 @@ export default function StudentNoticeBoard() {
               </div>
 
               <div className="mt-5">
-                <Link
-                  href={notification.href}
-                  className="inline-flex items-center rounded-lg bg-[#0a2f66] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#123f7d]"
-                >
-                  {notification.noticeType === "EVENT"
-                    ? "Open Event"
-                    : "Back to Dashboard"}
-                </Link>
+                <div className="flex flex-wrap gap-2">
+                  <Link
+                    href={notification.href}
+                    className="inline-flex items-center rounded-lg bg-[#0a2f66] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#123f7d]"
+                  >
+                    {notification.noticeType === "EVENT"
+                      ? "Open Event"
+                      : "Back to Dashboard"}
+                  </Link>
+                  <NotificationReadToggleButton
+                    notification={notification}
+                    onToggle={(item) => void toggleNotificationReadState(item)}
+                  />
+                </div>
               </div>
             </article>
           ))}

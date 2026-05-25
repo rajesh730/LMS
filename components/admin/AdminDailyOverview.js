@@ -7,10 +7,14 @@ import {
   FaCalendarAlt,
   FaCheckCircle,
   FaFeatherAlt,
+  FaBullseye,
+  FaHeadset,
   FaHandshake,
   FaSchool,
 } from "react-icons/fa";
 import AlertBanner from "@/components/ui/AlertBanner";
+import WorkIndicatorBadge from "@/components/work-indicators/WorkIndicatorBadge";
+import useWorkIndicators from "@/lib/useWorkIndicators";
 
 function formatDate(value) {
   if (!value) return "No date set";
@@ -29,6 +33,7 @@ function CommandCard({
   title,
   description,
   actionLabel,
+  indicator,
   tone = "blue",
 }) {
   const tones = {
@@ -74,8 +79,14 @@ function CommandCard({
         <span className={`flex h-11 w-11 items-center justify-center rounded-xl ring-1 ${toneClasses.icon}`}>
           <Icon className="text-xl" />
         </span>
-        <span className={`rounded-full border px-3 py-1 text-xs font-black uppercase tracking-wide ${toneClasses.pill}`}>
-          {count} {label}
+        <span className="flex flex-col items-end gap-2">
+          <WorkIndicatorBadge
+            count={indicator?.count}
+            tone={indicator?.tone}
+          />
+          <span className={`rounded-full border px-3 py-1 text-xs font-black uppercase tracking-wide ${toneClasses.pill}`}>
+            {count} {label}
+          </span>
         </span>
       </div>
       <h3 className="mt-5 line-clamp-2 text-lg font-black text-slate-950">
@@ -106,6 +117,7 @@ export default function AdminDailyOverview({
     notices: 0,
     challengeSubmissions: 0,
   });
+  const { getIndicator } = useWorkIndicators();
 
   useEffect(() => {
     let active = true;
@@ -236,7 +248,7 @@ export default function AdminDailyOverview({
           </p>
         </div>
 
-        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-6">
+        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <CommandCard
             href="/admin/dashboard?tab=approvals"
             icon={FaSchool}
@@ -247,6 +259,7 @@ export default function AdminDailyOverview({
             }
             description="Review new school registrations before they can use the platform."
             actionLabel="Review approvals"
+            indicator={getIndicator("admin.approvals")}
             tone="amber"
           />
 
@@ -262,6 +275,7 @@ export default function AdminDailyOverview({
                 : "Create a platform event when you are ready to invite schools."
             }
             actionLabel="Manage events"
+            indicator={getIndicator("admin.events")}
             tone="blue"
           />
 
@@ -291,6 +305,7 @@ export default function AdminDailyOverview({
                 : "Review student responses and select the best for Pratyo Pulse."
             }
             actionLabel="Review challenges"
+            indicator={getIndicator("admin.challenges")}
             tone="violet"
           />
 
@@ -302,6 +317,30 @@ export default function AdminDailyOverview({
             title="Student challenge program"
             description="Published challenges are visible to students and can produce Pratyo Pulse responses."
             actionLabel="Manage challenges"
+            tone="rose"
+          />
+
+          <CommandCard
+            href="/admin/support"
+            icon={FaHeadset}
+            count={getIndicator("admin.support").count}
+            label="pending"
+            title="Support queue"
+            description="Review school support tickets that still need platform action."
+            actionLabel="Open support"
+            indicator={getIndicator("admin.support")}
+            tone="amber"
+          />
+
+          <CommandCard
+            href="/admin/dashboard?tab=spotlight"
+            icon={FaBullseye}
+            count={getIndicator("admin.spotlight").count}
+            label="pending"
+            title="School spotlight"
+            description="Review school spotlight requests and promotion work waiting on platform attention."
+            actionLabel="Open spotlight"
+            indicator={getIndicator("admin.spotlight")}
             tone="rose"
           />
 

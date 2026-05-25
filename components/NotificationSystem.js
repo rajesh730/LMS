@@ -29,7 +29,7 @@ export function useNotification() {
 export function NotificationProvider({ children }) {
   const [notifications, setNotifications] = useState([]);
   const mounted = useSyncExternalStore(
-    () => () => {},
+    () => () => { },
     () => true,
     () => false
   );
@@ -129,9 +129,9 @@ function NotificationItem({ notification, onClose }) {
         };
       case "warning":
         return {
-          bg: "bg-[#eaf2ff] border-[#2f7fdb]/30",
-          text: "text-[#0a2f66]",
-          icon: <FaExclamationCircle className="text-[#0a2f66] text-lg" />,
+          bg: "bg-amber-50 border-amber-500/30",
+          text: "text-amber-800",
+          icon: <FaExclamationCircle className="text-amber-700 text-lg" />,
         };
       case "info":
       default:

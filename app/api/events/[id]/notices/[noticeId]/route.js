@@ -4,6 +4,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import dbConnect from "@/lib/db";
 import EventNotice from "@/models/EventNotice";
 import { getManageableEventOrResponse } from "@/lib/eventRoundAccess";
+import { publishRealtimeEvent } from "@/lib/realtimeBus";
 
 const NOTICE_TYPES = [
   "GENERAL",
@@ -104,6 +105,19 @@ export async function PATCH(req, props) {
     Object.assign(notice, payload);
     await notice.save();
 
+    publishRealtimeEvent("student-notifications", {
+      kind: notice.status === "PUBLISHED" ? "event-notice-updated" : "event-notice-removed",
+      eventId: access.params.id,
+    });
+    publishRealtimeEvent("school-notifications", {
+      kind: notice.status === "PUBLISHED" ? "event-notice-updated" : "event-notice-removed",
+      eventId: access.params.id,
+    });
+    publishRealtimeEvent(`event-${access.params.id}-notices`, {
+      kind: notice.status === "PUBLISHED" ? "event-notice-updated" : "event-notice-removed",
+      eventId: access.params.id,
+    });
+
     return NextResponse.json({ message: "Notice updated", notice });
   } catch (error) {
     console.error("Update Event Notice Error:", error);
@@ -144,6 +158,19 @@ export async function DELETE(req, props) {
     notice.deletedBy = session.user.id;
     notice.status = "UNPUBLISHED";
     await notice.save();
+
+    publishRealtimeEvent("student-notifications", {
+      kind: "event-notice-removed",
+      eventId: access.params.id,
+    });
+    publishRealtimeEvent("school-notifications", {
+      kind: "event-notice-removed",
+      eventId: access.params.id,
+    });
+    publishRealtimeEvent(`event-${access.params.id}-notices`, {
+      kind: "event-notice-removed",
+      eventId: access.params.id,
+    });
 
     return NextResponse.json({ message: "Notice archived" });
   } catch (error) {

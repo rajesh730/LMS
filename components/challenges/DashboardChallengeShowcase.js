@@ -3,11 +3,19 @@
 import { useEffect, useState } from "react";
 import DashboardChallengeShowcaseClient from "@/components/challenges/DashboardChallengeShowcaseClient";
 import LoadingState from "@/components/ui/LoadingState";
+import useWorkIndicators from "@/lib/useWorkIndicators";
 
-export default function DashboardChallengeShowcase() {
+export default function DashboardChallengeShowcase({ seenSurface = "school.pratyoPulse" }) {
+  const { markSurfaceSeen } = useWorkIndicators();
   const [responses, setResponses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (seenSurface) {
+      void markSurfaceSeen(seenSurface);
+    }
+  }, [markSurfaceSeen, seenSurface]);
 
   useEffect(() => {
     let active = true;

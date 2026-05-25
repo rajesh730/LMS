@@ -2,15 +2,23 @@
 
 import Link from 'next/link';
 import { useSearchParams, usePathname } from 'next/navigation';
-import { FaBullhorn, FaBullseye, FaCalendarAlt, FaCheckCircle, FaFeatherAlt, FaHandshake, FaSchool } from 'react-icons/fa';
+import { FaBullhorn, FaBullseye, FaCalendarAlt, FaCheckCircle, FaFeatherAlt, FaHandshake, FaSchool, FaHeartbeat } from 'react-icons/fa';
+import WorkIndicatorBadge from '@/components/work-indicators/WorkIndicatorBadge';
+import useWorkIndicators from '@/lib/useWorkIndicators';
 
 export default function AdminTopNav({ pendingCount = 0 }) {
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const rawTab = searchParams.get("tab") || "approvals";
   const currentTab = ["judging", "results"].includes(rawTab) ? "events" : rawTab;
+  const { getIndicator } = useWorkIndicators();
   
   const isDashboard = pathname === '/admin/dashboard';
+  const isDiagnostics = pathname === '/admin/diagnostics';
+  const approvalIndicator = getIndicator("admin.approvals");
+  const eventsIndicator = getIndicator("admin.events");
+  const challengesIndicator = getIndicator("admin.challenges");
+  const spotlightIndicator = getIndicator("admin.spotlight");
   return (
     <div className="mb-8 mt-8 -mx-4 overflow-x-auto border-y border-[#d7cdbb] bg-white/65 px-4 py-2 shadow-sm sm:mx-0 sm:rounded-2xl sm:border sm:p-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
       <div className="flex min-w-max snap-x gap-2">
@@ -23,11 +31,11 @@ export default function AdminTopNav({ pendingCount = 0 }) {
         }`}
       >
         <FaCheckCircle /> Approvals
-        {pendingCount > 0 && (
-          <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
-            {pendingCount}
-          </span>
-        )}
+        <WorkIndicatorBadge
+          count={approvalIndicator.count || pendingCount}
+          tone={approvalIndicator.tone}
+          compact
+        />
       </Link>
       
       <Link
@@ -50,6 +58,11 @@ export default function AdminTopNav({ pendingCount = 0 }) {
         }`}
       >
         <FaCalendarAlt /> Platform Events
+        <WorkIndicatorBadge
+          count={eventsIndicator.count}
+          tone={eventsIndicator.tone}
+          compact
+        />
       </Link>
 
       <Link
@@ -83,6 +96,11 @@ export default function AdminTopNav({ pendingCount = 0 }) {
         }`}
       >
         <FaFeatherAlt /> Student Challenges
+        <WorkIndicatorBadge
+          count={challengesIndicator.count}
+          tone={challengesIndicator.tone}
+          compact
+        />
       </Link>
 
       <Link
@@ -94,6 +112,22 @@ export default function AdminTopNav({ pendingCount = 0 }) {
         }`}
       >
         <FaBullseye /> School Spotlight
+        <WorkIndicatorBadge
+          count={spotlightIndicator.count}
+          tone={spotlightIndicator.tone}
+          compact
+        />
+      </Link>
+
+      <Link
+        href="/admin/diagnostics"
+        className={`flex min-h-11 snap-start items-center gap-2 rounded-xl px-4 text-sm font-semibold transition whitespace-nowrap ${
+          isDiagnostics
+            ? "bg-blue-600 text-white"
+            : "text-[#52657d] hover:bg-[#eaf2ff] hover:text-[#0a2f66]"
+        }`}
+      >
+        <FaHeartbeat /> Diagnostics
       </Link>
       </div>
     </div>

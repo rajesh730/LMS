@@ -4,6 +4,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import Student from "@/models/Student";
 import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
+import { publishWorkIndicatorsUpdate } from "@/lib/workIndicatorRealtime";
 
 function buildStudentLookup(session) {
   return {
@@ -133,6 +134,12 @@ export async function POST(request) {
       submissionSource: "FREE_WRITE",
       status: requestedStatus,
       submittedAt: requestedStatus === "SUBMITTED" ? new Date() : null,
+    });
+
+    publishWorkIndicatorsUpdate("student-writing-created", {
+      schoolId: String(student.school),
+      studentId: String(student._id),
+      status: article.status,
     });
 
     return NextResponse.json(

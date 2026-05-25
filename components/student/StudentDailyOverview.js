@@ -7,9 +7,12 @@ import {
   FaBookOpen,
   FaCalendarAlt,
   FaFeatherAlt,
+  FaLightbulb,
   FaPenNib,
 } from "react-icons/fa";
 import AlertBanner from "@/components/ui/AlertBanner";
+import WorkIndicatorBadge from "@/components/work-indicators/WorkIndicatorBadge";
+import useWorkIndicators from "@/lib/useWorkIndicators";
 
 function formatDate(value) {
   if (!value) return "No date set";
@@ -27,6 +30,7 @@ function DailyActionCard({
   title,
   description,
   meta,
+  indicator,
   tone = "blue",
 }) {
   const tones = {
@@ -47,8 +51,14 @@ function DailyActionCard({
         <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-current/10">
           <Icon className="text-xl" />
         </span>
-        <span className="rounded-full border border-current/20 px-3 py-1 text-xs font-bold uppercase tracking-wide">
-          {label}
+        <span className="flex flex-col items-end gap-2">
+          <WorkIndicatorBadge
+            count={indicator?.count}
+            tone={indicator?.tone}
+          />
+          <span className="rounded-full border border-current/20 px-3 py-1 text-xs font-bold uppercase tracking-wide">
+            {label}
+          </span>
         </span>
       </div>
       <h3 className="mt-5 line-clamp-2 text-lg font-bold text-white">
@@ -69,6 +79,7 @@ export default function StudentDailyOverview() {
   const [events, setEvents] = useState([]);
   const [challenges, setChallenges] = useState([]);
   const [articles, setArticles] = useState([]);
+  const { getIndicator } = useWorkIndicators();
 
   useEffect(() => {
     let active = true;
@@ -198,7 +209,7 @@ export default function StudentDailyOverview() {
           </p>
         </div>
 
-        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
           <DailyActionCard
             href="/student/notices"
             icon={FaBell}
@@ -213,6 +224,7 @@ export default function StudentDailyOverview() {
                 ? `${latestNotice.noticeType === "EVENT" ? "Event" : "School"} notice`
                 : "All clear"
             }
+            indicator={getIndicator("student.notices")}
             tone="amber"
           />
 
@@ -226,6 +238,7 @@ export default function StudentDailyOverview() {
               "Events for your grade will appear here after your school opens them."
             }
             meta={nextEvent ? `Event date: ${formatDate(nextEvent.date)}` : "Check later"}
+            indicator={getIndicator("student.events")}
             tone="emerald"
           />
 
@@ -243,6 +256,7 @@ export default function StudentDailyOverview() {
                 ? `Deadline: ${formatDate(openChallenge.deadline)}`
                 : "You are caught up"
             }
+            indicator={getIndicator("student.writing")}
             tone="blue"
           />
 
@@ -260,7 +274,19 @@ export default function StudentDailyOverview() {
                 ? `By ${latestArticle.authorStudent?.name || "Student"}`
                 : "Reading room is quiet"
             }
+            indicator={getIndicator("student.magazine")}
             tone="violet"
+          />
+
+          <DailyActionCard
+            href="/student/challenges"
+            icon={FaLightbulb}
+            label={`${challenges.length} pulses`}
+            title="Pratyo Pulse"
+            description="See platform-selected student challenge responses and new public showcase updates."
+            meta="Public showcase"
+            indicator={getIndicator("student.pratyoPulse")}
+            tone="amber"
           />
         </div>
 

@@ -4,6 +4,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
 import { recordLifecycleAudit } from "@/lib/lifecycle";
+import { publishWorkIndicatorsUpdate } from "@/lib/workIndicatorRealtime";
 
 export async function PATCH(request, props) {
   try {
@@ -70,6 +71,12 @@ export async function PATCH(request, props) {
         reviewNote: article.reviewNote,
         reviewedAt: article.reviewedAt,
       },
+    });
+
+    publishWorkIndicatorsUpdate("school-magazine-reviewed", {
+      schoolId: String(session.user.id),
+      articleId: String(article._id),
+      status: article.status,
     });
 
     return NextResponse.json({

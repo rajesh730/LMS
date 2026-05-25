@@ -4,6 +4,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import dbConnect from "@/lib/db";
 import EventNotice from "@/models/EventNotice";
 import { getManageableEventOrResponse } from "@/lib/eventRoundAccess";
+import { publishRealtimeEvent } from "@/lib/realtimeBus";
 
 const NOTICE_TYPES = [
   "GENERAL",
@@ -101,6 +102,21 @@ export async function POST(req, props) {
       round: null,
       createdBy: session.user.id,
     });
+
+    if (notice.status === "PUBLISHED") {
+      publishRealtimeEvent("student-notifications", {
+        kind: "event-notice-updated",
+        eventId: params.id,
+      });
+      publishRealtimeEvent("school-notifications", {
+        kind: "event-notice-updated",
+        eventId: params.id,
+      });
+      publishRealtimeEvent(`event-${params.id}-notices`, {
+        kind: "event-notice-updated",
+        eventId: params.id,
+      });
+    }
 
     return NextResponse.json(
       { message: "Notice saved", notice },

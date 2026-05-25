@@ -8,6 +8,7 @@ import ParticipationRequest from "@/models/ParticipationRequest";
 import { ensureSchoolInvitationForEvent } from "@/lib/eventInvitations";
 import { isAfterEndOfDay, isBeforeToday } from "@/lib/eventDates";
 import { buildInvitationLifecycle, recordLifecycleAudit } from "@/lib/lifecycle";
+import { publishWorkIndicatorsUpdate } from "@/lib/workIndicatorRealtime";
 import "@/models/ExternalOrganizer";
 
 export const dynamic = "force-dynamic";
@@ -169,6 +170,12 @@ export async function PUT(req, props) {
         decisionAt: invitation.decisionAt,
         reason: invitation.reason,
       },
+    });
+
+    publishWorkIndicatorsUpdate("school-event-invitation-updated", {
+      schoolId: String(session.user.id),
+      eventId: String(params.id),
+      status: invitation.status,
     });
 
     const populatedInvitation = await EventSchoolInvitation.findById(

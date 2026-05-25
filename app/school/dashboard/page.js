@@ -10,6 +10,8 @@ import CredentialsModal from "@/components/CredentialsModal";
 import SchoolNotificationCenter from "@/components/school/SchoolNotificationCenter";
 import SchoolNoticeBoard from "@/components/school/SchoolNoticeBoard";
 import SchoolDailyOverview from "@/components/school/SchoolDailyOverview";
+import WorkIndicatorBadge from "@/components/work-indicators/WorkIndicatorBadge";
+import useWorkIndicators from "@/lib/useWorkIndicators";
 import PageHeader from "@/components/ui/PageHeader";
 import AlertBanner from "@/components/ui/AlertBanner";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
@@ -123,6 +125,7 @@ function QuickActionCard({
   icon: Icon,
   title,
   description,
+  indicator,
   tone = "blue",
 }) {
   const toneMap = {
@@ -139,15 +142,20 @@ function QuickActionCard({
   return (
     <Link
       href={href}
-      className={`group rounded-2xl border p-5 shadow-[0_10px_28px_rgba(10,47,102,0.08)] transition hover:-translate-y-0.5 ${
-        toneMap[tone] || toneMap.blue
-      }`}
+      className={`group rounded-2xl border p-5 shadow-[0_10px_28px_rgba(10,47,102,0.08)] transition hover:-translate-y-0.5 ${toneMap[tone] || toneMap.blue
+        }`}
     >
       <div className="flex items-start justify-between gap-4">
         <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#dbeaff] text-[#0a2f66]">
           <Icon className="text-xl" />
         </span>
-        <FaArrowRight className="mt-2 text-[#17120a] transition group-hover:translate-x-1 group-hover:text-[#0a2f66]" />
+        <span className="flex items-center gap-2">
+          <WorkIndicatorBadge
+            count={indicator?.count}
+            tone={indicator?.tone}
+          />
+          <FaArrowRight className="text-[#17120a] transition group-hover:translate-x-1 group-hover:text-[#0a2f66]" />
+        </span>
       </div>
       <h3 className="mt-5 text-lg font-bold text-[#17120a]">{title}</h3>
       <p className="mt-2 text-sm leading-6 text-[#344f77]">{description}</p>
@@ -209,6 +217,9 @@ function SchoolDashboardContent() {
 
   const isPending = session?.user?.status === "PENDING";
   const isRestricted = isPending;
+  const { getIndicator } = useWorkIndicators({
+    enabled: status === "authenticated" && !isPending,
+  });
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
@@ -234,7 +245,7 @@ function SchoolDashboardContent() {
         // Handle both { data: config } and { config: config } formats
         setSchoolConfig(
           configData.data ||
-            configData.config || { teacherRoles: [] }
+          configData.config || { teacherRoles: [] }
         );
       } else {
         setSchoolConfig({ teacherRoles: [] });
@@ -517,18 +528,18 @@ function SchoolDashboardContent() {
         </header>
 
         {isPending && (
-            <div className="bg-blue-500/10 border border-blue-500/30 p-6 mb-6 rounded-xl flex items-center gap-4 text-blue-100">
-                <div className="p-3 bg-blue-500/20 rounded-full">
-                    <FaClock className="text-blue-500 text-2xl" />
-                </div>
-                <div>
-                    <h3 className="text-lg font-bold text-white">Account Pending Approval</h3>
-                    <p className="text-blue-100/80 mt-1">
-                        Your school account is currently under review by the Super Admin. 
-                        You will receive full access once your account is approved.
-                    </p>
-                </div>
+          <div className="rounded-xl border border-[#2f7fdb]/30 bg-[#eaf2ff] p-6 mb-6 flex items-center gap-4 text-[#0a2f66]">
+            <div className="p-3 bg-[#dbeaff] rounded-full">
+              <FaClock className="text-[#0a2f66] text-2xl" />
             </div>
+            <div>
+              <h3 className="text-lg font-bold text-[#17120a]">Account Pending Approval</h3>
+              <p className="text-[#344f77] mt-1">
+                Your school account is currently under review by the Super Admin.
+                You will receive full access once your account is approved.
+              </p>
+            </div>
+          </div>
         )}
 
         {feedback && (
@@ -543,219 +554,230 @@ function SchoolDashboardContent() {
 
         {/* Navigation Tabs - Hide if Pending */}
         {!isPending && (
-        <div className="mb-8 -mx-4 overflow-x-auto border-y border-[#d7cdbb] bg-white/65 px-4 py-2 shadow-sm sm:mx-0 sm:rounded-2xl sm:border sm:px-3 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-          <div className="flex min-w-max gap-2">
-          {[
-            "overview",
-            "students",
-            "teachers",
-            "platform-events",
-            "school-events",
-            "challenge-showcase",
-            "student-notices",
-            "notices",
-            "magazine",
-            "showcase",
-            "settings",
-          ].map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              disabled={isRestricted && tab !== 'settings'}
-              aria-pressed={activeTab === tab}
-              className={`min-h-11 rounded-xl px-4 text-sm font-semibold transition relative whitespace-nowrap ${
-                activeTab === tab
-                  ? "bg-[#0a2f66] text-white shadow-sm"
-                  : "text-[#52657d] hover:bg-[#eaf2ff] hover:text-[#0a2f66]"
-              } ${isRestricted && tab !== 'settings' ? 'opacity-50 cursor-not-allowed' : ''}`}
-            >
-              {tab === "platform-events"
-                ? "Platform Events"
-                : tab === "school-events"
-                ? "School Events"
-                : tab === "challenge-showcase"
-                ? "Pratyo Pulse"
-                : tab === "student-notices"
-                ? "Student Notices"
-                : tab === "notices"
-                ? "Received Notices"
-                : tab === "magazine"
-                ? "School Magazine"
-                : tab === "teachers"
-                ? "Teachers"
-                : tab === "showcase"
-                ? "Public Profile"
-                : tab.charAt(0).toUpperCase() + tab.slice(1)}
-            </button>
-          ))}
+          <div className="mb-8 -mx-4 overflow-x-auto border-y border-[#d7cdbb] bg-white/65 px-4 py-2 shadow-sm sm:mx-0 sm:rounded-2xl sm:border sm:px-3 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            <div className="flex min-w-max gap-2">
+              {[
+                { id: "overview" },
+                { id: "students" },
+                { id: "teachers" },
+                { id: "platform-events", indicatorKey: "school.platformEvents" },
+                { id: "school-events", indicatorKey: "school.schoolEvents" },
+                { id: "challenge-showcase", indicatorKey: "school.pratyoPulse" },
+                { id: "student-notices" },
+                { id: "notices", indicatorKey: "school.receivedNotices" },
+                { id: "magazine", indicatorKey: "school.magazine" },
+                { id: "showcase" },
+                { id: "settings" },
+              ].map(({ id: tab, indicatorKey }) => {
+                const indicator = getIndicator(indicatorKey);
+                return (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  disabled={isRestricted && tab !== 'settings'}
+                  aria-pressed={activeTab === tab}
+                  className={`min-h-11 rounded-xl px-4 text-sm font-semibold transition relative whitespace-nowrap ${activeTab === tab
+                      ? "bg-[#0a2f66] text-white shadow-sm"
+                      : "text-[#52657d] hover:bg-[#eaf2ff] hover:text-[#0a2f66]"
+                    } ${isRestricted && tab !== 'settings' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  {tab === "platform-events"
+                    ? "Platform Events"
+                    : tab === "school-events"
+                      ? "School Events"
+                      : tab === "challenge-showcase"
+                        ? "Pratyo Pulse"
+                        : tab === "student-notices"
+                          ? "Student Notices"
+                          : tab === "notices"
+                            ? "Received Notices"
+                            : tab === "magazine"
+                              ? "School Magazine"
+                              : tab === "teachers"
+                                ? "Teachers"
+                                : tab === "showcase"
+                                  ? "Public Profile"
+                                  : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                  <WorkIndicatorBadge
+                    count={indicator.count}
+                    tone={indicator.tone}
+                    compact
+                    className="ml-2 align-middle"
+                  />
+                </button>
+              )})}
+            </div>
           </div>
-        </div>
         )}
 
         {/* Content Area - Hide if Pending */}
         {isPending ? (
-            <div className="text-center py-20">
-                <AlertBanner
-                  type="warning"
-                  title="Approval required"
-                  message="Your school dashboard will unlock after the Super Admin approves this account."
-                />
-            </div>
-        ) : (
-            <>
-        {activeTab === "overview" && (
-          <>
-            <PageHeader
-              icon={FaSchool}
-              eyebrow="School command center"
-              title="Manage the work that students see every day"
-              description="Use this hub to register students, run events, send notices, publish magazine articles, and showcase selected achievements without jumping across separate tools."
-              meta={
-                <div className="grid gap-3 sm:grid-cols-3">
-                  <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4">
-                    <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
-                      First
-                    </p>
-                    <p className="mt-1 text-sm font-semibold text-white">
-                      Add students and teachers
-                    </p>
-                  </div>
-                  <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4">
-                    <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
-                      Then
-                    </p>
-                    <p className="mt-1 text-sm font-semibold text-white">
-                      Run events and notices
-                    </p>
-                  </div>
-                  <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4">
-                    <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
-                      Finally
-                    </p>
-                    <p className="mt-1 text-sm font-semibold text-white">
-                      Publish results and writing
-                    </p>
-                  </div>
-                </div>
-              }
+          <div className="text-center py-20">
+            <AlertBanner
+              type="warning"
+              title="Approval required"
+              message="Your school dashboard will unlock after the Super Admin approves this account."
             />
-            <div className="mt-8">
-              <SchoolDailyOverview />
-            </div>
-            <div className="mt-8">
-            <DashboardOverview />
-            </div>
-
-            <section className="mt-8 rounded-2xl border border-[#d7cdbb] bg-white p-6 shadow-[0_14px_36px_rgba(10,47,102,0.06)]">
-              <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#52657d]">
-                    Quick actions
-                  </p>
-                  <h2 className="mt-2 text-2xl font-bold text-[#17120a]">
-                    Pick the work area you need
-                  </h2>
-                </div>
-                <p className="max-w-xl text-sm leading-6 text-[#344f77]">
-                  These shortcuts match the real school workflow: students,
-                  events, student notices, publishing, and school spotlight.
-                </p>
-              </div>
-
-              <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                <QuickActionCard
-                  href="/school/dashboard?tab=students"
-                  icon={FaUsers}
-                  title="Students"
-                  description="Add student accounts, view credentials, and keep profiles ready for events and writing."
-                  tone="blue"
-                />
-                <QuickActionCard
-                  href="/school/dashboard?tab=platform-events"
-                  icon={FaCalendarCheck}
-                  title="Platform Events"
-                  description="Accept platform invitations and manage the teams your school sends."
-                  tone="emerald"
-                />
-                <QuickActionCard
-                  href="/school/dashboard?tab=school-events"
+          </div>
+        ) : (
+          <>
+            {activeTab === "overview" && (
+              <>
+                <PageHeader
                   icon={FaSchool}
-                  title="School Events"
-                  description="Create internal competitions, register participants, run rounds, and prepare certificates."
-                  tone="cyan"
+                  eyebrow="School command center"
+                  title="Manage the work that students see every day"
+                  description="Use this hub to register students, run events, send notices, publish magazine articles, and showcase selected achievements without jumping across separate tools."
+                  meta={
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <div className="rounded-xl border border-[#d7cdbb] bg-[#eaf2ff] p-4">
+                        <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#52657d]">
+                          First
+                        </p>
+                        <p className="mt-1 text-sm font-semibold text-[#17120a]">
+                          Add students and teachers
+                        </p>
+                      </div>
+                      <div className="rounded-xl border border-[#d7cdbb] bg-[#eaf2ff] p-4">
+                        <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#52657d]">
+                          Then
+                        </p>
+                        <p className="mt-1 text-sm font-semibold text-[#17120a]">
+                          Run events and notices
+                        </p>
+                      </div>
+                      <div className="rounded-xl border border-[#d7cdbb] bg-[#eaf2ff] p-4">
+                        <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#52657d]">
+                          Finally
+                        </p>
+                        <p className="mt-1 text-sm font-semibold text-[#17120a]">
+                          Publish results and writing
+                        </p>
+                      </div>
+                    </div>
+                  }
                 />
-                <QuickActionCard
-                  href="/school/dashboard?tab=student-notices"
-                  icon={FaBullhorn}
-                  title="Student Notices"
-                  description="Send announcements directly to every student in your school dashboard."
-                  tone="amber"
-                />
-                <QuickActionCard
-                  href="/school/dashboard?tab=magazine"
-                  icon={FaFeatherAlt}
-                  title="School Magazine"
-                  description="Review student writing and publish selected articles for the school community."
-                  tone="purple"
-                />
-                <QuickActionCard
-                  href="/school/dashboard?tab=challenge-showcase"
-                  icon={FaTrophy}
-                  title="Pratyo Pulse"
-                  description="See platform-selected student challenge responses and promote strong work."
-                  tone="emerald"
-                />
-              </div>
-            </section>
+                <div className="mt-8">
+                  <SchoolDailyOverview />
+                </div>
+                <div className="mt-8">
+                  <DashboardOverview />
+                </div>
 
-            <div className="mt-8">
-              <AlertBanner
-                type="info"
-                title="Production note"
-                message="Keep daily announcements inside Student Notices, use School Magazine only for approved writing, and use Public Profile when you are ready to promote school achievements."
-                action={
-                  <Link
-                    href="/school/dashboard?tab=showcase"
-                    className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-500"
-                  >
-                    Open public profile
-                    <FaBookReader />
-                  </Link>
-                }
+                <section className="mt-8 rounded-2xl border border-[#d7cdbb] bg-white p-6 shadow-[0_14px_36px_rgba(10,47,102,0.06)]">
+                  <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#52657d]">
+                        Quick actions
+                      </p>
+                      <h2 className="mt-2 text-2xl font-bold text-[#17120a]">
+                        Pick the work area you need
+                      </h2>
+                    </div>
+                    <p className="max-w-xl text-sm leading-6 text-[#344f77]">
+                      These shortcuts match the real school workflow: students,
+                      events, student notices, publishing, and school spotlight.
+                    </p>
+                  </div>
+
+                  <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    <QuickActionCard
+                      href="/school/dashboard?tab=students"
+                      icon={FaUsers}
+                      title="Students"
+                      description="Add student accounts, view credentials, and keep profiles ready for events and writing."
+                      tone="blue"
+                    />
+                    <QuickActionCard
+                      href="/school/dashboard?tab=platform-events"
+                      icon={FaCalendarCheck}
+                      title="Platform Events"
+                      description="Accept platform invitations and manage the teams your school sends."
+                      indicator={getIndicator("school.platformEvents")}
+                      tone="emerald"
+                    />
+                    <QuickActionCard
+                      href="/school/dashboard?tab=school-events"
+                      icon={FaSchool}
+                      title="School Events"
+                      description="Create internal competitions, register participants, run rounds, and prepare certificates."
+                      indicator={getIndicator("school.schoolEvents")}
+                      tone="cyan"
+                    />
+                    <QuickActionCard
+                      href="/school/dashboard?tab=student-notices"
+                      icon={FaBullhorn}
+                      title="Student Notices"
+                      description="Send announcements directly to every student in your school dashboard."
+                      tone="amber"
+                    />
+                    <QuickActionCard
+                      href="/school/dashboard?tab=magazine"
+                      icon={FaFeatherAlt}
+                      title="School Magazine"
+                      description="Review student writing and publish selected articles for the school community."
+                      indicator={getIndicator("school.magazine")}
+                      tone="purple"
+                    />
+                    <QuickActionCard
+                      href="/school/dashboard?tab=challenge-showcase"
+                      icon={FaTrophy}
+                      title="Pratyo Pulse"
+                      description="See platform-selected student challenge responses and promote strong work."
+                      indicator={getIndicator("school.pratyoPulse")}
+                      tone="emerald"
+                    />
+                  </div>
+                </section>
+
+                <div className="mt-8">
+                  <AlertBanner
+                    type="info"
+                    title="Production note"
+                    message="Keep daily announcements inside Student Notices, use School Magazine only for approved writing, and use Public Profile when you are ready to promote school achievements."
+                    action={
+                      <Link
+                        href="/school/dashboard?tab=showcase"
+                        className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-500"
+                      >
+                        Open public profile
+                        <FaBookReader />
+                      </Link>
+                    }
+                  />
+                </div>
+              </>
+            )}
+
+            {activeTab === "students" && <StudentManager />}
+
+            {activeTab === "teachers" && <TeacherManager />}
+            {activeTab === "showcase" && <ShowcaseProfileManager />}
+            {activeTab === "support" && <SupportTicketManager />}
+            {activeTab === "register-student" && (
+              <EnhancedStudentRegistration
+                schoolId={session?.user?.id}
+                onSuccess={() => router.refresh()}
               />
-            </div>
+            )}
+            {activeTab === "register-teacher" && (
+              <EnhancedTeacherRegistration
+                schoolId={session?.user?.id}
+                onSuccess={() => router.refresh()}
+              />
+            )}
+            {activeTab === "settings" && <SchoolSettingsManager />}
+
+            {activeTab === "platform-events" && (
+              <SchoolEventWorkspace mode="platform" />
+            )}
+            {activeTab === "school-events" && <SchoolEventWorkspace mode="school" />}
+            {activeTab === "challenge-showcase" && <DashboardChallengeShowcase />}
+
+            {activeTab === "student-notices" && <StudentNoticeManager />}
+            {activeTab === "notices" && <SchoolNoticeBoard />}
+            {activeTab === "magazine" && <SchoolMagazineManager />}
           </>
-        )}
-
-        {activeTab === "students" && <StudentManager />}
-
-        {activeTab === "teachers" && <TeacherManager />}
-        {activeTab === "showcase" && <ShowcaseProfileManager />}
-        {activeTab === "support" && <SupportTicketManager />}
-        {activeTab === "register-student" && (
-          <EnhancedStudentRegistration 
-            schoolId={session?.user?.id} 
-            onSuccess={() => router.refresh()} 
-          />
-        )}
-        {activeTab === "register-teacher" && (
-          <EnhancedTeacherRegistration 
-            schoolId={session?.user?.id} 
-            onSuccess={() => router.refresh()} 
-          />
-        )}
-        {activeTab === "settings" && <SchoolSettingsManager />}
-
-        {activeTab === "platform-events" && (
-          <SchoolEventWorkspace mode="platform" />
-        )}
-        {activeTab === "school-events" && <SchoolEventWorkspace mode="school" />}
-        {activeTab === "challenge-showcase" && <DashboardChallengeShowcase />}
-
-        {activeTab === "student-notices" && <StudentNoticeManager />}
-        {activeTab === "notices" && <SchoolNoticeBoard />}
-        {activeTab === "magazine" && <SchoolMagazineManager />}
-            </>
         )}
 
         {editingTeacher && (

@@ -366,6 +366,53 @@ table tbody tr:hover {
   border: 1px solid rgba(10, 47, 102, 0.14);
 }
 
+.event-manage-shell [class*="bg-[#071833]"],
+.event-manage-shell [class*="bg-[#081b39]"],
+.event-manage-shell [class*="bg-[#0a2145]"],
+.event-manage-shell [class*="bg-slate-950"],
+.event-manage-shell [class*="bg-slate-900"],
+.event-manage-shell [class*="bg-slate-800"] {
+  background-color: #ffffff !important;
+}
+
+.event-manage-shell [class*="border-[#1c4a8d]"],
+.event-manage-shell [class*="border-[#16396d]"],
+.event-manage-shell [class*="border-slate-800"],
+.event-manage-shell [class*="border-slate-700"],
+.event-manage-shell [class*="border-slate-200"] {
+  border-color: var(--brand-border) !important;
+}
+
+.event-manage-shell [class*="text-white"],
+.event-manage-shell [class*="text-slate-100"],
+.event-manage-shell [class*="text-slate-200"],
+.event-manage-shell [class*="text-slate-300"],
+.event-manage-shell [class*="text-[#dce9ff]"],
+.event-manage-shell [class*="text-[#cddfff]"] {
+  color: var(--brand-ink) !important;
+}
+
+.event-manage-shell [class*="text-slate-400"],
+.event-manage-shell [class*="text-slate-500"],
+.event-manage-shell [class*="text-[#86aee4]"],
+.event-manage-shell [class*="text-[#b6d6ff]"],
+.event-manage-shell [class*="text-[#8fc4ff]"] {
+  color: var(--brand-muted) !important;
+}
+
+.event-manage-shell [class*="bg-blue-600"],
+.event-manage-shell [class*="bg-[#1150a1]"],
+.event-manage-shell [class*="bg-[#2f7fdb]"] {
+  background-color: var(--brand-navy) !important;
+  color: #ffffff !important;
+}
+
+.event-manage-shell [class*="bg-blue-600"] *,
+.event-manage-shell [class*="bg-[#1150a1]"] *,
+.event-manage-shell [class*="bg-[#2f7fdb]"] * {
+  color: #ffffff !important;
+}
+
 @media (max-width: 640px) {
   h1[class*="text-5xl"],
   h1[class*="text-4xl"],

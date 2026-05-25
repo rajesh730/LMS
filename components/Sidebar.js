@@ -20,6 +20,27 @@ import {
   FaTimes,
 } from "react-icons/fa";
 import PratyoLogo from "@/components/brand/PratyoLogo";
+import WorkIndicatorBadge from "@/components/work-indicators/WorkIndicatorBadge";
+import useWorkIndicators from "@/lib/useWorkIndicators";
+
+const HREF_INDICATOR_KEYS = {
+  "/admin/dashboard?tab=approvals": "admin.approvals",
+  "/admin/dashboard?tab=events": "admin.events",
+  "/admin/dashboard?tab=challenges": "admin.challenges",
+  "/admin/support": "admin.support",
+  "/school/dashboard?tab=platform-events": "school.platformEvents",
+  "/school/dashboard?tab=school-events": "school.schoolEvents",
+  "/school/dashboard?tab=challenge-showcase": "school.pratyoPulse",
+  "/school/dashboard?tab=student-notices": "school.studentNotices",
+  "/school/dashboard?tab=notices": "school.receivedNotices",
+  "/school/dashboard?tab=magazine": "school.magazine",
+  "/school/support": "school.support",
+  "/student/events": "student.events",
+  "/student/challenges": "student.pratyoPulse",
+  "/student/notices": "student.notices",
+  "/student/writing": "student.writing",
+  "/student/magazine": "student.magazine",
+};
 
 export default function Sidebar({
   role,
@@ -32,6 +53,9 @@ export default function Sidebar({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const currentTab = searchParams?.get("tab");
+  const { getIndicator } = useWorkIndicators({
+    enabled: Boolean(role && !isPending),
+  });
 
   useEffect(() => {
     if (session?.error === "SessionRevoked") {
@@ -68,6 +92,16 @@ export default function Sidebar({
       name: "Student Notices",
       href: "/school/dashboard?tab=student-notices",
       icon: FaBell,
+    },
+    {
+      name: "Received Notices",
+      href: "/school/dashboard?tab=notices",
+      icon: FaBell,
+    },
+    {
+      name: "School Magazine",
+      href: "/school/dashboard?tab=magazine",
+      icon: FaBookOpen,
     },
     {
       name: "Public Profile",
@@ -141,6 +175,7 @@ export default function Sidebar({
         {links.map((link) => {
           const Icon = link.icon;
           const isActive = link.href === (pathname + (currentTab ? `?tab=${currentTab}` : ""));
+          const indicator = getIndicator(HREF_INDICATOR_KEYS[link.href]);
           return (
             <Link
               key={link.href}
@@ -158,7 +193,14 @@ export default function Sidebar({
                     : "text-[#6fa6ef] group-hover:text-[#d9e8ff]"
                   }`}
               />
-              <span className="font-medium leading-tight">{link.name}</span>
+              <span className="min-w-0 flex-1 font-medium leading-tight">
+                {link.name}
+              </span>
+              <WorkIndicatorBadge
+                count={indicator.count}
+                tone={indicator.tone}
+                compact
+              />
             </Link>
           );
         })}

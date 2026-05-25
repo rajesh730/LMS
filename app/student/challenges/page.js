@@ -31,7 +31,10 @@ export default async function StudentChallengeShowcasePage() {
   return (
     <DashboardLayout>
       <div className="mx-auto max-w-7xl">
-        <DashboardChallengeShowcaseClient responses={responses} />
+        <DashboardChallengeShowcaseClient
+          responses={responses}
+          seenSurface="student.pratyoPulse"
+        />
       </div>
     </DashboardLayout>
   );

@@ -45,12 +45,12 @@ function getSchoolStatus(requests) {
 
 function statusChip(status) {
   if (status === "APPROVED") {
-    return "border-[#2f7fdb]/20 bg-[#2f7fdb]/10 text-[#1150a1]";
+    return "border-[#9ed8b5] bg-[#e8f8ef] text-[#17643a]";
   }
   if (status === "REJECTED") {
-    return "border-[#ffb21c]/20 bg-[#ffb21c]/10 text-[#d97706]";
+    return "border-rose-200 bg-rose-50 text-rose-800";
   }
-  return "border-[#0a2f66]/20 bg-[#0a2f66]/10 text-[#0a2f66]";
+  return "border-[#bfd7f7] bg-[#eaf2ff] text-[#0a2f66]";
 }
 
 function getGroupLifecycle(requests) {
@@ -190,15 +190,15 @@ export default function UnifiedApprovalManager({ requests, event, onDataChange }
         />
       )}
 
-      <div className="flex w-fit rounded-lg bg-[#0a2145] p-1">
+      <div className="flex w-fit rounded-lg border border-[#d7cdbb] bg-white p-1 shadow-sm">
         {["ALL", "PENDING", "APPROVED", "REJECTED"].map((status) => (
           <button
             key={status}
             onClick={() => setFilter(status)}
             className={`px-4 py-2 rounded-md text-sm font-medium transition whitespace-nowrap ${
               filter === status
-                ? "bg-[#ffb21c] text-[#0a2f66] shadow-lg"
-                : "text-[#cddfff] hover:bg-[#1150a1] hover:text-white"
+                ? "bg-[#0a2f66] text-white shadow-sm"
+                : "text-[#0a2f66] hover:bg-[#eaf2ff]"
             }`}
           >
             {status === "ALL"
@@ -222,50 +222,50 @@ export default function UnifiedApprovalManager({ requests, event, onDataChange }
             className={`cursor-pointer p-4 rounded-xl border text-left transition-all ${
               filter === item.key
                 ? item.accent === "navy"
-                  ? "border-[#0a2f66]/50 bg-[#0a2f66]/10 ring-1 ring-[#0a2f66]/40"
+                  ? "border-[#bfd7f7] bg-[#eaf2ff] ring-1 ring-[#bfd7f7]"
                   : item.accent === "gold"
-                  ? "border-[#ffb21c]/50 bg-[#ffb21c]/10 ring-1 ring-[#ffb21c]/40"
+                  ? "border-[#f4d28a] bg-[#fff7e6] ring-1 ring-[#f4d28a]"
                   : item.accent === "blue"
-                  ? "border-[#2f7fdb]/50 bg-[#2f7fdb]/10 ring-1 ring-[#2f7fdb]/40"
-                  : "border-[#d97706]/50 bg-[#ffb21c]/10 ring-1 ring-[#d97706]/30"
-                : "border-[#1c4a8d] bg-[#081b39]/60 hover:border-[#2f7fdb]/40"
+                  ? "border-[#bfd7f7] bg-[#eaf2ff] ring-1 ring-[#bfd7f7]"
+                  : "border-rose-200 bg-rose-50 ring-1 ring-rose-200"
+                : "border-[#d7cdbb] bg-white hover:border-[#bfd7f7] hover:bg-[#f8fbff]"
             }`}
           >
             <div
               className={`text-xs uppercase font-bold tracking-wider mb-1 ${
                 item.accent === "navy"
-                  ? "text-[#bfd3f5]"
+                  ? "text-[#52657d]"
                   : item.accent === "gold"
-                  ? "text-[#ffcf57]"
+                  ? "text-[#b77900]"
                   : item.accent === "blue"
-                  ? "text-[#8fc4ff]"
-                  : "text-[#ffc44d]"
+                  ? "text-[#52657d]"
+                  : "text-rose-700"
               }`}
             >
               {item.label}
             </div>
-            <div className="text-2xl font-bold text-white">{item.value}</div>
+            <div className="text-2xl font-bold text-[#17120a]">{item.value}</div>
           </button>
         ))}
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-[#1c4a8d] bg-[#081b39]/70">
-        <div className="flex flex-col gap-4 border-b border-[#1c4a8d] p-4 xl:flex-row xl:items-center xl:justify-between">
+      <div className="overflow-hidden rounded-2xl border border-[#d7cdbb] bg-white">
+        <div className="flex flex-col gap-4 border-b border-[#d7cdbb] p-4 xl:flex-row xl:items-center xl:justify-between">
           <div className="relative flex-1 max-w-md">
-            <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6fa6ef]" />
+            <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-[#52657d]" />
             <input
               type="text"
               placeholder="Search schools or contact persons..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full rounded-lg border border-[#1c4a8d] bg-[#071833] py-2 pl-10 pr-4 text-white transition focus:border-[#2f7fdb] focus:outline-none"
+              className="w-full rounded-lg border border-[#d7cdbb] bg-[#f8fbff] py-2 pl-10 pr-4 text-[#17120a] transition focus:border-[#2f7fdb] focus:outline-none"
             />
           </div>
           <div className="flex flex-wrap items-center gap-4">
-            <div className="rounded-lg border border-[#1c4a8d] bg-[#071833] px-3 py-2 text-sm text-[#cddfff]">
+            <div className="rounded-lg border border-[#bfd7f7] bg-[#eaf2ff] px-3 py-2 text-sm text-[#0a2f66]">
               Approved students are added to Round 1 automatically.
             </div>
-            <div className="text-sm text-[#cddfff]">
+            <div className="text-sm text-[#52657d]">
               Showing {groupedParticipants.length} school
               {groupedParticipants.length === 1 ? "" : "s"}
             </div>
@@ -275,7 +275,7 @@ export default function UnifiedApprovalManager({ requests, event, onDataChange }
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-[#1c4a8d] bg-[#071833] text-xs uppercase tracking-wider text-[#b6d6ff]">
+              <tr className="border-b border-[#d7cdbb] bg-[#eaf2ff] text-xs uppercase tracking-wider text-[#52657d]">
                 <th className="p-4 font-medium">School Details</th>
                 <th className="p-4 font-medium">Contact Info</th>
                 <th className="p-4 font-medium">Students</th>
@@ -284,10 +284,10 @@ export default function UnifiedApprovalManager({ requests, event, onDataChange }
                 <th className="p-4 font-medium text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#16396d] text-sm">
+            <tbody className="divide-y divide-[#d7cdbb] text-sm">
               {groupedParticipants.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="p-8 text-center text-[#86aee4]">
+                  <td colSpan="6" className="p-8 text-center text-[#52657d]">
                     No registrations found matching your filters.
                   </td>
                 </tr>
@@ -300,12 +300,12 @@ export default function UnifiedApprovalManager({ requests, event, onDataChange }
                   const groupLifecycle = getGroupLifecycle(schoolRequests);
 
                   return (
-                    <tr key={group.schoolId} className="transition hover:bg-[#0f2953]/60">
+                    <tr key={group.schoolId} className="transition hover:bg-[#f8fbff]">
                       <td className="p-4 align-top">
-                        <div className="font-medium text-white text-base mb-1">
+                        <div className="mb-1 text-base font-medium text-[#17120a]">
                           {group.schoolName}
                         </div>
-                        <div className="flex items-center gap-2 text-xs text-[#86aee4]">
+                        <div className="flex items-center gap-2 text-xs text-[#52657d]">
                           <span>
                             {schoolRequests.length} registered student
                             {schoolRequests.length === 1 ? "" : "s"}
@@ -321,12 +321,12 @@ export default function UnifiedApprovalManager({ requests, event, onDataChange }
                       </td>
                       <td className="p-4 align-top">
                         <div className="space-y-2">
-                          <div className="flex items-center gap-2 text-[#dce9ff]">
-                            <FaUser className="text-[#6fa6ef] text-xs" />
+                          <div className="flex items-center gap-2 text-[#27344a]">
+                            <FaUser className="text-[#52657d] text-xs" />
                             <span>{contactPerson}</span>
                           </div>
-                          <div className="flex items-center gap-2 text-[#dce9ff]">
-                            <FaPhone className="text-[#6fa6ef] text-xs" />
+                          <div className="flex items-center gap-2 text-[#27344a]">
+                            <FaPhone className="text-[#52657d] text-xs" />
                             <span>{phone || "-"}</span>
                           </div>
                         </div>
@@ -336,9 +336,9 @@ export default function UnifiedApprovalManager({ requests, event, onDataChange }
                           {schoolRequests.map((request) => (
                             <div
                               key={request._id}
-                              className="flex items-center justify-between gap-3 rounded-lg border border-[#16396d] bg-[#071833]/70 px-3 py-2"
+                              className="flex items-center justify-between gap-3 rounded-lg border border-[#d7cdbb] bg-[#f8fbff] px-3 py-2"
                             >
-                              <span className="text-slate-300">
+                              <span className="text-[#27344a]">
                                 {request.student?.name || "Student"}
                               </span>
                               <span
@@ -359,9 +359,9 @@ export default function UnifiedApprovalManager({ requests, event, onDataChange }
                           {schoolRequests.map((request) => (
                             <div
                               key={`${request._id}-grade`}
-                              className="flex items-center gap-2 text-slate-300"
+                              className="flex items-center gap-2 text-[#27344a]"
                             >
-                              <FaUserGraduate className="text-slate-500 text-xs" />
+                              <FaUserGraduate className="text-[#52657d] text-xs" />
                               <span>{request.student?.grade || "-"}</span>
                             </div>
                           ))}
@@ -383,7 +383,7 @@ export default function UnifiedApprovalManager({ requests, event, onDataChange }
                             <button
                               onClick={() => updateSchoolStatus(schoolRequests, "approve")}
                               disabled={Boolean(loadingAction)}
-                              className="w-full px-3 py-1.5 bg-green-600/20 text-green-400 rounded hover:bg-green-600/30 transition flex items-center justify-center gap-2 text-xs font-medium border border-green-600/20 disabled:opacity-50"
+                              className="flex w-full items-center justify-center gap-2 rounded border border-[#9ed8b5] bg-[#e8f8ef] px-3 py-1.5 text-xs font-medium text-[#17643a] transition hover:bg-[#d8f1e3] disabled:opacity-50"
                             >
                               <FaCheck /> Approve
                             </button>
@@ -392,7 +392,7 @@ export default function UnifiedApprovalManager({ requests, event, onDataChange }
                             <button
                               onClick={() => updateSchoolStatus(schoolRequests, "reject")}
                               disabled={Boolean(loadingAction)}
-                              className="w-full px-3 py-1.5 bg-red-600/20 text-red-400 rounded hover:bg-red-600/30 transition flex items-center justify-center gap-2 text-xs font-medium border border-red-600/20 disabled:opacity-50"
+                              className="flex w-full items-center justify-center gap-2 rounded border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-800 transition hover:bg-rose-100 disabled:opacity-50"
                             >
                               <FaTimes /> Reject
                             </button>
@@ -401,7 +401,7 @@ export default function UnifiedApprovalManager({ requests, event, onDataChange }
                             <button
                               onClick={() => updateSchoolStatus(schoolRequests, "pending")}
                               disabled={Boolean(loadingAction)}
-                              className="w-full px-3 py-1.5 bg-yellow-600/20 text-yellow-400 rounded hover:bg-yellow-600/30 transition flex items-center justify-center gap-2 text-xs font-medium border border-yellow-600/20 disabled:opacity-50"
+                              className="flex w-full items-center justify-center gap-2 rounded border border-[#f4d28a] bg-[#fff7e6] px-3 py-1.5 text-xs font-medium text-[#7a4d00] transition hover:bg-[#ffefc7] disabled:opacity-50"
                             >
                               <FaUndo /> Pending
                             </button>
@@ -415,7 +415,7 @@ export default function UnifiedApprovalManager({ requests, event, onDataChange }
             </tbody>
           </table>
         </div>
-        <div className="border-t border-[#16396d] px-4 pb-4">
+        <div className="border-t border-[#d7cdbb] px-4 pb-4">
           <PaginationControls
             currentPage={currentPage}
             totalPages={totalPages}

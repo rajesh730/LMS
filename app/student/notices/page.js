@@ -26,8 +26,8 @@ export default async function StudentNoticesPage() {
       <div className="max-w-6xl mx-auto space-y-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-4xl font-bold text-white">Student Notices</h1>
-            <p className="mt-2 text-slate-400">
+            <h1 className="text-4xl font-bold text-[#17120a]">Student Notices</h1>
+            <p className="mt-2 text-[#52657d]">
               Keep up with school announcements and published event updates.
             </p>
           </div>

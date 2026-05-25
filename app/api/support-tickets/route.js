@@ -3,6 +3,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import SupportTicket from "@/models/SupportTicket";
 import connectDB from "@/lib/db";
 import { successResponse, errorResponse } from "@/lib/apiResponse";
+import { publishWorkIndicatorsUpdate } from "@/lib/workIndicatorRealtime";
 
 export async function GET(req) {
   try {
@@ -75,6 +76,12 @@ export async function POST(req) {
     });
 
     await ticket.save();
+
+    publishWorkIndicatorsUpdate("support-ticket-created", {
+      schoolId: String(session.user.id),
+      ticketId: String(ticket._id),
+      status: ticket.status,
+    });
 
     return successResponse(201, "Ticket created successfully", { ticket });
   } catch (error) {

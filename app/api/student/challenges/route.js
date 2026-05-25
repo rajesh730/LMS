@@ -5,6 +5,7 @@ import connectDB from "@/lib/db";
 import Student from "@/models/Student";
 import PlatformChallenge from "@/models/PlatformChallenge";
 import PlatformChallengeSubmission from "@/models/PlatformChallengeSubmission";
+import { gradeListContains } from "@/lib/schoolGrades";
 
 function buildStudentLookup(session) {
   return {
@@ -21,7 +22,7 @@ function buildStudentLookup(session) {
 
 function gradeMatches(challenge, studentGrade) {
   const grades = challenge.targetGrades || [];
-  return grades.length === 0 || grades.includes(studentGrade);
+  return grades.length === 0 || gradeListContains(grades, studentGrade);
 }
 
 export async function GET() {

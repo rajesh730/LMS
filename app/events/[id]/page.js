@@ -5,6 +5,7 @@ import Achievement from "@/models/Achievement";
 import ParticipationRequest from "@/models/ParticipationRequest";
 import EventNotice from "@/models/EventNotice";
 import PublicSiteNav from "@/components/public/PublicSiteNav";
+import PublicEventNoticeList from "@/components/events/PublicEventNoticeList";
 import "@/models/Student";
 import "@/models/User";
 import "@/models/ExternalOrganizer";
@@ -211,41 +212,10 @@ export default async function PublicEventPage({ params }) {
           </div>
         </div>
 
-        {eventNotices.length > 0 && (
-          <section className="rounded-3xl border border-slate-800 bg-slate-900/60 p-8 mb-10">
-            <div className="mb-5">
-              <h2 className="text-2xl font-bold">Event Notices</h2>
-              <p className="mt-2 text-sm text-slate-400">
-                Public updates tied directly to this event.
-              </p>
-            </div>
-            <div className="space-y-4">
-              {eventNotices.map((notice) => (
-                <article
-                  key={String(notice._id)}
-                  className="rounded-2xl border border-slate-800 bg-slate-950/50 p-5"
-                >
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="rounded-full bg-sky-500/10 px-3 py-1 text-xs font-semibold text-sky-300">
-                      {String(notice.type || "GENERAL").replaceAll("_", " ")}
-                    </span>
-                    {notice.publishedAt && (
-                      <span className="text-xs text-slate-500">
-                        {new Date(notice.publishedAt).toLocaleDateString()}
-                      </span>
-                    )}
-                  </div>
-                  <h3 className="mt-3 text-xl font-bold text-white">
-                    {notice.title}
-                  </h3>
-                  <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-slate-300">
-                    {notice.message}
-                  </p>
-                </article>
-              ))}
-            </div>
-          </section>
-        )}
+        <PublicEventNoticeList
+          eventId={String(event._id)}
+          initialNotices={eventNotices}
+        />
 
         <section className="rounded-3xl border border-slate-800 bg-slate-900/60 p-8 mb-10">
           <div className="flex items-center justify-between gap-4 mb-5">

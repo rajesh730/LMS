@@ -3,6 +3,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import SupportTicket from "@/models/SupportTicket";
 import connectDB from "@/lib/db";
 import { successResponse, errorResponse } from "@/lib/apiResponse";
+import { publishWorkIndicatorsUpdate } from "@/lib/workIndicatorRealtime";
 
 export async function GET(req, { params }) {
   try {
@@ -142,6 +143,12 @@ export async function PATCH(req, { params }) {
 
     await ticket.save();
 
+    publishWorkIndicatorsUpdate("support-ticket-updated", {
+      schoolId: String(ticket.school),
+      ticketId: String(ticket._id),
+      status: ticket.status,
+    });
+
     const updatedTicket = await SupportTicket.findById(id)
       .populate("school", "name email")
       .populate("replies.author", "name email role")
@@ -214,6 +221,11 @@ export async function DELETE(req, { params }) {
     if (!ticket) {
       return errorResponse(404, "Ticket not found");
     }
+
+    publishWorkIndicatorsUpdate("support-ticket-archived", {
+      schoolId: String(ticket.school),
+      ticketId: String(ticket._id),
+    });
 
     return successResponse(200, "Ticket archived successfully");
   } catch (error) {

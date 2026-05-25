@@ -5,6 +5,7 @@ import { FaBookOpen, FaCalendarAlt, FaFeatherAlt } from "react-icons/fa";
 import AlertBanner from "@/components/ui/AlertBanner";
 import EmptyState from "@/components/EmptyState";
 import PageHeader from "@/components/ui/PageHeader";
+import useWorkIndicators from "@/lib/useWorkIndicators";
 
 function formatDate(value) {
   if (!value) return "";
@@ -16,11 +17,16 @@ function formatDate(value) {
 }
 
 export default function StudentSchoolMagazine() {
+  const { markSurfaceSeen } = useWorkIndicators();
   const [student, setStudent] = useState(null);
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedArticleId, setSelectedArticleId] = useState("");
+
+  useEffect(() => {
+    void markSurfaceSeen("student.magazine");
+  }, [markSurfaceSeen]);
 
   useEffect(() => {
     let active = true;
