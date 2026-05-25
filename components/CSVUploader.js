@@ -85,7 +85,7 @@ export default function CSVUploader({
     <div className="space-y-4">
       {/* Error Message */}
       {error && (
-        <div className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg flex items-start gap-3">
+        <div className="bg-rose-50 border border-rose-200 text-rose-700 px-4 py-3 rounded-lg flex items-start gap-3">
           <FaExclamationCircle className="text-lg flex-shrink-0 mt-0.5" />
           <div>
             <p className="font-semibold text-sm">Validation Error</p>
@@ -99,8 +99,8 @@ export default function CSVUploader({
         className={`border-2 border-dashed rounded-xl p-6 text-center transition cursor-pointer
                     ${
                       dragging
-                        ? "border-blue-400 bg-blue-500/5"
-                        : "border-slate-700 hover:border-blue-500/50 bg-slate-900/30"
+                        ? "border-[#0a2f66] bg-[#eaf2ff]"
+                        : "border-[#d7cdbb] hover:border-[#7fb1ee] bg-[#f8fbff]"
                     }`}
         onDragEnter={() => setDragging(true)}
         onDragLeave={() => setDragging(false)}
@@ -117,18 +117,18 @@ export default function CSVUploader({
 
         {fileInfo ? (
           <div>
-            <FaFileCsv className="text-3xl text-blue-400 mx-auto mb-2" />
-            <p className="text-white font-semibold">{fileInfo.name}</p>
-            <p className="text-slate-400 text-sm">{fileInfo.size} KB</p>
+            <FaFileCsv className="text-3xl text-[#0a2f66] mx-auto mb-2" />
+            <p className="text-[#17120a] font-semibold">{fileInfo.name}</p>
+            <p className="text-[#52657d] text-sm">{fileInfo.size} KB</p>
           </div>
         ) : (
           <div>
-            <FaFileUpload className="text-3xl text-slate-500 mx-auto mb-2" />
-            <p className="text-white font-semibold">{label}</p>
-            <p className="text-slate-400 text-sm">
+            <FaFileUpload className="text-3xl text-[#7a8aa0] mx-auto mb-2" />
+            <p className="text-[#17120a] font-semibold">{label}</p>
+            <p className="text-[#52657d] text-sm">
               Drag and drop or click to browse
             </p>
-            <p className="text-slate-500 text-xs mt-2">
+            <p className="text-[#7a8aa0] text-xs mt-2">
               Max file size: {(maxFileSize / 1024 / 1024).toFixed(1)}MB
             </p>
           </div>
@@ -140,7 +140,7 @@ export default function CSVUploader({
         <button
           onClick={handleUpload}
           disabled={parsing}
-          className="w-full bg-blue-600 hover:bg-blue-500 disabled:bg-slate-600 text-white px-6 py-3 rounded-lg font-semibold transition"
+          className="w-full bg-[#0a2f66] hover:bg-[#123f7d] disabled:bg-[#9db6d9] text-white px-6 py-3 rounded-lg font-semibold transition"
         >
           {parsing ? "Processing..." : "📤 Upload & Parse CSV"}
         </button>

@@ -173,6 +173,18 @@ function SchoolDashboardContent() {
   const [feedback, setFeedback] = useState(null);
   const [confirmState, setConfirmState] = useState(null);
 
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    const params = new URLSearchParams(searchParams?.toString());
+    if (tab === "overview") {
+      params.delete("tab");
+    } else {
+      params.set("tab", tab);
+    }
+    const query = params.toString();
+    router.push(`/school/dashboard${query ? `?${query}` : ""}`);
+  };
+
   useEffect(() => {
     if (tabParam) {
       setActiveTab(
@@ -573,7 +585,7 @@ function SchoolDashboardContent() {
                 return (
                 <button
                   key={tab}
-                  onClick={() => setActiveTab(tab)}
+                  onClick={() => handleTabChange(tab)}
                   disabled={isRestricted && tab !== 'settings'}
                   aria-pressed={activeTab === tab}
                   className={`min-h-11 rounded-xl px-4 text-sm font-semibold transition relative whitespace-nowrap ${activeTab === tab

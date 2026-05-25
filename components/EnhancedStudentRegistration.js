@@ -3,6 +3,10 @@ import { Download, List, Edit, Trash2, Search, RefreshCw } from "lucide-react";
 import CSVUploader from "./CSVUploader";
 
 const EnhancedStudentRegistration = ({ schoolId, onSuccess }) => {
+  const scrollToTop = () => {
+    if (typeof window === "undefined") return;
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
   const normalizeHeaderKey = (key) =>
     String(key || "")
       .trim()
@@ -270,6 +274,9 @@ const EnhancedStudentRegistration = ({ schoolId, onSuccess }) => {
 
   const handleBulkUpload = async (parsedData) => {
     setLoading(true);
+    setError("");
+    setSuccess("");
+    setBulkResult(null);
     try {
         // parsedData is the array of rows directly from CSVUploader
         const students = parsedData.map(row => {
@@ -336,8 +343,10 @@ const EnhancedStudentRegistration = ({ schoolId, onSuccess }) => {
         const data = await response.json();
         if (!response.ok) throw new Error(data.message);
         
-        setBulkResult(data.data);
-        setSuccess(`Processed ${students.length} students. Success: ${data.data.success.length}, Failed: ${data.data.failed.length}`);
+        const resultData = data.data || { success: [], failed: [] };
+        setBulkResult(resultData);
+        setSuccess(`Processed ${students.length} students. Success: ${resultData.success.length}, Failed: ${resultData.failed.length}`);
+        scrollToTop();
     } catch (err) {
         setError(err.message);
     } finally {
@@ -391,10 +400,10 @@ const EnhancedStudentRegistration = ({ schoolId, onSuccess }) => {
   };
 
   return (
-    <div className="bg-[#0f172a] text-white rounded-lg shadow-xl p-6 max-w-4xl mx-auto border border-slate-700">
+    <div className="bg-white text-[#27344a] rounded-2xl shadow-[0_14px_36px_rgba(10,47,102,0.08)] p-6 max-w-4xl mx-auto border border-[#d7cdbb]">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-white">Add New Student</h2>
-        <div className="flex gap-2 bg-slate-800 p-1 rounded-lg">
+      <h2 className="text-2xl font-bold text-[#17120a]">Add New Student</h2>
+      <div className="flex gap-2 bg-[#eaf2ff] p-1 rounded-xl">
             <button 
                 onClick={() => {
                     setActiveTab("single");
@@ -415,19 +424,19 @@ const EnhancedStudentRegistration = ({ schoolId, onSuccess }) => {
                         parentAlternativeContact: "",
                     });
                 }}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition ${activeTab === 'single' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${activeTab === 'single' ? 'bg-[#0a2f66] text-white' : 'text-[#52657d] hover:bg-white hover:text-[#0a2f66]'}`}
             >
                 {editingId ? 'Edit Student' : 'Single Entry'}
             </button>
             <button 
                 onClick={() => setActiveTab("bulk")}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition ${activeTab === 'bulk' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${activeTab === 'bulk' ? 'bg-[#0a2f66] text-white' : 'text-[#52657d] hover:bg-white hover:text-[#0a2f66]'}`}
             >
                 Bulk Upload
             </button>
             <button 
                 onClick={() => setActiveTab("list")}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition ${activeTab === 'list' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${activeTab === 'list' ? 'bg-[#0a2f66] text-white' : 'text-[#52657d] hover:bg-white hover:text-[#0a2f66]'}`}
             >
                 View All
             </button>
@@ -435,13 +444,13 @@ const EnhancedStudentRegistration = ({ schoolId, onSuccess }) => {
       </div>
 
       {error && (
-        <div className="bg-red-500/10 border border-red-500/50 text-red-400 px-4 py-3 rounded-lg mb-6">
+        <div className="bg-rose-50 border border-rose-200 text-rose-700 px-4 py-3 rounded-lg mb-6">
           {error}
         </div>
       )}
 
       {success && (
-        <div className="bg-green-500/10 border border-green-500/50 text-green-400 px-4 py-3 rounded-lg mb-6 break-all">
+        <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3 rounded-lg mb-6 break-all">
           {success}
         </div>
       )}
@@ -450,14 +459,14 @@ const EnhancedStudentRegistration = ({ schoolId, onSuccess }) => {
         <div className="mb-6 space-y-4 animate-in fade-in slide-in-from-top-2">
             {/* Success List */}
             {bulkResult.success.length > 0 && (
-                <div className="bg-green-500/10 border border-green-500/50 rounded-lg p-4">
-                    <h4 className="text-green-400 font-medium mb-2">Successfully Registered ({bulkResult.success.length})</h4>
+                <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
+                  <h4 className="text-emerald-700 font-medium mb-2">Successfully Registered ({bulkResult.success.length})</h4>
                     <div className="max-h-40 overflow-y-auto pr-2 custom-scrollbar">
-                        <ul className="list-disc list-inside text-sm text-green-300 space-y-1">
+                    <ul className="list-disc list-inside text-sm text-emerald-700 space-y-1">
                             {bulkResult.success.map((s, i) => (
                                 <li key={i}>
                                     <span className="font-medium">{s.name}</span> 
-                                    <span className="text-green-400/70 ml-2 text-xs">({s.username})</span>
+                          <span className="text-emerald-700/70 ml-2 text-xs">({s.username})</span>
                                 </li>
                             ))}
                         </ul>
@@ -467,16 +476,16 @@ const EnhancedStudentRegistration = ({ schoolId, onSuccess }) => {
 
             {/* Failed List */}
             {bulkResult.failed.length > 0 && (
-                <div className="bg-red-500/10 border border-red-500/50 rounded-lg p-4">
-                    <h4 className="text-red-400 font-medium mb-2">Failed to Register ({bulkResult.failed.length})</h4>
+                <div className="bg-rose-50 border border-rose-200 rounded-lg p-4">
+                  <h4 className="text-rose-700 font-medium mb-2">Failed to Register ({bulkResult.failed.length})</h4>
                     <div className="max-h-40 overflow-y-auto pr-2 custom-scrollbar">
-                        <ul className="space-y-2 text-sm text-red-300">
+                    <ul className="space-y-2 text-sm text-rose-700">
                             {bulkResult.failed.map((f, i) => (
-                                <li key={i} className="border-b border-red-500/20 pb-2 last:border-0 last:pb-0">
-                                    <div className="font-medium text-red-200">
+                        <li key={i} className="border-b border-rose-200 pb-2 last:border-0 last:pb-0">
+                          <div className="font-medium text-rose-800">
                                         {f.student.firstName || 'Unknown'} {f.student.lastName || ''}
                                     </div>
-                                    <div className="text-xs opacity-80 mt-0.5">Reason: {f.reason}</div>
+                          <div className="text-xs opacity-80 mt-0.5 text-rose-700">Reason: {f.reason}</div>
                                 </li>
                             ))}
                         </ul>
@@ -490,27 +499,27 @@ const EnhancedStudentRegistration = ({ schoolId, onSuccess }) => {
         <div className="space-y-4">
           <div className="flex gap-4 mb-4">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#7a8aa0] w-4 h-4" />
               <input
                 type="text"
                 placeholder="Search students..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                className="w-full pl-10 pr-4 py-2 bg-white border border-[#d7cdbb] rounded-lg text-[#27344a] focus:ring-2 focus:ring-[#0a2f66] outline-none"
               />
             </div>
             <button 
               onClick={fetchStudents}
-              className="p-2 bg-slate-800 border border-slate-700 rounded-lg text-slate-400 hover:text-white"
+              className="p-2 bg-white border border-[#d7cdbb] rounded-lg text-[#52657d] hover:text-[#0a2f66]"
               title="Refresh"
             >
               <RefreshCw className="w-4 h-4" />
             </button>
           </div>
 
-          <div className="overflow-x-auto rounded-lg border border-slate-700">
-            <table className="w-full text-sm text-left text-slate-300">
-              <thead className="text-xs text-slate-400 uppercase bg-slate-800/50">
+          <div className="overflow-x-auto rounded-lg border border-[#d7cdbb]">
+            <table className="w-full text-sm text-left text-[#27344a]">
+              <thead className="text-xs text-[#52657d] uppercase bg-[#eaf2ff]">
                 <tr>
                   <th className="px-4 py-3">Name</th>
                   <th className="px-4 py-3">Roll No</th>
@@ -522,21 +531,21 @@ const EnhancedStudentRegistration = ({ schoolId, onSuccess }) => {
               <tbody>
                 {students.length === 0 ? (
                   <tr>
-                    <td colSpan="5" className="px-4 py-8 text-center text-slate-500">
+                    <td colSpan="5" className="px-4 py-8 text-center text-[#7a8aa0]">
                       No students found
                     </td>
                   </tr>
                 ) : (
                   students.map((student) => (
-                    <tr key={student._id} className="border-b border-slate-700 hover:bg-slate-800/30">
-                      <td className="px-4 py-3 font-medium text-white">{student.name}</td>
+                    <tr key={student._id} className="border-b border-[#d7cdbb] hover:bg-[#f8fbff]">
+                      <td className="px-4 py-3 font-medium text-[#17120a]">{student.name}</td>
                       <td className="px-4 py-3">{student.rollNumber}</td>
                       <td className="px-4 py-3">{student.grade}</td>
                       <td className="px-4 py-3">{student.phone || '-'}</td>
                       <td className="px-4 py-3 text-right">
                         <button
                           onClick={() => handleEdit(student)}
-                          className="text-blue-400 hover:text-blue-300 p-1"
+                          className="text-[#0a2f66] hover:text-[#123f7d] p-1"
                           title="Edit"
                         >
                           <Edit className="w-4 h-4" />
@@ -556,46 +565,46 @@ const EnhancedStudentRegistration = ({ schoolId, onSuccess }) => {
           
           {/* Part 1: Student Details */}
           <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
-            <h3 className="text-lg font-semibold text-blue-400 mb-4">Student Details</h3>
+            <h3 className="text-lg font-semibold text-[#0a2f66] mb-4">Student Details</h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-slate-300 mb-1">Student Full Name *</label>
+                <label className="block text-sm font-medium text-[#52657d] mb-1">Student Full Name *</label>
                 <input
                   type="text"
                   placeholder="Enter full name"
                   value={formData.fullName}
                   onChange={(e) => setFormData({...formData, fullName: e.target.value})}
-                  className="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full bg-white border border-[#d7cdbb] rounded-lg px-4 py-2.5 text-[#27344a] focus:ring-2 focus:ring-[#0a2f66] outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">Phone (Optional)</label>
+                <label className="block text-sm font-medium text-[#52657d] mb-1">Phone (Optional)</label>
                 <input
                   type="tel"
                   value={formData.phone}
                   onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                  className="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full bg-white border border-[#d7cdbb] rounded-lg px-4 py-2.5 text-[#27344a] focus:ring-2 focus:ring-[#0a2f66] outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">Date of Birth</label>
+                <label className="block text-sm font-medium text-[#52657d] mb-1">Date of Birth</label>
                 <input
                   type="date"
                   value={formData.dateOfBirth}
                   onChange={(e) => setFormData({...formData, dateOfBirth: e.target.value})}
-                  className="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full bg-white border border-[#d7cdbb] rounded-lg px-4 py-2.5 text-[#27344a] focus:ring-2 focus:ring-[#0a2f66] outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">Gender</label>
+                <label className="block text-sm font-medium text-[#52657d] mb-1">Gender</label>
                 <select
                   value={formData.gender}
                   onChange={(e) => setFormData({...formData, gender: e.target.value})}
-                  className="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full bg-white border border-[#d7cdbb] rounded-lg px-4 py-2.5 text-[#27344a] focus:ring-2 focus:ring-[#0a2f66] outline-none"
                 >
                   <option value="">Select Gender</option>
                   <option value="MALE">Male</option>
@@ -605,21 +614,21 @@ const EnhancedStudentRegistration = ({ schoolId, onSuccess }) => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">Roll Number *</label>
+                <label className="block text-sm font-medium text-[#52657d] mb-1">Roll Number *</label>
                 <input
                   type="text"
                   value={formData.rollNumber}
                   onChange={(e) => setFormData({...formData, rollNumber: e.target.value})}
-                  className="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full bg-white border border-[#d7cdbb] rounded-lg px-4 py-2.5 text-[#27344a] focus:ring-2 focus:ring-[#0a2f66] outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">Grade *</label>
+                <label className="block text-sm font-medium text-[#52657d] mb-1">Grade *</label>
                 <select
                   value={formData.grade}
                   onChange={(e) => setFormData({...formData, grade: e.target.value})}
-                  className="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full bg-white border border-[#d7cdbb] rounded-lg px-4 py-2.5 text-[#27344a] focus:ring-2 focus:ring-[#0a2f66] outline-none"
                 >
                   <option value="">Select Grade</option>
                   {grades.map((g) => (
@@ -629,11 +638,11 @@ const EnhancedStudentRegistration = ({ schoolId, onSuccess }) => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">Blood Group (Optional)</label>
+                <label className="block text-sm font-medium text-[#52657d] mb-1">Blood Group (Optional)</label>
                 <select
                   value={formData.bloodGroup}
                   onChange={(e) => setFormData({...formData, bloodGroup: e.target.value})}
-                  className="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full bg-white border border-[#d7cdbb] rounded-lg px-4 py-2.5 text-[#27344a] focus:ring-2 focus:ring-[#0a2f66] outline-none"
                 >
                   <option value="">Select Blood Group</option>
                   <option value="A+">A+</option>
@@ -648,11 +657,11 @@ const EnhancedStudentRegistration = ({ schoolId, onSuccess }) => {
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-slate-300 mb-1">Address</label>
+                <label className="block text-sm font-medium text-[#52657d] mb-1">Address</label>
                 <textarea
                   value={formData.address}
                   onChange={(e) => setFormData({...formData, address: e.target.value})}
-                  className="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full bg-white border border-[#d7cdbb] rounded-lg px-4 py-2.5 text-[#27344a] focus:ring-2 focus:ring-[#0a2f66] outline-none"
                   rows="2"
                 />
               </div>
@@ -660,19 +669,19 @@ const EnhancedStudentRegistration = ({ schoolId, onSuccess }) => {
           </div>
 
           {/* Divider */}
-          <div className="border-t border-slate-700"></div>
+          <div className="border-t border-[#d7cdbb]"></div>
 
           {/* Part 2: Parent/Guardian Details */}
           <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
-            <h3 className="text-lg font-semibold text-blue-400 mb-4">Parent/Guardian Details</h3>
+            <h3 className="text-lg font-semibold text-[#0a2f66] mb-4">Parent/Guardian Details</h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">Guardian Relationship</label>
+                <label className="block text-sm font-medium text-[#52657d] mb-1">Guardian Relationship</label>
                 <select
                   value={formData.guardianRelationship}
                   onChange={(e) => setFormData({...formData, guardianRelationship: e.target.value})}
-                  className="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full bg-white border border-[#d7cdbb] rounded-lg px-4 py-2.5 text-[#27344a] focus:ring-2 focus:ring-[#0a2f66] outline-none"
                 >
                   <option value="FATHER">Father</option>
                   <option value="MOTHER">Mother</option>
@@ -684,49 +693,49 @@ const EnhancedStudentRegistration = ({ schoolId, onSuccess }) => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">Guardian Full Name</label>
+                <label className="block text-sm font-medium text-[#52657d] mb-1">Guardian Full Name</label>
                 <input
                   type="text"
                   value={formData.parentName}
                   onChange={(e) => setFormData({...formData, parentName: e.target.value})}
-                  className="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full bg-white border border-[#d7cdbb] rounded-lg px-4 py-2.5 text-[#27344a] focus:ring-2 focus:ring-[#0a2f66] outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">Guardian Contact Number</label>
+                <label className="block text-sm font-medium text-[#52657d] mb-1">Guardian Contact Number</label>
                 <input
                   type="tel"
                   value={formData.parentContactNumber}
                   onChange={(e) => setFormData({...formData, parentContactNumber: e.target.value})}
-                  className="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full bg-white border border-[#d7cdbb] rounded-lg px-4 py-2.5 text-[#27344a] focus:ring-2 focus:ring-[#0a2f66] outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">Guardian Email</label>
+                <label className="block text-sm font-medium text-[#52657d] mb-1">Guardian Email</label>
                 <input
                   type="email"
                   value={formData.parentEmail}
                   onChange={(e) => setFormData({...formData, parentEmail: e.target.value})}
-                  className="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full bg-white border border-[#d7cdbb] rounded-lg px-4 py-2.5 text-[#27344a] focus:ring-2 focus:ring-[#0a2f66] outline-none"
                 />
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-slate-300 mb-1">Alternative Contact (Optional)</label>
+                <label className="block text-sm font-medium text-[#52657d] mb-1">Alternative Contact (Optional)</label>
                 <input
                   type="tel"
                   value={formData.parentAlternativeContact}
                   onChange={(e) => setFormData({...formData, parentAlternativeContact: e.target.value})}
-                  className="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-2.5 text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                  className="w-full bg-white border border-[#d7cdbb] rounded-lg px-4 py-2.5 text-[#27344a] focus:ring-2 focus:ring-[#0a2f66] outline-none"
                 />
               </div>
             </div>
           </div>
 
           {/* Submit Button */}
-          <div className="pt-6 border-t border-slate-700 mt-6 flex justify-end">
+          <div className="pt-6 border-t border-[#d7cdbb] mt-6 flex justify-end">
             <button
               onClick={handleSubmit}
               disabled={loading}
@@ -738,32 +747,32 @@ const EnhancedStudentRegistration = ({ schoolId, onSuccess }) => {
         </div>
       ) : (
         <div className="space-y-6">
-          <div className="bg-slate-800 p-6 rounded-lg border border-slate-700">
+          <div className="bg-[#f8fbff] p-6 rounded-2xl border border-[#d7cdbb]">
             <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
               <div>
-                <h3 className="text-lg font-medium text-white mb-2">Upload Student Data</h3>
-                <div className="text-slate-400 text-sm space-y-2">
+                <h3 className="text-lg font-medium text-[#17120a] mb-2">Upload Student Data</h3>
+                <div className="text-[#52657d] text-sm space-y-2">
                   <p>Upload a CSV file with the following headers:</p>
-                  <div className="bg-slate-900 p-3 rounded border border-slate-700 font-mono text-xs overflow-x-auto">
-                    <span className="text-red-400">FullName*</span>, 
-                    <span className="text-red-400"> RollNumber*</span>, 
-                    <span className="text-red-400"> Grade*</span>, 
-                    <span className="text-blue-300"> Gender</span>, 
-                    <span className="text-blue-300"> DateOfBirth</span>, 
-                    <span className="text-blue-300"> Phone</span>, 
-                    <span className="text-blue-300"> Address</span>, 
-                    <span className="text-blue-300"> BloodGroup</span>, 
-                    <span className="text-blue-300"> GuardianRelationship</span>, 
-                    <span className="text-blue-300"> GuardianName</span>, 
-                    <span className="text-blue-300"> GuardianPhone</span>, 
-                    <span className="text-blue-300"> GuardianEmail</span>, 
-                    <span className="text-blue-300"> GuardianAltPhone</span>
+                  <div className="bg-white p-3 rounded border border-[#d7cdbb] font-mono text-xs overflow-x-auto text-[#27344a]">
+                    <span className="text-rose-700">FullName*</span>, 
+                    <span className="text-rose-700"> RollNumber*</span>, 
+                    <span className="text-rose-700"> Grade*</span>, 
+                    <span className="text-[#0a2f66]"> Gender</span>, 
+                    <span className="text-[#0a2f66]"> DateOfBirth</span>, 
+                    <span className="text-[#0a2f66]"> Phone</span>, 
+                    <span className="text-[#0a2f66]"> Address</span>, 
+                    <span className="text-[#0a2f66]"> BloodGroup</span>, 
+                    <span className="text-[#0a2f66]"> GuardianRelationship</span>, 
+                    <span className="text-[#0a2f66]"> GuardianName</span>, 
+                    <span className="text-[#0a2f66]"> GuardianPhone</span>, 
+                    <span className="text-[#0a2f66]"> GuardianEmail</span>, 
+                    <span className="text-[#0a2f66]"> GuardianAltPhone</span>
                   </div>
-                  <p className="text-xs text-slate-500">
-                    <span className="text-red-400">* Mandatory Fields</span> | 
-                    <span className="text-blue-300"> Optional Fields</span>
+                  <p className="text-xs text-[#7a8aa0]">
+                    <span className="text-rose-700">* Mandatory Fields</span> | 
+                    <span className="text-[#0a2f66]"> Optional Fields</span>
                   </p>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-[#7a8aa0]">
                     Template includes one demo row. Replace it with your data before upload.
                   </p>
                 </div>
@@ -771,13 +780,13 @@ const EnhancedStudentRegistration = ({ schoolId, onSuccess }) => {
               <div className="flex flex-col gap-2 md:items-end">
                 <button
                   onClick={downloadCsvTemplate}
-                  className="flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm transition shrink-0"
+                  className="flex items-center gap-2 px-4 py-2 bg-[#0a2f66] hover:bg-[#123f7d] text-white rounded-lg text-sm transition shrink-0"
                 >
                   <Download size={16} /> Download Template
                 </button>
-                <div className="rounded-lg border border-slate-700 bg-slate-900/60 p-3 text-xs text-slate-400 max-w-[260px]">
-                  <div className="font-semibold text-slate-200">Demo row preview</div>
-                  <div className="mt-2 space-y-1">
+                <div className="rounded-lg border border-[#d7cdbb] bg-[#f8fbff] p-3 text-xs text-[#52657d] max-w-[260px]">
+                  <div className="font-semibold text-[#0a2f66]">Demo row preview</div>
+                  <div className="mt-2 space-y-1 text-[#52657d]">
                     <div>Name: Sujan Shrestha</div>
                     <div>Roll: 12 | Grade: 8</div>
                     <div>Guardian: Ram Shrestha</div>
@@ -785,6 +794,16 @@ const EnhancedStudentRegistration = ({ schoolId, onSuccess }) => {
                 </div>
               </div>
             </div>
+            {bulkResult && (
+              <div className="mt-5 rounded-xl border border-[#d7cdbb] bg-white p-4 text-sm text-[#27344a]">
+                <div className="font-semibold text-[#17120a]">Bulk upload summary</div>
+                <div className="mt-2 flex flex-wrap gap-3 text-sm text-[#52657d]">
+                  <span>Processed: {bulkResult.success.length + bulkResult.failed.length}</span>
+                  <span className="text-emerald-700">Success: {bulkResult.success.length}</span>
+                  <span className="text-rose-700">Failed: {bulkResult.failed.length}</span>
+                </div>
+              </div>
+            )}
             <div className="mt-6">
               <CSVUploader onUpload={handleBulkUpload} />
             </div>
