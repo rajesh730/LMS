@@ -167,19 +167,19 @@ function SchoolDashboardContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const tabParam = searchParams.get("tab");
   const [activeTab, setActiveTab] = useState("overview");
   const [isNavOpen, setIsNavOpen] = useState(false);
   const [feedback, setFeedback] = useState(null);
   const [confirmState, setConfirmState] = useState(null);
 
   useEffect(() => {
-    const tab = searchParams.get("tab");
-    if (tab) {
+    if (tabParam) {
       setActiveTab(
-        ["judging", "events"].includes(tab) ? "platform-events" : tab
+        ["judging", "events"].includes(tabParam) ? "platform-events" : tabParam
       );
     }
-  }, [searchParams]);
+  }, [tabParam]);
 
   useEffect(() => {
     if (!isNavOpen) return;

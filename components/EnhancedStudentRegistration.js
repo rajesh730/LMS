@@ -3,6 +3,38 @@ import { Download, List, Edit, Trash2, Search, RefreshCw } from "lucide-react";
 import CSVUploader from "./CSVUploader";
 
 const EnhancedStudentRegistration = ({ schoolId, onSuccess }) => {
+  const normalizeHeaderKey = (key) =>
+    String(key || "")
+      .trim()
+      .replace(/^\ufeff/, "")
+      .toLowerCase()
+      .replace(/[\s\*\-_]/g, "");
+
+  const buildNormalizedRow = (row) => {
+    const normalized = {};
+    Object.keys(row || {}).forEach((key) => {
+      normalized[normalizeHeaderKey(key)] = row[key];
+    });
+    return normalized;
+  };
+
+  const getRowValue = (row, keys) => {
+    for (const key of keys) {
+      const value = row[key];
+      if (value !== undefined && value !== null && String(value).trim() !== "") {
+        return value;
+      }
+    }
+    return "";
+  };
+
+  const parseDateValue = (value) => {
+    if (!value) return null;
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return null;
+    return parsed;
+  };
+
   const [activeTab, setActiveTab] = useState("single"); // 'single', 'bulk', 'list'
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -241,38 +273,53 @@ const EnhancedStudentRegistration = ({ schoolId, onSuccess }) => {
     try {
         // parsedData is the array of rows directly from CSVUploader
         const students = parsedData.map(row => {
-            const fullName = (row['FullName*'] || row.Name || "").trim();
-            const nameParts = fullName.split(" ");
-            const firstName = nameParts[0];
+            const normalizedRow = buildNormalizedRow(row);
+            const fullName = String(
+              getRowValue(normalizedRow, ["fullname", "name"])
+            ).trim();
+            const nameParts = fullName.split(" ").filter(Boolean);
+            const firstName = nameParts[0] || "";
             const lastName = nameParts.slice(1).join(" ") || ".";
-            const rollNumber = row['RollNumber*'] || row.RollNumber;
+            const rollNumber = String(
+              getRowValue(normalizedRow, ["rollnumber", "rollno", "roll"])
+            ).trim();
+            const grade = String(
+              getRowValue(normalizedRow, ["grade", "class"])
+            ).trim();
+            const dateOfBirthRaw = getRowValue(normalizedRow, ["dateofbirth", "dob"]);
+            const parsedDob = parseDateValue(dateOfBirthRaw);
             
             // Generate credentials for bulk
             const username = fullName.toLowerCase().replace(/\s+/g, '');
             const password = `${firstName.toLowerCase()}${rollNumber}@123`;
+            const guardianRelationship = String(
+              getRowValue(normalizedRow, ["guardianrelationship", "relationship"])
+            )
+              .trim()
+              .toUpperCase() || "FATHER";
 
             return {
                 firstName,
                 lastName,
                 username,
                 password,
-                email: row.Email, // Optional
-                grade: row['Grade*'] || row.Grade,
-                rollNumber: rollNumber,
+                email: getRowValue(normalizedRow, ["email"]) || "", // Optional
+                grade,
+                rollNumber,
                 
                 // Optional Student Fields
-                phone: row.Phone,
-                address: row.Address,
-                gender: row.Gender || "OTHER",
-                dateOfBirth: row.DateOfBirth ? new Date(row.DateOfBirth) : new Date(),
-                bloodGroup: row.BloodGroup,
+                phone: getRowValue(normalizedRow, ["phone", "phonenumber", "contact"]),
+                address: getRowValue(normalizedRow, ["address"]),
+                gender: getRowValue(normalizedRow, ["gender"]) || "OTHER",
+                dateOfBirth: parsedDob || new Date(),
+                bloodGroup: getRowValue(normalizedRow, ["bloodgroup", "blood"]),
 
                 // Parent Fields
-                guardianRelationship: row.GuardianRelationship || "FATHER",
-                parentName: row.GuardianName || "To be added",
-                parentContactNumber: row.GuardianPhone || "To be added",
-                parentEmail: row.GuardianEmail || row['ParentEmail'],
-                parentAlternativeContact: row.GuardianAltPhone,
+                guardianRelationship,
+                parentName: getRowValue(normalizedRow, ["guardianname", "parentname", "fathername", "mothername"]) || "To be added",
+                parentContactNumber: getRowValue(normalizedRow, ["guardianphone", "parentphone", "parentcontact", "guardiancontact"]) || "To be added",
+                parentEmail: getRowValue(normalizedRow, ["guardianemail", "parentemail"]) || "",
+                parentAlternativeContact: getRowValue(normalizedRow, ["guardianaltphone", "alternatephone", "secondaryphone"]),
             };
         }).filter(s => s.firstName && s.rollNumber && s.grade);
 
@@ -314,8 +361,23 @@ const EnhancedStudentRegistration = ({ schoolId, onSuccess }) => {
         "GuardianEmail", 
         "GuardianAltPhone"
     ];
+      const sampleRow = [
+        "Sujan Shrestha",
+        "12",
+        "8",
+        "MALE",
+        "2011-06-12",
+        "9812345678",
+        "Bhaktapur",
+        "O+",
+        "FATHER",
+        "Ram Shrestha",
+        "9800000000",
+        "ram.shrestha@example.com",
+        "9841000000"
+      ];
     
-    const csvContent = `${headers.join(",")}\n`;
+      const csvContent = `${headers.join(",")}\n${sampleRow.join(",")}\n`;
 
     const blob = new Blob([csvContent], { type: "text/csv" });
     const url = window.URL.createObjectURL(blob);
@@ -676,42 +738,57 @@ const EnhancedStudentRegistration = ({ schoolId, onSuccess }) => {
         </div>
       ) : (
         <div className="space-y-6">
-            <div className="bg-slate-800 p-6 rounded-lg border border-slate-700">
-                <div className="flex justify-between items-start mb-4">
-                    <div>
-                        <h3 className="text-lg font-medium text-white mb-2">Upload Student Data</h3>
-                        <div className="text-slate-400 text-sm space-y-2">
-                            <p>Upload a CSV file with the following headers:</p>
-                            <div className="bg-slate-900 p-3 rounded border border-slate-700 font-mono text-xs overflow-x-auto">
-                                <span className="text-red-400">FullName*</span>, 
-                                <span className="text-red-400"> RollNumber*</span>, 
-                                <span className="text-red-400"> Grade*</span>, 
-                                <span className="text-blue-300"> Gender</span>, 
-                                <span className="text-blue-300"> DateOfBirth</span>, 
-                                <span className="text-blue-300"> Phone</span>, 
-                                <span className="text-blue-300"> Address</span>, 
-                                <span className="text-blue-300"> BloodGroup</span>, 
-                                <span className="text-blue-300"> GuardianRelationship</span>, 
-                                <span className="text-blue-300"> GuardianName</span>, 
-                                <span className="text-blue-300"> GuardianPhone</span>, 
-                                <span className="text-blue-300"> GuardianEmail</span>, 
-                                <span className="text-blue-300"> GuardianAltPhone</span>
-                            </div>
-                            <p className="text-xs text-slate-500 mt-2">
-                                <span className="text-red-400">* Mandatory Fields</span> | 
-                                <span className="text-blue-300"> Optional Fields</span>
-                            </p>
-                        </div>
-                    </div>
-                    <button
-                        onClick={downloadCsvTemplate}
-                        className="flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm transition shrink-0 ml-4"
-                    >
-                        <Download size={16} /> Download Template
-                    </button>
+          <div className="bg-slate-800 p-6 rounded-lg border border-slate-700">
+            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+              <div>
+                <h3 className="text-lg font-medium text-white mb-2">Upload Student Data</h3>
+                <div className="text-slate-400 text-sm space-y-2">
+                  <p>Upload a CSV file with the following headers:</p>
+                  <div className="bg-slate-900 p-3 rounded border border-slate-700 font-mono text-xs overflow-x-auto">
+                    <span className="text-red-400">FullName*</span>, 
+                    <span className="text-red-400"> RollNumber*</span>, 
+                    <span className="text-red-400"> Grade*</span>, 
+                    <span className="text-blue-300"> Gender</span>, 
+                    <span className="text-blue-300"> DateOfBirth</span>, 
+                    <span className="text-blue-300"> Phone</span>, 
+                    <span className="text-blue-300"> Address</span>, 
+                    <span className="text-blue-300"> BloodGroup</span>, 
+                    <span className="text-blue-300"> GuardianRelationship</span>, 
+                    <span className="text-blue-300"> GuardianName</span>, 
+                    <span className="text-blue-300"> GuardianPhone</span>, 
+                    <span className="text-blue-300"> GuardianEmail</span>, 
+                    <span className="text-blue-300"> GuardianAltPhone</span>
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    <span className="text-red-400">* Mandatory Fields</span> | 
+                    <span className="text-blue-300"> Optional Fields</span>
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    Template includes one demo row. Replace it with your data before upload.
+                  </p>
                 </div>
-                <CSVUploader onUpload={handleBulkUpload} />
+              </div>
+              <div className="flex flex-col gap-2 md:items-end">
+                <button
+                  onClick={downloadCsvTemplate}
+                  className="flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm transition shrink-0"
+                >
+                  <Download size={16} /> Download Template
+                </button>
+                <div className="rounded-lg border border-slate-700 bg-slate-900/60 p-3 text-xs text-slate-400 max-w-[260px]">
+                  <div className="font-semibold text-slate-200">Demo row preview</div>
+                  <div className="mt-2 space-y-1">
+                    <div>Name: Sujan Shrestha</div>
+                    <div>Roll: 12 | Grade: 8</div>
+                    <div>Guardian: Ram Shrestha</div>
+                  </div>
+                </div>
+              </div>
             </div>
+            <div className="mt-6">
+              <CSVUploader onUpload={handleBulkUpload} />
+            </div>
+          </div>
         </div>
       )}
     </div>
