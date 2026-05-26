@@ -68,7 +68,7 @@ export default function EventHub({
           ? "/api/events/hub/available"
           : "/api/events";
 
-      const res = await fetch(endpoint);
+      const res = await fetch(endpoint, { cache: "no-store" });
       if (res.ok) {
         const data = await res.json();
         const rawEvents = data.events || data || [];
@@ -375,6 +375,7 @@ export default function EventHub({
               (() => {
                 const stage = getEventStage(event);
                 const isTeamEvent = isTeamEventLike(event);
+                const showSchoolMetric = event.eventScope === "PLATFORM";
                 const isCompletedEvent = Boolean(event.finalOutcomeReady);
                 const registrationLocked = isRegistrationClosed(event);
                 const needsSchoolApproval =
@@ -495,7 +496,11 @@ export default function EventHub({
                       </div>
 
                       {/* Event Details Grid */}
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div
+                        className={`grid grid-cols-2 gap-4 ${
+                          showSchoolMetric ? "md:grid-cols-4" : "md:grid-cols-3"
+                        }`}
+                      >
                         {/* Date */}
                         <div className="flex items-center gap-2">
                           <FaCalendarAlt className="text-[#52657d]" />
@@ -565,17 +570,19 @@ export default function EventHub({
                         </div>
 
                         {/* Schools */}
-                        <div className="flex items-center gap-2">
-                          <FaMapMarkerAlt className="text-[#52657d]" />
-                          <div>
-                            <p className="text-xs uppercase text-[#52657d]">
-                              Schools
-                            </p>
-                            <p className="font-medium text-[#17120a]">
-                              {event.schoolCount || 0} schools
-                            </p>
+                        {showSchoolMetric && (
+                          <div className="flex items-center gap-2">
+                            <FaMapMarkerAlt className="text-[#52657d]" />
+                            <div>
+                              <p className="text-xs uppercase text-[#52657d]">
+                                Schools
+                              </p>
+                              <p className="font-medium text-[#17120a]">
+                                {event.schoolCount || 0} schools
+                              </p>
+                            </div>
                           </div>
-                        </div>
+                        )}
                       </div>
                     </div>
 

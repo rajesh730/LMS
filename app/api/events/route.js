@@ -500,7 +500,13 @@ export async function GET(req) {
     const eventIds = events.map((event) => event._id);
     const activeStatusFilter = { $in: ["PENDING", "APPROVED", "ENROLLED"] };
 
-    const [summaryRequests, detailedRequests, schoolRequests, eventNotices] = await Promise.all([
+    const [
+      summaryRequests,
+      detailedRequests,
+      schoolRequests,
+      eventNotices,
+      approvedInvitations,
+    ] = await Promise.all([
       ParticipationRequest.find({
         event: { $in: eventIds },
         status: { $in: ["PENDING", "APPROVED", "ENROLLED", "REJECTED"] },
@@ -539,6 +545,12 @@ export async function GET(req) {
         .select("event title message type publishedAt createdAt")
         .sort({ publishedAt: -1, createdAt: -1 })
         .lean(),
+      EventSchoolInvitation.find({
+        event: { $in: eventIds },
+        status: "APPROVED",
+      })
+        .select("event school")
+        .lean(),
     ]);
 
     const summaryRequestsByEvent = groupRequestsByEvent(summaryRequests);
@@ -553,6 +565,16 @@ export async function GET(req) {
       if (!latestNoticeByEvent.has(key)) {
         latestNoticeByEvent.set(key, notice);
       }
+    });
+    const approvedInvitationSchoolsByEvent = new Map();
+    approvedInvitations.forEach((invitation) => {
+      const eventId = String(invitation.event || "");
+      const schoolId = String(invitation.school || "");
+      if (!eventId || !schoolId) return;
+      if (!approvedInvitationSchoolsByEvent.has(eventId)) {
+        approvedInvitationSchoolsByEvent.set(eventId, new Set());
+      }
+      approvedInvitationSchoolsByEvent.get(eventId).add(schoolId);
     });
 
     // Add computed fields for frontend compatibility
@@ -586,16 +608,19 @@ export async function GET(req) {
             ? buildTeamKey(request)
             : String(request.school?._id || request.school || "");
 
+        const enrolledRequestsOnly = allRequests.filter((r) =>
+          ["APPROVED", "ENROLLED"].includes(String(r.status || "").toUpperCase())
+        );
         const uniqueSchools = new Set(
           allRequests
-            .filter((r) => ["PENDING", "APPROVED", "ENROLLED"].includes(String(r.status || "").toUpperCase()))
+            .filter((r) => ["APPROVED", "ENROLLED"].includes(String(r.status || "").toUpperCase()))
             .map((r) => (r.school ? String(r.school) : ""))
             .filter(Boolean)
         );
-        const activeRequestsOnly = allRequests.filter((r) =>
-          ["PENDING", "APPROVED", "ENROLLED"].includes(String(r.status || "").toUpperCase())
-        );
-        const uniqueTeams = new Set(activeRequestsOnly.map(buildTeamKey));
+        const approvedInvitationSchools =
+          approvedInvitationSchoolsByEvent.get(String(event._id)) || new Set();
+        approvedInvitationSchools.forEach((schoolId) => uniqueSchools.add(schoolId));
+        const uniqueTeams = new Set(enrolledRequestsOnly.map(buildTeamKey));
         const pendingEntries = new Set(
           allRequests
             .filter((r) => String(r.status || "").toUpperCase() === "PENDING")
@@ -616,9 +641,9 @@ export async function GET(req) {
         );
 
         eventObj.schoolCount = uniqueSchools.size;
-        eventObj.studentCount = activeRequestsOnly.length;
+        eventObj.studentCount = enrolledRequestsOnly.length;
         eventObj.teamCount = uniqueTeams.size;
-        eventObj.memberCount = activeRequestsOnly.length;
+        eventObj.memberCount = enrolledRequestsOnly.length;
         eventObj.pendingEntryCount = pendingEntries.size;
         eventObj.approvedEntryCount = approvedEntries.size;
         eventObj.rejectedEntryCount = rejectedEntries.size;

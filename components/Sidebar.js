@@ -174,7 +174,10 @@ export default function Sidebar({
       <nav className="flex-1 space-y-2 overflow-y-auto p-3 sm:p-4">
         {links.map((link) => {
           const Icon = link.icon;
-          const isActive = link.href === (pathname + (currentTab ? `?tab=${currentTab}` : ""));
+          const currentHref = pathname + (currentTab ? `?tab=${currentTab}` : "");
+          const isNestedActive =
+            !link.href.includes("?") && pathname?.startsWith(`${link.href}/`);
+          const isActive = link.href === currentHref || isNestedActive;
           const indicator = getIndicator(HREF_INDICATOR_KEYS[link.href]);
           return (
             <Link

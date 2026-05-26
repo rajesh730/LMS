@@ -8,6 +8,7 @@ import ManagementTabs from "./ManagementTabs";
 import { useSession } from "next-auth/react";
 import { FaArrowLeft } from "react-icons/fa";
 import LoadingState from "@/components/ui/LoadingState";
+import useRealtimeChannel from "@/lib/useRealtimeChannel";
 
 export default function EventDetailDashboard() {
   const params = useParams();
@@ -53,6 +54,13 @@ export default function EventDetailDashboard() {
   useEffect(() => {
     fetchEventData();
   }, [fetchEventData]);
+
+  useRealtimeChannel(
+    ["events", eventId ? `event-${eventId}` : null].filter(Boolean),
+    useCallback(() => {
+      void fetchEventData();
+    }, [fetchEventData])
+  );
 
   if (loading) {
     return (

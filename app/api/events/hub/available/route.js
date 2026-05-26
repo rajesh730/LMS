@@ -113,7 +113,7 @@ export async function GET(req) {
       }),
       ParticipationRequest.find({
         event: { $in: events.map((e) => e._id) },
-        status: { $in: ["PENDING", "APPROVED", "ENROLLED"] },
+        status: { $in: ["APPROVED", "ENROLLED"] },
       })
         .select("event school status teamName student")
         .lean(),
