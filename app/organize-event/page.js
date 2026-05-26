@@ -1,5 +1,6 @@
 import Link from "next/link";
 import EventProposalForm from "@/components/partners/EventProposalForm";
+import PublicExplorePanel from "@/components/public/PublicExplorePanel";
 import PublicSiteNav from "@/components/public/PublicSiteNav";
 import {
   PublicCard,
@@ -29,8 +30,10 @@ export default function OrganizeEventPage() {
         </PublicContainer>
       </section>
 
-      <PublicContainer className="py-6 sm:py-10">
-        <div className="grid lg:grid-cols-[0.9fr_1.4fr] gap-10 items-start">
+      <div className="mx-auto grid max-w-[1500px] gap-6 px-4 py-6 sm:px-6 sm:py-10 xl:grid-cols-[230px_minmax(0,1fr)]">
+        <PublicExplorePanel active="partners" />
+
+        <div className="grid min-w-0 gap-10 lg:grid-cols-[0.9fr_1.4fr] lg:items-start">
           <aside className="space-y-6 lg:sticky lg:top-8">
             <div>
               <p className="text-[11px] font-black uppercase tracking-normal text-[#0a2f66] mb-4">
@@ -90,7 +93,7 @@ export default function OrganizeEventPage() {
 
           <EventProposalForm />
         </div>
-      </PublicContainer>
+      </div>
     </PublicPageShell>
   );
 }

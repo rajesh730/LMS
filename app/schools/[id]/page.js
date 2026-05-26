@@ -7,6 +7,7 @@ import Event from "@/models/Event";
 import Achievement from "@/models/Achievement";
 import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
 import PublicSiteNav from "@/components/public/PublicSiteNav";
+import PublicExplorePanel from "@/components/public/PublicExplorePanel";
 import {
   FaArrowRight,
   FaAward,
@@ -299,6 +300,34 @@ function AtGlance({ school, profile, studentCount }) {
   );
 }
 
+function ShowcaseTabs() {
+  const tabs = [
+    ["#overview", "Overview", FaSchool],
+    ["#story", "Story", FaBookOpen],
+    ["#events", "Events", FaCalendarAlt],
+    ["#achievements", "Achievements", FaTrophy],
+    ["#writings", "Writings", FaBookOpen],
+    ["#glance", "Info", FaAward],
+  ];
+
+  return (
+    <nav className="sticky top-[4.5rem] z-30 overflow-x-auto rounded-2xl border border-[#d7cdbb] bg-white/95 p-2 shadow-lg shadow-slate-950/5 backdrop-blur-xl">
+      <div className="flex min-w-max gap-2">
+        {tabs.map(([href, label, Icon]) => (
+          <a
+            key={href}
+            href={href}
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-black text-[#40516b] transition hover:bg-purple-50 hover:text-purple-700 focus:bg-purple-50 focus:text-purple-700"
+          >
+            <Icon className="text-purple-700" />
+            {label}
+          </a>
+        ))}
+      </div>
+    </nav>
+  );
+}
+
 export default async function PublicSchoolPage({ params }) {
   const resolvedParams = await params;
   const data = await getSchoolData(resolvedParams.id);
@@ -325,7 +354,10 @@ export default async function PublicSchoolPage({ params }) {
     <main className="min-h-screen bg-[#f5f1e8] pb-24 text-[#17120a]">
       <PublicSiteNav active="schools" />
 
-      <div className="mx-auto max-w-7xl space-y-5 px-4 py-5 sm:px-6">
+      <div className="mx-auto grid max-w-[1500px] gap-5 px-4 py-5 sm:px-6 xl:grid-cols-[230px_minmax(0,1fr)]">
+        <PublicExplorePanel active="schools" variant="school" />
+
+        <div className="min-w-0 space-y-5">
         <div className="flex flex-wrap items-center justify-between gap-3 text-xs font-bold text-[#52657d]">
           <div className="flex items-center gap-2">
             <Link href="/" className="hover:text-purple-700">
@@ -356,7 +388,10 @@ export default async function PublicSchoolPage({ params }) {
           </div>
         </div>
 
-        <section className="relative overflow-hidden rounded-2xl border border-[#d7cdbb] bg-white shadow-[0_18px_50px_rgba(10,47,102,0.08)]">
+        <section
+          id="overview"
+          className="scroll-mt-28 relative overflow-hidden rounded-2xl border border-[#d7cdbb] bg-white shadow-[0_18px_50px_rgba(10,47,102,0.08)]"
+        >
           <div className="relative min-h-[360px]">
             {coverImage ? (
               <div
@@ -467,9 +502,14 @@ export default async function PublicSchoolPage({ params }) {
           />
         </section>
 
+        <ShowcaseTabs />
+
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_420px]">
           <main className="space-y-5">
-            <section className="rounded-2xl border border-[#e7dcc8] bg-white p-5 shadow-sm">
+            <section
+              id="story"
+              className="scroll-mt-28 rounded-2xl border border-[#e7dcc8] bg-white p-5 shadow-sm"
+            >
               <h2 className="inline-flex items-center gap-2 text-lg font-black text-[#17120a]">
                 <FaBookOpen className="text-purple-700" />
                 School Story
@@ -487,7 +527,7 @@ export default async function PublicSchoolPage({ params }) {
 
             <section
               id="achievements"
-              className="rounded-2xl border border-[#e7dcc8] bg-white p-5 shadow-sm"
+              className="scroll-mt-28 rounded-2xl border border-[#e7dcc8] bg-white p-5 shadow-sm"
             >
               <div className="flex items-center justify-between gap-3">
                 <h2 className="inline-flex items-center gap-2 text-lg font-black text-[#17120a]">
@@ -524,7 +564,7 @@ export default async function PublicSchoolPage({ params }) {
           <aside className="space-y-5">
             <section
               id="events"
-              className="rounded-2xl border border-[#e7dcc8] bg-white p-5 shadow-sm"
+              className="scroll-mt-28 rounded-2xl border border-[#e7dcc8] bg-white p-5 shadow-sm"
             >
               <div className="flex items-center justify-between gap-3">
                 <h2 className="inline-flex items-center gap-2 text-lg font-black text-[#17120a]">
@@ -574,11 +614,20 @@ export default async function PublicSchoolPage({ params }) {
               )}
             </section>
 
-            <AtGlance school={school} profile={profile} studentCount={studentCount} />
+            <div id="glance" className="scroll-mt-28">
+              <AtGlance
+                school={school}
+                profile={profile}
+                studentCount={studentCount}
+              />
+            </div>
           </aside>
         </div>
 
-        <section className="rounded-2xl border border-[#e7dcc8] bg-white p-5 shadow-sm">
+        <section
+          id="writings"
+          className="scroll-mt-28 rounded-2xl border border-[#e7dcc8] bg-white p-5 shadow-sm"
+        >
           <div className="flex items-center justify-between gap-3">
             <h2 className="inline-flex items-center gap-2 text-lg font-black text-[#17120a]">
               <FaBookOpen className="text-purple-700" />
@@ -632,6 +681,7 @@ export default async function PublicSchoolPage({ params }) {
             </Link>
           </div>
         </section>
+        </div>
       </div>
 
       <footer className="border-t border-[#d7cdbb] px-4 py-6 text-center text-sm text-[#52657d]">

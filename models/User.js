@@ -37,6 +37,34 @@ const UserSchema = new mongoose.Schema(
     schoolLocation: {
       type: String,
     },
+    province: {
+      type: String,
+      trim: true,
+    },
+    district: {
+      type: String,
+      trim: true,
+    },
+    municipality: {
+      type: String,
+      trim: true,
+    },
+    ward: {
+      type: String,
+      trim: true,
+    },
+    tole: {
+      type: String,
+      trim: true,
+    },
+    streetAddress: {
+      type: String,
+      trim: true,
+    },
+    postalCode: {
+      type: String,
+      trim: true,
+    },
     schoolPhone: {
       type: String,
     },

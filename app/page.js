@@ -10,6 +10,7 @@ import { PUBLIC_FEED_VIEWER_COOKIE } from "@/lib/publicFeedViewer";
 import { getRotatingPartnerSpotlights } from "@/lib/partnerSpotlights";
 import { getActiveSchoolPromotions } from "@/lib/schoolPromotions";
 import PublicSiteNav from "@/components/public/PublicSiteNav";
+import PublicExplorePanel from "@/components/public/PublicExplorePanel";
 import {
   FaArrowRight,
   FaAward,
@@ -577,7 +578,10 @@ export default async function Home() {
     <main className="min-h-screen bg-[#f5f1e8] text-[#17120a] selection:bg-purple-200/60">
       <PublicSiteNav active="home" />
 
-      <div className="mx-auto max-w-7xl space-y-5 px-4 py-5 pb-20 sm:px-6 lg:py-6">
+      <div className="mx-auto grid max-w-[1500px] gap-5 px-4 py-5 pb-20 sm:px-6 lg:py-6 xl:grid-cols-[230px_minmax(0,1fr)]">
+        <PublicExplorePanel active="home" variant="home" />
+
+        <div className="min-w-0 space-y-5">
         <section className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
           <div className="overflow-hidden rounded-2xl border border-[#d7cdbb] bg-white p-5 shadow-sm md:p-7">
             <div className="grid gap-6 lg:grid-cols-[1fr_0.82fr] lg:items-center">
@@ -623,7 +627,10 @@ export default async function Home() {
 
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_330px]">
           <main className="space-y-5">
-            <section className="rounded-2xl border border-[#d7cdbb] bg-white p-5 shadow-sm">
+            <section
+              id="featured"
+              className="scroll-mt-28 rounded-2xl border border-[#d7cdbb] bg-white p-5 shadow-sm"
+            >
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <h2 className="inline-flex items-center gap-2 text-lg font-black text-[#17120a]">
                   <FaStar className="text-purple-600" />
@@ -655,7 +662,10 @@ export default async function Home() {
               )}
             </section>
 
-            <section className="rounded-2xl border border-[#d7cdbb] bg-white p-5 shadow-sm">
+            <section
+              id="writings"
+              className="scroll-mt-28 rounded-2xl border border-[#d7cdbb] bg-white p-5 shadow-sm"
+            >
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <h2 className="inline-flex items-center gap-2 text-lg font-black text-[#17120a]">
                   <FaBookOpen className="text-purple-600" />
@@ -685,9 +695,15 @@ export default async function Home() {
           </main>
 
           <aside className="space-y-5">
-            <WinnerPanel winners={winnerHighlights} />
-            <SchoolSpotlightPanel spotlights={homeSpotlights} />
-            <UpcomingEventsPanel events={upcomingEvents} />
+            <div id="winners" className="scroll-mt-28">
+              <WinnerPanel winners={winnerHighlights} />
+            </div>
+            <div id="spotlights" className="scroll-mt-28">
+              <SchoolSpotlightPanel spotlights={homeSpotlights} />
+            </div>
+            <div id="upcoming" className="scroll-mt-28">
+              <UpcomingEventsPanel events={upcomingEvents} />
+            </div>
           </aside>
         </div>
 
@@ -708,6 +724,7 @@ export default async function Home() {
             </div>
           ))}
         </section>
+        </div>
       </div>
 
       <footer className="border-t border-[#d7cdbb] px-4 py-6 text-center text-sm text-[#52657d]">

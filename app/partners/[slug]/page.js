@@ -1,16 +1,178 @@
 import Link from "next/link";
+import {
+  FaArrowRight,
+  FaCalendarAlt,
+  FaCheckCircle,
+  FaEnvelope,
+  FaGlobeAsia,
+  FaHandshake,
+  FaMapMarkerAlt,
+  FaRegBuilding,
+  FaSchool,
+  FaTrophy,
+  FaUsers,
+} from "react-icons/fa";
 import connectDB from "@/lib/db";
-import ExternalOrganizer from "@/models/ExternalOrganizer";
+import Achievement from "@/models/Achievement";
 import Event from "@/models/Event";
 import EventProposal from "@/models/EventProposal";
-import Achievement from "@/models/Achievement";
+import ExternalOrganizer from "@/models/ExternalOrganizer";
 import ParticipationRequest from "@/models/ParticipationRequest";
+import PartnerEventsBrowser from "@/components/public/PartnerEventsBrowser";
+import PublicExplorePanel from "@/components/public/PublicExplorePanel";
 import PublicSiteNav from "@/components/public/PublicSiteNav";
+import { PublicPageShell } from "@/components/public/PublicLayout";
 
 export const dynamic = "force-dynamic";
 
 function label(value) {
-  return String(value || "").replaceAll("_", " ");
+  return String(value || "Other")
+    .replaceAll("_", " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function PartnerLogo({ partner, className = "" }) {
+  return (
+    <div
+      className={`flex items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-purple-700 to-[#0a2f66] text-white shadow-lg ${className}`.trim()}
+    >
+      {partner.logoUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={partner.logoUrl} alt="" className="h-full w-full object-cover" />
+      ) : (
+        <span className="text-4xl font-black">
+          {partner.organizationName?.charAt(0)?.toUpperCase() || "P"}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function HeroArt() {
+  return (
+    <div className="relative hidden min-h-56 overflow-hidden rounded-2xl lg:block">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_78%_22%,rgba(245,158,11,0.28),transparent_28%),radial-gradient(circle_at_28%_70%,rgba(168,85,247,0.18),transparent_26%)]" />
+      <div className="absolute bottom-5 left-9 h-24 w-32 -rotate-6 rounded-2xl border border-white/80 bg-white/75 shadow-xl" />
+      <div className="absolute bottom-8 right-8 h-28 w-40 rotate-6 rounded-2xl border border-white/80 bg-white/70 shadow-xl" />
+      <FaTrophy className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-8xl text-amber-400 drop-shadow" />
+      <FaUsers className="absolute bottom-12 left-14 text-4xl text-purple-700/70" />
+      <FaHandshake className="absolute right-16 top-12 text-5xl text-[#0a2f66]/65" />
+    </div>
+  );
+}
+
+function MetricTile({ icon: Icon, label: title, value, href, cta }) {
+  return (
+    <Link
+      href={href || "#"}
+      className="flex min-h-24 items-center gap-4 rounded-2xl border border-[#e6eaf7] bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-purple-200 hover:shadow-md"
+    >
+      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-purple-50 text-purple-700">
+        <Icon />
+      </span>
+      <span className="min-w-0">
+        <strong className="block text-xl font-black text-[#17120a]">{value}</strong>
+        <span className="block text-xs font-bold text-[#52657d]">{title}</span>
+        <span className="mt-1 inline-flex items-center gap-1 text-[11px] font-black text-purple-700">
+          {cta}
+          <FaArrowRight />
+        </span>
+      </span>
+    </Link>
+  );
+}
+
+function SectionCard({ title, icon: Icon, children, action }) {
+  return (
+    <section className="rounded-2xl border border-[#e6eaf7] bg-white p-5 shadow-sm">
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <h2 className="inline-flex items-center gap-2 text-base font-black text-[#17120a]">
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-50 text-purple-700">
+            <Icon />
+          </span>
+          {title}
+        </h2>
+        {action}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function ImpactSidebar({ metrics, schools, partner }) {
+  return (
+    <aside className="space-y-5 lg:sticky lg:top-24 lg:self-start">
+      <section className="rounded-2xl border border-[#e6eaf7] bg-white p-5 shadow-sm">
+        <h2 className="text-base font-black text-[#17120a]">Impact Overview</h2>
+        <div className="mt-4 space-y-3">
+          {[
+            ["Events Organized", metrics.eventCount, FaCalendarAlt],
+            ["Schools Reached", metrics.schoolCount, FaSchool],
+            ["Student Registrations", metrics.studentCount, FaUsers],
+            ["Awards & Recognitions", metrics.achievementCount, FaTrophy],
+          ].map(([title, value, Icon]) => (
+            <div key={title} className="flex items-center justify-between gap-3 rounded-xl border border-[#e6eaf7] bg-[#f8fbff] p-3">
+              <span>
+                <span className="block text-[10px] font-black uppercase text-[#52657d]">
+                  {title}
+                </span>
+                <strong className="text-xl font-black text-[#17120a]">{value}</strong>
+              </span>
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-purple-700 shadow-sm">
+                <Icon />
+              </span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-[#e6eaf7] bg-white p-5 shadow-sm">
+        <h2 className="inline-flex items-center gap-2 text-base font-black text-[#17120a]">
+          <FaSchool className="text-purple-700" />
+          Schools Reached
+        </h2>
+        {schools.length === 0 ? (
+          <p className="mt-4 text-sm leading-6 text-[#52657d]">
+            School participation will appear after registrations.
+          </p>
+        ) : (
+          <div className="mt-4 space-y-3">
+            {schools.slice(0, 5).map((school) => (
+              <Link
+                key={String(school._id)}
+                href={`/schools/${school._id}`}
+                className="block rounded-xl border border-[#e6eaf7] bg-[#f8fbff] p-3 transition hover:bg-white"
+              >
+                <strong className="line-clamp-1 text-sm text-[#17120a]">
+                  {school.schoolName}
+                </strong>
+                {school.schoolLocation && (
+                  <span className="mt-1 block line-clamp-1 text-xs font-semibold text-[#52657d]">
+                    {school.schoolLocation}
+                  </span>
+                )}
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="overflow-hidden rounded-2xl bg-gradient-to-br from-purple-700 to-[#0a2f66] p-5 text-white shadow-[0_18px_45px_rgba(88,28,135,0.22)]">
+        <h2 className="text-base font-black">Want to collaborate?</h2>
+        <p className="mt-2 text-sm leading-6 text-white/80">
+          New organizations can submit an event idea for platform review.
+        </p>
+        <Link
+          href={`/organize-event?partner=${partner.slug}`}
+          className="mt-5 inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-white px-4 text-sm font-black text-purple-700"
+        >
+          Propose an Event
+          <FaArrowRight />
+        </Link>
+      </section>
+    </aside>
+  );
 }
 
 async function getPartnerData(slug) {
@@ -31,8 +193,8 @@ async function getPartnerData(slug) {
     status: "APPROVED",
     lifecycleStatus: { $ne: "ARCHIVED" },
   })
-    .sort({ date: -1 })
-    .populate("school", "schoolName")
+    .sort({ date: -1, createdAt: -1 })
+    .populate("school", "schoolName schoolLocation")
     .lean();
 
   const eventIds = events.map((event) => event._id);
@@ -51,7 +213,7 @@ async function getPartnerData(slug) {
           status: { $in: ["PENDING", "APPROVED", "ENROLLED"] },
         })
           .select("school student event")
-          .populate("school", "schoolName")
+          .populate("school", "schoolName schoolLocation")
           .lean()
       : [],
     eventIds.length
@@ -61,7 +223,7 @@ async function getPartnerData(slug) {
         })
           .sort({ awardedAt: -1 })
           .limit(12)
-          .populate("school", "schoolName")
+          .populate("school", "schoolName schoolLocation")
           .populate("student", "name")
           .populate("event", "title")
           .lean()
@@ -69,9 +231,18 @@ async function getPartnerData(slug) {
   ]);
 
   const schoolMap = new Map();
+  const studentSet = new Set();
+  const eventRegistrationMap = new Map();
   requests.forEach((request) => {
     if (request.school?._id) {
       schoolMap.set(String(request.school._id), request.school);
+    }
+    if (request.student) {
+      studentSet.add(String(request.student));
+    }
+    if (request.event) {
+      const eventId = String(request.event);
+      eventRegistrationMap.set(eventId, (eventRegistrationMap.get(eventId) || 0) + 1);
     }
   });
 
@@ -80,10 +251,12 @@ async function getPartnerData(slug) {
     events,
     announcedProposals,
     achievements,
+    eventRegistrationMap,
     metrics: {
       eventCount: events.length,
-      studentCount: requests.length,
+      studentCount: studentSet.size,
       schoolCount: schoolMap.size,
+      achievementCount: achievements.length,
     },
     schools: Array.from(schoolMap.values()).slice(0, 10),
   };
@@ -95,245 +268,195 @@ export default async function PartnerPortfolioPage({ params }) {
 
   if (!data) {
     return (
-      <main className="pratyo-public-shell min-h-screen bg-[#f5f1e8] p-8 pb-32 text-slate-950 md:pb-8">
-        <div className="max-w-5xl mx-auto text-slate-400">
+      <PublicPageShell className="bg-[#f8f9fd]">
+        <PublicSiteNav active="partners" />
+        <div className="mx-auto max-w-5xl p-8 text-[#52657d]">
           Partner portfolio not found.
         </div>
-      </main>
+      </PublicPageShell>
     );
   }
 
-  const { partner, events, announcedProposals, achievements, metrics, schools } =
-    data;
+  const {
+    partner,
+    events,
+    announcedProposals,
+    eventRegistrationMap,
+    metrics,
+    schools,
+  } = data;
+
+  const browsableEvents = events.map((event) => ({
+    id: String(event._id),
+    title: event.title || "Partner event",
+    description: event.description || "",
+    eventType: event.eventType || "OTHER",
+    date: event.date ? event.date.toISOString() : "",
+    schoolName: event.school?.schoolName || "",
+    registrations: eventRegistrationMap.get(String(event._id)) || 0,
+  }));
 
   return (
-    <main className="pratyo-public-shell min-h-screen bg-[#f5f1e8] pb-32 text-slate-950 md:pb-0">
+    <PublicPageShell className="bg-[#f8f9fd]">
       <PublicSiteNav active="partners" />
 
-      <section className="max-w-6xl mx-auto px-6 py-14">
-        <div className="grid lg:grid-cols-[1.4fr_0.8fr] gap-10 items-start">
-          <div>
-            <div className="flex items-start gap-5 mb-8">
-              <div className="h-24 w-24 rounded-3xl bg-slate-900 border border-slate-800 overflow-hidden flex items-center justify-center shrink-0">
-                {partner.logoUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={partner.logoUrl}
-                    alt=""
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <span className="text-4xl font-black text-emerald-300">
-                    {partner.organizationName.charAt(0)}
-                  </span>
-                )}
-              </div>
-              <div>
-                <div className="flex flex-wrap gap-2 mb-3">
-                  <span className="rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 px-3 py-1 text-xs">
-                    Verified Partner
-                  </span>
-                  <span className="rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-300 px-3 py-1 text-xs">
-                    {label(partner.organizationType)}
-                  </span>
+      <section className="mx-auto grid max-w-[1500px] gap-5 px-4 py-5 sm:px-6 xl:grid-cols-[230px_minmax(0,1fr)]">
+        <PublicExplorePanel active="partners" variant="partners" />
+
+        <div className="min-w-0 space-y-5">
+          <section className="overflow-hidden rounded-2xl border border-[#e6eaf7] bg-gradient-to-br from-white via-purple-50 to-amber-50 p-5 shadow-sm md:p-7">
+            <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_390px] lg:items-center">
+              <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
+                <PartnerLogo partner={partner} className="h-24 w-24 shrink-0" />
+                <div className="min-w-0">
+                  <div className="flex flex-wrap gap-2">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-black text-emerald-700">
+                      <FaCheckCircle />
+                      Verified Partner
+                    </span>
+                    <span className="rounded-full bg-blue-50 px-3 py-1 text-[11px] font-black text-blue-700">
+                      {label(partner.organizationType)}
+                    </span>
+                  </div>
+                  <h1 className="mt-3 break-words text-4xl font-black leading-tight text-[#17120a] md:text-5xl">
+                    {partner.organizationName}
+                  </h1>
+                  <p className="mt-2 text-sm font-black uppercase text-purple-700">
+                    {(partner.partnerRoles || []).map(label).join(" / ")}
+                  </p>
+                  <p className="mt-3 max-w-2xl text-sm leading-6 text-[#52657d]">
+                    {partner.description ||
+                      "This partner is approved by the platform for student-facing events and school collaboration."}
+                  </p>
+                  <div className="mt-5 flex flex-wrap gap-5 text-xs font-bold text-[#52657d]">
+                    <span className="inline-flex items-center gap-2">
+                      <FaMapMarkerAlt className="text-[#0a2f66]" />
+                      {partner.location || "Kathmandu, Nepal"}
+                    </span>
+                    {partner.website && (
+                      <a
+                        href={partner.website}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-2 hover:text-purple-700"
+                      >
+                        <FaGlobeAsia className="text-[#0a2f66]" />
+                        {partner.website.replace(/^https?:\/\//, "")}
+                      </a>
+                    )}
+                    {partner.contactEmail && (
+                      <span className="inline-flex items-center gap-2">
+                        <FaEnvelope className="text-[#0a2f66]" />
+                        {partner.contactEmail}
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <h1 className="text-4xl md:text-5xl font-black tracking-tight">
-                  {partner.organizationName}
-                </h1>
-                <p className="text-slate-400 mt-3">
-                  {(partner.partnerRoles || []).map(label).join(", ")}
-                </p>
-                {partner.website && (
-                  <a
-                    href={partner.website}
-                    className="mt-5 inline-flex rounded-full bg-slate-800 px-5 py-2 text-sm font-bold text-white transition hover:bg-slate-700"
-                  >
-                    Visit website
-                  </a>
-                )}
               </div>
+              <HeroArt />
             </div>
+          </section>
 
-            <section className="rounded-3xl border border-slate-800 bg-slate-900/70 p-8 mb-10">
-              <h2 className="text-2xl font-bold mb-4">Partner Story</h2>
-              <p className="text-slate-300 leading-8">
-                {partner.description ||
-                  "This partner has been approved by the platform for student-facing events and school collaboration."}
-              </p>
-            </section>
-
-            <section className="rounded-3xl border border-slate-800 bg-slate-900/70 p-8 mb-10">
-              <h2 className="text-2xl font-bold mb-6">Partner Events</h2>
-              {events.length === 0 && announcedProposals.length === 0 ? (
-                <p className="text-slate-400">
-                  Public partner events will appear here after publishing.
-                </p>
-              ) : (
-                <div className="grid gap-4">
-                  {announcedProposals.map((proposal) => (
-                    <article
-                      key={String(proposal._id)}
-                      className="rounded-2xl border border-sky-400/20 bg-sky-400/[0.06] p-5"
-                    >
-                      <div className="flex items-center justify-between gap-4 mb-2">
-                        <h3 className="text-xl font-semibold">
-                          {proposal.eventTitle}
-                        </h3>
-                        <span className="text-xs text-sky-300 uppercase">
-                          Announced
-                        </span>
-                      </div>
-                      <p className="text-slate-400 line-clamp-2">
-                        {proposal.eventDescription}
-                      </p>
-                      <div className="mt-4 flex flex-wrap gap-3 text-sm text-slate-300">
-                        <span>
-                          {proposal.preferredDate
-                            ? new Date(proposal.preferredDate).toLocaleDateString()
-                            : "Date to be announced"}
-                        </span>
-                        <span>{label(proposal.eventMode)}</span>
-                      </div>
-                    </article>
-                  ))}
-
-                  {events.map((event) => (
-                    <Link
-                      key={String(event._id)}
-                      href={`/events/${event._id}`}
-                      className="rounded-2xl border border-slate-800 bg-slate-950/70 p-5 hover:border-blue-500/40 transition"
-                    >
-                      <div className="flex items-center justify-between gap-4 mb-2">
-                        <h3 className="text-xl font-semibold">{event.title}</h3>
-                        <span className="text-xs text-slate-400 uppercase">
-                          {event.eventType}
-                        </span>
-                      </div>
-                      <p className="text-slate-400 line-clamp-2">
-                        {event.description}
-                      </p>
-                      <div className="mt-4 flex flex-wrap gap-3 text-sm text-slate-300">
-                        <span>{new Date(event.date).toLocaleDateString()}</span>
-                        {event.resultsPublished && (
-                          <span className="text-yellow-300">
-                            Results published
-                          </span>
-                        )}
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </section>
-
-            <section className="rounded-3xl border border-slate-800 bg-slate-900/70 p-8">
-              <h2 className="text-2xl font-bold mb-6">Published Recognition</h2>
-              {achievements.length === 0 ? (
-                <p className="text-slate-400">
-                  Public winner recognition from partner events will appear here.
-                </p>
-              ) : (
-                <div className="grid md:grid-cols-2 gap-4">
-                  {achievements.map((achievement) => (
-                    <div
-                      key={String(achievement._id)}
-                      className="rounded-2xl border border-slate-800 bg-slate-950/70 p-5"
-                    >
-                      <h3 className="font-semibold">{achievement.title}</h3>
-                      <p className="text-sm text-slate-400 mt-2">
-                        {achievement.student?.name || "Student"}
-                        {achievement.school?.schoolName
-                          ? ` - ${achievement.school.schoolName}`
-                          : ""}
-                      </p>
-                      <p className="text-sm text-yellow-300 mt-3">
-                        {label(achievement.placement)}
-                      </p>
-                      {achievement.totalScore > 0 && (
-                        <p className="text-xs text-emerald-300 mt-2">
-                          Score: {achievement.totalScore}
-                          {achievement.scorePercentage > 0
-                            ? ` (${achievement.scorePercentage}%)`
-                            : ""}
-                        </p>
-                      )}
-                      <p className="text-xs text-slate-500 mt-2">
-                        {achievement.event?.title}
-                      </p>
-                      {achievement.certificateUrl && (
-                        <a
-                          href={achievement.certificateUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex text-xs text-blue-400 hover:text-blue-300 mt-3"
-                        >
-                          View certificate
-                        </a>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <MetricTile
+              icon={FaCalendarAlt}
+              label="Events Organized"
+              value={metrics.eventCount}
+              href="#events"
+              cta="View events"
+            />
+            <MetricTile
+              icon={FaSchool}
+              label="Schools Reached"
+              value={metrics.schoolCount}
+              href="#schools"
+              cta="View schools"
+            />
+            <MetricTile
+              icon={FaUsers}
+              label="Student Registrations"
+              value={metrics.studentCount}
+              href="#events"
+              cta="View registrations"
+            />
+            <MetricTile
+              icon={FaTrophy}
+              label="Awards & Recognitions"
+              value={metrics.achievementCount}
+              href="#events"
+              cta="View events"
+            />
           </div>
 
-          <aside className="space-y-6">
-            <section className="rounded-3xl border border-slate-800 bg-slate-900/70 p-6">
-              <h2 className="text-xl font-bold mb-4">Impact</h2>
-              <div className="grid gap-3">
-                {[
-                  ["Events", metrics.eventCount],
-                  ["Schools reached", metrics.schoolCount],
-                  ["Student registrations", metrics.studentCount],
-                ].map(([name, value]) => (
-                  <div
-                    key={name}
-                    className="rounded-2xl bg-slate-950/70 border border-slate-800 p-4"
-                  >
-                    <p className="text-xs text-slate-500 uppercase">{name}</p>
-                    <p className="text-3xl font-bold mt-1">{value}</p>
+          <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+            <main className="min-w-0 space-y-5">
+              <SectionCard title="About Our Organization" icon={FaRegBuilding}>
+                <div className="grid gap-5 md:grid-cols-[minmax(0,1fr)_260px] md:items-center">
+                  <div>
+                    <p className="text-sm leading-7 text-[#52657d]">
+                      {partner.description ||
+                        "This organization is committed to creating meaningful educational opportunities for students. They support competitions, academic events, and talent showcases that inspire creativity, skill development, and leadership."}
+                    </p>
+                    <p className="mt-4 text-sm leading-7 text-[#52657d]">
+                      Our mission is to help schools and students connect with
+                      trusted opportunities where they can learn, compete, and grow.
+                    </p>
                   </div>
-                ))}
-              </div>
-            </section>
-
-            <section className="rounded-3xl border border-slate-800 bg-slate-900/70 p-6">
-              <h2 className="text-xl font-bold mb-4">Schools Reached</h2>
-              {schools.length === 0 ? (
-                <p className="text-sm text-slate-400">
-                  School participation will appear after registrations.
-                </p>
-              ) : (
-                <div className="space-y-2">
-                  {schools.map((school) => (
-                    <div
-                      key={String(school._id)}
-                      className="rounded-2xl bg-slate-950/70 border border-slate-800 p-4 text-sm text-slate-300"
-                    >
-                      {school.schoolName}
-                    </div>
-                  ))}
+                  <div className="relative h-40 overflow-hidden rounded-xl bg-gradient-to-br from-[#eef6ff] via-white to-amber-50">
+                    <FaHandshake className="absolute bottom-8 left-10 text-5xl text-purple-700/75" />
+                    <FaTrophy className="absolute right-10 top-8 text-6xl text-amber-400" />
+                  </div>
                 </div>
-              )}
-            </section>
+              </SectionCard>
 
-            <section className="rounded-3xl border border-emerald-500/20 bg-emerald-500/10 p-6">
-              <h2 className="text-xl font-bold text-emerald-200 mb-3">
-                Want to collaborate?
-              </h2>
-              <p className="text-sm text-emerald-50/80 leading-7 mb-5">
-                New organizations can submit an event idea for platform review.
-              </p>
-              <Link
-                href="/organize-event"
-                className="inline-flex items-center justify-center rounded-xl bg-[#0a2f66] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#123f82]"
+              <SectionCard
+                title="Events Hosted"
+                icon={FaCalendarAlt}
+                action={
+                  <Link href="/events" className="inline-flex items-center gap-2 text-xs font-black text-purple-700">
+                    View all events
+                    <FaArrowRight />
+                  </Link>
+                }
               >
-                Propose an event
-              </Link>
-            </section>
-          </aside>
+                {events.length === 0 && announcedProposals.length === 0 ? (
+                  <p className="text-sm leading-6 text-[#52657d]">
+                    Public partner events will appear here after publishing.
+                  </p>
+                ) : (
+                  <div id="events" className="space-y-3 scroll-mt-28">
+                    {announcedProposals.map((proposal) => (
+                      <article
+                        key={String(proposal._id)}
+                        className="rounded-xl border border-blue-100 bg-blue-50/60 p-4"
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <h3 className="text-base font-black text-[#17120a]">
+                            {proposal.eventTitle}
+                          </h3>
+                          <span className="rounded-full bg-white px-3 py-1 text-[10px] font-black uppercase text-blue-700">
+                            Announced
+                          </span>
+                        </div>
+                        <p className="mt-2 line-clamp-2 text-sm text-[#52657d]">
+                          {proposal.eventDescription}
+                        </p>
+                      </article>
+                    ))}
+                    {browsableEvents.length > 0 && (
+                      <PartnerEventsBrowser events={browsableEvents} />
+                    )}
+                  </div>
+                )}
+              </SectionCard>
+            </main>
+
+            <div id="schools" className="scroll-mt-28">
+              <ImpactSidebar metrics={metrics} schools={schools} partner={partner} />
+            </div>
+          </div>
         </div>
       </section>
-    </main>
+    </PublicPageShell>
   );
 }

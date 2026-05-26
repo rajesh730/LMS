@@ -1,21 +1,61 @@
-import Link from "next/link";
 import connectDB from "@/lib/db";
 import User from "@/models/User";
+import Student from "@/models/Student";
 import SchoolShowcaseProfile from "@/models/SchoolShowcaseProfile";
 import { getActiveSchoolPromotions } from "@/lib/schoolPromotions";
+import PublicExplorePanel from "@/components/public/PublicExplorePanel";
+import PublicSchoolsDirectory from "@/components/public/PublicSchoolsDirectory";
 import PublicSiteNav from "@/components/public/PublicSiteNav";
-import {
-  PublicBadge,
-  PublicCard,
-  PublicContainer,
-  PublicHero,
-  PublicPageShell,
-  PublicSectionHeader,
-  PublicStatTile,
-} from "@/components/public/PublicLayout";
-import { FaArrowRight, FaAward, FaCalendarAlt, FaSchool } from "react-icons/fa";
+import { PublicPageShell } from "@/components/public/PublicLayout";
 
 export const dynamic = "force-dynamic";
+
+function serializeProfile(profile) {
+  return {
+    tagline: profile?.tagline || "",
+    summary: profile?.summary || "",
+    coverImageUrl: profile?.coverImageUrl || "",
+    highlightMetrics: {
+      eventsHosted: profile?.highlightMetrics?.eventsHosted || 0,
+      eventsParticipated: profile?.highlightMetrics?.eventsParticipated || 0,
+      awardsCount: profile?.highlightMetrics?.awardsCount || 0,
+      studentParticipationRate:
+        profile?.highlightMetrics?.studentParticipationRate || 0,
+    },
+  };
+}
+
+function parseLocationParts(location = "") {
+  const parts = String(location || "")
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  const postalIndex = parts.findIndex((part) => /^postal code/i.test(part));
+  const cleanParts = postalIndex >= 0 ? parts.slice(0, postalIndex) : parts;
+  const wardIndex = cleanParts.findIndex((part) => /^ward\s+/i.test(part));
+
+  return {
+    province: cleanParts.at(-1) || "",
+    district: cleanParts.at(-2) || "",
+    municipality:
+      wardIndex > 0 ? cleanParts[wardIndex - 1] : cleanParts.at(-3) || "",
+    ward: wardIndex >= 0 ? cleanParts[wardIndex] : "",
+  };
+}
+
+function serializePromotion(promotion, studentCountMap) {
+  const schoolId = promotion.school?.id || promotion.schoolId || promotion.school?.schoolId;
+  return {
+    id: promotion.id,
+    schoolId,
+    title: promotion.title,
+    href: promotion.href,
+    location: promotion.school?.location || "",
+    priority: promotion.priority,
+    studentCount: studentCountMap.get(String(schoolId)) || 0,
+    profile: serializeProfile(promotion.profile),
+  };
+}
 
 export default async function PublicSchoolsPage() {
   await connectDB();
@@ -25,182 +65,111 @@ export default async function PublicSchoolsPage() {
       role: "SCHOOL_ADMIN",
       status: { $in: ["APPROVED", "SUBSCRIBED"] },
     })
-      .select("schoolName schoolLocation principalName")
+      .select(
+        "schoolName schoolLocation province district municipality ward tole streetAddress postalCode principalName establishedYear createdAt"
+      )
+      .sort({ createdAt: -1 })
       .lean(),
-    getActiveSchoolPromotions("SCHOOLS_SPOTLIGHT", 3),
+    getActiveSchoolPromotions("SCHOOLS_SPOTLIGHT", 4),
   ]);
 
   const schoolIds = schools.map((school) => school._id);
 
-  const profiles = await SchoolShowcaseProfile.find({
-    school: { $in: schoolIds },
-    visibility: "PUBLIC",
-  })
-    .select("school tagline summary coverImageUrl highlightMetrics")
-    .lean();
+  const [profiles, studentCounts] = await Promise.all([
+    SchoolShowcaseProfile.find({
+      school: { $in: schoolIds },
+      visibility: "PUBLIC",
+    })
+      .select("school tagline summary coverImageUrl highlightMetrics")
+      .lean(),
+    Student.aggregate([
+      {
+        $match: {
+          school: { $in: schoolIds },
+          isDeleted: { $ne: true },
+          status: { $in: ["ACTIVE", "ALUMNI"] },
+        },
+      },
+      { $group: { _id: "$school", count: { $sum: 1 } } },
+    ]),
+  ]);
 
   const profileMap = new Map(
     profiles.map((profile) => [String(profile.school), profile])
+  );
+  const studentCountMap = new Map(
+    studentCounts.map((item) => [String(item._id), item.count])
   );
 
   const publicSchools = schools
     .map((school) => {
       const profile = profileMap.get(String(school._id));
+      if (!profile) return null;
+      const parsedLocation = parseLocationParts(school.schoolLocation);
+
       return {
-        ...school,
-        profile,
+        id: String(school._id),
+        name: school.schoolName || "School",
+        location: school.schoolLocation || "",
+        province: school.province || parsedLocation.province,
+        district: school.district || parsedLocation.district,
+        municipality: school.municipality || parsedLocation.municipality,
+        ward: school.ward || parsedLocation.ward,
+        tole: school.tole || "",
+        streetAddress: school.streetAddress || "",
+        postalCode: school.postalCode || "",
+        principalName: school.principalName || "",
+        establishedYear: school.establishedYear || null,
+        createdAt: school.createdAt ? school.createdAt.toISOString() : "",
+        studentCount: studentCountMap.get(String(school._id)) || 0,
+        profile: serializeProfile(profile),
       };
     })
-    .filter((school) => school.profile);
+    .filter(Boolean);
 
-  const totalHosted = publicSchools.reduce(
-    (sum, school) => sum + (school.profile?.highlightMetrics?.eventsHosted || 0),
-    0
+  const totals = publicSchools.reduce(
+    (summary, school) => ({
+      schoolCount: summary.schoolCount + 1,
+      hostedEventCount:
+        summary.hostedEventCount +
+        (school.profile?.highlightMetrics?.eventsHosted || 0),
+      joinedEventCount:
+        summary.joinedEventCount +
+        (school.profile?.highlightMetrics?.eventsParticipated || 0),
+      eventCount:
+        summary.eventCount +
+        (school.profile?.highlightMetrics?.eventsHosted || 0) +
+        (school.profile?.highlightMetrics?.eventsParticipated || 0),
+      awardCount:
+        summary.awardCount + (school.profile?.highlightMetrics?.awardsCount || 0),
+      studentCount: summary.studentCount + (school.studentCount || 0),
+    }),
+    {
+      schoolCount: 0,
+      hostedEventCount: 0,
+      joinedEventCount: 0,
+      eventCount: 0,
+      awardCount: 0,
+      studentCount: 0,
+    }
   );
-  const totalAwards = publicSchools.reduce(
-    (sum, school) => sum + (school.profile?.highlightMetrics?.awardsCount || 0),
-    0
-  );
+
+  const serializedSpotlights = spotlights
+    .map((promotion) => serializePromotion(promotion, studentCountMap))
+    .filter((promotion) => promotion.schoolId);
 
   return (
-    <PublicPageShell>
+    <PublicPageShell className="bg-[#f8f9fd]">
       <PublicSiteNav active="schools" />
-      <PublicHero
-        eyebrow="Discover Active Schools"
-        title="School profiles built around talent and activity"
-        description="Explore how schools host showcases, join competitions, and build vibrant cultures beyond academics."
-        stats={
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-1">
-            <PublicStatTile label="Profiles" value={publicSchools.length} icon={FaSchool} />
-            <PublicStatTile label="Hosted" value={totalHosted} icon={FaCalendarAlt} />
-            <PublicStatTile label="Awards" value={totalAwards} icon={FaAward} className="col-span-2 lg:col-span-1" />
-          </div>
-        }
-      />
 
-      <PublicContainer className="py-6 sm:py-8">
-        {spotlights.length > 0 && (
-          <section className="mb-10">
-            <PublicSectionHeader
-              eyebrow="School Spotlight"
-              title="Highlighted school profiles"
-              description="These spotlights rotate separately from the regular public school directory."
-            />
-
-            <div className="grid gap-5 lg:grid-cols-3">
-              {spotlights.map((promotion) => (
-                <Link
-                  key={promotion.id}
-                  href={promotion.href}
-                  className="group overflow-hidden rounded-[26px] border border-[#cfe0f6] bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-[#2f7fdb]/45"
-                >
-                  <div
-                    className="h-44 bg-cover bg-center"
-                    style={{
-                      backgroundImage: promotion.profile?.coverImageUrl
-                        ? `linear-gradient(rgba(8,17,31,0.15), rgba(8,17,31,0.88)), url(${promotion.profile.coverImageUrl})`
-                        : "linear-gradient(135deg, rgba(47,127,219,0.35), rgba(10,47,102,0.95))",
-                    }}
-                  />
-                  <div className="p-5">
-                    <div className="flex flex-wrap gap-2">
-                      <PublicBadge>School Spotlight</PublicBadge>
-                      <PublicBadge tone="white">{promotion.priority}</PublicBadge>
-                    </div>
-                    <h3 className="mt-4 text-xl font-black text-slate-950 group-hover:text-[#0a2f66]">
-                      {promotion.title}
-                    </h3>
-                    {promotion.school.location && (
-                      <p className="mt-1 text-sm font-semibold text-[#0a2f66]">
-                        {promotion.school.location}
-                      </p>
-                    )}
-                    <p className="mt-3 line-clamp-3 text-sm leading-6 text-slate-600">
-                      {promotion.tagline}
-                    </p>
-                    <span className="mt-5 inline-flex items-center gap-2 text-sm font-black text-[#0a2f66]">
-                      View spotlight
-                      <FaArrowRight />
-                    </span>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {publicSchools.length === 0 ? (
-          <PublicCard flushMobile className="p-10 text-center text-slate-600">
-            No public school profiles are available yet.
-          </PublicCard>
-        ) : (
-          <div className="grid lg:grid-cols-2 gap-6">
-            {publicSchools.map((school) => (
-              <PublicCard
-                key={String(school._id)}
-                flushMobile
-                className="overflow-hidden p-0"
-              >
-                <div
-                  className="h-48 bg-cover bg-center"
-                  style={{
-                    backgroundImage: school.profile.coverImageUrl
-                      ? `linear-gradient(rgba(2,6,23,0.2), rgba(2,6,23,0.85)), url(${school.profile.coverImageUrl})`
-                      : "linear-gradient(135deg, rgba(16,185,129,0.2), rgba(14,116,144,0.35), rgba(15,23,42,0.95))",
-                  }}
-                />
-                <div className="p-5 sm:p-6">
-                  <div className="grid gap-3">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <PublicBadge tone="success">Public Profile</PublicBadge>
-                    </div>
-                    <div className="min-w-0">
-                      <h2 className="max-w-[18rem] break-words text-2xl font-black leading-tight text-slate-950 sm:max-w-none">{school.schoolName}</h2>
-                      <p className="mt-2 max-w-[19rem] break-words text-slate-500 sm:max-w-none">
-                        {school.schoolLocation || "Location not listed"}
-                      </p>
-                    </div>
-                  </div>
-                  {school.profile.tagline && (
-                    <p className="text-[#0a2f66] mt-4 font-semibold">{school.profile.tagline}</p>
-                  )}
-                  {school.profile.summary && (
-                    <p className="text-slate-600 mt-3 line-clamp-3">
-                      {school.profile.summary}
-                    </p>
-                  )}
-                  <div className="grid grid-cols-3 gap-3 mt-6">
-                    {[
-                      ["Hosted", school.profile.highlightMetrics?.eventsHosted || 0],
-                      ["Joined", school.profile.highlightMetrics?.eventsParticipated || 0],
-                      ["Awards", school.profile.highlightMetrics?.awardsCount || 0],
-                    ].map(([label, value]) => (
-                      <div
-                        key={label}
-                        className="rounded-2xl bg-[#f8fbff] border border-[#d7e5f7] p-3"
-                      >
-                        <p className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-500">
-                          {label}
-                        </p>
-                        <p className="text-xl font-black text-slate-950 mt-1">{value}</p>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="mt-6">
-                    <Link
-                      href={`/schools/${school._id}`}
-                      className="inline-flex items-center gap-2 rounded-full bg-[#0a2f66] px-4 py-2 text-sm font-black text-white transition hover:bg-[#123f82]"
-                    >
-                      View School Profile
-                      <FaArrowRight />
-                    </Link>
-                  </div>
-                </div>
-              </PublicCard>
-            ))}
-          </div>
-        )}
-      </PublicContainer>
+      <div className="mx-auto grid max-w-[1500px] gap-5 px-4 py-5 sm:px-6 xl:grid-cols-[230px_minmax(0,1fr)]">
+        <PublicExplorePanel active="schools" variant="schools" />
+        <PublicSchoolsDirectory
+          schools={publicSchools}
+          spotlights={serializedSpotlights}
+          totals={totals}
+        />
+      </div>
     </PublicPageShell>
   );
 }

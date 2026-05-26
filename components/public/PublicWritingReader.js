@@ -17,6 +17,7 @@ import {
   FaStar,
   FaUser,
 } from "react-icons/fa";
+import PublicExplorePanel from "@/components/public/PublicExplorePanel";
 
 function formatDate(value) {
   if (!value) return "";
@@ -118,8 +119,10 @@ export default function PublicWritingReader({ article, relatedArticles, moreFrom
   const schoolHref = school.id ? `/schools/${school.id}` : "/schools";
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6 pb-24 sm:px-6">
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+    <div className="mx-auto max-w-[1500px] px-4 py-6 pb-24 sm:px-6">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[230px_minmax(0,1fr)_320px]">
+        <PublicExplorePanel active="writings" />
+
         <main className="min-w-0 rounded-2xl border border-[#e7dcc8] bg-white p-5 shadow-sm md:p-7">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <nav className="flex flex-wrap items-center gap-2 text-xs font-bold text-[#75869b]">

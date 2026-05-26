@@ -1,20 +1,360 @@
 import Link from "next/link";
+import {
+  FaArrowRight,
+  FaAward,
+  FaCalendarAlt,
+  FaCheck,
+  FaCheckCircle,
+  FaClipboardList,
+  FaExternalLinkAlt,
+  FaGlobeAsia,
+  FaHandshake,
+  FaInfoCircle,
+  FaMapMarkerAlt,
+  FaRegCalendarAlt,
+  FaSchool,
+  FaShareAlt,
+  FaTrophy,
+  FaUsers,
+} from "react-icons/fa";
 import connectDB from "@/lib/db";
-import Event from "@/models/Event";
 import Achievement from "@/models/Achievement";
-import ParticipationRequest from "@/models/ParticipationRequest";
+import Event from "@/models/Event";
 import EventNotice from "@/models/EventNotice";
-import PublicSiteNav from "@/components/public/PublicSiteNav";
+import ParticipationRequest from "@/models/ParticipationRequest";
 import PublicEventNoticeList from "@/components/events/PublicEventNoticeList";
+import PublicExplorePanel from "@/components/public/PublicExplorePanel";
+import PublicSiteNav from "@/components/public/PublicSiteNav";
+import { PublicPageShell } from "@/components/public/PublicLayout";
+import "@/models/ExternalOrganizer";
 import "@/models/Student";
 import "@/models/User";
-import "@/models/ExternalOrganizer";
 
 export const dynamic = "force-dynamic";
 
+function label(value) {
+  return String(value || "Other")
+    .replaceAll("_", " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function formatDate(value) {
+  if (!value) return "Date to be announced";
+  return new Intl.DateTimeFormat("en", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date(value));
+}
+
 function formatPlacement(value) {
   if (value === "RUNNER_UP") return "Runner Up";
-  return String(value || "").replaceAll("_", " ");
+  return label(value);
+}
+
+function placementTone(value) {
+  const placement = String(value || "").toUpperCase();
+  if (placement === "WINNER") return "bg-amber-50 text-amber-700";
+  if (placement === "RUNNER_UP") return "bg-blue-50 text-blue-700";
+  if (placement === "PARTICIPANT") return "bg-emerald-50 text-emerald-700";
+  if (placement === "FINALIST") return "bg-purple-50 text-purple-700";
+  return "bg-slate-100 text-slate-700";
+}
+
+function getEventArt(eventType = "") {
+  const type = String(eventType || "").toUpperCase();
+  if (type.includes("FESTIVAL")) return "from-pink-700 via-purple-700 to-amber-400";
+  if (type.includes("WORKSHOP")) return "from-emerald-700 via-teal-600 to-cyan-300";
+  if (type.includes("EXHIBITION")) return "from-rose-500 via-orange-400 to-amber-200";
+  if (type.includes("SHOWCASE")) return "from-indigo-700 via-purple-600 to-pink-300";
+  return "from-[#0a2f66] via-purple-700 to-indigo-300";
+}
+
+function EventHeroArt({ event }) {
+  return (
+    <div
+      className={`relative min-h-72 overflow-hidden rounded-2xl bg-gradient-to-br ${getEventArt(
+        event.eventType
+      )}`}
+    >
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_15%,rgba(255,255,255,0.35),transparent_18%),radial-gradient(circle_at_78%_34%,rgba(251,191,36,0.35),transparent_20%),radial-gradient(circle_at_68%_88%,rgba(255,255,255,0.2),transparent_24%)]" />
+      <div className="absolute left-8 top-12 h-28 w-20 rotate-[-10deg] rounded-2xl bg-white/18 shadow-xl" />
+      <div className="absolute left-24 top-24 h-36 w-24 rotate-[8deg] rounded-2xl bg-white/16 shadow-xl" />
+      <div className="absolute right-10 top-12 h-28 w-28 rounded-full bg-white/16" />
+      <FaUsers className="absolute bottom-14 left-12 text-7xl text-white/75" />
+      <FaTrophy className="absolute bottom-16 right-14 text-7xl text-amber-300" />
+      <span className="absolute left-5 top-5 rounded-full bg-purple-700 px-4 py-2 text-xs font-black uppercase text-white">
+        {event.eventType}
+      </span>
+    </div>
+  );
+}
+
+function PartnerLogo({ partner, name }) {
+  const logo = partner?.organizer?.logoUrl || partner?.logoUrl;
+  return (
+    <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[#e7dcc8] bg-white text-sm font-black text-[#0a2f66]">
+      {logo ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={logo} alt="" className="h-full w-full object-cover" />
+      ) : (
+        name.charAt(0)
+      )}
+    </div>
+  );
+}
+
+function PartnerCard({ partner }) {
+  const organizer = partner.organizer;
+  const name = organizer?.organizationName || partner.displayName || "Approved partner";
+  const href = organizer?.slug ? `/partners/${organizer.slug}` : null;
+  const content = (
+    <div className="flex items-center gap-3 rounded-xl border border-emerald-100 bg-white p-3 shadow-sm transition hover:border-purple-200">
+      <PartnerLogo partner={partner} name={name} />
+      <div className="min-w-0">
+        <p className="line-clamp-1 text-sm font-black text-[#17120a]">{name}</p>
+        <p className="line-clamp-1 text-xs font-semibold uppercase text-[#0a2f66]">
+          {label(partner.role)}
+        </p>
+      </div>
+    </div>
+  );
+
+  return href ? (
+    <Link href={href} className="block">
+      {content}
+    </Link>
+  ) : (
+    content
+  );
+}
+
+function StatTile({ icon: Icon, value, label: title }) {
+  return (
+    <div className="flex min-h-20 items-center gap-4 border-r border-[#e6eaf7] px-4 last:border-r-0">
+      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-purple-50 text-purple-700">
+        <Icon />
+      </span>
+      <span>
+        <strong className="block text-xl font-black text-[#17120a]">{value}</strong>
+        <span className="text-xs font-bold text-[#52657d]">{title}</span>
+      </span>
+    </div>
+  );
+}
+
+function SnapshotCard({ event, organizer, location }) {
+  return (
+    <aside className="space-y-5 lg:sticky lg:top-24 lg:self-start">
+      <section className="rounded-2xl border border-[#e6eaf7] bg-white p-5 shadow-sm">
+        <h2 className="text-base font-black text-[#17120a]">Event Snapshot</h2>
+        <div className="mt-4 space-y-3">
+          {[
+            ["Event Type", label(event.eventType), FaAward],
+            ["Visibility", label(event.visibility), FaGlobeAsia],
+            ["Organizer", organizer, FaHandshake],
+            ["Event Date", formatDate(event.date), FaRegCalendarAlt],
+            [
+              "Deadline",
+              event.registrationDeadline
+                ? formatDate(event.registrationDeadline)
+                : "No deadline",
+              FaClipboardList,
+            ],
+            ["Location", location, FaMapMarkerAlt],
+          ].map(([title, value, Icon]) => (
+            <div key={title} className="flex items-center gap-3 rounded-xl bg-[#f8fbff] p-3">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-50 text-purple-700">
+                <Icon />
+              </span>
+              <span className="min-w-0">
+                <span className="block text-[10px] font-black uppercase text-[#52657d]">
+                  {title}
+                </span>
+                <strong className="line-clamp-1 text-sm text-[#17120a]">{value}</strong>
+              </span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-[#e6eaf7] bg-white p-5 shadow-sm">
+        <h2 className="text-base font-black text-[#17120a]">Results Overview</h2>
+        <div className="mt-4 flex items-center gap-3 rounded-xl bg-amber-50 p-3">
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-amber-500 shadow-sm">
+            <FaTrophy />
+          </span>
+          <span>
+            <strong className="block text-xl font-black text-[#17120a]">
+              {event.resultCount}
+            </strong>
+            <span className="text-xs font-bold text-[#52657d]">Results Published</span>
+          </span>
+        </div>
+        <a
+          href="#results"
+          className="mt-4 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl border border-purple-200 text-sm font-black text-purple-700 transition hover:bg-purple-50"
+        >
+          View Results
+          <FaArrowRight />
+        </a>
+      </section>
+
+      <section className="overflow-hidden rounded-2xl bg-gradient-to-br from-purple-700 to-[#0a2f66] p-5 text-white shadow-[0_18px_45px_rgba(88,28,135,0.22)]">
+        <h2 className="text-base font-black">How registration works</h2>
+        <div className="mt-4 space-y-3">
+          {[
+            "Schools log in to their dashboard and collect student names.",
+            "Teachers or admins submit eligible participants.",
+            "Participants are reviewed and published in the results.",
+          ].map((item, index) => (
+            <div key={item} className="flex gap-3 text-sm leading-5 text-white/85">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/15 text-xs font-black">
+                {index + 1}
+              </span>
+              <span>{item}</span>
+            </div>
+          ))}
+        </div>
+        <div className="mt-5 grid gap-2">
+          <Link
+            href="/login"
+            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-white px-4 text-sm font-black text-purple-700"
+          >
+            Login as a school
+          </Link>
+          <Link
+            href="/register"
+            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-white/12 px-4 text-sm font-black text-white ring-1 ring-white/30"
+          >
+            Register a school
+          </Link>
+        </div>
+      </section>
+    </aside>
+  );
+}
+
+function InfoColumn({ title, icon: Icon, items }) {
+  return (
+    <div>
+      <h3 className="inline-flex items-center gap-2 text-sm font-black text-[#17120a]">
+        <Icon className="text-purple-700" />
+        {title}
+      </h3>
+      <ul className="mt-3 space-y-2 text-sm leading-5 text-[#52657d]">
+        {items.map((item) => (
+          <li key={item} className="flex gap-2">
+            <FaCheck className="mt-1 shrink-0 text-purple-700" />
+            <span>{item}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function ResultsTable({ achievements, resultsPublished }) {
+  return (
+    <section id="results" className="scroll-mt-28 rounded-2xl border border-[#e6eaf7] bg-white p-5 shadow-sm">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="inline-flex items-center gap-2 text-base font-black text-[#17120a]">
+            <FaTrophy className="text-amber-500" />
+            Published Results
+          </h2>
+          <p className="mt-1 text-sm text-[#52657d]">
+            A focused results board built for large student lists.
+          </p>
+        </div>
+        {achievements.length > 0 && (
+          <span className="rounded-full border border-[#e6eaf7] px-3 py-1 text-xs font-black text-[#52657d]">
+            {achievements.length} result{achievements.length === 1 ? "" : "s"}
+          </span>
+        )}
+      </div>
+
+      {!resultsPublished ? (
+        <p className="rounded-xl bg-[#f8fbff] p-4 text-sm text-[#52657d]">
+          Results not published yet.
+        </p>
+      ) : achievements.length === 0 ? (
+        <p className="rounded-xl bg-[#f8fbff] p-4 text-sm text-[#52657d]">
+          No public results have been published for this event yet.
+        </p>
+      ) : (
+        <div className="overflow-hidden rounded-xl border border-[#e6eaf7]">
+          <div className="max-h-[70vh] overflow-auto">
+            <table className="min-w-full text-left text-sm">
+              <thead className="sticky top-0 z-10 bg-white text-[#52657d] shadow-sm">
+                <tr>
+                  <th className="px-4 py-3 font-black">Student</th>
+                  <th className="px-4 py-3 font-black">School</th>
+                  <th className="px-4 py-3 font-black">Placement</th>
+                  <th className="px-4 py-3 font-black">Level</th>
+                  <th className="px-4 py-3 font-black">Certificate</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#e6eaf7]">
+                {achievements.map((achievement) => {
+                  const studentName =
+                    achievement.certificateRecipientName ||
+                    achievement.student?.name ||
+                    "Student";
+
+                  return (
+                    <tr key={String(achievement._id)} className="transition hover:bg-[#f8fbff]">
+                      <td className="px-4 py-3 font-bold text-[#17120a]">{studentName}</td>
+                      <td className="px-4 py-3">
+                        {achievement.school?._id ? (
+                          <Link
+                            href={`/schools/${achievement.school._id}`}
+                            className="font-semibold text-[#0a2f66] transition hover:text-purple-700"
+                          >
+                            {achievement.school.schoolName || "School"}
+                          </Link>
+                        ) : (
+                          <span className="text-[#52657d]">School</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`rounded-full px-2.5 py-1 text-[10px] font-black ${placementTone(
+                            achievement.placement
+                          )}`}
+                        >
+                          {formatPlacement(achievement.placement)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-[#52657d]">
+                        {achievement.level || "-"}
+                      </td>
+                      <td className="px-4 py-3">
+                        {achievement.certificateUrl ? (
+                          <a
+                            href={achievement.certificateUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 whitespace-nowrap text-xs font-black text-purple-700"
+                          >
+                            View certificate
+                            <FaExternalLinkAlt />
+                          </a>
+                        ) : (
+                          <span className="text-[#8a9ab1]">-</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </section>
+  );
 }
 
 async function getEventData(id) {
@@ -35,13 +375,13 @@ async function getEventData(id) {
 
   if (!event) return null;
 
-  const [participatingSchools, achievements, eventNotices] = await Promise.all([
+  const [participationRequests, achievements, eventNotices] = await Promise.all([
     ParticipationRequest.find({
       event: id,
       status: { $in: ["APPROVED", "ENROLLED"] },
     })
-      .populate("school", "schoolName")
-      .select("school")
+      .populate("school", "schoolName schoolLocation")
+      .select("school student teamName")
       .lean(),
     event.resultsPublished
       ? Achievement.find({
@@ -66,15 +406,17 @@ async function getEventData(id) {
   ]);
 
   const schoolMap = new Map();
-  participatingSchools.forEach((request) => {
-    if (request.school?._id) {
-      schoolMap.set(String(request.school._id), request.school);
-    }
+  const studentSet = new Set();
+  participationRequests.forEach((request) => {
+    if (request.school?._id) schoolMap.set(String(request.school._id), request.school);
+    if (request.student) studentSet.add(String(request.student));
   });
 
   return {
     event,
+    participationRequests,
     participatingSchools: Array.from(schoolMap.values()),
+    participantCount: studentSet.size || participationRequests.length,
     achievements,
     eventNotices,
   };
@@ -86,15 +428,26 @@ export default async function PublicEventPage({ params }) {
 
   if (!data) {
     return (
-      <main className="pratyo-public-shell min-h-screen bg-[#f5f1e8] pb-32 text-slate-950 md:pb-0">
+      <PublicPageShell className="bg-[#f8f9fd]">
         <PublicSiteNav active="events" />
-        <div className="max-w-5xl mx-auto p-8 text-slate-400">Public event not found.</div>
-      </main>
+        <div className="mx-auto max-w-5xl p-8 text-[#52657d]">
+          Public event not found.
+        </div>
+      </PublicPageShell>
     );
   }
 
-  const { event, participatingSchools, achievements, eventNotices } = data;
+  const {
+    event,
+    participationRequests,
+    participatingSchools,
+    participantCount,
+    achievements,
+    eventNotices,
+  } = data;
   const isInternalEvent = event.eventScope === "SCHOOL";
+  const isTeamEvent =
+    String(event.participationFormat || "INDIVIDUAL").toUpperCase() === "TEAM";
   const visiblePartners = event.partnerBrandingEnabled
     ? (event.partners || []).filter(
         (partner) =>
@@ -102,6 +455,10 @@ export default async function PublicEventPage({ params }) {
           partner?.displayName
       )
     : [];
+  const organizer = isInternalEvent
+    ? event.school?.schoolName || "School"
+    : "Pratyo";
+  const location = event.school?.schoolLocation || "Online Event";
   const sortedAchievements = [...achievements].sort((a, b) => {
     const order = {
       WINNER: 1,
@@ -113,276 +470,243 @@ export default async function PublicEventPage({ params }) {
     };
     return (order[a.placement] || 99) - (order[b.placement] || 99);
   });
+  const snapshotEvent = { ...event, resultCount: sortedAchievements.length };
 
   return (
-    <main className="pratyo-public-shell min-h-screen bg-[#f5f1e8] pb-32 text-slate-950 md:pb-0">
+    <PublicPageShell className="bg-[#f8f9fd]">
       <PublicSiteNav active="events" />
 
-      <section className="max-w-7xl mx-auto px-6 py-12">
-        <div className="mb-8">
-          <div className="flex items-center gap-3 flex-wrap mb-4">
-            <span className="px-3 py-1 rounded-full text-xs bg-blue-500/15 text-blue-300 border border-blue-500/30">
-              {event.eventScope === "PLATFORM" ? "Platform Event" : "Internal Event"}
-            </span>
-            <span className="px-3 py-1 rounded-full text-xs bg-slate-800 text-slate-300 border border-slate-700">
-              {event.eventType}
-            </span>
+      <section className="mx-auto grid max-w-[1500px] gap-5 px-4 py-5 sm:px-6 xl:grid-cols-[230px_minmax(0,1fr)]">
+        <PublicExplorePanel active="events" />
+
+        <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
+          <main className="min-w-0 space-y-5">
+            <section className="grid overflow-hidden rounded-2xl border border-[#e6eaf7] bg-white p-5 shadow-sm lg:grid-cols-[320px_minmax(0,1fr)] lg:gap-6">
+              <EventHeroArt event={event} />
+              <div className="min-w-0 p-1 lg:p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex flex-wrap gap-2">
+                    <span className="rounded-full bg-purple-50 px-3 py-1 text-[11px] font-black text-purple-700">
+                      {event.eventScope === "PLATFORM" ? "Platform Event" : "School Event"}
+                    </span>
+                    <span className="rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-black text-emerald-700">
+                      {label(event.visibility)}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    aria-label="Share event"
+                    className="flex h-9 w-9 items-center justify-center rounded-full bg-[#f8fbff] text-[#0a2f66]"
+                  >
+                    <FaShareAlt />
+                  </button>
+                </div>
+                <h1 className="mt-5 break-words text-4xl font-black leading-tight text-[#061a44] md:text-5xl">
+                  {event.title}
+                </h1>
+                <p className="mt-3 max-w-2xl text-base leading-7 text-[#52657d]">
+                  {event.description}
+                </p>
+                <div className="mt-5 grid gap-3 text-sm font-bold text-[#52657d]">
+                  <span className="inline-flex items-center gap-2">
+                    <FaCalendarAlt className="text-purple-700" />
+                    {formatDate(event.date)}
+                  </span>
+                  <span className="inline-flex items-center gap-2">
+                    <FaMapMarkerAlt className="text-purple-700" />
+                    {location}
+                  </span>
+                  <span className="inline-flex items-center gap-2">
+                    <FaRegCalendarAlt className="text-purple-700" />
+                    Organized by
+                    <strong className="text-[#17120a]">{organizer}</strong>
+                  </span>
+                </div>
+              </div>
+            </section>
+
             {visiblePartners.length > 0 && (
-              <span className="px-3 py-1 rounded-full text-xs bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
-                Partner Event
-              </span>
+              <section className="rounded-2xl border border-[#e6eaf7] bg-white p-5 shadow-sm">
+                <h2 className="text-base font-black text-[#17120a]">Event Partners</h2>
+                <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                  {visiblePartners.map((partner) => (
+                    <PartnerCard
+                      key={
+                        partner.organizer?._id?.toString() ||
+                        partner.displayName ||
+                        partner.role
+                      }
+                      partner={partner}
+                    />
+                  ))}
+                </div>
+              </section>
             )}
-          </div>
-          <h1 className="text-4xl md:text-5xl font-black tracking-tight">
-            {event.title}
-          </h1>
-          <p className="text-slate-300 mt-5 text-lg leading-8 max-w-4xl">
-            {event.description}
-          </p>
-        </div>
 
-        {visiblePartners.length > 0 && (
-          <section className="rounded-3xl border border-emerald-500/20 bg-emerald-500/10 p-6 mb-10">
-            <h2 className="text-xl font-bold text-emerald-100 mb-4">
-              Event Partners
-            </h2>
-            <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {visiblePartners.map((partner) => {
-                const organizer = partner.organizer;
-                const name =
-                  organizer?.organizationName ||
-                  partner.displayName ||
-                  "Approved partner";
-                const href = organizer?.slug ? `/partners/${organizer.slug}` : null;
+            <section className="grid overflow-hidden rounded-2xl border border-[#e6eaf7] bg-white shadow-sm md:grid-cols-4">
+              <StatTile
+                icon={FaClipboardList}
+                value={
+                  event.registrationDeadline
+                    ? formatDate(event.registrationDeadline)
+                    : "No deadline"
+                }
+                label="Registration Deadline"
+              />
+              <StatTile
+                icon={FaUsers}
+                value={event.maxParticipantsPerSchool || "Any"}
+                label={`Max ${isTeamEvent ? "Teams" : "Students"} per School`}
+              />
+              <StatTile
+                icon={FaUsers}
+                value={event.maxParticipants || "Open"}
+                label={`Total ${isTeamEvent ? "Team" : "Student"} Capacity`}
+              />
+              <StatTile
+                icon={FaSchool}
+                value={isInternalEvent ? "-" : participatingSchools.length}
+                label="Participating Schools"
+              />
+            </section>
 
-                const card = (
-                  <div className="rounded-2xl border border-emerald-500/20 bg-slate-950/50 p-4 flex items-center gap-4">
-                    <div className="h-12 w-12 rounded-xl bg-slate-900 border border-slate-800 overflow-hidden flex items-center justify-center shrink-0">
-                      {organizer?.logoUrl || partner.logoUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={organizer?.logoUrl || partner.logoUrl}
-                          alt=""
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        <span className="font-black text-emerald-300">
-                          {name.charAt(0)}
+            <section className="rounded-2xl border border-[#e6eaf7] bg-white shadow-sm">
+              <nav className="grid border-b border-[#e6eaf7] text-sm font-black text-[#52657d] md:grid-cols-4">
+                {[
+                  ["#about", "About Event", FaInfoCircle],
+                  ["#results", "Results", FaTrophy],
+                  ["#schools", "Participating Schools", FaSchool],
+                  ["#info", "Important Info", FaClipboardList],
+                ].map(([href, title, Icon]) => (
+                  <a
+                    key={href}
+                    href={href}
+                    className="inline-flex min-h-12 items-center justify-center gap-2 border-b-2 border-transparent px-3 transition hover:border-purple-700 hover:bg-purple-50 hover:text-purple-700"
+                  >
+                    <Icon />
+                    {title}
+                  </a>
+                ))}
+              </nav>
+              <div id="about" className="scroll-mt-28 p-5">
+                <h2 className="text-lg font-black text-[#17120a]">About this event</h2>
+                <p className="mt-3 max-w-3xl text-sm leading-7 text-[#52657d]">
+                  {event.description}
+                </p>
+                <div className="mt-6 grid gap-6 md:grid-cols-3">
+                  <InfoColumn
+                    title="Event Highlights"
+                    icon={FaInfoCircle}
+                    items={[
+                      event.eligibleGrades?.length
+                        ? `Open for ${event.eligibleGrades.join(", ")}`
+                        : "Open to all listed grades",
+                      event.publicResultsEnabled
+                        ? "Public results can be published"
+                        : "Results managed by organizers",
+                      "Certificates can be issued from final results",
+                    ]}
+                  />
+                  <InfoColumn
+                    title="Who can participate?"
+                    icon={FaUsers}
+                    items={[
+                      event.eligibleGrades?.length
+                        ? `Registration grades: ${event.eligibleGrades.join(", ")}`
+                        : "All grades may be eligible",
+                      isTeamEvent
+                        ? `Team size: ${event.minTeamSize || "No minimum"} to ${
+                            event.maxTeamSize || "No maximum"
+                          }`
+                        : "Individual participation format",
+                      event.maxParticipantsPerSchool
+                        ? `Each school can submit up to ${event.maxParticipantsPerSchool}`
+                        : "No per-school limit listed",
+                    ]}
+                  />
+                  <InfoColumn
+                    title="Judging & Results"
+                    icon={FaTrophy}
+                    items={[
+                      event.resultsPublished
+                        ? "Results have been published"
+                        : "Results are not published yet",
+                      `Event date: ${formatDate(event.date)}`,
+                      "Certificates remain available when issued",
+                    ]}
+                  />
+                </div>
+              </div>
+            </section>
+
+            <PublicEventNoticeList
+              eventId={String(event._id)}
+              initialNotices={eventNotices}
+            />
+
+            <ResultsTable
+              achievements={sortedAchievements}
+              resultsPublished={event.resultsPublished}
+            />
+
+            <section id="schools" className="scroll-mt-28 rounded-2xl border border-[#e6eaf7] bg-white p-5 shadow-sm">
+              <h2 className="inline-flex items-center gap-2 text-base font-black text-[#17120a]">
+                <FaSchool className="text-purple-700" />
+                Participating Schools
+              </h2>
+              {isInternalEvent ? (
+                <p className="mt-4 text-sm leading-6 text-[#52657d]">
+                  This is a school event managed internally by {organizer}.
+                </p>
+              ) : participatingSchools.length === 0 ? (
+                <p className="mt-4 text-sm leading-6 text-[#52657d]">
+                  No schools are publicly listed for this event yet.
+                </p>
+              ) : (
+                <div className="mt-4 grid gap-3 md:grid-cols-2">
+                  {participatingSchools.map((school) => (
+                    <Link
+                      key={String(school._id)}
+                      href={`/schools/${school._id}`}
+                      className="rounded-xl border border-[#e6eaf7] bg-[#f8fbff] p-4 transition hover:bg-white"
+                    >
+                      <strong className="line-clamp-1 text-[#17120a]">
+                        {school.schoolName}
+                      </strong>
+                      {school.schoolLocation && (
+                        <span className="mt-1 block line-clamp-1 text-sm text-[#52657d]">
+                          {school.schoolLocation}
                         </span>
                       )}
-                    </div>
-                    <div>
-                      <p className="font-semibold text-white">{name}</p>
-                      <p className="text-xs text-emerald-200/80">
-                        {partner.role?.replaceAll("_", " ")}
-                      </p>
-                    </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            <section id="info" className="scroll-mt-28 rounded-2xl border border-[#e6eaf7] bg-white p-5 shadow-sm">
+              <h2 className="inline-flex items-center gap-2 text-base font-black text-[#17120a]">
+                <FaClipboardList className="text-purple-700" />
+                Important Info
+              </h2>
+              <div className="mt-4 grid gap-4 md:grid-cols-3">
+                {[
+                  ["Participation Format", label(event.participationFormat)],
+                  ["Total Requests", participationRequests.length],
+                  ["Approved Participants", participantCount],
+                ].map(([title, value]) => (
+                  <div key={title} className="rounded-xl bg-[#f8fbff] p-4">
+                    <p className="text-xs font-black uppercase text-[#52657d]">{title}</p>
+                    <p className="mt-2 text-lg font-black text-[#17120a]">{value}</p>
                   </div>
-                );
-
-                return href ? (
-                  <Link key={name} href={href} className="block">
-                    {card}
-                  </Link>
-                ) : (
-                  <div key={name}>{card}</div>
-                );
-              })}
-            </div>
-          </section>
-        )}
-
-        <div className="grid md:grid-cols-3 gap-4 mb-10">
-          <div className="rounded-3xl border border-slate-800 bg-slate-900/60 p-5">
-            <p className="text-slate-500 text-sm uppercase tracking-wide">Date</p>
-            <p className="text-xl font-bold mt-2">
-              {new Date(event.date).toLocaleDateString()}
-            </p>
-          </div>
-          <div className="rounded-3xl border border-slate-800 bg-slate-900/60 p-5">
-            <p className="text-slate-500 text-sm uppercase tracking-wide">Organizer</p>
-            <p className="text-xl font-bold mt-2">
-              {event.eventScope === "PLATFORM"
-                ? "Pratyo"
-                : event.school?.schoolName || "School"}
-            </p>
-          </div>
-          <div className="rounded-3xl border border-slate-800 bg-slate-900/60 p-5">
-            <p className="text-slate-500 text-sm uppercase tracking-wide">Visibility</p>
-            <p className="text-xl font-bold mt-2">{event.visibility}</p>
-          </div>
-        </div>
-
-        <PublicEventNoticeList
-          eventId={String(event._id)}
-          initialNotices={eventNotices}
-        />
-
-        <section className="rounded-3xl border border-slate-800 bg-slate-900/60 p-8 mb-10">
-          <div className="flex items-center justify-between gap-4 mb-5">
-            <div>
-              <h2 className="text-2xl font-bold">Published Results</h2>
-              <p className="text-sm text-slate-400 mt-2">
-                A focused results board built for large student lists.
-              </p>
-            </div>
-            {sortedAchievements.length > 0 && (
-              <div className="rounded-full border border-slate-700 bg-slate-950/80 px-4 py-2 text-xs text-slate-300">
-                {sortedAchievements.length} result{sortedAchievements.length === 1 ? "" : "s"}
-              </div>
-            )}
-          </div>
-          {!event.resultsPublished ? (
-            <p className="text-slate-400">
-              Results not published yet.
-            </p>
-          ) : sortedAchievements.length === 0 ? (
-            <p className="text-slate-400">
-              No public results have been published for this event yet.
-            </p>
-          ) : (
-            <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/50">
-              <div className="max-h-[70vh] overflow-auto">
-                <table className="min-w-full text-left text-sm">
-                  <thead className="sticky top-0 z-10 bg-slate-900/95 text-slate-300 backdrop-blur">
-                    <tr className="border-b border-slate-800">
-                      <th className="px-5 py-4 font-semibold">Student</th>
-                      <th className="px-5 py-4 font-semibold">School</th>
-                      <th className="px-5 py-4 font-semibold">Placement</th>
-                      <th className="px-5 py-4 font-semibold">Level</th>
-                      <th className="px-5 py-4 font-semibold">Certificate</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sortedAchievements.map((achievement) => {
-                      const studentName =
-                        achievement.certificateRecipientName ||
-                        achievement.student?.name ||
-                        "Student";
-
-                      return (
-                        <tr
-                          key={String(achievement._id)}
-                          className="border-b border-slate-800/80 transition hover:bg-slate-900/60"
-                        >
-                          <td className="px-5 py-4 font-medium text-white">
-                            {studentName}
-                          </td>
-                          <td className="px-5 py-4 text-slate-300">
-                            {achievement.school?.schoolName || "School"}
-                          </td>
-                          <td className="px-5 py-4">
-                            <span className="inline-flex rounded-full border border-yellow-400/20 bg-yellow-400/10 px-2.5 py-1 text-xs font-medium text-yellow-300">
-                              {formatPlacement(achievement.placement)}
-                            </span>
-                          </td>
-                          <td className="px-5 py-4 text-slate-300">
-                            {achievement.level || "-"}
-                          </td>
-                          <td className="px-5 py-4">
-                            {achievement.certificateUrl ? (
-                              <a
-                                href={achievement.certificateUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="inline-flex whitespace-nowrap text-blue-400 hover:text-blue-300"
-                              >
-                                View certificate
-                              </a>
-                            ) : (
-                              <span className="text-slate-500">-</span>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-        </section>
-
-        <div className="grid gap-8 xl:grid-cols-3">
-          <section className="rounded-3xl border border-slate-800 bg-slate-900/60 p-6">
-            <h2 className="text-xl font-bold mb-4">Participation Info</h2>
-            <div className="space-y-3 text-sm text-slate-300">
-              {event.registrationDeadline && (
-                <div>
-                  Registration deadline:{" "}
-                  {new Date(event.registrationDeadline).toLocaleDateString()}
-                </div>
-              )}
-              {event.maxParticipants && (
-                <div>
-                  Total {String(event.participationFormat || "INDIVIDUAL").toUpperCase() === "TEAM"
-                    ? "team"
-                    : "student"} capacity: {event.maxParticipants}
-                </div>
-              )}
-              {!isInternalEvent && event.maxParticipantsPerSchool && (
-                <div>
-                  Max {String(event.participationFormat || "INDIVIDUAL").toUpperCase() === "TEAM"
-                    ? "teams"
-                    : "students"} per school: {event.maxParticipantsPerSchool}
-                </div>
-              )}
-              {String(event.participationFormat || "INDIVIDUAL").toUpperCase() === "TEAM" &&
-                (event.minTeamSize || event.maxTeamSize) && (
-                  <div>
-                    Team size: {event.minTeamSize || "No minimum"} to{" "}
-                    {event.maxTeamSize || "No maximum"} members
-                  </div>
-                )}
-              {event.eligibleGrades?.length > 0 && (
-                <div>Registration grades: {event.eligibleGrades.join(", ")}</div>
-              )}
-            </div>
-          </section>
-
-          <section className="rounded-3xl border border-slate-800 bg-slate-900/60 p-6">
-            <h2 className="text-xl font-bold mb-4">Participating Schools</h2>
-            {participatingSchools.length === 0 ? (
-              <p className="text-sm text-slate-400">
-                No schools are publicly listed for this event yet.
-              </p>
-            ) : (
-              <div className="space-y-2 text-sm text-slate-300">
-                {participatingSchools.map((school) => (
-                  <div key={String(school._id)}>{school.schoolName}</div>
                 ))}
               </div>
-            )}
-          </section>
+            </section>
+          </main>
 
-          <section className="rounded-3xl border border-slate-800 bg-slate-900/60 p-6">
-            <h2 className="text-xl font-bold mb-4">
-              {isInternalEvent ? "How participation works" : "How registration works"}
-            </h2>
-            <p className="text-sm text-slate-400 leading-7">
-              {isInternalEvent
-                ? "This internal event is managed by your school. Teachers or school admins add eligible students and publish updates through the school dashboard."
-                : "Registration is managed by the school in phase 1. Teachers or school admins collect student names and submit eligible participants through the school dashboard."}
-            </p>
-            {!isInternalEvent && (
-              <div className="mt-5 flex flex-col gap-3">
-                <Link
-                  href="/login"
-                  className="rounded-xl bg-blue-600 hover:bg-blue-500 px-4 py-3 text-center font-medium"
-                >
-                  Login as a school
-                </Link>
-                <Link
-                  href="/register"
-                  className="rounded-xl bg-slate-800 hover:bg-slate-700 px-4 py-3 text-center font-medium text-slate-200"
-                >
-                  Register a school
-                </Link>
-              </div>
-            )}
-          </section>
+          <SnapshotCard event={snapshotEvent} organizer={organizer} location={location} />
         </div>
       </section>
-    </main>
+    </PublicPageShell>
   );
 }

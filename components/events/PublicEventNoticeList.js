@@ -84,18 +84,18 @@ export default function PublicEventNoticeList({
   }
 
   return (
-    <section className="rounded-3xl border border-slate-800 bg-slate-900/60 p-8 mb-10">
+    <section className="rounded-2xl border border-[#e6eaf7] bg-white p-5 shadow-sm">
       <div className="mb-5">
-        <h2 className="text-2xl font-bold">Event Notices</h2>
-        <p className="mt-2 text-sm text-slate-400">
+        <h2 className="text-base font-black text-[#17120a]">Event Notices</h2>
+        <p className="mt-2 text-sm text-[#52657d]">
           Public updates tied directly to this event.
         </p>
       </div>
 
       {loading && notices.length === 0 ? (
-        <p className="text-sm text-slate-400">Loading notices...</p>
+        <p className="text-sm text-[#52657d]">Loading notices...</p>
       ) : error ? (
-        <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
           {error}
         </div>
       ) : (
@@ -103,22 +103,22 @@ export default function PublicEventNoticeList({
           {notices.map((notice) => (
             <article
               key={String(notice._id)}
-              className="rounded-2xl border border-slate-800 bg-slate-950/50 p-5"
+              className="rounded-xl border border-[#e6eaf7] bg-[#f8fbff] p-4"
             >
               <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-full bg-sky-500/10 px-3 py-1 text-xs font-semibold text-sky-300">
+                <span className="rounded-full bg-purple-50 px-3 py-1 text-xs font-black text-purple-700">
                   {String(notice.type || "GENERAL").replaceAll("_", " ")}
                 </span>
                 {notice.publishedAt && (
-                  <span className="text-xs text-slate-500">
+                  <span className="text-xs font-semibold text-[#52657d]">
                     {formatPublishedDate(notice.publishedAt)}
                   </span>
                 )}
               </div>
-              <h3 className="mt-3 text-xl font-bold text-white">
+              <h3 className="mt-3 text-lg font-black text-[#17120a]">
                 {notice.title}
               </h3>
-              <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-slate-300">
+              <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-[#52657d]">
                 {notice.message}
               </p>
             </article>
