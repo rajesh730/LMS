@@ -5,6 +5,7 @@ import connectDB from "@/lib/db";
 import Student from "@/models/Student";
 import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
 import { publishWorkIndicatorsUpdate } from "@/lib/workIndicatorRealtime";
+import { notifySchoolMagazineSubmitted } from "@/lib/magazineNotifications";
 
 function buildStudentLookup(session) {
   return {
@@ -91,7 +92,7 @@ export async function POST(request) {
     await connectDB();
 
     const student = await Student.findOne(buildStudentLookup(session))
-      .select("_id school grade")
+      .select("_id school grade name")
       .lean();
 
     if (!student) {
@@ -141,6 +142,14 @@ export async function POST(request) {
       studentId: String(student._id),
       status: article.status,
     });
+
+    if (requestedStatus === "SUBMITTED") {
+      await notifySchoolMagazineSubmitted({
+        article,
+        student,
+        schoolId: student.school,
+      });
+    }
 
     return NextResponse.json(
       {

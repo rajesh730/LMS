@@ -33,7 +33,7 @@ export default function OrganizeEventPage() {
         <div className="grid lg:grid-cols-[0.9fr_1.4fr] gap-10 items-start">
           <aside className="space-y-6 lg:sticky lg:top-8">
             <div>
-              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[#0a2f66] mb-4">
+              <p className="text-[11px] font-black uppercase tracking-normal text-[#0a2f66] mb-4">
                 Partner Event Request
               </p>
               <h1 className="text-[1.7rem] font-black leading-[1.08] tracking-tight text-slate-950 md:text-5xl">

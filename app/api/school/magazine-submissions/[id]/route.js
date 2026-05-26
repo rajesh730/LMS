@@ -5,6 +5,7 @@ import connectDB from "@/lib/db";
 import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
 import { recordLifecycleAudit } from "@/lib/lifecycle";
 import { publishWorkIndicatorsUpdate } from "@/lib/workIndicatorRealtime";
+import { notifyStudentMagazineReviewed } from "@/lib/magazineNotifications";
 
 export async function PATCH(request, props) {
   try {
@@ -77,6 +78,13 @@ export async function PATCH(request, props) {
       schoolId: String(session.user.id),
       articleId: String(article._id),
       status: article.status,
+    });
+
+    await notifyStudentMagazineReviewed({
+      article,
+      schoolId: session.user.id,
+      status: article.status,
+      reviewNote,
     });
 
     return NextResponse.json({

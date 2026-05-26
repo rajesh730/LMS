@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   FaBell,
   FaCalendarCheck,
@@ -10,7 +10,9 @@ import {
   FaBullhorn,
   FaTrophy,
 } from "react-icons/fa";
+import DashboardFocusCard from "@/components/dashboard/DashboardFocusCard";
 import AlertBanner from "@/components/ui/AlertBanner";
+import useRealtimeChannel from "@/lib/useRealtimeChannel";
 
 function formatDate(value) {
   if (!value) return "No date set";
@@ -19,52 +21,6 @@ function formatDate(value) {
     day: "numeric",
     year: "numeric",
   });
-}
-
-function WorkCard({
-  href,
-  icon: Icon,
-  count,
-  label,
-  title,
-  description,
-  actionLabel,
-  tone = "blue",
-}) {
-  const tones = {
-    blue: "border-blue-500/20 bg-blue-500/10 text-blue-200",
-    emerald: "border-emerald-500/20 bg-emerald-500/10 text-emerald-200",
-    amber: "border-amber-500/20 bg-amber-500/10 text-amber-200",
-    violet: "border-violet-500/20 bg-violet-500/10 text-violet-200",
-    rose: "border-rose-500/20 bg-rose-500/10 text-rose-200",
-  };
-
-  return (
-    <Link
-      href={href}
-      className={`group rounded-2xl border p-5 transition hover:-translate-y-0.5 hover:bg-slate-900/80 ${
-        tones[tone] || tones.blue
-      }`}
-    >
-      <div className="flex items-start justify-between gap-4">
-        <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-current/10">
-          <Icon className="text-xl" />
-        </span>
-        <span className="rounded-full border border-current/20 px-3 py-1 text-xs font-bold uppercase tracking-wide">
-          {count} {label}
-        </span>
-      </div>
-      <h3 className="mt-5 line-clamp-2 text-lg font-bold text-white">
-        {title}
-      </h3>
-      <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-300">
-        {description}
-      </p>
-      <p className="mt-4 text-xs font-bold uppercase tracking-wide text-slate-400 transition group-hover:text-white">
-        {actionLabel}
-      </p>
-    </Link>
-  );
 }
 
 export default function SchoolDailyOverview() {
@@ -82,12 +38,12 @@ export default function SchoolDailyOverview() {
     challengeWinners: 0,
   });
 
-  useEffect(() => {
-    let active = true;
-
-    const load = async () => {
+  const load = useCallback(
+    async ({ silent = false } = {}) => {
       try {
-        setLoading(true);
+        if (!silent) {
+          setLoading(true);
+        }
         setError("");
 
         const [
@@ -121,8 +77,6 @@ export default function SchoolDailyOverview() {
           eventsRes.json().catch(() => ({})),
           challengeWinnersRes.json().catch(() => ({})),
         ]);
-
-        if (!active) return;
 
         setSubmissions(
           submissionsRes.ok && Array.isArray(submissionsPayload.submissions)
@@ -181,22 +135,26 @@ export default function SchoolDailyOverview() {
           setError(`Some work areas could not load: ${failedSources.join(", ")}.`);
         }
       } catch (loadError) {
-        if (active) {
-          setError(loadError.message || "Failed to load today's work");
-        }
+        setError(loadError.message || "Failed to load today's work");
       } finally {
-        if (active) {
+        if (!silent) {
           setLoading(false);
         }
       }
-    };
+    },
+    []
+  );
 
-    load();
+  useEffect(() => {
+    void load();
+  }, [load]);
 
-    return () => {
-      active = false;
-    };
-  }, []);
+  useRealtimeChannel(
+    ["school-notifications", "events", "work-indicators"],
+    useCallback(() => {
+      void load({ silent: true });
+    }, [load])
+  );
 
   const activeSchoolEvents = useMemo(
     () =>
@@ -222,7 +180,7 @@ export default function SchoolDailyOverview() {
         {[0, 1, 2, 3, 4].map((item) => (
           <div
             key={item}
-            className="h-48 animate-pulse rounded-2xl border border-slate-800 bg-slate-900/70"
+            className="h-44 animate-pulse rounded-lg border border-[#d7cdbb] bg-white"
           />
         ))}
       </section>
@@ -239,29 +197,28 @@ export default function SchoolDailyOverview() {
         />
       )}
 
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6">
-        <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+      <div className="rounded-xl border border-[#d7cdbb] bg-[#f8fbff]/90 p-5 shadow-sm sm:p-6">
+        <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
+            <p className="text-[11px] font-bold uppercase tracking-normal text-[#52657d]">
               Today&apos;s work
             </p>
-            <h2 className="mt-2 text-2xl font-bold text-white">
+            <h2 className="mt-1 text-xl font-bold text-[#17120a] sm:text-2xl">
               What needs school attention?
             </h2>
           </div>
-          <p className="max-w-xl text-sm leading-6 text-slate-400">
+          <p className="max-w-xl text-sm leading-6 text-[#52657d]">
             This section gathers the practical admin jobs: review writing,
             accept platform events, manage school events, read notices, and
             publish selected student work.
           </p>
         </div>
 
-        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-          <WorkCard
+        <div className="mt-5 grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
+          <DashboardFocusCard
             href="/school/dashboard?tab=magazine"
             icon={FaFeatherAlt}
-            count={totals.submissions}
-            label="pending"
+            badge={`${totals.submissions} pending`}
             title={
               submissions[0]?.title || "No magazine submissions waiting"
             }
@@ -274,11 +231,10 @@ export default function SchoolDailyOverview() {
             tone="violet"
           />
 
-          <WorkCard
+          <DashboardFocusCard
             href="/school/dashboard?tab=platform-events"
             icon={FaClipboardCheck}
-            count={totals.invitations}
-            label="invites"
+            badge={`${totals.invitations} invites`}
             title={
               invitations[0]?.event?.title || "No platform invitations pending"
             }
@@ -287,11 +243,10 @@ export default function SchoolDailyOverview() {
             tone="emerald"
           />
 
-          <WorkCard
+          <DashboardFocusCard
             href="/school/dashboard?tab=school-events"
             icon={FaCalendarCheck}
-            count={activeSchoolEvents.length}
-            label="active"
+            badge={`${activeSchoolEvents.length} active`}
             title={nextSchoolEvent?.title || "No active school events"}
             description={
               nextSchoolEvent
@@ -302,25 +257,23 @@ export default function SchoolDailyOverview() {
             tone="blue"
           />
 
-          <WorkCard
+          <DashboardFocusCard
             href="/school/dashboard?tab=notices"
             icon={FaBell}
-            count={totals.notifications}
-            label="updates"
+            badge={`${totals.notifications} updates`}
             title={latestNotice?.title || "No received notices yet"}
             description={
               latestNotice?.message ||
               "Platform and event updates relevant to your school will appear here."
             }
             actionLabel="Read notices"
-            tone="amber"
+            tone="rose"
           />
 
-          <WorkCard
+          <DashboardFocusCard
             href="/school/dashboard?tab=challenge-showcase"
             icon={FaTrophy}
-            count={totals.challengeWinners}
-            label="selected"
+            badge={`${totals.challengeWinners} selected`}
             title={winnerToAdd?.title || "No showcase responses to add"}
             description={
               winnerToAdd?.student?.name
@@ -335,14 +288,14 @@ export default function SchoolDailyOverview() {
         <div className="mt-5 flex flex-wrap gap-3 text-sm">
           <Link
             href="/school/dashboard?tab=student-notices"
-            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 font-semibold text-white transition hover:bg-blue-500"
+            className="inline-flex items-center gap-2 rounded-lg bg-[#0a2f66] px-3 py-2 font-semibold text-white transition hover:bg-[#123f82]"
           >
             <FaBullhorn />
             Send notice to students
           </Link>
           <Link
             href="/school/dashboard?tab=school-events"
-            className="inline-flex items-center gap-2 rounded-lg border border-slate-700 px-3 py-2 font-semibold text-slate-200 transition hover:bg-slate-800"
+            className="inline-flex items-center gap-2 rounded-lg border border-[#d7cdbb] bg-white px-3 py-2 font-semibold text-[#0a2f66] transition hover:bg-[#eaf2ff]"
           >
             Create or manage school event
           </Link>

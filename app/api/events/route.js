@@ -18,6 +18,8 @@ import { normalizeGradeValue } from "@/lib/schoolGrades";
 import { buildEventPresentationState } from "@/lib/eventPresentation";
 import { buildSchoolParticipationPresentation } from "@/lib/participationPresentation";
 import { isTeamEventLike, resolveParticipationFormat as resolveParticipationFormatFromRecord } from "@/lib/eventParticipationFormat";
+import { publishEventRealtimeUpdate } from "@/lib/eventRealtime";
+import { ensureStudentEventNotification } from "@/lib/studentEventNotifications";
 import "@/models/ExternalOrganizer";
 
 export const dynamic = "force-dynamic";
@@ -331,6 +333,27 @@ export async function POST(req) {
         console.error("Sync Event Invitations Error:", invitationError);
       }
     }
+
+    try {
+      if (normalizedScope === "SCHOOL") {
+        await ensureStudentEventNotification({
+          event: newEvent,
+          schoolId: school,
+          authorId: session.user.id,
+          title: `New internal event: ${newEvent.title}`,
+          content:
+            "Your school has published a new internal event. Open Student Events to view the details and follow updates.",
+        });
+      }
+    } catch (noticeError) {
+      console.error("Create School Event Notice Error:", noticeError);
+    }
+
+    publishEventRealtimeUpdate("event-created", {
+      event: newEvent,
+      schoolId: school,
+      eventScope: normalizedScope,
+    });
 
     return NextResponse.json(
       { message: "Event created successfully", event: newEvent },

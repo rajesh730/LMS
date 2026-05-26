@@ -8,8 +8,8 @@ import Student from "@/models/Student";
 import ParticipationRequest from "@/models/ParticipationRequest";
 import EventNotice from "@/models/EventNotice";
 import { isAfterEndOfDay, startOfToday } from "@/lib/eventDates";
-import { getEquivalentGradeValues } from "@/lib/schoolGrades";
 import { buildEventPresentationState } from "@/lib/eventPresentation";
+import { isTeamEventLike } from "@/lib/eventParticipationFormat";
 
 /**
  * GET /api/events/hub/available
@@ -68,41 +68,30 @@ export async function GET(req) {
           status: "APPROVED",
         }).distinct("event")
       : [];
-    const eligibleGradeValues = getEquivalentGradeValues(student.grade);
     const requestedEventIds = await ParticipationRequest.find({
       student: student._id,
     }).distinct("event");
 
-    // Find eligible events. Students can discover active school and approved
-    // platform events even when registration is school-managed.
+    const activeUpcomingEvent = {
+      lifecycleStatus: "ACTIVE",
+      date: { $gte: startOfToday() },
+    };
+    // Students can discover every active event their school can access.
+    // eligibleGrades is enforced only when the school registers students.
     const baseQuery = {
       ...searchQuery,
       status: "APPROVED",
-      $and: [
+      $or: [
+        { _id: { $in: requestedEventIds } },
         {
-          $or: [
-            { eligibleGrades: { $size: 0 } }, // No grade restrictions
-            { eligibleGrades: { $in: eligibleGradeValues } },
-          ],
+          ...activeUpcomingEvent,
+          eventScope: "SCHOOL",
+          school: student.school,
         },
         {
-          $or: [
-            { _id: { $in: requestedEventIds } },
-            {
-              lifecycleStatus: "ACTIVE",
-              date: { $gte: startOfToday() },
-              $or: [
-                {
-                  eventScope: "SCHOOL",
-                  school: student.school,
-                },
-                {
-                  eventScope: "PLATFORM",
-                  _id: { $in: approvedPlatformEventIds },
-                },
-              ],
-            },
-          ],
+          ...activeUpcomingEvent,
+          eventScope: "PLATFORM",
+          _id: { $in: approvedPlatformEventIds },
         },
       ],
     };
@@ -116,12 +105,18 @@ export async function GET(req) {
 
     const total = await Event.countDocuments(baseQuery);
 
-    // Get participation requests for this student plus latest event notices.
-    const [requests, eventNotices] = await Promise.all([
+    // Get participation requests for this student, aggregate counts, and latest event notices.
+    const [requests, allEventRequests, eventNotices] = await Promise.all([
       ParticipationRequest.find({
         student: student._id,
         event: { $in: events.map((e) => e._id) },
       }),
+      ParticipationRequest.find({
+        event: { $in: events.map((e) => e._id) },
+        status: { $in: ["PENDING", "APPROVED", "ENROLLED"] },
+      })
+        .select("event school status teamName student")
+        .lean(),
       EventNotice.find({
         event: { $in: events.map((e) => e._id) },
         round: null,
@@ -138,6 +133,7 @@ export async function GET(req) {
     requests.forEach((req) => {
       requestMap.set(req.event.toString(), req);
     });
+    const requestsByEvent = groupRequestsByEvent(allEventRequests);
     const latestNoticeByEvent = new Map();
     const noticeCountByEvent = new Map();
     eventNotices.forEach((notice) => {
@@ -153,11 +149,12 @@ export async function GET(req) {
     const enrichedEvents = events.map((event) => {
       const request = requestMap.get(event._id.toString());
       const latestNotice = latestNoticeByEvent.get(event._id.toString());
-      const isDeadlinePassed =
-        event.registrationDeadline && isAfterEndOfDay(event.registrationDeadline);
-      const isFull =
-        event.maxParticipants &&
-        getStudentEnrollmentCount(event) >= event.maxParticipants;
+      const eventRequests = requestsByEvent.get(String(event._id)) || [];
+      const participationCounts = getParticipationCounts(event, eventRequests);
+      const schoolRequests = eventRequests.filter(
+        (item) => String(item.school?._id || item.school || "") === String(student.school || "")
+      );
+      const schoolParticipationCounts = getParticipationCounts(event, schoolRequests);
       const presentedEvent = {
         ...event,
         userStatus: request ? request.status : null,
@@ -165,19 +162,31 @@ export async function GET(req) {
         isParticipating: Boolean(request),
         deadline: event.registrationDeadline,
         capacity: event.maxParticipants,
+        enrolled: participationCounts.capacityUnits,
+        studentCount: participationCounts.studentCount,
+        memberCount: participationCounts.studentCount,
+        teamCount: participationCounts.teamCount,
+        schoolCount: participationCounts.schoolCount,
+        studentCapacityCount: participationCounts.capacityUnits,
+        myParticipation: request
+          ? {
+              studentCount: schoolParticipationCounts.studentCount,
+              teamCount: schoolParticipationCounts.teamCount,
+            }
+          : null,
       };
 
       return {
         ...presentedEvent,
         canRequest: false,
         registrationSupportMode: "SCHOOL_MANAGED",
-        capacityInfo: getCapacityInfo(event),
+        capacityInfo: getCapacityInfo(event, eventRequests),
         daysUntilDeadline: event.registrationDeadline
           ? Math.ceil(
               (event.registrationDeadline - new Date()) / (1000 * 60 * 60 * 24)
             )
           : null,
-        eventStatus: getEventStatus(event),
+        eventStatus: getEventStatus(event, eventRequests),
         latestEventNotice: latestNotice
           ? {
               _id: latestNotice._id,
@@ -192,7 +201,7 @@ export async function GET(req) {
           : 0,
         ...buildEventPresentationState(presentedEvent, {
           participationStatus: request ? request.status : null,
-          studentCount: Boolean(request) ? 1 : 0,
+          studentCount: request ? schoolParticipationCounts.studentCount : 0,
         }),
       };
     });
@@ -217,8 +226,45 @@ export async function GET(req) {
   }
 }
 
-function getCapacityInfo(event) {
-  const filled = getStudentEnrollmentCount(event);
+function groupRequestsByEvent(requests = []) {
+  const grouped = new Map();
+  requests.forEach((request) => {
+    const eventId = String(request.event || "");
+    if (!eventId) return;
+    grouped.set(eventId, [...(grouped.get(eventId) || []), request]);
+  });
+  return grouped;
+}
+
+function buildTeamKey(request) {
+  return `${String(request.school?._id || request.school || "")}::${String(
+    request.teamName || ""
+  )
+    .trim()
+    .toLowerCase() || "default-team"}`;
+}
+
+function getParticipationCounts(event, requests = []) {
+  const schoolIds = new Set(
+    requests
+      .map((request) => String(request.school?._id || request.school || ""))
+      .filter(Boolean)
+  );
+  const teamCount = isTeamEventLike(event)
+    ? new Set(requests.map(buildTeamKey)).size
+    : 0;
+  const studentCount = requests.length;
+
+  return {
+    schoolCount: schoolIds.size,
+    studentCount,
+    teamCount,
+    capacityUnits: isTeamEventLike(event) ? teamCount : studentCount,
+  };
+}
+
+function getCapacityInfo(event, requests = []) {
+  const filled = getParticipationCounts(event, requests).capacityUnits;
 
   if (!event.maxParticipants) {
     return {
@@ -243,14 +289,14 @@ function getCapacityInfo(event) {
   };
 }
 
-function getEventStatus(event) {
+function getEventStatus(event, requests = []) {
   const lifecycleStatus = String(event.lifecycleStatus || "").toUpperCase();
   if (["COMPLETED", "ARCHIVED", "CANCELLED"].includes(lifecycleStatus)) {
     return lifecycleStatus;
   }
 
   const now = new Date();
-  const filled = getStudentEnrollmentCount(event);
+  const filled = getParticipationCounts(event, requests).capacityUnits;
 
   if (event.date < now) {
     return "ENDED";
@@ -278,11 +324,4 @@ function getEventStatus(event) {
   }
 
   return "OPEN";
-}
-
-function getStudentEnrollmentCount(event) {
-  return (event.participants || []).reduce(
-    (total, participant) => total + (participant.students?.length || 0),
-    0
-  );
 }

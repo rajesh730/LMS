@@ -135,7 +135,7 @@ export default function StudentNoticeBoard() {
                 <div className="flex flex-wrap gap-2">
                   <Link
                     href={notification.href}
-                    className="inline-flex items-center rounded-lg bg-[#0a2f66] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#123f7d]"
+                    className="inline-flex items-center rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-500"
                   >
                     {notification.noticeType === "EVENT"
                       ? "Open Event"

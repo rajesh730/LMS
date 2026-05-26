@@ -10,6 +10,7 @@ import {
   syncApprovedRequestsToRoundOne,
 } from "@/lib/competitionFlow";
 import { recordLifecycleAudit } from "@/lib/lifecycle";
+import { publishEventRealtimeUpdate } from "@/lib/eventRealtime";
 
 function canManageEventApprovals(session, event) {
   if (!session?.user || !event) return false;
@@ -101,6 +102,12 @@ export async function PUT(req, { params }) {
           rejectionReason: rejectionReason || "Admin rejection",
         }
       );
+
+      publishEventRealtimeUpdate("participation-updated", {
+        event,
+        eventId,
+        schoolId,
+      });
 
       return NextResponse.json({ message: "School removed from event" });
     }
@@ -351,6 +358,11 @@ export async function PUT(req, { params }) {
         studentIds: removedStudentIds,
       });
     }
+
+    publishEventRealtimeUpdate("participation-updated", {
+      event,
+      eventId,
+    });
 
     return NextResponse.json(
       {

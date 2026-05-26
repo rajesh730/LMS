@@ -52,6 +52,9 @@ export default function SchoolNoticeBoard() {
   const platformNotices = notifications.filter(
     (notification) => notification.noticeType === "GENERAL"
   );
+  const magazineNotices = notifications.filter(
+    (notification) => notification.noticeType === "MAGAZINE"
+  );
   const eventNotices = notifications.filter(
     (notification) => notification.noticeType === "EVENT"
   );
@@ -62,7 +65,7 @@ export default function SchoolNoticeBoard() {
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h2 className="flex items-center gap-3 text-2xl font-bold text-[#17120a]">
-              <FaBell className="text-[#0a2f66]" />
+              <FaBell className="text-red-600" />
               Received Notices
             </h2>
             <p className="mt-2 text-sm text-[#344f77]">
@@ -81,7 +84,7 @@ export default function SchoolNoticeBoard() {
             <button
               type="button"
               onClick={() => void loadNotifications()}
-              className="inline-flex items-center gap-2 rounded-lg bg-[#0a2f66] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#123f7d]"
+              className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-500"
             >
               <FaSyncAlt />
               Refresh
@@ -89,6 +92,67 @@ export default function SchoolNoticeBoard() {
           </div>
         </div>
       </div>
+
+      <section className="rounded-2xl border border-[#d7cdbb] bg-white p-6 shadow-[0_10px_28px_rgba(10,47,102,0.05)]">
+        <h3 className="text-xl font-semibold text-[#17120a]">
+          Magazine Notices ({magazineNotices.length})
+        </h3>
+        <p className="mt-1 text-sm text-[#344f77]">
+          Student magazine submissions and resubmissions that need school attention.
+        </p>
+
+        {loading ? (
+          <LoadingState
+            title="Loading magazine notices"
+            message="Preparing magazine submission updates."
+            className="mt-4"
+          />
+        ) : magazineNotices.length === 0 ? (
+          <EmptyState
+            icon={FaBell}
+            title="No magazine notices yet"
+            description="Student writing submissions and resubmissions will appear here."
+          />
+        ) : (
+          <div className="mt-4 space-y-4">
+            {magazineNotices.map((notification) => (
+              <article
+                key={`${notification.noticeType}-${notification.id}`}
+                className="rounded-xl border border-[#d7cdbb] bg-white p-4 transition hover:border-red-200 hover:bg-red-50/40"
+              >
+                <Link href={notification.href} className="block">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <NotificationTypeBadge
+                      noticeType={notification.noticeType}
+                    />
+                  </div>
+                  <p className="mt-3 text-lg font-semibold text-[#17120a]">
+                    {notification.title}
+                  </p>
+                  <p className="mt-2 whitespace-pre-wrap text-sm text-[#27344a]">
+                    {notification.message}
+                  </p>
+                  <NotificationMeta
+                    className="mt-3"
+                    date={formatDate(notification.publishedAt)}
+                  />
+                  {!notification.isRead && (
+                    <div className="mt-3">
+                      <NotificationNewBadge isRead={notification.isRead} />
+                    </div>
+                  )}
+                </Link>
+                <div className="mt-4">
+                  <NotificationReadToggleButton
+                    notification={notification}
+                    onToggle={(item) => void toggleNotificationReadState(item)}
+                  />
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
 
       <section className="rounded-2xl border border-[#d7cdbb] bg-white p-6 shadow-[0_10px_28px_rgba(10,47,102,0.05)]">
         <h3 className="text-xl font-semibold text-[#17120a]">
@@ -174,7 +238,7 @@ export default function SchoolNoticeBoard() {
             {eventNotices.map((notification) => (
               <article
                 key={`${notification.noticeType}-${notification.id}`}
-                className="rounded-xl border border-[#d7cdbb] bg-white p-4 transition hover:border-[#bfd7f7] hover:bg-[#f8fbff]"
+                className="rounded-xl border border-[#d7cdbb] bg-white p-4 transition hover:border-red-200 hover:bg-red-50/40"
               >
                 <Link href={notification.href} className="block">
                   <div className="flex flex-wrap items-center gap-2">

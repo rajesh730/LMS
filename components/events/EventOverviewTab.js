@@ -17,15 +17,15 @@ import {
 
 function MetricCard({ icon: Icon, label, value, detail }) {
   return (
-    <div className="rounded-xl border border-[#d6e6fb] bg-white p-4 shadow-sm">
-      <div className="mb-3 flex items-center gap-2 text-[#5f84b7]">
-        <Icon />
-        <span className="text-xs font-semibold uppercase tracking-wide">
+    <div className="rounded-lg border border-[#d7cdbb] bg-white p-4 shadow-sm">
+      <div className="mb-3 flex items-center gap-2 text-[#52657d]">
+        <Icon className="text-red-600" />
+        <span className="text-xs font-semibold uppercase tracking-normal">
           {label}
         </span>
       </div>
-      <div className="text-2xl font-bold text-[#0a2f66]">{value}</div>
-      {detail && <p className="mt-1 text-sm text-[#5f84b7]">{detail}</p>}
+      <div className="text-2xl font-bold text-[#17120a]">{value}</div>
+      {detail && <p className="mt-1 text-sm text-[#52657d]">{detail}</p>}
     </div>
   );
 }
@@ -88,16 +88,16 @@ export default function EventOverviewTab({
 
   return (
     <div className="space-y-6">
-      <div className={`rounded-2xl border p-5 ${getStageClasses(stage.tone)}`}>
+      <div className={`rounded-lg border p-5 ${getStageClasses(stage.tone)}`}>
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
-            <p className="text-xs font-bold uppercase tracking-wide">
+            <p className="text-xs font-bold uppercase tracking-normal">
               Current Stage
             </p>
             <h2 className="mt-1 text-2xl font-bold">{stage.label}</h2>
             <p className="mt-2 text-sm opacity-90">{stage.nextAction}</p>
           </div>
-        <div className="rounded-xl border border-current/20 bg-white/20 px-4 py-3 text-sm">
+        <div className="rounded-lg border border-current/20 bg-white/70 px-4 py-3 text-sm">
             Deadline: {formatShortDate(event.registrationDeadline)}
           </div>
         </div>
@@ -135,8 +135,8 @@ export default function EventOverviewTab({
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
-        <div className="rounded-2xl border border-[#d6e6fb] bg-white p-5 lg:col-span-2 shadow-sm">
-          <h3 className="mb-4 text-lg font-bold text-[#0a2f66]">
+        <div className="rounded-lg border border-[#d7cdbb] bg-white p-5 lg:col-span-2 shadow-sm">
+          <h3 className="mb-4 text-lg font-bold text-[#17120a]">
             Event Timeline
           </h3>
           <div className="grid gap-3 md:grid-cols-3">
@@ -164,16 +164,16 @@ export default function EventOverviewTab({
               return (
                 <div
                   key={item.label}
-                  className="rounded-xl border border-[#d6e6fb] bg-[#f7fbff] p-4"
+                  className="rounded-lg border border-[#d7cdbb] bg-[#f8fbff] p-4"
                 >
-                  <div className="mb-3 flex items-center gap-2 text-[#5f84b7]">
-                    <Icon />
+                  <div className="mb-3 flex items-center gap-2 text-[#52657d]">
+                    <Icon className="text-red-600" />
                     <span className="font-semibold">{item.label}</span>
                   </div>
-                  <p className="text-lg font-bold text-[#0a2f66]">
+                  <p className="text-lg font-bold text-[#17120a]">
                     {item.state}
                   </p>
-                  <p className="text-sm text-[#5f84b7]">
+                  <p className="text-sm text-[#52657d]">
                     {item.date ? formatShortDate(item.date) : "After final round"}
                   </p>
                 </div>
@@ -182,46 +182,46 @@ export default function EventOverviewTab({
           </div>
 
           {(capacityInfo.total || event.maxParticipantsPerSchool) && (
-            <div className="mt-8 rounded-xl border border-[#d6e6fb] bg-[#f7fbff] p-5">
-              <h4 className="mb-3 font-bold text-[#0a2f66]">Limits & Capacity</h4>
+            <div className="mt-8 rounded-lg border border-[#d7cdbb] bg-[#f8fbff] p-5">
+              <h4 className="mb-3 font-bold text-[#17120a]">Limits & Capacity</h4>
               {capacityInfo.total && (
                 <div className="mb-4">
                   <div className="mb-1 flex justify-between text-sm">
-                    <span className="font-semibold text-[#5f84b7]">
+                    <span className="font-semibold text-[#52657d]">
                       Total {isTeamEvent ? "Team" : "Student"} Capacity
                     </span>
-                    <span className="font-bold text-[#0a2f66]">{capacityInfo.filled} / {capacityInfo.total}</span>
+                    <span className="font-bold text-[#17120a]">{capacityInfo.filled} / {capacityInfo.total}</span>
                   </div>
-                  <div className="h-2 w-full overflow-hidden rounded-full bg-[#dce9ff]">
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-red-100">
                     <div
                       className={`h-full transition-all duration-300 ${
                         capacityInfo.percentage >= 100
-                          ? "bg-[#ffb21c]"
+                          ? "bg-red-600"
                           : capacityInfo.percentage >= 80
-                          ? "bg-[#ffd56f]"
-                          : "bg-[#2f7fdb]"
+                          ? "bg-red-500"
+                          : "bg-red-400"
                       }`}
                       style={{ width: `${Math.min(capacityInfo.percentage, 100)}%` }}
                     />
                   </div>
-                  <p className="mt-1 text-xs text-[#5f84b7]">{capacityInfo.percentage}% filled</p>
+                  <p className="mt-1 text-xs text-[#52657d]">{capacityInfo.percentage}% filled</p>
                 </div>
               )}
               {event.maxParticipantsPerSchool && (
                 <div>
                   <div className="mb-1 flex justify-between text-sm">
-                    <span className="font-semibold text-[#5f84b7]">
+                    <span className="font-semibold text-[#52657d]">
                       Max {isTeamEvent ? "Teams" : "Students"} Per School
                     </span>
-                    <span className="font-bold text-[#0a2f66]">{event.maxParticipantsPerSchool}</span>
+                    <span className="font-bold text-[#17120a]">{event.maxParticipantsPerSchool}</span>
                   </div>
                 </div>
               )}
               {isTeamEvent && event.maxTeamSize && (
-                <div className="mt-4 border-t border-[#d6e6fb] pt-4">
+                <div className="mt-4 border-t border-[#d7cdbb] pt-4">
                   <div className="mb-1 flex justify-between text-sm">
-                    <span className="font-semibold text-[#5f84b7]">Members Per Team</span>
-                    <span className="font-bold text-[#0a2f66]">
+                    <span className="font-semibold text-[#52657d]">Members Per Team</span>
+                    <span className="font-bold text-[#17120a]">
                       {event.minTeamSize || 1} - {event.maxTeamSize}
                     </span>
                   </div>
@@ -231,8 +231,8 @@ export default function EventOverviewTab({
           )}
         </div>
 
-        <div className="rounded-2xl border border-[#d6e6fb] bg-white p-5 shadow-sm">
-          <h3 className="mb-4 text-lg font-bold text-[#0a2f66]">
+        <div className="rounded-lg border border-[#d7cdbb] bg-white p-5 shadow-sm">
+          <h3 className="mb-4 text-lg font-bold text-[#17120a]">
             Next Actions
           </h3>
           <div className="space-y-3">
@@ -241,10 +241,10 @@ export default function EventOverviewTab({
                 key={action.target}
                 type="button"
                 onClick={() => setActiveTab(action.target)}
-                className="w-full rounded-xl border border-[#d6e6fb] bg-[#f7fbff] p-4 text-left transition hover:border-[#2f7fdb]/40 hover:bg-[#eef5ff]"
+                className="w-full rounded-lg border border-[#d7cdbb] bg-[#f8fbff] p-4 text-left transition hover:border-red-200 hover:bg-red-50/40"
               >
-                <p className="font-semibold text-[#0a2f66]">{action.label}</p>
-                <p className="mt-1 text-sm text-[#5f84b7]">{action.detail}</p>
+                <p className="font-semibold text-[#17120a]">{action.label}</p>
+                <p className="mt-1 text-sm text-[#52657d]">{action.detail}</p>
               </button>
             ))}
           </div>

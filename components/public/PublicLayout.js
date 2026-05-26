@@ -69,7 +69,7 @@ export function PublicSectionHeader({ eyebrow, title, description, action }) {
     <div className="mb-4 flex flex-col gap-3 px-1 md:flex-row md:items-end md:justify-between md:px-0">
       <div className="min-w-0">
         {eyebrow && (
-          <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[#0a2f66]">
+          <p className="text-[11px] font-black uppercase tracking-normal text-[#0a2f66]">
             {eyebrow}
           </p>
         )}

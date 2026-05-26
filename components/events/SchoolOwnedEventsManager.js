@@ -21,6 +21,7 @@ import EmptyState from "@/components/EmptyState";
 import LoadingState from "@/components/ui/LoadingState";
 import AlertBanner from "@/components/ui/AlertBanner";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import useRealtimeChannel from "@/lib/useRealtimeChannel";
 import { getEventStage, getStageClasses, isDatePast } from "@/lib/eventUiStatus";
 import { isTeamEventLike } from "@/lib/eventParticipationFormat";
 
@@ -43,9 +44,11 @@ export default function SchoolOwnedEventsManager({
   const [feedback, setFeedback] = useState(null);
   const [archiveTarget, setArchiveTarget] = useState(null);
 
-  const loadEvents = useCallback(async () => {
+  const loadEvents = useCallback(async ({ silent = false } = {}) => {
     try {
-      setLoading(true);
+      if (!silent) {
+        setLoading(true);
+      }
       const res = await fetch("/api/events", { cache: "no-store" });
       if (!res.ok) {
         setEvents([]);
@@ -73,13 +76,27 @@ export default function SchoolOwnedEventsManager({
       });
       setEvents([]);
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
   }, [session?.user?.id, session?.user?.schoolId]);
 
   useEffect(() => {
     loadEvents();
   }, [loadEvents, refreshKey]);
+
+  useRealtimeChannel(
+    "events",
+    useCallback(
+      (message) => {
+        const payload = message?.payload || {};
+        if (payload.eventScope && payload.eventScope !== "SCHOOL") return;
+        void loadEvents({ silent: true });
+      },
+      [loadEvents]
+    )
+  );
 
   const filteredEvents = useMemo(() => {
     return events.filter(

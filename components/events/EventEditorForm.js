@@ -402,14 +402,14 @@ export default function EventEditorForm({
   const selectedGradesLabel =
     formData.eligibleGrades.length > 0
       ? formData.eligibleGrades.join(", ")
-      : "All eligible grades";
+      : "All grades can be registered";
   const stepGuidance = {
     basic: isSchoolOwnedFlow
       ? "Keep this simple: title, date, description, and whether students join individually or in groups."
       : "Set the public-facing basics for the platform event before deciding audience and limits.",
     audience: isSchoolOwnedFlow
-      ? "Choose the grades that should see this school event in their student dashboard."
-      : "Choose the grades/schools that can participate in this platform event.",
+      ? "Choose which grades can be registered. Every student in the school can still see the event."
+      : "Choose which grades can be registered for this platform event. Visibility stays available after school approval.",
     registration: isSchoolOwnedFlow
       ? "Teachers register students. Set only the deadline, total capacity, and team size if needed."
       : "Schools register on behalf of students. Set total capacity and optional per-school limits.",
@@ -432,7 +432,7 @@ export default function EventEditorForm({
           {!initialData && (
             <p className="text-sm text-slate-400 mt-1">
               {resolvedOwnerMode === "school"
-                ? "Create internal events for your students. School registration and student visibility are handled automatically."
+                ? "Create internal events for your students. All school students can see them; registration rules control who can join."
                 : "Create flagship platform events for the wider network."}
             </p>
           )}
@@ -643,15 +643,15 @@ export default function EventEditorForm({
         {activeStep === "audience" && (
           <section className="space-y-4 rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
             <div>
-              <h3 className="text-lg font-semibold text-white">Student Audience</h3>
+              <h3 className="text-lg font-semibold text-white">Registration Eligibility</h3>
               <p className="mt-1 text-sm text-slate-400">
-                Choose which students should see this event and be eligible for registration.
+                Choose who can be registered for this event. This does not limit who can see the event or receive event updates.
               </p>
             </div>
 
             <div>
               <label className="block text-slate-300 mb-2 text-sm">
-                Eligible Grades
+                Registration Grades
               </label>
               <div className="mb-3">
                 <div className="flex items-center justify-between mb-2">
@@ -1036,7 +1036,7 @@ export default function EventEditorForm({
                 ...(!isSchoolOwnedFlow ? [["Visibility", formData.visibility]] : []),
                 ["Registration Method", "School registers students"],
                 ["Deadline", formData.registrationDeadline || "No deadline"],
-                ["Eligible Grades", selectedGradesLabel],
+                ["Registration Grades", selectedGradesLabel],
                 [
                   "Capacity",
                   formData.maxParticipants

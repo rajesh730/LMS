@@ -5,6 +5,7 @@ import dbConnect from "@/lib/db";
 import EventNotice from "@/models/EventNotice";
 import { getManageableEventOrResponse } from "@/lib/eventRoundAccess";
 import { publishRealtimeEvent } from "@/lib/realtimeBus";
+import { publishEventRealtimeUpdate } from "@/lib/eventRealtime";
 
 const NOTICE_TYPES = [
   "GENERAL",
@@ -114,6 +115,10 @@ export async function POST(req, props) {
       });
       publishRealtimeEvent(`event-${params.id}-notices`, {
         kind: "event-notice-updated",
+        eventId: params.id,
+      });
+      publishEventRealtimeUpdate("event-notice-updated", {
+        event: access.event,
         eventId: params.id,
       });
     }

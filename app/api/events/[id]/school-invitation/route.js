@@ -9,6 +9,8 @@ import { ensureSchoolInvitationForEvent } from "@/lib/eventInvitations";
 import { isAfterEndOfDay, isBeforeToday } from "@/lib/eventDates";
 import { buildInvitationLifecycle, recordLifecycleAudit } from "@/lib/lifecycle";
 import { publishWorkIndicatorsUpdate } from "@/lib/workIndicatorRealtime";
+import { publishEventRealtimeUpdate } from "@/lib/eventRealtime";
+import { ensureStudentEventNotification } from "@/lib/studentEventNotifications";
 import "@/models/ExternalOrganizer";
 
 export const dynamic = "force-dynamic";
@@ -91,7 +93,7 @@ export async function PUT(req, props) {
     }
 
     const event = await Event.findById(params.id).select(
-      "date registrationDeadline"
+      "title date registrationDeadline eligibleGrades eventScope lifecycleStatus status"
     );
     if (!event) {
       return NextResponse.json({ message: "Event not found" }, { status: 404 });
@@ -175,6 +177,29 @@ export async function PUT(req, props) {
     publishWorkIndicatorsUpdate("school-event-invitation-updated", {
       schoolId: String(session.user.id),
       eventId: String(params.id),
+      status: invitation.status,
+    });
+
+    if (invitation.status === "APPROVED") {
+      try {
+        await ensureStudentEventNotification({
+          event,
+          schoolId: session.user.id,
+          authorId: session.user.id,
+          title: `New platform competition: ${event.title}`,
+          content:
+            "Your school has approved a platform competition. Open Student Events to view the details and follow updates.",
+        });
+      } catch (noticeError) {
+        console.error("Create Platform Event Student Notice Error:", noticeError);
+      }
+    }
+
+    publishEventRealtimeUpdate("school-event-invitation-updated", {
+      event,
+      eventId: params.id,
+      schoolId: session.user.id,
+      eventScope: event.eventScope,
       status: invitation.status,
     });
 

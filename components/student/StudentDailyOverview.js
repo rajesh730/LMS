@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   FaBell,
   FaBookOpen,
@@ -10,9 +10,10 @@ import {
   FaLightbulb,
   FaPenNib,
 } from "react-icons/fa";
+import DashboardFocusCard from "@/components/dashboard/DashboardFocusCard";
 import AlertBanner from "@/components/ui/AlertBanner";
-import WorkIndicatorBadge from "@/components/work-indicators/WorkIndicatorBadge";
 import useWorkIndicators from "@/lib/useWorkIndicators";
+import useRealtimeChannel from "@/lib/useRealtimeChannel";
 
 function formatDate(value) {
   if (!value) return "No date set";
@@ -21,55 +22,6 @@ function formatDate(value) {
     day: "numeric",
     year: "numeric",
   });
-}
-
-function DailyActionCard({
-  href,
-  icon: Icon,
-  label,
-  title,
-  description,
-  meta,
-  indicator,
-  tone = "blue",
-}) {
-  const tones = {
-    blue: "border-blue-500/20 bg-blue-500/10 text-blue-200",
-    amber: "border-amber-500/20 bg-amber-500/10 text-amber-200",
-    emerald: "border-emerald-500/20 bg-emerald-500/10 text-emerald-200",
-    violet: "border-violet-500/20 bg-violet-500/10 text-violet-200",
-  };
-
-  return (
-    <Link
-      href={href}
-      className={`group rounded-2xl border p-5 transition hover:-translate-y-0.5 hover:bg-slate-900/80 ${
-        tones[tone] || tones.blue
-      }`}
-    >
-      <div className="flex items-start justify-between gap-4">
-        <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-current/10">
-          <Icon className="text-xl" />
-        </span>
-        <span className="flex flex-col items-end gap-2">
-          <WorkIndicatorBadge
-            count={indicator?.count}
-            tone={indicator?.tone}
-          />
-          <span className="rounded-full border border-current/20 px-3 py-1 text-xs font-bold uppercase tracking-wide">
-            {label}
-          </span>
-        </span>
-      </div>
-      <h3 className="mt-5 line-clamp-2 text-lg font-bold text-white">
-        {title}
-      </h3>
-      <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-300">
-        {description}
-      </p>
-      {meta && <p className="mt-4 text-xs font-semibold text-slate-400">{meta}</p>}
-    </Link>
-  );
 }
 
 export default function StudentDailyOverview() {
@@ -81,12 +33,12 @@ export default function StudentDailyOverview() {
   const [articles, setArticles] = useState([]);
   const { getIndicator } = useWorkIndicators();
 
-  useEffect(() => {
-    let active = true;
-
-    const load = async () => {
+  const load = useCallback(
+    async ({ silent = false } = {}) => {
       try {
-        setLoading(true);
+        if (!silent) {
+          setLoading(true);
+        }
         setError("");
 
         const [noticeRes, eventRes, challengeRes, magazineRes] =
@@ -104,8 +56,6 @@ export default function StudentDailyOverview() {
             challengeRes.json().catch(() => ({})),
             magazineRes.json().catch(() => ({})),
           ]);
-
-        if (!active) return;
 
         setNotices(
           noticeRes.ok && Array.isArray(noticePayload.notifications)
@@ -139,22 +89,34 @@ export default function StudentDailyOverview() {
           setError(`Some updates could not load: ${failedSources.join(", ")}.`);
         }
       } catch (loadError) {
-        if (active) {
-          setError(loadError.message || "Failed to load dashboard updates");
-        }
+        setError(loadError.message || "Failed to load dashboard updates");
       } finally {
-        if (active) {
+        if (!silent) {
           setLoading(false);
         }
       }
-    };
+    },
+    []
+  );
 
-    load();
+  useEffect(() => {
+    let active = true;
+
+    void load().finally(() => {
+      if (!active) return;
+    });
 
     return () => {
       active = false;
     };
-  }, []);
+  }, [load]);
+
+  useRealtimeChannel(
+    ["student-notifications", "events", "work-indicators"],
+    useCallback(() => {
+      void load({ silent: true });
+    }, [load])
+  );
 
   const nextEvent = useMemo(
     () =>
@@ -176,7 +138,7 @@ export default function StudentDailyOverview() {
         {[0, 1, 2, 3].map((item) => (
           <div
             key={item}
-            className="h-48 animate-pulse rounded-2xl border border-slate-800 bg-slate-900/70"
+            className="h-44 animate-pulse rounded-lg border border-[#d7cdbb] bg-white"
           />
         ))}
       </section>
@@ -193,27 +155,27 @@ export default function StudentDailyOverview() {
         />
       )}
 
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6">
-        <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+      <div className="rounded-xl border border-[#d7cdbb] bg-[#f8fbff]/90 p-5 shadow-sm sm:p-6">
+        <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
+            <p className="text-[11px] font-bold uppercase tracking-normal text-[#52657d]">
               Today&apos;s focus
             </p>
-            <h2 className="mt-2 text-2xl font-bold text-white">
+            <h2 className="mt-1 text-xl font-bold text-[#17120a] sm:text-2xl">
               What should you check next?
             </h2>
           </div>
-          <p className="max-w-xl text-sm leading-6 text-slate-400">
+          <p className="max-w-xl text-sm leading-6 text-[#52657d]">
             Notices, events, writing tasks, and magazine updates are gathered
-            here so the student dashboard feels like a real starting point.
+            here so the student dashboard stays current.
           </p>
         </div>
 
-        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-          <DailyActionCard
+        <div className="mt-5 grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
+          <DashboardFocusCard
             href="/student/notices"
             icon={FaBell}
-            label={`${notices.length} updates`}
+            badge={`${notices.length} updates`}
             title={latestNotice?.title || "No new notices yet"}
             description={
               latestNotice?.message ||
@@ -225,27 +187,27 @@ export default function StudentDailyOverview() {
                 : "All clear"
             }
             indicator={getIndicator("student.notices")}
-            tone="amber"
+            tone="rose"
           />
 
-          <DailyActionCard
+          <DashboardFocusCard
             href="/student/events"
             icon={FaCalendarAlt}
-            label={`${events.length} events`}
-            title={nextEvent?.title || "No eligible events yet"}
+            badge={`${events.length} events`}
+            title={nextEvent?.title || "No events yet"}
             description={
               nextEvent?.description ||
-              "Events for your grade will appear here after your school opens them."
+              "Events from your school will appear here as soon as they are published."
             }
             meta={nextEvent ? `Event date: ${formatDate(nextEvent.date)}` : "Check later"}
             indicator={getIndicator("student.events")}
             tone="emerald"
           />
 
-          <DailyActionCard
+          <DashboardFocusCard
             href="/student/writing"
             icon={FaPenNib}
-            label={`${challenges.length} tasks`}
+            badge={`${challenges.length} tasks`}
             title={openChallenge?.title || "No pending writing task"}
             description={
               openChallenge?.prompt ||
@@ -260,10 +222,10 @@ export default function StudentDailyOverview() {
             tone="blue"
           />
 
-          <DailyActionCard
+          <DashboardFocusCard
             href="/student/magazine"
             icon={FaBookOpen}
-            label={`${articles.length} articles`}
+            badge={`${articles.length} articles`}
             title={latestArticle?.title || "No magazine articles yet"}
             description={
               latestArticle?.content ||
@@ -278,10 +240,10 @@ export default function StudentDailyOverview() {
             tone="violet"
           />
 
-          <DailyActionCard
+          <DashboardFocusCard
             href="/student/challenges"
             icon={FaLightbulb}
-            label={`${challenges.length} pulses`}
+            badge={`${challenges.length} pulses`}
             title="Pratyo Pulse"
             description="See platform-selected student challenge responses and new public showcase updates."
             meta="Public showcase"
@@ -293,14 +255,14 @@ export default function StudentDailyOverview() {
         <div className="mt-5 flex flex-wrap gap-3 text-sm">
           <Link
             href="/student/challenges"
-            className="inline-flex items-center gap-2 rounded-lg border border-slate-700 px-3 py-2 font-semibold text-slate-200 transition hover:bg-slate-800"
+            className="inline-flex items-center gap-2 rounded-lg border border-[#d7cdbb] bg-white px-3 py-2 font-semibold text-[#0a2f66] transition hover:bg-[#eaf2ff]"
           >
             <FaFeatherAlt />
             View public challenge showcase
           </Link>
           <Link
             href="/student/writing"
-            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 font-semibold text-white transition hover:bg-blue-500"
+            className="inline-flex items-center gap-2 rounded-lg bg-[#0a2f66] px-3 py-2 font-semibold text-white transition hover:bg-[#123f82]"
           >
             Start writing
           </Link>

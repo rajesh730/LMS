@@ -259,7 +259,7 @@ export default function AdminDiagnosticsPanel() {
       <div className="rounded-2xl border border-[#d7cdbb] bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#52657d]">
+            <p className="text-xs font-bold uppercase tracking-normal text-[#52657d]">
               Internal QA
             </p>
             <h1 className="mt-2 text-3xl font-black text-[#17120a]">

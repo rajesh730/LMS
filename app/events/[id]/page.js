@@ -94,6 +94,7 @@ export default async function PublicEventPage({ params }) {
   }
 
   const { event, participatingSchools, achievements, eventNotices } = data;
+  const isInternalEvent = event.eventScope === "SCHOOL";
   const visiblePartners = event.partnerBrandingEnabled
     ? (event.partners || []).filter(
         (partner) =>
@@ -121,7 +122,7 @@ export default async function PublicEventPage({ params }) {
         <div className="mb-8">
           <div className="flex items-center gap-3 flex-wrap mb-4">
             <span className="px-3 py-1 rounded-full text-xs bg-blue-500/15 text-blue-300 border border-blue-500/30">
-              {event.eventScope === "PLATFORM" ? "Platform Event" : "School Event"}
+              {event.eventScope === "PLATFORM" ? "Platform Event" : "Internal Event"}
             </span>
             <span className="px-3 py-1 rounded-full text-xs bg-slate-800 text-slate-300 border border-slate-700">
               {event.eventType}
@@ -319,7 +320,7 @@ export default async function PublicEventPage({ params }) {
                     : "student"} capacity: {event.maxParticipants}
                 </div>
               )}
-              {event.maxParticipantsPerSchool && (
+              {!isInternalEvent && event.maxParticipantsPerSchool && (
                 <div>
                   Max {String(event.participationFormat || "INDIVIDUAL").toUpperCase() === "TEAM"
                     ? "teams"
@@ -334,7 +335,7 @@ export default async function PublicEventPage({ params }) {
                   </div>
                 )}
               {event.eligibleGrades?.length > 0 && (
-                <div>Eligible grades: {event.eligibleGrades.join(", ")}</div>
+                <div>Registration grades: {event.eligibleGrades.join(", ")}</div>
               )}
             </div>
           </section>
@@ -355,24 +356,30 @@ export default async function PublicEventPage({ params }) {
           </section>
 
           <section className="rounded-3xl border border-slate-800 bg-slate-900/60 p-6">
-            <h2 className="text-xl font-bold mb-4">How registration works</h2>
+            <h2 className="text-xl font-bold mb-4">
+              {isInternalEvent ? "How participation works" : "How registration works"}
+            </h2>
             <p className="text-sm text-slate-400 leading-7">
-              Registration is managed by the school in phase 1. Teachers or school admins collect student names and submit eligible participants through the school dashboard.
+              {isInternalEvent
+                ? "This internal event is managed by your school. Teachers or school admins add eligible students and publish updates through the school dashboard."
+                : "Registration is managed by the school in phase 1. Teachers or school admins collect student names and submit eligible participants through the school dashboard."}
             </p>
-            <div className="mt-5 flex flex-col gap-3">
-              <Link
-                href="/login"
-                className="rounded-xl bg-blue-600 hover:bg-blue-500 px-4 py-3 text-center font-medium"
-              >
-                Login as a school
-              </Link>
-              <Link
-                href="/register"
-                className="rounded-xl bg-slate-800 hover:bg-slate-700 px-4 py-3 text-center font-medium text-slate-200"
-              >
-                Register a school
-              </Link>
-            </div>
+            {!isInternalEvent && (
+              <div className="mt-5 flex flex-col gap-3">
+                <Link
+                  href="/login"
+                  className="rounded-xl bg-blue-600 hover:bg-blue-500 px-4 py-3 text-center font-medium"
+                >
+                  Login as a school
+                </Link>
+                <Link
+                  href="/register"
+                  className="rounded-xl bg-slate-800 hover:bg-slate-700 px-4 py-3 text-center font-medium text-slate-200"
+                >
+                  Register a school
+                </Link>
+              </div>
+            )}
           </section>
         </div>
       </section>

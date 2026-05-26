@@ -12,8 +12,8 @@ import {
   FaHandshake,
   FaSchool,
 } from "react-icons/fa";
+import DashboardFocusCard from "@/components/dashboard/DashboardFocusCard";
 import AlertBanner from "@/components/ui/AlertBanner";
-import WorkIndicatorBadge from "@/components/work-indicators/WorkIndicatorBadge";
 import useWorkIndicators from "@/lib/useWorkIndicators";
 
 function formatDate(value) {
@@ -23,83 +23,6 @@ function formatDate(value) {
     day: "numeric",
     year: "numeric",
   });
-}
-
-function CommandCard({
-  href,
-  icon: Icon,
-  count,
-  label,
-  title,
-  description,
-  actionLabel,
-  indicator,
-  tone = "blue",
-}) {
-  const tones = {
-    blue: {
-      card: "border-[#bfd7f7] bg-[#eaf2ff]",
-      icon: "bg-white text-[#0a2f66] ring-[#bfd7f7]",
-      pill: "border-[#bfd7f7] bg-white text-[#0a2f66]",
-    },
-    emerald: {
-      card: "border-emerald-200 bg-emerald-50",
-      icon: "bg-white text-emerald-800 ring-emerald-200",
-      pill: "border-emerald-200 bg-white text-emerald-800",
-    },
-    amber: {
-      card: "border-[#bfd7f7] bg-[#eaf2ff]",
-      icon: "bg-white text-[#0a2f66] ring-[#bfd7f7]",
-      pill: "border-[#bfd7f7] bg-white text-[#0a2f66]",
-    },
-    violet: {
-      card: "border-indigo-200 bg-indigo-50",
-      icon: "bg-white text-indigo-800 ring-indigo-200",
-      pill: "border-indigo-200 bg-white text-indigo-800",
-    },
-    cyan: {
-      card: "border-cyan-200 bg-cyan-50",
-      icon: "bg-white text-cyan-800 ring-cyan-200",
-      pill: "border-cyan-200 bg-white text-cyan-800",
-    },
-    rose: {
-      card: "border-rose-200 bg-rose-50",
-      icon: "bg-white text-rose-800 ring-rose-200",
-      pill: "border-rose-200 bg-white text-rose-800",
-    },
-  };
-  const toneClasses = tones[tone] || tones.blue;
-
-  return (
-    <Link
-      href={href}
-      className={`group rounded-2xl border p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-[#2f7fdb]/45 ${toneClasses.card}`}
-    >
-      <div className="flex items-start justify-between gap-4">
-        <span className={`flex h-11 w-11 items-center justify-center rounded-xl ring-1 ${toneClasses.icon}`}>
-          <Icon className="text-xl" />
-        </span>
-        <span className="flex flex-col items-end gap-2">
-          <WorkIndicatorBadge
-            count={indicator?.count}
-            tone={indicator?.tone}
-          />
-          <span className={`rounded-full border px-3 py-1 text-xs font-black uppercase tracking-wide ${toneClasses.pill}`}>
-            {count} {label}
-          </span>
-        </span>
-      </div>
-      <h3 className="mt-5 line-clamp-2 text-lg font-black text-slate-950">
-        {title}
-      </h3>
-      <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-600">
-        {description}
-      </p>
-      <p className="mt-4 text-xs font-black uppercase tracking-wide text-[#0a2f66] transition group-hover:text-[#123f82]">
-        {actionLabel}
-      </p>
-    </Link>
-  );
 }
 
 export default function AdminDailyOverview({
@@ -216,7 +139,7 @@ export default function AdminDailyOverview({
     return (
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
         {[0, 1, 2, 3, 4, 5].map((item) => (
-          <div key={item} className="h-48 animate-pulse rounded-2xl border border-[#d7cdbb] bg-white" />
+          <div key={item} className="h-44 animate-pulse rounded-lg border border-[#d7cdbb] bg-white" />
         ))}
       </section>
     );
@@ -232,28 +155,27 @@ export default function AdminDailyOverview({
         />
       )}
 
-      <div className="rounded-[26px] border border-[#d7cdbb] bg-white p-6 shadow-sm">
-        <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+      <div className="rounded-xl border border-[#d7cdbb] bg-[#f8fbff]/90 p-5 shadow-sm sm:p-6">
+        <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#0a2f66]">
+            <p className="text-[11px] font-bold uppercase tracking-normal text-[#52657d]">
               Today&apos;s command center
             </p>
-            <h2 className="mt-2 text-2xl font-black text-slate-950">
+            <h2 className="mt-1 text-xl font-bold text-[#17120a] sm:text-2xl">
               What needs platform attention?
             </h2>
           </div>
-          <p className="max-w-xl text-sm leading-6 text-slate-600">
+          <p className="max-w-xl text-sm leading-6 text-[#52657d]">
             A quick operational view for approvals, flagship events, notices,
             partners, and student challenge publishing.
           </p>
         </div>
 
-        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <CommandCard
+        <div className="mt-5 grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+          <DashboardFocusCard
             href="/admin/dashboard?tab=approvals"
             icon={FaSchool}
-            count={pendingSchools.length}
-            label="pending"
+            badge={`${pendingSchools.length} pending`}
             title={
               pendingSchools[0]?.schoolName || "No school approvals waiting"
             }
@@ -263,11 +185,10 @@ export default function AdminDailyOverview({
             tone="amber"
           />
 
-          <CommandCard
+          <DashboardFocusCard
             href="/admin/dashboard?tab=events"
             icon={FaCalendarAlt}
-            count={activeEvents.length}
-            label="active"
+            badge={`${activeEvents.length} active`}
             title={nextEvent?.title || "No active platform events"}
             description={
               nextEvent
@@ -279,11 +200,10 @@ export default function AdminDailyOverview({
             tone="blue"
           />
 
-          <CommandCard
+          <DashboardFocusCard
             href="/admin/dashboard?tab=notices"
             icon={FaBell}
-            count={totals.notices}
-            label="notices"
+            badge={`${totals.notices} notices`}
             title={latestNotice?.title || "No platform notices yet"}
             description={
               latestNotice?.content ||
@@ -293,11 +213,10 @@ export default function AdminDailyOverview({
             tone="emerald"
           />
 
-          <CommandCard
+          <DashboardFocusCard
             href="/admin/dashboard?tab=challenges"
             icon={FaFeatherAlt}
-            count={totals.challengeSubmissions}
-            label="to review"
+            badge={`${totals.challengeSubmissions} to review`}
             title={latestSubmission?.title || "No challenge submissions waiting"}
             description={
               latestSubmission?.student?.name
@@ -309,22 +228,20 @@ export default function AdminDailyOverview({
             tone="violet"
           />
 
-          <CommandCard
+          <DashboardFocusCard
             href="/admin/dashboard?tab=challenges"
             icon={FaCheckCircle}
-            count={publishedChallenges.length}
-            label="live"
+            badge={`${publishedChallenges.length} live`}
             title="Student challenge program"
             description="Published challenges are visible to students and can produce Pratyo Pulse responses."
             actionLabel="Manage challenges"
             tone="rose"
           />
 
-          <CommandCard
+          <DashboardFocusCard
             href="/admin/support"
             icon={FaHeadset}
-            count={getIndicator("admin.support").count}
-            label="pending"
+            badge={`${getIndicator("admin.support").count} pending`}
             title="Support queue"
             description="Review school support tickets that still need platform action."
             actionLabel="Open support"
@@ -332,11 +249,10 @@ export default function AdminDailyOverview({
             tone="amber"
           />
 
-          <CommandCard
+          <DashboardFocusCard
             href="/admin/dashboard?tab=spotlight"
             icon={FaBullseye}
-            count={getIndicator("admin.spotlight").count}
-            label="pending"
+            badge={`${getIndicator("admin.spotlight").count} pending`}
             title="School spotlight"
             description="Review school spotlight requests and promotion work waiting on platform attention."
             actionLabel="Open spotlight"
@@ -344,11 +260,10 @@ export default function AdminDailyOverview({
             tone="rose"
           />
 
-          <CommandCard
+          <DashboardFocusCard
             href="/admin/dashboard?tab=partners"
             icon={FaHandshake}
-            count={partners.length}
-            label="partners"
+            badge={`${partners.length} partners`}
             title={
               proposals.length > 0
                 ? `${proposals.length} proposal links ready`

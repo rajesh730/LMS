@@ -27,51 +27,55 @@ export default function ManagementTabs({
       id: "overview",
       label: "OVERVIEW",
       count: null,
-      color: "bg-[#0a2f66]",
+      color: "bg-red-600",
     },
     {
       id: "manage",
       label: "PARTICIPANTS",
       count: allRequests.length,
-      color: "bg-[#0a2f66]",
+      color: "bg-red-600",
     },
     {
       id: "rounds",
       label: "ROUNDS",
       count: null,
-      color: "bg-[#0a2f66]",
+      color: "bg-red-600",
     },
     {
       id: "notices",
       label: "NOTICES",
       count: null,
-      color: "bg-[#0a2f66]",
+      color: "bg-red-600",
     },
     {
       id: "results",
       label: "RESULTS & CERTIFICATES",
       count: null,
-      color: "bg-[#0a2f66]",
+      color: "bg-red-600",
     },
   ];
 
   return (
-    <div className="mb-8 overflow-hidden rounded-2xl border border-[#d7cdbb] bg-white shadow-[0_14px_36px_rgba(10,47,102,0.08)]">
+    <div className="mb-8 overflow-hidden rounded-xl border border-[#d7cdbb] bg-white shadow-[0_14px_36px_rgba(10,47,102,0.08)]">
       {/* Tab Headers */}
-      <div className="flex flex-wrap gap-0 border-b border-[#d7cdbb] bg-white">
+      <div className="grid border-b border-[#d7cdbb] bg-white sm:grid-cols-2 lg:grid-cols-5">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex-1 px-4 py-4 font-semibold text-sm md:text-base transition-all border-b-2 ${
+            className={`event-manage-tab flex min-h-12 items-center justify-center gap-2 border-b border-r border-[#d7cdbb] px-3 py-3 text-sm font-bold transition-all last:border-r-0 ${
               activeTab === tab.id
-                ? `${tab.color} text-white border-b-transparent`
-                : "border-b-transparent text-[#0a2f66] hover:bg-[#eaf2ff] hover:text-[#0a2f66]"
+                ? `${tab.color} event-manage-tab-active border-red-600`
+                : "text-[#0a2f66] hover:bg-red-50 hover:text-red-700"
             }`}
           >
             {tab.label}
             {tab.count !== null && (
-              <span className="ml-2 inline-block rounded-full bg-[#dce9ff] px-2.5 py-0.5 text-xs font-bold text-[#0a2f66]">
+              <span className={`inline-flex min-w-6 items-center justify-center rounded-full px-2 py-0.5 text-xs font-bold ${
+                activeTab === tab.id
+                  ? "bg-white text-red-700"
+                  : "bg-red-100 text-red-700"
+              }`}>
                 {tab.count}
               </span>
             )}
@@ -80,7 +84,7 @@ export default function ManagementTabs({
       </div>
 
       {/* Tab Content */}
-      <div className="bg-[#f8fbff] p-6 md:p-8">
+      <div className="bg-[#f8fbff] p-4 md:p-6">
         {activeTab === "overview" && (
           <EventOverviewTab
             event={event}

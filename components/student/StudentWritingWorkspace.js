@@ -18,10 +18,10 @@ const CATEGORY_OPTIONS = [
 ];
 
 const STATUS_STYLES = {
-  DRAFT: "bg-slate-700/70 text-slate-200",
-  SUBMITTED: "bg-blue-500/15 text-blue-200",
-  APPROVED: "bg-emerald-500/15 text-emerald-200",
-  REJECTED: "bg-red-500/15 text-red-200",
+  DRAFT: "border border-[#d7cdbb] bg-white text-[#40516b]",
+  SUBMITTED: "border border-[#bfd7f7] bg-[#eaf2ff] text-[#0a2f66]",
+  APPROVED: "border border-emerald-200 bg-emerald-50 text-emerald-800",
+  REJECTED: "border border-red-200 bg-red-50 text-red-700",
 };
 
 function formatStatus(status) {
@@ -273,7 +273,7 @@ export default function StudentWritingWorkspace() {
   };
 
   return (
-    <div className="space-y-6 text-slate-200">
+    <div className="space-y-6 text-[#27344a]">
       <PageHeader
         icon={FaEdit}
         eyebrow="Student Writing"
@@ -281,7 +281,7 @@ export default function StudentWritingWorkspace() {
         description="Write freely for your school magazine or respond to active platform challenges."
         meta={
           student ? (
-            <p className="text-sm text-slate-400">
+            <p className="text-sm text-[#52657d]">
               {student.name} - {student.grade} - Roll {student.rollNumber}
             </p>
           ) : null
@@ -291,12 +291,12 @@ export default function StudentWritingWorkspace() {
       {error && <AlertBanner type="error" title="Action needed" message={error} />}
       {success && <AlertBanner type="success" message={success} />}
 
-      <section className="rounded-xl border border-slate-800 bg-slate-900/70 p-6">
+      <section className="rounded-lg border border-[#d7cdbb] bg-white p-5 shadow-sm sm:p-6">
         <div className="flex items-center gap-3">
-          <FaLightbulb className="text-blue-300" />
+          <FaLightbulb className="text-[#0a2f66]" />
           <div>
-            <h2 className="text-2xl font-bold text-white">Student Challenges</h2>
-            <p className="mt-1 text-sm text-slate-400">
+            <h2 className="text-xl font-bold text-[#17120a]">Student Challenges</h2>
+            <p className="mt-1 text-sm text-[#52657d]">
               Respond to active platform topics. Selected responses can appear
               on Pratyo Pulse with student and school recognition.
             </p>
@@ -322,33 +322,33 @@ export default function StudentWritingWorkspace() {
             {challenges.map((challenge) => (
               <article
                 key={challenge.id}
-                className="rounded-xl border border-slate-800 bg-slate-950/70 p-5"
+                className="rounded-lg border border-[#d7cdbb] bg-[#f8fbff] p-4"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <h3 className="text-lg font-bold text-white">
+                    <h3 className="text-base font-bold text-[#17120a]">
                       {challenge.title}
                     </h3>
                     {challenge.deadline && (
-                      <p className="mt-1 text-xs text-slate-500">
+                      <p className="mt-1 text-xs text-[#52657d]">
                         Deadline {formatDate(challenge.deadline)}
                       </p>
                     )}
                   </div>
                   {challenge.response && (
-                    <span className="rounded-full bg-blue-500/15 px-3 py-1 text-xs font-semibold text-blue-200">
+                    <span className="rounded-full border border-[#bfd7f7] bg-[#eaf2ff] px-3 py-1 text-xs font-semibold text-[#0a2f66]">
                       {formatStatus(challenge.response.status)}
                     </span>
                   )}
                 </div>
-                <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-300">
+                <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-[#52657d]">
                   {challenge.prompt}
                 </p>
                 <button
                   type="button"
                   disabled={Boolean(challenge.response)}
                   onClick={() => startChallengeResponse(challenge)}
-                  className="mt-4 inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-500 disabled:bg-slate-800 disabled:text-slate-400"
+                  className="mt-4 inline-flex items-center gap-2 rounded-lg bg-[#0a2f66] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#123f82] disabled:bg-[#eaf2ff] disabled:text-[#52657d]"
                 >
                   <FaEdit />
                   {challenge.response ? "Submitted" : "Respond now"}
@@ -360,13 +360,13 @@ export default function StudentWritingWorkspace() {
       </section>
 
       <div className="grid gap-6 xl:grid-cols-[1.1fr_.9fr]">
-        <section className="rounded-xl border border-slate-800 bg-slate-900/70 p-6">
+        <section className="rounded-lg border border-[#d7cdbb] bg-white p-5 shadow-sm sm:p-6">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h2 className="text-2xl font-bold text-white">
+              <h2 className="text-xl font-bold text-[#17120a]">
                 {activeEditingLabel}
               </h2>
-              <p className="mt-2 text-sm text-slate-400">
+              <p className="mt-2 text-sm text-[#52657d]">
                 {student
                   ? `${student.name} - ${student.grade} - Roll ${student.rollNumber}`
                   : "Your writing will be reviewed by your school before it appears in the magazine."}
@@ -376,7 +376,7 @@ export default function StudentWritingWorkspace() {
               <button
                 type="button"
                 onClick={resetForm}
-                className="rounded-lg border border-slate-700 px-3 py-2 text-sm font-semibold text-slate-200 transition hover:bg-slate-800"
+                className="rounded-lg border border-[#d7cdbb] bg-white px-3 py-2 text-sm font-semibold text-[#0a2f66] transition hover:bg-[#eaf2ff]"
               >
                 New draft
               </button>
@@ -385,12 +385,12 @@ export default function StudentWritingWorkspace() {
 
           <div className="mt-6 space-y-4">
             {form.challengeId && (
-              <div className="rounded-xl border border-blue-500/20 bg-blue-500/10 p-4 text-sm text-blue-100">
+              <div className="rounded-lg border border-[#bfd7f7] bg-[#eaf2ff] p-4 text-sm text-[#0a2f66]">
                 <p className="font-semibold">
                   Challenge response: {form.challengeTitle}
                 </p>
                 {form.challengePrompt && (
-                  <p className="mt-2 whitespace-pre-wrap text-blue-100/80">
+                  <p className="mt-2 whitespace-pre-wrap text-[#40516b]">
                     {form.challengePrompt}
                   </p>
                 )}
@@ -404,7 +404,7 @@ export default function StudentWritingWorkspace() {
               onChange={(event) =>
                 setForm((current) => ({ ...current, title: event.target.value }))
               }
-              className="w-full rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-white outline-none transition focus:border-blue-500"
+              className="w-full rounded-lg border border-[#d7cdbb] bg-white px-4 py-3 text-[#17120a] outline-none transition focus:border-[#2f7fdb]"
             />
 
             {!form.challengeId && (
@@ -417,7 +417,7 @@ export default function StudentWritingWorkspace() {
                       category: event.target.value,
                     }))
                   }
-                  className="rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-white outline-none transition focus:border-blue-500"
+                  className="rounded-lg border border-[#d7cdbb] bg-white px-4 py-3 text-[#17120a] outline-none transition focus:border-[#2f7fdb]"
                 >
                   {CATEGORY_OPTIONS.map((option) => (
                     <option key={option} value={option}>
@@ -437,7 +437,7 @@ export default function StudentWritingWorkspace() {
                   content: event.target.value,
                 }))
               }
-              className="min-h-[320px] w-full rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-white outline-none transition focus:border-blue-500"
+              className="min-h-[320px] w-full rounded-lg border border-[#d7cdbb] bg-white px-4 py-3 text-[#17120a] outline-none transition focus:border-[#2f7fdb]"
             />
 
             <div className="flex flex-wrap gap-3">
@@ -446,7 +446,7 @@ export default function StudentWritingWorkspace() {
                   type="button"
                   disabled={saving}
                   onClick={() => handleSave("DRAFT")}
-                  className="inline-flex items-center gap-2 rounded-xl bg-slate-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-600 disabled:opacity-60"
+                  className="inline-flex items-center gap-2 rounded-lg border border-[#d7cdbb] bg-white px-5 py-3 text-sm font-semibold text-[#0a2f66] transition hover:bg-[#eaf2ff] disabled:opacity-60"
                 >
                   <FaEdit />
                   {saving ? "Saving..." : form.id ? "Update draft" : "Save as draft"}
@@ -456,7 +456,7 @@ export default function StudentWritingWorkspace() {
                 type="button"
                 disabled={saving}
                 onClick={() => handleSave("SUBMITTED")}
-                className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-500 disabled:opacity-60"
+                className="inline-flex items-center gap-2 rounded-lg bg-[#0a2f66] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#123f82] disabled:opacity-60"
               >
                 <FaPaperPlane />
                 {saving
@@ -469,12 +469,12 @@ export default function StudentWritingWorkspace() {
           </div>
         </section>
 
-        <section className="rounded-xl border border-slate-800 bg-slate-900/70 p-6">
+        <section className="rounded-lg border border-[#d7cdbb] bg-white p-5 shadow-sm sm:p-6">
           <div className="flex items-center gap-3">
-            <FaFileAlt className="text-emerald-400" />
-            <h2 className="text-2xl font-bold text-white">My Submissions</h2>
+            <FaFileAlt className="text-[#0a2f66]" />
+            <h2 className="text-xl font-bold text-[#17120a]">My Submissions</h2>
           </div>
-          <p className="mt-2 text-sm text-slate-400">
+          <p className="mt-2 text-sm text-[#52657d]">
             Drafts stay private. Submitted writings go to your school for review.
           </p>
 
@@ -504,7 +504,7 @@ export default function StudentWritingWorkspace() {
                 return (
                   <article
                     key={writing.id}
-                    className="rounded-xl border border-slate-800 bg-slate-950/70 p-4"
+                    className="rounded-lg border border-[#d7cdbb] bg-[#f8fbff] p-4"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
@@ -515,14 +515,14 @@ export default function StudentWritingWorkspace() {
                         >
                           {formatStatus(writing.status)}
                         </div>
-                        <h3 className="mt-3 text-lg font-bold text-white">
+                        <h3 className="mt-3 text-base font-bold text-[#17120a]">
                           {writing.title}
                         </h3>
-                        <p className="mt-1 text-xs uppercase tracking-wide text-slate-500">
+                        <p className="mt-1 text-xs font-semibold text-[#52657d]">
                           {writing.category}
                         </p>
                         {writing.submissionSource === "PLATFORM_CHALLENGE" && (
-                          <p className="mt-2 text-xs font-semibold text-blue-200">
+                          <p className="mt-2 text-xs font-semibold text-[#0a2f66]">
                             Challenge: {writing.challengeTitle || "Student Challenge"}
                           </p>
                         )}
@@ -530,13 +530,13 @@ export default function StudentWritingWorkspace() {
                     </div>
 
                     {writing.reviewNote && (
-                      <div className="mt-3 rounded-lg border border-blue-500/20 bg-blue-500/10 p-3 text-sm text-blue-100">
+                      <div className="mt-3 rounded-lg border border-[#bfd7f7] bg-[#eaf2ff] p-3 text-sm text-[#40516b]">
                         <span className="font-semibold">School note:</span>{" "}
                         {writing.reviewNote}
                       </div>
                     )}
 
-                    <div className="mt-4 text-xs text-slate-500">
+                    <div className="mt-4 text-xs text-[#52657d]">
                       Updated {formatDate(writing.updatedAt)}
                       {writing.submittedAt && ` - Submitted ${formatDate(writing.submittedAt)}`}
                     </div>
@@ -545,7 +545,7 @@ export default function StudentWritingWorkspace() {
                       <button
                         type="button"
                         onClick={() => setReadingWriting(writing)}
-                        className="inline-flex items-center gap-2 rounded-lg bg-slate-800 px-3 py-2 text-sm font-semibold text-slate-100 transition hover:bg-slate-700"
+                        className="inline-flex items-center gap-2 rounded-lg border border-[#d7cdbb] bg-white px-3 py-2 text-sm font-semibold text-[#0a2f66] transition hover:bg-[#eaf2ff]"
                       >
                         <FaBookOpen />
                         Read
@@ -554,7 +554,7 @@ export default function StudentWritingWorkspace() {
                         <button
                           type="button"
                           onClick={() => startEdit(writing)}
-                          className="inline-flex items-center gap-2 rounded-lg bg-slate-800 px-3 py-2 text-sm font-semibold text-slate-100 transition hover:bg-slate-700"
+                          className="inline-flex items-center gap-2 rounded-lg border border-[#d7cdbb] bg-white px-3 py-2 text-sm font-semibold text-[#0a2f66] transition hover:bg-[#eaf2ff]"
                         >
                           <FaEdit />
                           {writing.status === "REJECTED"
@@ -566,20 +566,20 @@ export default function StudentWritingWorkspace() {
                       )}
                       {canRevise && (
                         <button
-                          type="button"
-                          onClick={() => handleCreateRevision(writing.id)}
-                          className="inline-flex items-center gap-2 rounded-lg bg-blue-500/10 px-3 py-2 text-sm font-semibold text-blue-200 transition hover:bg-blue-500/20"
-                        >
+                        type="button"
+                        onClick={() => handleCreateRevision(writing.id)}
+                        className="inline-flex items-center gap-2 rounded-lg border border-[#bfd7f7] bg-[#eaf2ff] px-3 py-2 text-sm font-semibold text-[#0a2f66] transition hover:bg-[#dbeafe]"
+                      >
                           <FaEdit />
                           Revise as Draft
                         </button>
                       )}
                       {canDelete && (
                         <button
-                          type="button"
-                          onClick={() => setDeleteTarget(writing)}
-                          className="inline-flex items-center gap-2 rounded-lg bg-red-500/10 px-3 py-2 text-sm font-semibold text-red-200 transition hover:bg-red-500/20"
-                        >
+                        type="button"
+                        onClick={() => setDeleteTarget(writing)}
+                        className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-100"
+                      >
                           <FaTrash />
                           Delete
                         </button>

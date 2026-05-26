@@ -227,7 +227,7 @@ export default function EventCard({
               )}
               {event.eligibleGrades && event.eligibleGrades.length > 0 && (
                 <span className="text-xs bg-slate-800 border border-slate-600 px-2 py-1 rounded text-slate-300">
-                  Grades: {event.eligibleGrades.join(", ")}
+                  Registration grades: {event.eligibleGrades.join(", ")}
                 </span>
               )}
             </div>

@@ -26,13 +26,13 @@ function formatDate(value) {
 }
 
 const placementTone = {
-  WINNER: "border-yellow-500/30 bg-yellow-500/10 text-yellow-200",
-  RUNNER_UP: "border-slate-500/40 bg-slate-500/10 text-slate-200",
-  THIRD_PLACE: "border-orange-500/30 bg-orange-500/10 text-orange-200",
-  FINALIST: "border-blue-500/30 bg-blue-500/10 text-blue-200",
-  MERIT: "border-emerald-500/30 bg-emerald-500/10 text-emerald-200",
-  SPECIAL_MENTION: "border-purple-500/30 bg-purple-500/10 text-purple-200",
-  PARTICIPANT: "border-slate-700 bg-slate-800/80 text-slate-200",
+  WINNER: "border-amber-200 bg-amber-50 text-amber-800",
+  RUNNER_UP: "border-slate-200 bg-slate-50 text-slate-700",
+  THIRD_PLACE: "border-orange-200 bg-orange-50 text-orange-800",
+  FINALIST: "border-[#bfd7f7] bg-[#eaf2ff] text-[#0a2f66]",
+  MERIT: "border-emerald-200 bg-emerald-50 text-emerald-800",
+  SPECIAL_MENTION: "border-violet-200 bg-violet-50 text-violet-800",
+  PARTICIPANT: "border-[#d7cdbb] bg-white text-[#40516b]",
 };
 
 export default function StudentActivityOverview() {
@@ -80,10 +80,10 @@ export default function StudentActivityOverview() {
   if (loading) {
     return (
       <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
-        <div className="h-72 animate-pulse rounded-2xl border border-slate-800 bg-slate-900/70" />
+        <div className="h-72 animate-pulse rounded-lg border border-[#d7cdbb] bg-white" />
         <div className="space-y-4">
-          <div className="h-36 animate-pulse rounded-2xl border border-slate-800 bg-slate-900/70" />
-          <div className="h-36 animate-pulse rounded-2xl border border-slate-800 bg-slate-900/70" />
+          <div className="h-36 animate-pulse rounded-lg border border-[#d7cdbb] bg-white" />
+          <div className="h-36 animate-pulse rounded-lg border border-[#d7cdbb] bg-white" />
         </div>
       </div>
     );
@@ -106,32 +106,32 @@ export default function StudentActivityOverview() {
   return (
     <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
       <aside className="space-y-6">
-        <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/70">
-          <div className="h-24 bg-gradient-to-r from-blue-600/40 via-emerald-500/20 to-amber-400/20" />
+        <div className="overflow-hidden rounded-lg border border-[#d7cdbb] bg-white shadow-sm">
+          <div className="h-20 bg-gradient-to-r from-[#eaf2ff] via-emerald-50 to-amber-50" />
           <div className="-mt-10 p-6 pt-0">
-            <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-emerald-400 text-3xl font-black text-white shadow-xl shadow-blue-950/40">
+            <div className="flex h-20 w-20 items-center justify-center rounded-lg bg-[#0a2f66] text-2xl font-bold text-white shadow-lg shadow-[#0a2f66]/15">
               {student?.name?.charAt(0) || "S"}
             </div>
-            <h2 className="mt-4 text-2xl font-bold text-white">
+            <h2 className="mt-4 text-xl font-bold text-[#17120a]">
               {student?.name || "Student"}
             </h2>
-            <p className="mt-2 text-sm text-slate-300">
+            <p className="mt-2 text-sm text-[#52657d]">
               Verified student activity and achievement profile
             </p>
 
-            <div className="mt-5 space-y-3 text-sm text-slate-400">
+            <div className="mt-5 space-y-3 text-sm text-[#52657d]">
               <div className="flex items-center gap-3">
-                <FaSchool className="text-slate-500" />
+                <FaSchool className="text-[#0a2f66]" />
                 <span>{student?.schoolName || "School"}</span>
               </div>
               {student?.schoolLocation && (
                 <div className="flex items-center gap-3">
-                  <FaMapMarkerAlt className="text-slate-500" />
+                  <FaMapMarkerAlt className="text-[#0a2f66]" />
                   <span>{student.schoolLocation}</span>
                 </div>
               )}
               <div className="flex items-center gap-3">
-                <FaAward className="text-slate-500" />
+                <FaAward className="text-[#0a2f66]" />
                 <span>
                   {student?.grade || "Grade"} - Roll{" "}
                   {student?.rollNumber || "-"}
@@ -141,8 +141,8 @@ export default function StudentActivityOverview() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6">
-          <h3 className="text-lg font-semibold text-white">Quick Highlights</h3>
+        <div className="rounded-lg border border-[#d7cdbb] bg-white p-5 shadow-sm">
+          <h3 className="text-base font-bold text-[#17120a]">Quick Highlights</h3>
           <div className="mt-4 grid grid-cols-2 gap-3">
             {[
               ["Achievements", metrics.achievementsCount || 0],
@@ -152,10 +152,10 @@ export default function StudentActivityOverview() {
             ].map(([label, value]) => (
               <div
                 key={label}
-                className="rounded-xl border border-slate-800 bg-slate-950/70 p-4"
+                className="rounded-lg border border-[#d7cdbb] bg-[#f8fbff] p-4"
               >
-                <div className="text-2xl font-black text-white">{value}</div>
-                <div className="mt-1 text-xs uppercase tracking-wide text-slate-500">
+                <div className="text-xl font-bold text-[#17120a]">{value}</div>
+                <div className="mt-1 text-xs font-semibold text-[#52657d]">
                   {label}
                 </div>
               </div>
@@ -165,21 +165,21 @@ export default function StudentActivityOverview() {
       </aside>
 
       <section className="space-y-6">
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6">
+        <div className="rounded-lg border border-[#d7cdbb] bg-white p-5 shadow-sm">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
+              <p className="text-[11px] font-bold uppercase tracking-normal text-[#52657d]">
                 Verified timeline
               </p>
-              <h2 className="mt-2 text-2xl font-bold text-white">
+              <h2 className="mt-1 text-xl font-bold text-[#17120a] sm:text-2xl">
                 Achievement History
               </h2>
-              <p className="mt-2 text-sm leading-6 text-slate-400">
+              <p className="mt-2 text-sm leading-6 text-[#52657d]">
                 This section updates automatically after schools publish event
                 results and certificates.
               </p>
             </div>
-            <FaClipboardList className="mt-1 text-2xl text-blue-300" />
+            <FaClipboardList className="mt-1 text-xl text-[#0a2f66]" />
           </div>
         </div>
 
@@ -193,7 +193,7 @@ export default function StudentActivityOverview() {
           achievements.map((achievement) => (
             <article
               key={achievement.id}
-              className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6"
+              className="rounded-lg border border-[#d7cdbb] bg-white p-5 shadow-sm"
             >
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
@@ -205,10 +205,10 @@ export default function StudentActivityOverview() {
                   >
                     {formatPlacement(achievement.placement)}
                   </div>
-                  <h4 className="mt-4 text-xl font-bold text-white">
+                  <h4 className="mt-4 text-lg font-bold text-[#17120a]">
                     {achievement.event?.title || achievement.title}
                   </h4>
-                  <p className="mt-2 text-sm leading-7 text-slate-300">
+                  <p className="mt-2 text-sm leading-6 text-[#52657d]">
                     {achievement.description ||
                       `${student?.name || "Student"} earned ${formatPlacement(
                         achievement.placement
@@ -218,9 +218,9 @@ export default function StudentActivityOverview() {
                   </p>
                 </div>
 
-                <div className="text-right text-sm text-slate-400">
+                <div className="text-right text-sm text-[#52657d]">
                   <div className="flex items-center justify-end gap-2">
-                    <FaCalendarAlt className="text-slate-500" />
+                    <FaCalendarAlt className="text-[#0a2f66]" />
                     <span>{formatDate(achievement.awardedAt)}</span>
                   </div>
                   <div className="mt-2">
@@ -233,7 +233,7 @@ export default function StudentActivityOverview() {
                 {achievement.certificateUrl && (
                   <Link
                     href={achievement.certificateUrl}
-                    className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 font-semibold text-white hover:bg-emerald-500"
+                    className="inline-flex items-center gap-2 rounded-lg bg-[#0a2f66] px-3 py-2 font-semibold text-white hover:bg-[#123f82]"
                   >
                     <FaCertificate />
                     View Certificate
@@ -242,13 +242,13 @@ export default function StudentActivityOverview() {
                 {achievement.event?.id && (
                   <Link
                     href={`/events/${achievement.event.id}`}
-                    className="inline-flex items-center gap-2 rounded-lg bg-slate-800 px-3 py-2 font-semibold text-slate-100 hover:bg-slate-700"
+                    className="inline-flex items-center gap-2 rounded-lg border border-[#d7cdbb] bg-white px-3 py-2 font-semibold text-[#0a2f66] hover:bg-[#eaf2ff]"
                   >
                     View Event
                   </Link>
                 )}
                 {achievement.scorePercentage > 0 && (
-                  <span className="rounded-lg border border-slate-700 px-3 py-2 text-slate-300">
+                  <span className="rounded-lg border border-[#d7cdbb] bg-[#f8fbff] px-3 py-2 text-[#52657d]">
                     Score: {achievement.scorePercentage}%
                   </span>
                 )}

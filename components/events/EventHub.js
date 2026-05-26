@@ -26,6 +26,7 @@ import EmptyState from "@/components/EmptyState";
 import LoadingState from "@/components/ui/LoadingState";
 import AlertBanner from "@/components/ui/AlertBanner";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import useRealtimeChannel from "@/lib/useRealtimeChannel";
 import { getEventStage, getStageClasses, isDatePast } from "@/lib/eventUiStatus";
 import { isTeamEventLike } from "@/lib/eventParticipationFormat";
 
@@ -56,9 +57,11 @@ export default function EventHub({
   const [feedback, setFeedback] = useState(null);
   const [withdrawTarget, setWithdrawTarget] = useState(null);
 
-  const fetchEvents = useCallback(async () => {
+  const fetchEvents = useCallback(async ({ silent = false } = {}) => {
     try {
-      setLoading(true);
+      if (!silent) {
+        setLoading(true);
+      }
       // Use different endpoint based on user role
       const endpoint =
         session?.user?.role === "STUDENT"
@@ -109,13 +112,29 @@ export default function EventHub({
     } catch (error) {
       console.error("Error fetching events:", error);
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
   }, [completedView, eventScope, lifecycleFilter, session?.user?.role]);
 
   useEffect(() => {
     fetchEvents();
   }, [fetchEvents, refreshKey]);
+
+  useRealtimeChannel(
+    "events",
+    useCallback(
+      (message) => {
+        const payload = message?.payload || {};
+        if (eventScope && payload.eventScope && payload.eventScope !== eventScope) {
+          return;
+        }
+        void fetchEvents({ silent: true });
+      },
+      [eventScope, fetchEvents]
+    )
+  );
 
   const isRegistrationClosed = (event) => {
     if (typeof event.registrationLocked === "boolean") {
@@ -134,6 +153,29 @@ export default function EventHub({
       : event.myParticipation?.studentCount ||
         event.myParticipation?.students?.length ||
         0;
+  const getRegisteredSummary = (event) => {
+    if (isTeamEventLike(event)) {
+      const teamCount =
+        Number(event.myParticipation?.teamCount ?? event.teamCount ?? 0) || 0;
+      const memberCount =
+        Number(
+          event.myParticipation?.studentCount ??
+            event.memberCount ??
+            event.studentCount ??
+            0
+        ) || 0;
+      return `${teamCount} ${teamCount === 1 ? "team" : "teams"}${
+        memberCount
+          ? `, ${memberCount} ${memberCount === 1 ? "student" : "students"}`
+          : ""
+      } registered`;
+    }
+
+    const studentCount = getRegisteredStudentCount(event);
+    return `${studentCount} ${
+      studentCount === 1 ? "student" : "students"
+    } registered`;
+  };
 
   const handleWithdraw = async (eventId) => {
     const event = events.find((item) => item._id === eventId);
@@ -372,7 +414,7 @@ export default function EventHub({
                         >
                           {event.eventScope === "PLATFORM"
                             ? "Platform Competition"
-                            : "School Event"}
+                            : "Internal Event"}
                         </span>
                         {event.participationStatus &&
                           getStatusBadge(
@@ -387,10 +429,7 @@ export default function EventHub({
                         )}
                         {event.participationStatus && (
                           <span className="rounded-full border border-[#d7cdbb] px-3 py-1 text-sm text-[#27344a]">
-                            {getRegisteredStudentCount(event)}{" "}
-                            {isTeamEventLike(event)
-                              ? "teams registered"
-                              : "students registered"}
+                            {getRegisteredSummary(event)}
                           </span>
                         )}
                       </div>
@@ -510,7 +549,7 @@ export default function EventHub({
                           <FaUsers className="text-[#52657d]" />
                           <div>
                             <p className="text-xs uppercase text-[#52657d]">
-                              Capacity
+                              {isTeamEvent ? "Team Capacity" : "Capacity"}
                             </p>
                             <p
                               className={`font-medium ${getCapacityColor(

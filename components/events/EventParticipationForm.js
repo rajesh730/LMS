@@ -1085,10 +1085,10 @@ const EventParticipationForm = memo(function EventParticipationForm({
             ) : filteredStudents.length === 0 ? (
               <div className="p-6 text-center text-slate-400">
                 <p className="font-semibold text-slate-300">
-                  No eligible students match these filters.
+                  No students match the registration filters.
                 </p>
                 <p className="mt-1 text-sm text-slate-500">
-                  Clear search, change grade/status filters, or check this event&apos;s eligible grades.
+                  Clear search, change grade/status filters, or check this event&apos;s registration grades.
                 </p>
               </div>
             ) : (

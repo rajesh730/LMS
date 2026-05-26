@@ -260,7 +260,7 @@ export default async function PublicEventsPage() {
                     <>
                 <div className="mb-3 flex min-w-0 flex-wrap items-center justify-between gap-2 sm:gap-4">
                   <EventBadge tone={event.eventScope === "PLATFORM" ? "blue" : "emerald"}>
-                    {event.eventScope}
+                    {event.eventScope === "PLATFORM" ? "PLATFORM" : "INTERNAL"}
                   </EventBadge>
                   <div className="flex min-w-0 flex-wrap items-center justify-start gap-2 sm:justify-end">
                     {event.resultsPublished && (
@@ -285,7 +285,7 @@ export default async function PublicEventsPage() {
                     <div className="mt-2 flex min-w-0 items-start gap-2 break-words text-slate-600">
                       <FaUsers className="mt-1 text-[#0a2f66]" />
                       <span className="min-w-0 break-words">
-                        {event.eligibleGrades.join(", ")}
+                        Registration: {event.eligibleGrades.join(", ")}
                       </span>
                     </div>
                   )}

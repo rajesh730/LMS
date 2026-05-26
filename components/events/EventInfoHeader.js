@@ -21,20 +21,20 @@ export default function EventInfoHeader({ event, capacityInfo }) {
   const stage = getEventStage(event, { capacityInfo });
 
   return (
-    <div className="border-b border-[#d7cdbb] bg-white p-6 text-[#27344a] shadow-[0_8px_24px_rgba(10,47,102,0.05)] md:p-10">
+    <div className="border-b border-[#d7cdbb] bg-white px-5 py-6 text-[#27344a] shadow-[0_8px_24px_rgba(10,47,102,0.05)] md:px-8 md:py-7">
       <div className="max-w-7xl mx-auto">
         {/* Title & Description */}
-        <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <h1 className="mb-2 text-4xl font-bold text-[#17120a]">{event.title}</h1>
-            <p className="text-[#344f77]">{event.description}</p>
+        <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0">
+            <h1 className="mb-1 text-3xl font-bold leading-tight text-[#17120a] md:text-4xl">{event.title}</h1>
+            <p className="max-w-3xl text-sm leading-6 text-[#52657d] md:text-base">{event.description}</p>
           </div>
           <div
-            className={`min-w-64 rounded-2xl border px-4 py-3 shadow-sm ${getStageClasses(
+            className={`w-full rounded-lg border px-4 py-3 shadow-sm lg:w-[320px] ${getStageClasses(
               stage.tone
             )}`}
           >
-            <p className="text-xs font-bold uppercase tracking-wide">
+            <p className="text-[11px] font-bold uppercase tracking-normal">
               Current Stage
             </p>
             <p className="mt-1 text-lg font-bold">{stage.label}</p>
@@ -43,21 +43,21 @@ export default function EventInfoHeader({ event, capacityInfo }) {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           {/* Date */}
-          <div className="rounded-lg border border-[#bfd7f7] bg-[#eaf2ff] p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <FaCalendarAlt className="text-[#0a2f66]" />
-              <span className="text-sm text-[#344f77]">Event Date</span>
+          <div className="rounded-lg border border-[#d7cdbb] bg-[#f8fbff] p-4">
+            <div className="flex items-center gap-2 mb-2 text-[#52657d]">
+              <FaCalendarAlt className="text-red-600" />
+              <span className="text-sm">Event Date</span>
             </div>
             <p className="text-lg font-semibold text-[#17120a]">{formatDate(event.date)}</p>
           </div>
 
           {/* Deadline */}
-          <div className="rounded-lg border border-[#bfd7f7] bg-[#eaf2ff] p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <FaClock className="text-[#0a2f66]" />
-              <span className="text-sm text-[#344f77]">Deadline</span>
+          <div className="rounded-lg border border-[#d7cdbb] bg-[#f8fbff] p-4">
+            <div className="flex items-center gap-2 mb-2 text-[#52657d]">
+              <FaClock className="text-red-600" />
+              <span className="text-sm">Deadline</span>
             </div>
             <p className="text-lg font-semibold text-[#17120a]">
               {event.registrationDeadline
@@ -72,10 +72,10 @@ export default function EventInfoHeader({ event, capacityInfo }) {
           </div>
 
           {/* Capacity */}
-          <div className="rounded-lg border border-[#bfd7f7] bg-[#eaf2ff] p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <FaUsers className="text-[#0a2f66]" />
-              <span className="text-sm text-[#344f77]">Enrolled</span>
+          <div className="rounded-lg border border-[#d7cdbb] bg-[#f8fbff] p-4">
+            <div className="flex items-center gap-2 mb-2 text-[#52657d]">
+              <FaUsers className="text-red-600" />
+              <span className="text-sm">Enrolled</span>
             </div>
             <p className="text-lg font-semibold text-[#17120a]">
               {capacityInfo.filled}
@@ -89,10 +89,10 @@ export default function EventInfoHeader({ event, capacityInfo }) {
           </div>
 
           {/* Pending Requests */}
-          <div className="rounded-lg border border-[#bfd7f7] bg-[#eaf2ff] p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <FaTasks className="text-[#0a2f66]" />
-              <span className="text-sm text-[#344f77]">Pending</span>
+          <div className="rounded-lg border border-[#d7cdbb] bg-[#f8fbff] p-4">
+            <div className="flex items-center gap-2 mb-2 text-[#52657d]">
+              <FaTasks className="text-red-600" />
+              <span className="text-sm">Pending</span>
             </div>
             <p className="text-lg font-semibold text-[#17120a]">{capacityInfo.pending}</p>
             <p className="mt-1 text-xs text-[#52657d]">requests to approve</p>
@@ -108,14 +108,14 @@ export default function EventInfoHeader({ event, capacityInfo }) {
                 {capacityInfo.filled}/{capacityInfo.total}
               </span>
             </div>
-            <div className="h-3 w-full overflow-hidden rounded-full bg-[#dbeaff]">
+            <div className="h-2.5 w-full overflow-hidden rounded-full bg-red-100">
               <div
                 className={`h-full transition-all duration-300 ${
                   capacityInfo.percentage >= 100
-                    ? "bg-[#ffb21c]"
+                    ? "bg-red-600"
                     : capacityInfo.percentage >= 80
-                    ? "bg-[#ffd56f]"
-                    : "bg-[#7fb4ff]"
+                    ? "bg-red-500"
+                    : "bg-red-400"
                 }`}
                 style={{ width: `${Math.min(capacityInfo.percentage, 100)}%` }}
               />

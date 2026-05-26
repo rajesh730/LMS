@@ -155,4 +155,58 @@ describe("POST /api/student/notifications/read", () => {
     );
     expect(EventNotice.updateMany).not.toHaveBeenCalled();
   });
+
+  it("marks event notifications stored as school notices in the Notice collection", async () => {
+    const session = { user: { id: "student-1", role: "STUDENT" } };
+
+    getServerSession.mockResolvedValue(session);
+    getStudentNotificationPayload.mockResolvedValue({
+      notifications: [
+        {
+          id: "notice-event-1",
+          noticeType: "EVENT",
+          storageType: "NOTICE",
+        },
+      ],
+      unreadCount: 1,
+    });
+    Notice.updateMany.mockResolvedValue({ modifiedCount: 1 });
+    EventNotice.updateMany.mockResolvedValue({ modifiedCount: 0 });
+
+    const response = await POST(
+      new Request("http://localhost/api/student/notifications/read", {
+        method: "POST",
+        body: JSON.stringify({
+          notifications: [
+            {
+              id: "notice-event-1",
+              noticeType: "EVENT",
+              storageType: "NOTICE",
+            },
+          ],
+        }),
+      })
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      markedCount: 1,
+      unreadCount: 0,
+    });
+    expect(Notice.updateMany).toHaveBeenCalledWith(
+      {
+        _id: { $in: ["notice-event-1"] },
+        "readBy.user": { $ne: "student-1" },
+      },
+      expect.objectContaining({
+        $push: expect.objectContaining({
+          readBy: expect.objectContaining({
+            user: "student-1",
+            userType: "STUDENT",
+          }),
+        }),
+      })
+    );
+    expect(EventNotice.updateMany).not.toHaveBeenCalled();
+  });
 });

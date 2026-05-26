@@ -4,6 +4,8 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import Event from '@/models/Event';
 import connectDB from '@/lib/db';
 import { syncEventSchoolInvitations } from '@/lib/eventInvitations';
+import { publishEventRealtimeUpdate } from '@/lib/eventRealtime';
+import { ensureStudentEventNotification } from '@/lib/studentEventNotifications';
 
 export async function PUT(req, { params }) {
     try {
@@ -52,6 +54,17 @@ export async function PUT(req, { params }) {
                     createdBy: session.user.id,
                 });
             }
+            if (eventById.eventScope === 'SCHOOL' && eventById.status === 'APPROVED') {
+                await ensureStudentEventNotification({
+                    event: eventById,
+                    schoolId: eventById.school,
+                    authorId: session.user.id,
+                    title: `New internal event: ${eventById.title}`,
+                    content:
+                        'Your school has published a new internal event. Open Student Events to view the details and follow updates.',
+                });
+            }
+            publishEventRealtimeUpdate('event-status-updated', { event: eventById });
             return NextResponse.json(eventById);
         }
 
@@ -60,6 +73,19 @@ export async function PUT(req, { params }) {
                 createdBy: session.user.id,
             });
         }
+
+        if (event.eventScope === 'SCHOOL' && event.status === 'APPROVED') {
+            await ensureStudentEventNotification({
+                event,
+                schoolId: event.school,
+                authorId: session.user.id,
+                title: `New internal event: ${event.title}`,
+                content:
+                    'Your school has published a new internal event. Open Student Events to view the details and follow updates.',
+            });
+        }
+
+        publishEventRealtimeUpdate('event-status-updated', { event });
 
         return NextResponse.json(event);
     } catch (error) {

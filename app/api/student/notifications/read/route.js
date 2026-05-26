@@ -4,6 +4,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import Notice from "@/models/Notice";
 import EventNotice from "@/models/EventNotice";
+import UserNotification from "@/models/UserNotification";
 import { getStudentNotificationPayload } from "@/lib/studentNotifications";
 import { publishWorkIndicatorsUpdate } from "@/lib/workIndicatorRealtime";
 
@@ -13,6 +14,7 @@ function normalizeNotifications(body) {
         .map((item) => ({
           id: String(item?.id || "").trim(),
           noticeType: String(item?.noticeType || "").trim().toUpperCase(),
+          storageType: String(item?.storageType || "").trim().toUpperCase(),
         }))
         .filter((item) => item.id && item.noticeType)
     : [];
@@ -53,17 +55,31 @@ export async function POST(request) {
           ? visible.notifications.map((item) => ({
               id: String(item.id),
               noticeType: String(item.noticeType).toUpperCase(),
+              storageType: String(item.storageType || "").toUpperCase(),
             }))
           : [];
 
     const visibleKeys = new Set(
       visible.notifications.map(
-        (item) => `${String(item.noticeType).toUpperCase()}:${String(item.id)}`
+        (item) =>
+          `${String(item.noticeType).toUpperCase()}:${String(item.id)}`
       )
+    );
+    const visibleStorageTypes = new Map(
+      visible.notifications.map((item) => [
+        `${String(item.noticeType).toUpperCase()}:${String(item.id)}`,
+        String(item.storageType || "").toUpperCase(),
+      ])
     );
     const allowedNotifications = baseNotifications.filter((item) =>
       visibleKeys.has(`${item.noticeType}:${item.id}`)
-    );
+    ).map((item) => {
+      const key = `${item.noticeType}:${item.id}`;
+      return {
+        ...item,
+        storageType: item.storageType || visibleStorageTypes.get(key) || "",
+      };
+    });
 
     if (allowedNotifications.length === 0) {
       return NextResponse.json({
@@ -73,13 +89,22 @@ export async function POST(request) {
     }
 
     const schoolNoticeIds = allowedNotifications
-      .filter((item) => item.noticeType === "SCHOOL")
+      .filter(
+        (item) =>
+          item.noticeType === "SCHOOL" ||
+          (item.noticeType === "EVENT" && item.storageType === "NOTICE")
+      )
       .map((item) => item.id);
     const eventNoticeIds = allowedNotifications
-      .filter((item) => item.noticeType === "EVENT")
+      .filter(
+        (item) => item.noticeType === "EVENT" && item.storageType !== "NOTICE"
+      )
+      .map((item) => item.id);
+    const userNotificationIds = allowedNotifications
+      .filter((item) => item.storageType === "USER_NOTIFICATION")
       .map((item) => item.id);
 
-    const [schoolResult, eventResult] = await Promise.all([
+    const [schoolResult, eventResult, userNotificationResult] = await Promise.all([
       schoolNoticeIds.length > 0
         ? action === "read"
           ? Notice.updateMany(
@@ -138,6 +163,35 @@ export async function POST(request) {
               }
             )
         : { modifiedCount: 0 },
+      userNotificationIds.length > 0
+        ? action === "read"
+          ? UserNotification.updateMany(
+              {
+                _id: { $in: userNotificationIds },
+                "readBy.user": { $ne: session.user.id },
+              },
+              {
+                $push: {
+                  readBy: {
+                    user: session.user.id,
+                    userType: "STUDENT",
+                    readAt: new Date(),
+                  },
+                },
+              }
+            )
+          : UserNotification.updateMany(
+              { _id: { $in: userNotificationIds } },
+              {
+                $pull: {
+                  readBy: {
+                    user: session.user.id,
+                    userType: "STUDENT",
+                  },
+                },
+              }
+            )
+        : { modifiedCount: 0 },
     ]);
 
     const nextUnreadCount =
@@ -152,12 +206,16 @@ export async function POST(request) {
       userId: String(session.user.id),
       action,
       markedCount:
-        (schoolResult.modifiedCount || 0) + (eventResult.modifiedCount || 0),
+        (schoolResult.modifiedCount || 0) +
+        (eventResult.modifiedCount || 0) +
+        (userNotificationResult.modifiedCount || 0),
     });
 
     return NextResponse.json({
       markedCount:
-        (schoolResult.modifiedCount || 0) + (eventResult.modifiedCount || 0),
+        (schoolResult.modifiedCount || 0) +
+        (eventResult.modifiedCount || 0) +
+        (userNotificationResult.modifiedCount || 0),
       unreadCount: nextUnreadCount,
     });
   } catch (error) {

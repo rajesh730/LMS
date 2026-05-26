@@ -39,7 +39,7 @@ export default function LifecycleTimeline({
   return (
     <div className="rounded-xl border border-slate-700/70 bg-slate-950/50 p-4">
       <div className="mb-3 flex items-center justify-between gap-3">
-        <h4 className="text-xs font-bold uppercase tracking-[0.18em] text-slate-400">
+        <h4 className="text-xs font-bold uppercase tracking-normal text-slate-400">
           {title}
         </h4>
         <span className="rounded-full bg-slate-800 px-2 py-1 text-[11px] font-semibold text-slate-300">

@@ -7,7 +7,6 @@ import EventSchoolInvitation from "@/models/EventSchoolInvitation";
 import Student from "@/models/Student";
 import User from "@/models/User";
 import ParticipationRequest from "@/models/ParticipationRequest";
-import { getEquivalentGradeValues } from "@/lib/schoolGrades";
 
 /**
  * GET /api/events/hub
@@ -45,7 +44,7 @@ export async function GET(req) {
     let response = {};
 
     if (session.user.role === "STUDENT") {
-      // Get student info for grade eligibility
+      // Get student info for school-scoped event access.
       const student = await Student.findOne({
         isDeleted: { $ne: true },
         status: "ACTIVE",
@@ -70,40 +69,27 @@ export async function GET(req) {
             status: "APPROVED",
           }).distinct("event")
         : [];
-      const eligibleGradeValues = getEquivalentGradeValues(student.grade);
-
       const requestedEventIds = await ParticipationRequest.find({
         student: student._id,
       }).distinct("event");
 
-      // Find eligible events. Platform/partner events need school approval first.
-      // Direct discovery is controlled by registrationMode; already registered
-      // events stay visible even when the school registered the student.
+      // Show all events the student's school can access. eligibleGrades only
+      // affects which students can be registered, not event visibility.
       const baseQuery = {
         ...searchQuery,
         status: "APPROVED",
         lifecycleStatus: "ACTIVE",
-        $and: [
+        $or: [
+          { _id: { $in: requestedEventIds } },
           {
-            $or: [
-              { eligibleGrades: { $size: 0 } }, // No grade restrictions
-              { eligibleGrades: { $in: eligibleGradeValues } },
-            ],
+            registrationMode: "DIRECT",
+            eventScope: "SCHOOL",
+            school: student.school,
           },
           {
-            $or: [
-              { _id: { $in: requestedEventIds } },
-              {
-                registrationMode: "DIRECT",
-                eventScope: "SCHOOL",
-                school: student.school,
-              },
-              {
-                registrationMode: "DIRECT",
-                eventScope: "PLATFORM",
-                _id: { $in: approvedPlatformEventIds },
-              },
-            ],
+            registrationMode: "DIRECT",
+            eventScope: "PLATFORM",
+            _id: { $in: approvedPlatformEventIds },
           },
         ],
       };

@@ -4,6 +4,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import Notice from "@/models/Notice";
 import EventNotice from "@/models/EventNotice";
+import UserNotification from "@/models/UserNotification";
 import { getSchoolNotificationPayload } from "@/lib/schoolNotifications";
 import { publishWorkIndicatorsUpdate } from "@/lib/workIndicatorRealtime";
 
@@ -13,6 +14,7 @@ function normalizeNotifications(body) {
         .map((item) => ({
           id: String(item?.id || "").trim(),
           noticeType: String(item?.noticeType || "").trim().toUpperCase(),
+          storageType: String(item?.storageType || "").trim().toUpperCase(),
         }))
         .filter((item) => item.id && item.noticeType)
     : [];
@@ -46,6 +48,7 @@ export async function POST(request) {
           ? visible.notifications.map((item) => ({
               id: String(item.id),
               noticeType: String(item.noticeType).toUpperCase(),
+              storageType: String(item.storageType || "").toUpperCase(),
             }))
           : [];
     const visibleKeys = new Set(
@@ -55,7 +58,19 @@ export async function POST(request) {
     );
     const allowedNotifications = baseNotifications.filter((item) =>
       visibleKeys.has(`${item.noticeType}:${item.id}`)
-    );
+    ).map((item) => {
+      const visibleNotification = visible.notifications.find(
+        (notification) =>
+          String(notification.noticeType).toUpperCase() === item.noticeType &&
+          String(notification.id) === item.id
+      );
+      return {
+        ...item,
+        storageType:
+          item.storageType ||
+          String(visibleNotification?.storageType || "").toUpperCase(),
+      };
+    });
 
     if (allowedNotifications.length === 0) {
       return NextResponse.json({
@@ -70,8 +85,11 @@ export async function POST(request) {
     const eventNoticeIds = allowedNotifications
       .filter((item) => item.noticeType === "EVENT")
       .map((item) => item.id);
+    const userNotificationIds = allowedNotifications
+      .filter((item) => item.storageType === "USER_NOTIFICATION")
+      .map((item) => item.id);
 
-    const [platformResult, eventResult] = await Promise.all([
+    const [platformResult, eventResult, userNotificationResult] = await Promise.all([
       platformNoticeIds.length > 0
         ? action === "read"
           ? Notice.updateMany(
@@ -130,6 +148,35 @@ export async function POST(request) {
               }
             )
         : { modifiedCount: 0 },
+      userNotificationIds.length > 0
+        ? action === "read"
+          ? UserNotification.updateMany(
+              {
+                _id: { $in: userNotificationIds },
+                "readBy.user": { $ne: session.user.id },
+              },
+              {
+                $push: {
+                  readBy: {
+                    user: session.user.id,
+                    userType: "SCHOOL_ADMIN",
+                    readAt: new Date(),
+                  },
+                },
+              }
+            )
+          : UserNotification.updateMany(
+              { _id: { $in: userNotificationIds } },
+              {
+                $pull: {
+                  readBy: {
+                    user: session.user.id,
+                    userType: "SCHOOL_ADMIN",
+                  },
+                },
+              }
+            )
+        : { modifiedCount: 0 },
     ]);
 
     const nextUnreadCount =
@@ -144,12 +191,16 @@ export async function POST(request) {
       userId: String(session.user.id),
       action,
       markedCount:
-        (platformResult.modifiedCount || 0) + (eventResult.modifiedCount || 0),
+        (platformResult.modifiedCount || 0) +
+        (eventResult.modifiedCount || 0) +
+        (userNotificationResult.modifiedCount || 0),
     });
 
     return NextResponse.json({
       markedCount:
-        (platformResult.modifiedCount || 0) + (eventResult.modifiedCount || 0),
+        (platformResult.modifiedCount || 0) +
+        (eventResult.modifiedCount || 0) +
+        (userNotificationResult.modifiedCount || 0),
       unreadCount: nextUnreadCount,
     });
   } catch (error) {

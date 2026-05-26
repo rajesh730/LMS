@@ -679,7 +679,7 @@ function SchoolDashboardContent() {
                 <section className="mt-8 rounded-2xl border border-[#d7cdbb] bg-white p-6 shadow-[0_14px_36px_rgba(10,47,102,0.06)]">
                   <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
                     <div>
-                      <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#52657d]">
+                      <p className="text-xs font-bold uppercase tracking-normal text-[#52657d]">
                         Quick actions
                       </p>
                       <h2 className="mt-2 text-2xl font-bold text-[#17120a]">

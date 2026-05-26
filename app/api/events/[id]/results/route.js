@@ -19,6 +19,7 @@ import {
   CERTIFICATE_BLOCKED_STATUSES,
   normalizeRoundParticipantStatus,
 } from "@/lib/competitionFlow";
+import { publishEventRealtimeUpdate } from "@/lib/eventRealtime";
 
 export const dynamic = "force-dynamic";
 const FINAL_STATUS_TO_PLACEMENT = {
@@ -761,6 +762,11 @@ async function upsertResults(req, props) {
         },
       });
     }
+
+    publishEventRealtimeUpdate(
+      resultsPublished ? "results-published" : "results-updated",
+      { event }
+    );
 
     return NextResponse.json(
       {

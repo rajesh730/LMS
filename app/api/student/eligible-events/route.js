@@ -6,8 +6,8 @@ import Event from "@/models/Event";
 import EventSchoolInvitation from "@/models/EventSchoolInvitation";
 import Student from "@/models/Student";
 import ParticipationRequest from "@/models/ParticipationRequest";
-import { gradeListContains } from "@/lib/schoolGrades";
 import { buildEventPresentationState } from "@/lib/eventPresentation";
+import { isTeamEventLike } from "@/lib/eventParticipationFormat";
 
 /**
  * GET /api/student/eligible-events
@@ -42,14 +42,6 @@ export async function GET(req) {
       );
     }
 
-    if (!student.grade) {
-      return NextResponse.json(
-        { success: false, message: "Student grade not configured" },
-        { status: 400 }
-      );
-    }
-
-    const studentGrade = student.grade;
     const approvedPlatformEventIds = student.school
       ? await EventSchoolInvitation.find({
           school: student.school,
@@ -70,19 +62,19 @@ export async function GET(req) {
       .populate("participants.students", "_id")
       .sort({ date: 1 })
       .lean();
+    const activeRequests = await ParticipationRequest.find({
+      event: { $in: events.map((event) => event._id) },
+      status: { $in: ["PENDING", "APPROVED", "ENROLLED"] },
+    })
+      .select("event school teamName student")
+      .lean();
+    const requestsByEvent = groupRequestsByEvent(activeRequests);
 
-    // Filter events by grade eligibility and calculate capacity metrics
+    // Show all accessible events. eligibleGrades only affects registration.
     const eligibleEvents = events
       .map((event) => {
-        // Check if student is eligible by grade
-        const isEligible =
-          !event.eligibleGrades ||
-          event.eligibleGrades.length === 0 ||
-          gradeListContains(event.eligibleGrades, studentGrade);
-
-        if (!isEligible) {
-          return null; // Filter out ineligible events
-        }
+        const eventRequests = requestsByEvent.get(String(event._id)) || [];
+        const capacityUnitCount = getCapacityUnitCount(event, eventRequests);
 
         // Check deadline
         const now = new Date();
@@ -90,29 +82,25 @@ export async function GET(req) {
           event.registrationDeadline &&
           new Date(event.registrationDeadline) < now;
 
-        // Calculate total enrolled students
-        const totalEnrolled =
-          event.participants?.reduce(
-            (sum, p) => sum + (p.students?.length || 0),
-            0
-          ) || 0;
+        // Calculate enrolled capacity units. Team events count teams, not members.
+        const totalEnrolled = capacityUnitCount;
 
         // Check if globally full
         const isGloballyFull =
           event.maxParticipants && totalEnrolled >= event.maxParticipants;
 
         // Calculate per-school capacity breakdown
-        const schoolCapacity = (event.participants || [])
+        const schoolCapacity = buildSchoolCapacity(event, eventRequests)
           .map((p) => {
-            const enrolled = p.students?.length || 0;
+            const enrolled = p.enrolled || 0;
             const maxPerSchool = event.maxParticipantsPerSchool;
             const percentage = maxPerSchool
               ? Math.round((enrolled / maxPerSchool) * 100)
               : 0;
 
             return {
-              schoolId: p.school?._id?.toString(),
-              schoolName: p.school?.schoolName || "Unknown School",
+              schoolId: p.schoolId,
+              schoolName: p.schoolName || "Unknown School",
               enrolled,
               maxCapacity: maxPerSchool,
               percentage,
@@ -238,4 +226,54 @@ export async function GET(req) {
       { status: 500 }
     );
   }
+}
+
+function groupRequestsByEvent(requests = []) {
+  const grouped = new Map();
+  requests.forEach((request) => {
+    const eventId = String(request.event || "");
+    if (!eventId) return;
+    grouped.set(eventId, [...(grouped.get(eventId) || []), request]);
+  });
+  return grouped;
+}
+
+function buildTeamKey(request) {
+  return `${String(request.school?._id || request.school || "")}::${String(
+    request.teamName || ""
+  )
+    .trim()
+    .toLowerCase() || "default-team"}`;
+}
+
+function getCapacityUnitCount(event, requests = []) {
+  return isTeamEventLike(event) ? new Set(requests.map(buildTeamKey)).size : requests.length;
+}
+
+function buildSchoolCapacity(event, requests = []) {
+  const grouped = new Map();
+  requests.forEach((request) => {
+    const schoolId = String(request.school?._id || request.school || "");
+    if (!schoolId) return;
+    if (!grouped.has(schoolId)) {
+      const participantSchool = (event.participants || []).find(
+        (participant) => String(participant.school?._id || participant.school || "") === schoolId
+      );
+      grouped.set(schoolId, {
+        schoolId,
+        schoolName:
+          participantSchool?.school?.schoolName ||
+          request.school?.schoolName ||
+          "Unknown School",
+        requests: [],
+      });
+    }
+    grouped.get(schoolId).requests.push(request);
+  });
+
+  return Array.from(grouped.values()).map((entry) => ({
+    schoolId: entry.schoolId,
+    schoolName: entry.schoolName,
+    enrolled: getCapacityUnitCount(event, entry.requests),
+  }));
 }

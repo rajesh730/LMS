@@ -41,7 +41,9 @@ export default function SchoolNotificationCenter() {
     realtimeChannel: "school-notifications",
     enableRealtimeToast: true,
     toastMessageBuilder: (notification) =>
-      notification.noticeType === "EVENT"
+      notification.noticeType === "MAGAZINE"
+        ? `Magazine update: ${notification.title}`
+        : notification.noticeType === "EVENT"
         ? `New event notice: ${notification.title}`
         : `New platform notice: ${notification.title}`,
   });
@@ -85,7 +87,7 @@ export default function SchoolNotificationCenter() {
       <button
         type="button"
         onClick={handleTogglePanel}
-        className="relative inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border border-[#d7cdbb] bg-white text-[#0a2f66] shadow-sm transition hover:bg-[#eaf2ff]"
+        className="relative inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border border-red-200 bg-white text-red-600 shadow-sm transition hover:bg-red-50"
         aria-label="Toggle notifications"
       >
         <FaBell />
@@ -97,11 +99,11 @@ export default function SchoolNotificationCenter() {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-14 z-50 w-[360px] rounded-2xl border border-[#d7cdbb] bg-white p-4 shadow-[0_20px_50px_rgba(10,47,102,0.15)]">
+        <div className="absolute right-0 top-14 z-50 w-[360px] rounded-2xl border border-red-100 bg-white p-4 shadow-[0_20px_50px_rgba(185,28,28,0.14)]">
           <div className="mb-4">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h3 className="text-sm font-bold uppercase tracking-[0.18em] text-[#0a2f66]">
+                <h3 className="text-sm font-bold uppercase tracking-normal text-red-700">
                   Notifications
                 </h3>
                 <p className="mt-1 text-xs text-[#52657d]">
@@ -151,7 +153,7 @@ export default function SchoolNotificationCenter() {
               {notifications.map((notification) => (
                 <div
                   key={`${notification.noticeType}-${notification.id}`}
-                  className="rounded-xl border border-[#d7cdbb] bg-white p-3 transition hover:border-[#bfd7f7] hover:bg-[#f8fbff]"
+                  className="rounded-xl border border-[#d7cdbb] bg-white p-3 transition hover:border-red-200 hover:bg-red-50/40"
                 >
                   <button
                     type="button"
@@ -201,7 +203,7 @@ export default function SchoolNotificationCenter() {
                   void markNotificationsRead(notifications);
                   router.push("/school/dashboard?tab=notices");
                 }}
-                className="block rounded-xl border border-[#d7cdbb] bg-[#f8fbff] px-4 py-3 text-center text-sm font-semibold text-[#0a2f66] transition hover:border-[#bfd7f7] hover:bg-[#eaf2ff]"
+                className="block rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-center text-sm font-semibold text-red-700 transition hover:border-red-300 hover:bg-red-100"
               >
                 View all school notices
               </a>

@@ -76,7 +76,7 @@ export default function EventDetailDashboard() {
           <button
             type="button"
             onClick={fetchEventData}
-            className="mt-4 rounded-lg bg-[#0a2f66] px-4 py-2 text-sm font-semibold text-white hover:bg-[#123f7d]"
+            className="event-manage-tab-active mt-4 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500"
           >
             Try Again
           </button>
@@ -101,11 +101,11 @@ export default function EventDetailDashboard() {
       <EventInfoHeader event={event} capacityInfo={capacityInfo} />
 
       {/* Main Content */}
-      <div className="p-6 md:p-8 max-w-7xl mx-auto">
-        <div className="mb-4">
+      <div className="mx-auto max-w-7xl px-5 py-6 md:px-8">
+        <div className="mb-5">
           <Link
             href={backHref}
-            className="inline-flex items-center gap-2 rounded-lg border border-[#d7cdbb] bg-white px-4 py-2 text-sm font-semibold text-[#0a2f66] shadow-sm transition hover:bg-[#eaf2ff]"
+            className="inline-flex items-center gap-2 rounded-lg border border-[#d7cdbb] bg-white px-4 py-2 text-sm font-semibold text-[#0a2f66] shadow-sm transition hover:bg-[#f8fbff]"
           >
             <FaArrowLeft />
             {backLabel}

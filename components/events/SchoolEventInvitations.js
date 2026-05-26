@@ -361,7 +361,7 @@ export default function SchoolEventInvitations({ refreshKey = 0, onChanged }) {
                       </span>
                       <span className="flex items-center gap-2">
                         <FaUsers className="text-[#52657d]" />
-                        Grades:{" "}
+                        Registration grades:{" "}
                         {event.eligibleGrades?.length
                           ? event.eligibleGrades.join(", ")
                           : "All grades"}
@@ -443,7 +443,7 @@ export default function SchoolEventInvitations({ refreshKey = 0, onChanged }) {
                   : {participationEvent.title}
                 </h3>
                 <p className="mt-1 text-sm text-[#344f77]">
-                  Only eligible students for{" "}
+                  Only students in registration grades{" "}
                   {participationEvent.eligibleGrades?.length
                     ? participationEvent.eligibleGrades.join(", ")
                     : "all grades"}{" "}

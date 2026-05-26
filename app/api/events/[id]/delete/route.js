@@ -5,6 +5,7 @@ import connectDB from "@/lib/db";
 import Event from "@/models/Event";
 import { canManageEventRecord } from "@/lib/authz";
 import { syncEventSchoolInvitations } from "@/lib/eventInvitations";
+import { publishEventRealtimeUpdate } from "@/lib/eventRealtime";
 
 export async function POST(req, props) {
   try {
@@ -43,6 +44,8 @@ export async function POST(req, props) {
         console.error("Archive Event Invitations Error:", invitationError);
       }
     }
+
+    publishEventRealtimeUpdate("event-archived", { event });
 
     return NextResponse.json(
       { message: "Event archived successfully" },

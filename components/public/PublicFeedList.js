@@ -294,8 +294,8 @@ function EventFeedCard({ item }) {
             <span className="inline-flex items-center gap-2">
               <FaUsers className="text-[#0a2f66]" />
               {item.eligibleGrades?.length
-                ? item.eligibleGrades.join(", ")
-                : "Eligible grades"}
+                ? `Registration: ${item.eligibleGrades.join(", ")}`
+                : "All grades can register"}
             </span>
           </div>
         </div>

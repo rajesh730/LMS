@@ -17,10 +17,7 @@ export default function WorkIndicatorBadge({
 
   if (numericCount <= 0) return null;
 
-  const toneClass =
-    tone === "new"
-      ? "bg-red-500 text-white"
-      : "bg-amber-400 text-[#17120a]";
+  const toneClass = "pratyo-notification-badge bg-red-500 text-white ring-1 ring-red-200";
 
   return (
     <span

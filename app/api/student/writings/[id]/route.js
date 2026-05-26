@@ -5,6 +5,7 @@ import connectDB from "@/lib/db";
 import Student from "@/models/Student";
 import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
 import { publishWorkIndicatorsUpdate } from "@/lib/workIndicatorRealtime";
+import { notifySchoolMagazineSubmitted } from "@/lib/magazineNotifications";
 
 function buildStudentLookup(session) {
   return {
@@ -30,7 +31,7 @@ export async function PATCH(request, props) {
     await connectDB();
 
     const student = await Student.findOne(buildStudentLookup(session))
-      .select("_id school")
+      .select("_id school name")
       .lean();
 
     if (!student) {
@@ -78,6 +79,8 @@ export async function PATCH(request, props) {
       );
     }
 
+    const previousStatus = article.status;
+
     article.title = nextTitle;
     article.content = nextContent;
     article.category = nextCategory;
@@ -99,6 +102,15 @@ export async function PATCH(request, props) {
       studentId: String(student._id),
       status: article.status,
     });
+
+    if (requestedStatus === "SUBMITTED") {
+      await notifySchoolMagazineSubmitted({
+        article,
+        student,
+        schoolId: student.school,
+        isResubmission: previousStatus === "REJECTED",
+      });
+    }
 
     return NextResponse.json({
       message:

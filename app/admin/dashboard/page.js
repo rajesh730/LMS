@@ -490,7 +490,7 @@ function AdminDashboardContent() {
           <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800">
             <div className="mb-6 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
+                <p className="text-xs font-bold uppercase tracking-normal text-slate-500">
                   School onboarding
                 </p>
                 <h2 className="mt-2 text-2xl font-bold text-white">
@@ -575,7 +575,7 @@ function AdminDashboardContent() {
         <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800">
           <div className="mb-6 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
+              <p className="text-xs font-bold uppercase tracking-normal text-slate-500">
                 Network
               </p>
               <h2 className="mt-2 text-2xl font-bold text-white">
@@ -734,7 +734,7 @@ function AdminDashboardContent() {
 
                 <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
                   <div>
-                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
+                    <p className="text-xs font-bold uppercase tracking-normal text-slate-500">
                       Active competitions
                     </p>
                     <h2 className="mt-2 text-2xl font-bold text-white">

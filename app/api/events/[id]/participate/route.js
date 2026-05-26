@@ -22,6 +22,7 @@ import {
   applySchoolParticipationProjection,
   buildSchoolParticipationPresentation,
 } from "@/lib/participationPresentation";
+import { publishEventRealtimeUpdate } from "@/lib/eventRealtime";
 
 function getRegistrationLockMessage(event, action = "change participation") {
   const lifecycleStatus = String(event.lifecycleStatus || "ACTIVE").toUpperCase();
@@ -513,6 +514,11 @@ export async function POST(req, { params }) {
           return errorResponse(400, replacementResult.error);
         }
 
+        publishEventRealtimeUpdate("participation-updated", {
+          event,
+          schoolId,
+        });
+
         return successResponse(
           200,
           `Successfully registered ${replacementResult.teamCount} teams.`,
@@ -692,6 +698,11 @@ export async function POST(req, { params }) {
         });
       }
 
+      publishEventRealtimeUpdate("participation-updated", {
+        event,
+        schoolId,
+      });
+
       return successResponse(
         200,
         `Successfully registered ${successCount} students.`,
@@ -832,6 +843,11 @@ export async function DELETE(req, { params }) {
         return errorResponse(404, "No active participation found to withdraw");
       }
 
+      publishEventRealtimeUpdate("participation-withdrawn", {
+        event,
+        schoolId,
+      });
+
       return successResponse(200, "School participation withdrawn", {
         count: result.deletedCount,
       });
@@ -969,6 +985,11 @@ export async function PUT(req, { params }) {
       if (replacementResult?.error) {
         return errorResponse(400, replacementResult.error);
       }
+
+      publishEventRealtimeUpdate("participation-updated", {
+        event,
+        schoolId,
+      });
 
       return successResponse(200, "Team participation updated successfully", replacementResult);
     }
@@ -1147,6 +1168,11 @@ export async function PUT(req, { params }) {
     await syncApprovedRequestsToRoundOne({
       eventId,
       createdBy: session.user.id,
+    });
+
+    publishEventRealtimeUpdate("participation-updated", {
+      event,
+      schoolId,
     });
 
     return successResponse(200, "Participation updated successfully");

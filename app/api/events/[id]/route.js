@@ -8,6 +8,7 @@ import { syncEventSchoolInvitations } from "@/lib/eventInvitations";
 import { validateEventDates } from "@/lib/eventDates";
 import { validateEventCapacity } from "@/lib/eventCapacity";
 import { normalizeGradeValue } from "@/lib/schoolGrades";
+import { publishEventRealtimeUpdate } from "@/lib/eventRealtime";
 import "@/models/ExternalOrganizer";
 
 const EVENT_PARTNER_ROLES = [
@@ -406,6 +407,8 @@ export async function PUT(req, props) {
       }
     }
 
+    publishEventRealtimeUpdate("event-updated", { event });
+
     return NextResponse.json(
       { message: "Event updated", event },
       { status: 200 }
@@ -463,6 +466,8 @@ export async function DELETE(req, props) {
         console.error("Archive Event Invitations Error:", invitationError);
       }
     }
+
+    publishEventRealtimeUpdate("event-archived", { event: archivedEvent });
 
     return NextResponse.json(
       { message: "Event archived successfully" },

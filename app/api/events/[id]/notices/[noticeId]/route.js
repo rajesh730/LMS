@@ -5,6 +5,7 @@ import dbConnect from "@/lib/db";
 import EventNotice from "@/models/EventNotice";
 import { getManageableEventOrResponse } from "@/lib/eventRoundAccess";
 import { publishRealtimeEvent } from "@/lib/realtimeBus";
+import { publishEventRealtimeUpdate } from "@/lib/eventRealtime";
 
 const NOTICE_TYPES = [
   "GENERAL",
@@ -61,7 +62,7 @@ async function requireAccess(props, session) {
     };
   }
 
-  return { params };
+  return { params, event: access.event };
 }
 
 export async function PATCH(req, props) {
@@ -117,6 +118,13 @@ export async function PATCH(req, props) {
       kind: notice.status === "PUBLISHED" ? "event-notice-updated" : "event-notice-removed",
       eventId: access.params.id,
     });
+    publishEventRealtimeUpdate(
+      notice.status === "PUBLISHED" ? "event-notice-updated" : "event-notice-removed",
+      {
+        event: access.event,
+        eventId: access.params.id,
+      }
+    );
 
     return NextResponse.json({ message: "Notice updated", notice });
   } catch (error) {
@@ -169,6 +177,10 @@ export async function DELETE(req, props) {
     });
     publishRealtimeEvent(`event-${access.params.id}-notices`, {
       kind: "event-notice-removed",
+      eventId: access.params.id,
+    });
+    publishEventRealtimeUpdate("event-notice-removed", {
+      event: access.event,
       eventId: access.params.id,
     });
 
