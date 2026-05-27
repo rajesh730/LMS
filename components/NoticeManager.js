@@ -3,10 +3,16 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   FaBullhorn,
+  FaClipboardList,
   FaEdit,
   FaPlus,
   FaTrash,
   FaEye,
+  FaFileAlt,
+  FaFilter,
+  FaInfoCircle,
+  FaPaperPlane,
+  FaRegCalendarAlt,
   FaSearch,
   FaUserGraduate,
   FaChalkboardTeacher,
@@ -33,6 +39,8 @@ export default function NoticeManager({
     type: "",
     priority: "",
     audience: "",
+    status: "",
+    grade: "",
     search: "",
   });
   const [pagination, setPagination] = useState({
@@ -43,6 +51,7 @@ export default function NoticeManager({
   });
   const [feedback, setFeedback] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [summaryNotices, setSummaryNotices] = useState([]);
 
   const [noticeForm, setNoticeForm] = useState({
     title: "",
@@ -98,6 +107,8 @@ export default function NoticeManager({
       if (!isPlatformMode && filters.priority) {
         params.append("priority", filters.priority);
       }
+      if (filters.status) params.append("status", filters.status);
+      if (!isPlatformMode && filters.grade) params.append("grade", filters.grade);
       if (!isPlatformMode && isStudentOnlyMode) {
         params.append("audience", "students");
       } else if (!isPlatformMode && filters.audience) {
@@ -133,12 +144,36 @@ export default function NoticeManager({
     }
   }, [filters, isPlatformMode, isStudentOnlyMode]);
 
+  const fetchNoticeSummary = useCallback(async () => {
+    try {
+      const params = new URLSearchParams();
+      params.append("page", "1");
+      params.append("limit", "100");
+      params.append("scope", isPlatformMode ? "PLATFORM" : "SCHOOL");
+      if (!isPlatformMode && isStudentOnlyMode) {
+        params.append("audience", "students");
+      }
+
+      const res = await fetch(`/api/notices?${params}`, { cache: "no-store" });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setSummaryNotices(Array.isArray(data.notices) ? data.notices : []);
+      }
+    } catch (error) {
+      console.error("Error fetching notice summary:", error);
+    }
+  }, [isPlatformMode, isStudentOnlyMode]);
+
   useEffect(() => {
     const timer = setTimeout(() => {
       fetchNotices(1);
     }, 300);
     return () => clearTimeout(timer);
   }, [fetchNotices]);
+
+  useEffect(() => {
+    fetchNoticeSummary();
+  }, [fetchNoticeSummary]);
 
   useEffect(() => {
     let isActive = true;
@@ -235,6 +270,7 @@ export default function NoticeManager({
       setEditingNoticeId("");
       setShowForm(false);
       fetchNotices();
+      fetchNoticeSummary();
     } catch (error) {
       console.error("Error saving notice:", error);
       setFeedback({
@@ -264,6 +300,7 @@ export default function NoticeManager({
       });
       setDeleteTarget(null);
       fetchNotices(pagination.page || 1);
+      fetchNoticeSummary();
     } catch (error) {
       console.error("Error deleting notice:", error);
       setFeedback({
@@ -339,6 +376,77 @@ export default function NoticeManager({
 
   const getStatusLabel = (notice) => {
     return notice.status === "DRAFT" ? "Draft" : "Published";
+  };
+
+  const sourceForMetrics = summaryNotices.length > 0 ? summaryNotices : notices;
+  const totalNoticeCount = pagination.totalItems ?? sourceForMetrics.length;
+  const publishedNoticeCount = sourceForMetrics.filter(
+    (notice) => notice.status !== "DRAFT"
+  ).length;
+  const draftNoticeCount = sourceForMetrics.filter(
+    (notice) => notice.status === "DRAFT"
+  ).length;
+  const scheduledNoticeCount = sourceForMetrics.filter(
+    (notice) => notice.expiryDate && new Date(notice.expiryDate) > new Date()
+  ).length;
+
+  const metricCards = [
+    {
+      label: "Total Notices",
+      value: totalNoticeCount,
+      note: "This academic year",
+      icon: FaClipboardList,
+      tone: "purple",
+    },
+    {
+      label: "Published",
+      value: publishedNoticeCount,
+      note: "Visible to students",
+      icon: FaPaperPlane,
+      tone: "emerald",
+    },
+    {
+      label: "Scheduled",
+      value: scheduledNoticeCount,
+      note: "Have an expiry date",
+      icon: FaRegCalendarAlt,
+      tone: "amber",
+    },
+    {
+      label: "Drafts",
+      value: draftNoticeCount,
+      note: "Not published yet",
+      icon: FaFileAlt,
+      tone: "blue",
+    },
+  ];
+
+  const metricToneClasses = {
+    purple: "border-purple-100 bg-purple-50 text-purple-700",
+    emerald: "border-emerald-100 bg-emerald-50 text-emerald-700",
+    amber: "border-amber-100 bg-amber-50 text-amber-700",
+    blue: "border-blue-100 bg-blue-50 text-[#0a2f66]",
+  };
+
+  const typeStyles = {
+    GENERAL: "border-emerald-100 bg-emerald-50 text-emerald-700",
+    URGENT: "border-red-100 bg-red-50 text-red-700",
+    EVENT: "border-purple-100 bg-purple-50 text-purple-700",
+    HOLIDAY: "border-amber-100 bg-amber-50 text-amber-700",
+    SHOWCASE: "border-blue-100 bg-blue-50 text-[#0a2f66]",
+  };
+
+  const statusStyles = {
+    PUBLISHED: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+    DRAFT: "bg-blue-50 text-[#0a2f66] ring-blue-200",
+  };
+
+  const rowAccentStyles = {
+    GENERAL: "border-l-4 border-l-emerald-400",
+    URGENT: "border-l-4 border-l-red-400",
+    EVENT: "border-l-4 border-l-purple-400",
+    HOLIDAY: "border-l-4 border-l-amber-400",
+    SHOWCASE: "border-l-4 border-l-blue-400",
   };
 
   if (selectedNotice) {
@@ -484,16 +592,16 @@ export default function NoticeManager({
       )}
 
       {/* Header */}
-      <div className="bg-white p-6 rounded-2xl border border-[#d7cdbb] shadow-sm">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <h2 className="text-2xl font-bold text-[#17120a] flex items-center gap-3">
-              <FaBullhorn className="text-emerald-400" />
-              {title}
-            </h2>
-            <p className="text-[#52657d] text-sm">
-              {subtitle}
-            </p>
+      <div className="rounded-2xl border border-[#e1e7f2] bg-white p-6 shadow-sm">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-start gap-4">
+            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-purple-50 text-xl text-purple-700">
+              <FaBullhorn />
+            </span>
+            <div>
+              <h2 className="text-3xl font-black text-[#17120a]">{title}</h2>
+              <p className="mt-2 max-w-2xl text-base text-[#52657d]">{subtitle}</p>
+            </div>
           </div>
           <button
             onClick={() => {
@@ -503,113 +611,56 @@ export default function NoticeManager({
               }
               setShowForm(!showForm);
             }}
-            className="bg-emerald-600 hover:bg-emerald-500 text-[#17120a] px-4 py-2 rounded-lg font-medium transition flex items-center gap-2"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-purple-700 px-5 text-sm font-black text-white shadow-sm transition hover:bg-purple-800"
           >
             <FaPlus />
             {showForm ? "Cancel" : editingNoticeId ? "Edit Notice" : "Create Notice"}
           </button>
         </div>
 
-        {/* Filters */}
-        <div
-          className={`mt-6 grid gap-4 ${isPlatformMode ? "grid-cols-1" : "grid-cols-1 md:grid-cols-3"
-            }`}
-        >
-          {isPlatformMode ? (
-            <>
-              <div className="bg-slate-800 text-[#52657d] p-3 rounded-lg border border-slate-700 text-sm">
-                Platform notices appear inside logged-in school dashboards and notification panels.
-              </div>
-              <div className="relative">
-                <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-                <input
-                  type="text"
-                  value={filters.search}
-                  onChange={(e) =>
-                    setFilters({ ...filters, search: e.target.value })
-                  }
-                  placeholder="Search platform notices..."
-                  className="w-full rounded-lg border border-[#d7cdbb] bg-[#f8fbff] py-3 pl-10 pr-3 text-[#17120a] outline-none transition focus:border-[#0a2f66] focus:bg-white"
-                />
-              </div>
-            </>
-          ) : isStudentOnlyMode ? (
-            <>
-              <div className="bg-slate-800 text-[#344f77] p-3 rounded-lg border border-slate-700 text-sm">
-                These notices are sent only to students of your school. Leave grades empty to send to all students.
-              </div>
-              <div className="relative">
-                <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-                <input
-                  type="text"
-                  value={filters.search}
-                  onChange={(e) =>
-                    setFilters({ ...filters, search: e.target.value })
-                  }
-                  placeholder="Search student notices..."
-                  className="w-full rounded-lg border border-[#d7cdbb] bg-[#f8fbff] py-3 pl-10 pr-3 text-[#17120a] outline-none transition focus:border-[#0a2f66] focus:bg-white"
-                />
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="relative md:col-span-3">
-                <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-                <input
-                  type="text"
-                  value={filters.search}
-                  onChange={(e) =>
-                    setFilters({ ...filters, search: e.target.value })
-                  }
-                  placeholder="Search notice title or content..."
-                  className="w-full rounded-lg border border-[#d7cdbb] bg-[#f8fbff] py-3 pl-10 pr-3 text-[#17120a] outline-none transition focus:border-[#0a2f66] focus:bg-white"
-                />
-              </div>
-              <select
-                value={filters.type}
-                onChange={(e) =>
-                  setFilters({ ...filters, type: e.target.value })
-                }
-                className="bg-[#f8fbff] text-[#17120a] p-3 rounded-lg border border-[#d7cdbb] focus:border-[#0a2f66] focus:bg-white focus:outline-none"
-              >
-                <option value="">All Types</option>
-                {noticeTypes.map((type) => (
-                  <option key={type.value} value={type.value}>
-                    {type.label}
-                  </option>
-                ))}
-              </select>
-
-              <select
-                value={filters.priority}
-                onChange={(e) =>
-                  setFilters({ ...filters, priority: e.target.value })
-                }
-                className="bg-[#f8fbff] text-[#17120a] p-3 rounded-lg border border-[#d7cdbb] focus:border-[#0a2f66] focus:bg-white focus:outline-none"
-              >
-                <option value="">All Priorities</option>
-                {priorities.map((priority) => (
-                  <option key={priority.value} value={priority.value}>
-                    {priority.label}
-                  </option>
-                ))}
-              </select>
-
-              <select
-                value={filters.audience}
-                onChange={(e) =>
-                  setFilters({ ...filters, audience: e.target.value })
-                }
-                className="bg-[#f8fbff] text-[#17120a] p-3 rounded-lg border border-[#d7cdbb] focus:border-[#0a2f66] focus:bg-white focus:outline-none"
-              >
-                <option value="">All Audiences</option>
-                <option value="students">Students</option>
-                <option value="teachers">Teachers</option>
-                <option value="parents">Parents</option>
-              </select>
-            </>
-          )}
+        <div className="mt-5 flex gap-3 rounded-xl border border-purple-100 bg-purple-50/70 p-4 text-sm font-semibold text-[#40516b]">
+          <FaInfoCircle className="mt-0.5 shrink-0 text-purple-700" />
+          <p>
+            {isPlatformMode
+              ? "Platform notices appear inside logged-in school dashboards and notification panels."
+              : isStudentOnlyMode
+                ? "These notices are sent only to students of your school. Leave grades empty to send to all students."
+                : "Choose the audience carefully so each notice reaches the right school community members."}
+          </p>
         </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {metricCards.map((card) => {
+          const Icon = card.icon;
+          return (
+            <div
+              key={card.label}
+              className="rounded-2xl border border-[#e6eaf7] bg-white p-5 shadow-sm"
+            >
+              <div className="flex items-center gap-4">
+                <span
+                  className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border ${
+                    metricToneClasses[card.tone]
+                  }`}
+                >
+                  <Icon />
+                </span>
+                <span className="min-w-0">
+                  <strong className="block text-2xl font-black text-[#17120a]">
+                    {card.value}
+                  </strong>
+                  <span className="block truncate text-sm font-black text-[#24314d]">
+                    {card.label}
+                  </span>
+                  <span className="mt-1 block text-xs font-bold text-[#52657d]">
+                    {card.note}
+                  </span>
+                </span>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {/* Create Notice Form */}
@@ -834,22 +885,100 @@ export default function NoticeManager({
         </div>
       )}
 
+      <div className="rounded-2xl border border-[#e6eaf7] bg-white p-4 shadow-sm">
+        <div className="grid gap-3 lg:grid-cols-[minmax(240px,1fr)_160px_160px_160px_auto]">
+          <div className="relative">
+            <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-[#75869b]" />
+            <input
+              type="text"
+              value={filters.search}
+              onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+              placeholder={
+                isStudentOnlyMode
+                  ? "Search student notices..."
+                  : "Search notice title or content..."
+              }
+              className="h-12 w-full rounded-xl border border-[#dbe5f4] bg-[#f8fbff] pl-11 pr-4 text-sm font-semibold outline-none transition focus:border-purple-300"
+            />
+          </div>
+          {!isPlatformMode && (
+            <select
+              value={filters.type}
+              onChange={(e) => setFilters({ ...filters, type: e.target.value })}
+              className="h-12 rounded-xl border border-[#dbe5f4] bg-white px-4 text-sm font-black text-[#24314d] outline-none transition focus:border-purple-300"
+            >
+              <option value="">All Types</option>
+              {noticeTypes.map((type) => (
+                <option key={type.value} value={type.value}>
+                  {type.label}
+                </option>
+              ))}
+            </select>
+          )}
+          {!isPlatformMode && (
+            <select
+              value={filters.grade}
+              onChange={(e) => setFilters({ ...filters, grade: e.target.value })}
+              className="h-12 rounded-xl border border-[#dbe5f4] bg-white px-4 text-sm font-black text-[#24314d] outline-none transition focus:border-purple-300"
+            >
+              <option value="">All Grades</option>
+              {gradeOptions.map((grade) => (
+                <option key={grade} value={grade}>
+                  {grade}
+                </option>
+              ))}
+            </select>
+          )}
+          <select
+            value={filters.status}
+            onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+            className="h-12 rounded-xl border border-[#dbe5f4] bg-white px-4 text-sm font-black text-[#24314d] outline-none transition focus:border-purple-300"
+          >
+            <option value="">All Status</option>
+            <option value="PUBLISHED">Published</option>
+            <option value="DRAFT">Draft</option>
+          </select>
+          <button
+            type="button"
+            onClick={() =>
+              setFilters({
+                type: "",
+                priority: "",
+                audience: "",
+                status: "",
+                grade: "",
+                search: "",
+              })
+            }
+            className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-[#dbe5f4] bg-white px-4 text-sm font-black text-[#0a2f66] transition hover:bg-[#f8fbff]"
+          >
+            <FaFilter />
+            Clear
+          </button>
+        </div>
+      </div>
+
       {/* Notices List */}
-      <div className="bg-white p-6 rounded-2xl border border-[#d7cdbb] shadow-sm">
-        <h3 className="text-xl font-semibold text-[#17120a] mb-4">
-          All Notices ({pagination.totalItems ?? notices.length})
-        </h3>
+      <div className="rounded-2xl border border-[#e1e7f2] bg-white p-5 shadow-[0_14px_34px_rgba(10,47,102,0.08)]">
+        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <h3 className="text-xl font-black text-[#17120a]">
+            All Notices ({pagination.totalItems ?? notices.length})
+          </h3>
+          <span className="text-sm font-black text-purple-700">
+            Sort by: Newest First
+          </span>
+        </div>
 
         {loading ? (
           <div className="space-y-4">
             {[1, 2, 3].map((i) => (
               <div
                 key={i}
-                className="bg-slate-800 p-4 rounded-xl animate-pulse"
+                className="rounded-xl border border-[#e1e7f2] bg-[#f8fbff] p-4"
               >
-                <div className="h-4 bg-slate-700 rounded w-1/2 mb-2"></div>
-                <div className="h-3 bg-slate-700 rounded w-full mb-2"></div>
-                <div className="h-3 bg-slate-700 rounded w-3/4"></div>
+                <div className="mb-3 h-4 w-1/2 animate-pulse rounded bg-[#e1e7f2]" />
+                <div className="mb-2 h-3 w-full animate-pulse rounded bg-[#e1e7f2]" />
+                <div className="h-3 w-3/4 animate-pulse rounded bg-[#e1e7f2]" />
               </div>
             ))}
           </div>
@@ -859,93 +988,95 @@ export default function NoticeManager({
               {notices.map((notice) => (
                 <div
                   key={notice._id}
-                  className="bg-white hover:bg-[#f8fbff] p-4 rounded-xl border border-[#d7cdbb] transition shadow-sm hover:border-[#0a2f66]/30"
+                  className={`rounded-xl border border-[#e1e7f2] bg-white p-4 shadow-sm transition hover:border-purple-200 hover:bg-[#f8fbff] ${
+                    rowAccentStyles[notice.type] || rowAccentStyles.GENERAL
+                  }`}
                 >
-                  <div className="flex items-start justify-between mb-3">
-                    {!isPlatformMode ? (
-                      <div className="flex items-center gap-3">
+                  <div className="grid gap-4 lg:grid-cols-[1fr_180px_112px] lg:items-center">
+                    <div className="min-w-0">
+                      <div className="mb-2 flex flex-wrap items-center gap-2">
                         <span
-                          className={`px-2 py-1 rounded text-xs font-medium text-[#17120a] ${getTypeColor(
-                            notice.type
-                          )}`}
+                          className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-black uppercase ${
+                            typeStyles[notice.type] || typeStyles.GENERAL
+                          }`}
                         >
                           {notice.type}
                         </span>
                         <span
-                          className={`text-xs font-medium ${getPriorityColor(
-                            notice.priority
-                          )}`}
+                          className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-black uppercase ring-1 ${
+                            statusStyles[notice.status] || statusStyles.PUBLISHED
+                          }`}
                         >
-                          {notice.priority}
+                          {getStatusLabel(notice)}
+                        </span>
+                        {!isPlatformMode && notice.grades?.length > 0 && (
+                          <span className="rounded-full bg-[#f8fbff] px-2.5 py-1 text-[11px] font-black uppercase text-[#52657d]">
+                            {notice.grades.join(", ")}
+                          </span>
+                        )}
+                      </div>
+
+                      <h4 className="line-clamp-1 text-lg font-black text-[#17120a]">
+                        {notice.title}
+                      </h4>
+                      <p className="mt-1 line-clamp-2 text-sm text-[#52657d]">
+                        {notice.content}
+                      </p>
+                      <div className="mt-3 flex flex-wrap items-center gap-3 text-xs font-bold text-[#75869b]">
+                        <span>{notice.author?.name || "School Admin"}</span>
+                        <span>
+                          {notice.grades?.length > 0
+                            ? `${notice.grades.length} grade target${
+                                notice.grades.length === 1 ? "" : "s"
+                              }`
+                            : "All Students"}
+                        </span>
+                        <span>
+                          {notice.publishedAt
+                            ? formatDate(notice.publishedAt)
+                            : "Not published yet"}
                         </span>
                       </div>
-                    ) : (
-                      <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
-                        <span>{getStatusLabel(notice)}</span>
-                        <span>Platform notice</span>
-                      </div>
-                    )}
+                    </div>
 
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => openEditNotice(notice)}
-                        className="text-[#52657d] hover:text-blue-400 transition"
-                        title="Edit Notice"
+                    <div>
+                      <span
+                        className={`inline-flex rounded-full px-3 py-1 text-xs font-black ring-1 ${
+                          statusStyles[notice.status] || statusStyles.PUBLISHED
+                        }`}
                       >
-                        <FaEdit />
-                      </button>
+                        {getStatusLabel(notice)}
+                      </span>
+                      <p className="mt-1 text-xs font-semibold text-[#75869b]">
+                        {notice.publishedAt
+                          ? formatDate(notice.publishedAt)
+                          : "Not published yet"}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center justify-end gap-2">
                       <button
                         onClick={() => setSelectedNotice(notice)}
-                        className="text-[#52657d] hover:text-blue-400 transition"
-                        title="View Details"
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[#dbe5f4] bg-white text-[#0a2f66] transition hover:bg-[#f8fbff]"
+                        title="View notice"
                       >
                         <FaEye />
                       </button>
                       <button
+                        onClick={() => openEditNotice(notice)}
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[#dbe5f4] bg-white text-[#0a2f66] transition hover:bg-[#f8fbff]"
+                        title="Edit notice"
+                      >
+                        <FaEdit />
+                      </button>
+                      <button
                         onClick={() => setDeleteTarget(notice)}
-                        className="text-[#52657d] hover:text-red-400 transition"
-                        title="Delete Notice"
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-rose-200 bg-rose-50 text-rose-700 transition hover:bg-rose-100"
+                        title="Archive notice"
                       >
                         <FaTrash />
                       </button>
                     </div>
-                  </div>
-
-                  <h4 className="text-lg font-semibold text-[#17120a] mb-2">
-                    {notice.title}
-                  </h4>
-                  <p className="text-[#52657d] text-sm mb-3 line-clamp-2">
-                    {notice.content}
-                  </p>
-
-                  <div className="flex items-center justify-between text-xs text-slate-500">
-                    <div className="flex items-center gap-4">
-                      <span>By {notice.author?.name}</span>
-                      <span>{getStatusLabel(notice)}</span>
-                      <span>
-                        {notice.publishedAt
-                          ? formatDate(notice.publishedAt)
-                          : "Not published yet"}
-                      </span>
-                    </div>
-
-                    {isPlatformMode ? (
-                      <div className="rounded-full bg-slate-700 px-2 py-1 text-[11px] font-semibold text-slate-200">
-                        Dashboard notice
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        {notice.targetAudience.students && (
-                          <FaUserGraduate className="text-blue-400" />
-                        )}
-                        {notice.targetAudience.teachers && (
-                          <FaChalkboardTeacher className="text-emerald-400" />
-                        )}
-                        {notice.targetAudience.parents && (
-                          <FaUserFriends className="text-purple-400" />
-                        )}
-                      </div>
-                    )}
                   </div>
 
                 </div>

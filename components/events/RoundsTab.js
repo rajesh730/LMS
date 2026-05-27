@@ -2,10 +2,18 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  FaBell,
+  FaCheckCircle,
   FaEdit,
+  FaEllipsisH,
+  FaEye,
+  FaLayerGroup,
+  FaLock,
   FaPlus,
   FaSave,
   FaTrash,
+  FaTrophy,
+  FaUsers,
 } from "react-icons/fa";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
@@ -119,7 +127,7 @@ function summarizeTeamRoundParticipant(participant) {
   };
 }
 
-export default function RoundsTab({ event, onCompetitionClosed }) {
+export default function RoundsTab({ event, onCompetitionClosed, onAddNotice }) {
   const eventId = event.id || event._id;
   const isTeamEvent =
     String(event?.participationFormat || "INDIVIDUAL").toUpperCase() === "TEAM";
@@ -172,6 +180,14 @@ export default function RoundsTab({ event, onCompetitionClosed }) {
       ? String(selectedRound._id) === String(latestRound._id)
       : false;
   const statusButtons = isFinalRound ? FINAL_STATUS_BUTTONS : NON_FINAL_STATUS_BUTTONS;
+  const completedRoundCount = rounds.filter((round) =>
+    ["COMPLETED", "SHORTLIST_PUBLISHED"].includes(round.status)
+  ).length;
+  const certificateCount = event?.resultsPublished
+    ? rounds.flatMap((round) => round.participants || []).filter((participant) =>
+        ["WINNER", "RUNNER_UP", "FINALIST", "SELECTED"].includes(participant.status)
+      ).length
+    : 0;
 
   const selectedCount = useMemo(
     () =>
@@ -200,6 +216,12 @@ export default function RoundsTab({ event, onCompetitionClosed }) {
     return {
       total: participants.length,
       selected: participants.filter((participant) => participant.status === "SELECTED")
+        .length,
+      winners: participants.filter((participant) => participant.status === "WINNER")
+        .length,
+      runnerUps: participants.filter((participant) => participant.status === "RUNNER_UP")
+        .length,
+      finalists: participants.filter((participant) => participant.status === "FINALIST")
         .length,
       completed: completedParticipants.length,
       pending: Math.max(participants.length - completedParticipants.length, 0),
@@ -367,43 +389,66 @@ export default function RoundsTab({ event, onCompetitionClosed }) {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {message && (
-        <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+        <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-bold text-[#0a2f66]">
           {message}
         </div>
       )}
-      {competitionLocked && (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-          Competition is closed. All rounds are now locked and certificates/results are available in the results tab.
-        </div>
-      )}
 
-      <div className="rounded-2xl border border-slate-200 bg-white">
-        <div className="flex flex-col gap-4 border-b border-slate-200 px-6 py-5 md:flex-row md:items-center md:justify-between">
+      <div
+        className={`rounded-xl border px-4 py-4 ${
+          competitionLocked
+            ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+            : "border-blue-100 bg-blue-50 text-[#0a2f66]"
+        }`}
+      >
+        <div className="flex items-start gap-3">
+          <span
+            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
+              competitionLocked
+                ? "bg-emerald-600 text-white"
+                : "bg-blue-600 text-white"
+            }`}
+          >
+            {competitionLocked ? <FaCheckCircle /> : <FaLayerGroup />}
+          </span>
           <div>
-            <h2 className="text-xl font-bold text-slate-900">Rounds</h2>
-            <p className="mt-1 text-sm text-slate-500">
-              Approved {isTeamEvent ? "teams enter" : "students enter"} Round 1
-              automatically. Update statuses here, then move selected{" "}
-              {isTeamEvent ? "teams" : "students"} to the next or final round.
+            <h2 className="text-base font-black">
+              {competitionLocked ? "Competition is closed" : "Competition rounds are active"}
+            </h2>
+            <p className="mt-1 text-sm opacity-90">
+              {competitionLocked
+                ? "All rounds are locked. Certificates and results are available in the Results & Certificates tab."
+                : `Approved ${isTeamEvent ? "teams" : "students"} move through each round automatically when selected.`}
             </p>
           </div>
-          {rounds.length === 0 && !competitionLocked && (
+        </div>
+      </div>
+
+      <div className="overflow-hidden rounded-xl border border-[#e1e7f2] bg-white shadow-sm">
+        <div className="flex flex-col gap-4 border-b border-[#e1e7f2] px-5 py-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className="text-xl font-black text-[#17120a]">Rounds</h2>
+            <p className="mt-1 text-sm text-[#52657d]">
+              Manage each round and update outcomes. Selected entries can move forward.
+            </p>
+          </div>
+          {!competitionLocked && (
             <button
               type="button"
               onClick={openCreateRound}
-              className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700"
+              className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-purple-700 px-4 text-sm font-black text-white hover:bg-purple-800"
             >
               <FaPlus />
-              Create Initial Round
+              Add Round
             </button>
           )}
         </div>
 
         <div className="overflow-x-auto">
           <table className="min-w-full text-left">
-            <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+            <thead className="bg-[#f8fbff] text-[11px] uppercase tracking-wide text-[#52657d]">
               <tr>
                 <th className="px-4 py-3">Round</th>
                 <th className="px-4 py-3">Date</th>
@@ -420,13 +465,13 @@ export default function RoundsTab({ event, onCompetitionClosed }) {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan="6" className="px-6 py-10 text-center text-slate-500">
+                  <td colSpan="6" className="px-6 py-10 text-center text-[#52657d]">
                     Loading rounds...
                   </td>
                 </tr>
               ) : rounds.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="px-6 py-10 text-center text-slate-500">
+                  <td colSpan="6" className="px-6 py-10 text-center text-[#52657d]">
                     No rounds yet. Round 1 will be created automatically once a
                     {isTeamEvent ? "team is approved." : "participant is approved."}
                   </td>
@@ -446,31 +491,52 @@ export default function RoundsTab({ event, onCompetitionClosed }) {
                   return (
                     <tr
                       key={roundKey}
-                      className={`border-t border-slate-100 ${
-                        String(selectedRoundId) === String(round._id) ? "bg-blue-50/70" : "bg-white"
+                      className={`border-t border-[#e1e7f2] ${
+                        String(selectedRoundId) === String(round._id)
+                          ? "bg-purple-50/70"
+                          : "bg-white"
                       }`}
                     >
                       <td className="px-4 py-4">
-                        <div className="font-semibold text-slate-900">
-                          {round.title}
-                        </div>
-                        <div className="text-xs text-slate-500">
-                          {isFinalRoundRecord(round)
-                            ? "Final round"
-                            : `Round ${round.roundNumber}`}
+                        <div className="flex items-center gap-3">
+                          <span
+                            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-black ${
+                              isFinalRoundRecord(round)
+                                ? "bg-purple-100 text-purple-700"
+                                : round.status === "COMPLETED"
+                                ? "bg-emerald-100 text-emerald-700"
+                                : "bg-blue-100 text-[#0a2f66]"
+                            }`}
+                          >
+                            {isFinalRoundRecord(round) ? <FaTrophy /> : round.roundNumber}
+                          </span>
+                          <span>
+                            <span className="block font-black text-[#17120a]">
+                              {round.title}
+                            </span>
+                            <span className="text-xs font-bold text-[#52657d]">
+                              {isFinalRoundRecord(round)
+                                ? "Final Round"
+                                : round.roundNumber === 1
+                                ? "Preliminary Round"
+                                : `Round ${round.roundNumber}`}
+                            </span>
+                          </span>
                         </div>
                       </td>
-                      <td className="px-4 py-4 text-sm text-slate-600">
+                      <td className="px-4 py-4 text-sm font-bold text-[#52657d]">
                         {formatDate(round.date)}
                       </td>
-                      <td className="px-4 py-4 text-sm text-slate-600">
-                        {participantCount}
+                      <td className="px-4 py-4 text-sm text-[#52657d]">
+                        <strong className="block text-[#17120a]">{participantCount}</strong>
+                        {isTeamEvent ? "Teams" : participantCount === 1 ? "Student" : "Students"}
                       </td>
-                      <td className="px-4 py-4 text-sm text-slate-600">
-                        {roundSelectedCount}
+                      <td className="px-4 py-4 text-sm text-[#52657d]">
+                        <strong className="block text-[#17120a]">{roundSelectedCount}</strong>
+                        Selected
                       </td>
                       <td className="px-4 py-4">
-                        <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
+                        <span className="inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-black text-emerald-700">
                           {label(round.status)}
                         </span>
                       </td>
@@ -479,18 +545,18 @@ export default function RoundsTab({ event, onCompetitionClosed }) {
                           <button
                             type="button"
                             onClick={() => setSelectedRoundId(String(round._id))}
-                            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                            className="rounded-lg border border-[#dbe5f4] bg-white px-3 py-2 text-xs font-black text-[#0a2f66] hover:bg-[#f8fbff]"
                           >
-                            Open
+                            {isFinalRoundRecord(round) ? "Manage Final" : "View Details"}
                           </button>
                           <button
                             type="button"
                             onClick={() => openEditRound(round)}
                             disabled={competitionLocked}
-                            className="rounded-lg bg-slate-100 p-2 text-slate-700 hover:bg-slate-200"
+                            className="rounded-lg bg-[#f8fbff] p-2 text-[#0a2f66] hover:bg-[#edf4ff] disabled:opacity-50"
                             title="Edit round"
                           >
-                            <FaEdit />
+                            <FaEllipsisH />
                           </button>
                           <button
                             type="button"
@@ -513,14 +579,21 @@ export default function RoundsTab({ event, onCompetitionClosed }) {
       </div>
 
       {selectedRound && (
-        <div className="rounded-2xl border border-slate-200 bg-white">
-          <div className="flex flex-col gap-4 border-b border-slate-200 px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
+        <div className="overflow-hidden rounded-xl border border-purple-100 bg-white shadow-sm">
+          <div className="flex flex-col gap-4 border-b border-purple-100 bg-purple-50/40 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <h3 className="text-lg font-bold text-slate-900">{selectedRound.title}</h3>
-              <p className="mt-1 text-sm text-slate-500">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="text-lg font-black text-[#17120a]">
+                  {selectedRound.title}
+                </h3>
+                <span className="rounded-full bg-purple-100 px-3 py-1 text-[11px] font-black uppercase text-purple-700">
+                  {isFinalRound ? "Final Placement" : "Round Management"}
+                </span>
+              </div>
+              <p className="mt-1 text-sm text-[#52657d]">
                 {selectedRound.instructions || "No round instructions added yet."}
               </p>
-              <p className="mt-2 text-xs text-slate-500">
+              <p className="mt-2 text-xs font-bold text-[#52657d]">
                 Date: {formatDate(selectedRound.date)} | Venue:{" "}
                 {selectedRound.venue || "Not set"} | Status: {label(selectedRound.status)}
               </p>
@@ -529,91 +602,99 @@ export default function RoundsTab({ event, onCompetitionClosed }) {
               <button
                 type="button"
                 onClick={() => setParticipantFilter("all")}
-                className={`rounded-lg px-3 py-2 text-sm font-semibold ${
+                className={`inline-flex min-h-9 items-center gap-2 rounded-lg px-3 text-sm font-black ${
                   participantFilter === "all"
-                    ? "bg-[#0a2f66] text-white"
-                    : "border border-slate-200 bg-white text-slate-700"
+                    ? "bg-purple-700 text-white"
+                    : "border border-purple-100 bg-white text-[#0a2f66]"
                 }`}
               >
-                {selectedRound.title}
+                <FaTrophy />
+                {isFinalRound ? "Final Round" : selectedRound.title}
               </button>
               <button
                 type="button"
                 onClick={() => setParticipantFilter("selected")}
-                className={`rounded-lg px-3 py-2 text-sm font-semibold ${
+                className={`inline-flex min-h-9 items-center gap-2 rounded-lg px-3 text-sm font-black ${
                   participantFilter === "selected"
-                    ? "bg-[#2f7fdb] text-white"
-                    : "border border-slate-200 bg-white text-slate-700"
+                    ? "bg-purple-700 text-white"
+                    : "border border-purple-100 bg-white text-[#0a2f66]"
                 }`}
               >
-                Selected {isTeamEvent ? "Teams" : "Participants"} ({selectedCount})
+                <FaUsers />
+                Selected Participants ({selectedCount})
               </button>
               <button
                 type="button"
-                onClick={() => openNoticeModal(selectedRound)}
+                onClick={() => onAddNotice?.(selectedRound)}
                 disabled={competitionLocked}
-                className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-purple-100 bg-white px-3 text-sm font-black text-[#0a2f66] hover:bg-[#f8fbff] disabled:opacity-50"
               >
+                <FaBell />
                 Add Notice
               </button>
               <button
                 type="button"
                 onClick={() => openEditRound(selectedRound)}
                 disabled={competitionLocked}
-                className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-purple-100 bg-white px-3 text-sm font-black text-[#0a2f66] hover:bg-[#f8fbff] disabled:opacity-50"
               >
+                <FaEye />
                 Round Details
               </button>
             </div>
           </div>
 
-          <div className="grid gap-4 border-b border-slate-200 px-6 py-5 md:grid-cols-4">
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-              <div className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
+          <div className="grid gap-4 border-b border-purple-100 px-5 py-4 md:grid-cols-4">
+            <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-4">
+              <div className="text-xs font-black uppercase text-[#0a2f66]">
                 {isTeamEvent ? "Teams In Round" : "Entries In Round"}
               </div>
-              <div className="mt-2 text-3xl font-bold text-slate-900">
+              <div className="mt-2 text-3xl font-black text-[#17120a]">
                 {roundMetrics.total}
               </div>
-              <p className="mt-2 text-sm text-slate-500">
+              <p className="mt-2 text-sm text-[#52657d]">
                 {isTeamEvent
                   ? "All approved teams currently active in this round."
                   : "All approved participants currently active in this round."}
               </p>
             </div>
-            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4">
-              <div className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-700">
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-4">
+              <div className="text-xs font-black uppercase text-emerald-700">
                 Selected
               </div>
-              <div className="mt-2 text-3xl font-bold text-emerald-900">
-                {roundMetrics.selected}
+              <div className="mt-2 text-3xl font-black text-emerald-900">
+                {isFinalRound
+                  ? roundMetrics.winners + roundMetrics.runnerUps + roundMetrics.finalists
+                  : roundMetrics.selected}
               </div>
               <p className="mt-2 text-sm text-emerald-700">
-                {isTeamEvent
+                {isFinalRound
+                  ? "Participants with final placement."
+                  : isTeamEvent
                   ? "Teams ready to move to the next stage."
                   : "Participants ready to move to the next stage."}
               </p>
             </div>
-            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4">
-              <div className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-700">
+            <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-4">
+              <div className="text-xs font-black uppercase text-[#0a2f66]">
                 Awaiting Decision
               </div>
-              <div className="mt-2 text-3xl font-bold text-amber-900">
+              <div className="mt-2 text-3xl font-black text-[#17120a]">
                 {roundMetrics.pending}
               </div>
-              <p className="mt-2 text-sm text-amber-700">
+              <p className="mt-2 text-sm text-[#52657d]">
                 Review these {isTeamEvent ? "teams" : "participants"} and set their
                 round outcome.
               </p>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
-              <div className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-4">
+              <div className="text-xs font-black uppercase text-amber-700">
                 Advancement Mode
               </div>
-              <div className="mt-2 text-lg font-bold text-slate-900">
+              <div className="mt-2 text-lg font-black text-[#17120a]">
                 {isFinalRound ? "Final Placement" : "Qualification"}
               </div>
-              <p className="mt-2 text-sm text-slate-500">
+              <p className="mt-2 text-sm text-amber-700">
                 {isFinalRound
                   ? `Mark ${isTeamEvent ? "team" : "participant"} outcomes here, then close the competition.`
                   : `Select ${isTeamEvent ? "teams" : "participants"} and send them to the next round or final.`}
@@ -623,7 +704,7 @@ export default function RoundsTab({ event, onCompetitionClosed }) {
 
           <div className="overflow-x-auto">
             <table className="min-w-full text-left">
-              <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+              <thead className="bg-[#f8fbff] text-[11px] uppercase tracking-wide text-[#52657d]">
                 <tr>
                   <th className="px-4 py-3">School Name</th>
                   <th className="px-4 py-3">
@@ -640,7 +721,7 @@ export default function RoundsTab({ event, onCompetitionClosed }) {
               <tbody>
                 {visibleParticipants.length === 0 ? (
                   <tr>
-                    <td colSpan="6" className="px-6 py-10 text-center text-slate-500">
+                    <td colSpan="6" className="px-6 py-10 text-center text-[#52657d]">
                       No {isTeamEvent ? "teams" : "participants"} in this view yet.
                     </td>
                   </tr>
@@ -653,16 +734,16 @@ export default function RoundsTab({ event, onCompetitionClosed }) {
                           participant.student ||
                           `${participant.school?._id || participant.school}-${participant.student?.name || "student"}`
                       )}
-                      className="border-t border-slate-100"
+                      className="border-t border-[#e1e7f2]"
                     >
-                      <td className="px-4 py-4 text-sm text-slate-700">
+                      <td className="px-4 py-4 text-sm font-bold text-[#0a2f66]">
                         {isTeamEvent
                           ? summarizeTeamRoundParticipant(participant).schoolName
                           : participant.school?.schoolName ||
                             participant.school?.name ||
                             "School"}
                       </td>
-                      <td className="px-4 py-4 font-medium text-slate-900">
+                      <td className="px-4 py-4 font-bold text-[#17120a]">
                         {isTeamEvent ? (
                           <div>
                             <div className="font-semibold text-slate-900">
@@ -680,7 +761,7 @@ export default function RoundsTab({ event, onCompetitionClosed }) {
                           participant.student?.name || "Student"
                         )}
                       </td>
-                      <td className="px-4 py-4 text-sm text-slate-600">
+                      <td className="px-4 py-4 text-sm text-[#52657d]">
                         {isTeamEvent ? (
                           <div className="space-y-2">
                             <div className="font-medium text-slate-700">
@@ -716,7 +797,7 @@ export default function RoundsTab({ event, onCompetitionClosed }) {
                           {label(participant.status)}
                         </span>
                       </td>
-                      <td className="px-4 py-4 text-sm text-slate-500">
+                      <td className="px-4 py-4 text-sm text-[#52657d]">
                         {participant.sourceRoundNumber ? (
                           <div>Moved from Round {participant.sourceRoundNumber}</div>
                         ) : (
@@ -757,7 +838,7 @@ export default function RoundsTab({ event, onCompetitionClosed }) {
             </table>
           </div>
 
-          <div className="border-t border-slate-200 px-6 py-4">
+          <div className="border-t border-[#e1e7f2] px-5 py-4">
             <div className="flex flex-wrap justify-end gap-3">
               {!isFinalRound && (
                 <>
@@ -770,7 +851,7 @@ export default function RoundsTab({ event, onCompetitionClosed }) {
                       selectedCount === 0
                     }
                     onClick={() => moveSelected("next")}
-                    className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+                    className="rounded-lg bg-purple-700 px-4 py-2.5 text-sm font-black text-white hover:bg-purple-800 disabled:opacity-50"
                   >
                     Send to Next Round ({selectedCount}{" "}
                     {isTeamEvent ? "team" : "entry"}
@@ -785,7 +866,7 @@ export default function RoundsTab({ event, onCompetitionClosed }) {
                       selectedCount === 0
                     }
                     onClick={() => moveSelected("final")}
-                    className="rounded-lg bg-[#0a2f66] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1150a1] disabled:opacity-50"
+                    className="rounded-lg bg-[#0a2f66] px-4 py-2.5 text-sm font-black text-white hover:bg-[#1150a1] disabled:opacity-50"
                   >
                     Send to Final Round ({selectedCount}{" "}
                     {isTeamEvent ? "team" : "entry"}
@@ -802,8 +883,9 @@ export default function RoundsTab({ event, onCompetitionClosed }) {
                     busyKey === `close-${selectedRound._id}`
                   }
                   onClick={closeCompetition}
-                  className="rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+                  className="inline-flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm font-black text-rose-700 hover:bg-rose-100 disabled:opacity-50"
                 >
+                  <FaLock />
                   Close Competition
                 </button>
               )}

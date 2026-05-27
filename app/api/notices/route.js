@@ -18,6 +18,7 @@ export async function GET(request) {
     const type = searchParams.get("type");
     const priority = searchParams.get("priority");
     const status = searchParams.get("status");
+    const grade = searchParams.get("grade");
     const active = searchParams.get("active") !== "false";
     const audience = searchParams.get("audience"); // 'students', 'teachers', 'parents'
     const scope = String(searchParams.get("scope") || "SCHOOL").toUpperCase();
@@ -61,6 +62,12 @@ export async function GET(request) {
       });
     }
 
+    if (grade) {
+      andConditions.push({
+        $or: [{ grades: { $size: 0 } }, { grades: grade }],
+      });
+    }
+
     // Only show non-expired notices by default
     if (active) {
       andConditions.push({
@@ -75,7 +82,7 @@ export async function GET(request) {
     const [notices, total] = await Promise.all([
       Notice.find(query)
         .select(
-          "title content type scope priority status school author event visibility targetAudience grades isActive publishedAt createdAt updatedAt"
+          "title content type scope priority status school author event visibility targetAudience grades expiryDate isActive publishedAt createdAt updatedAt"
         )
         .populate("author", "name email")
         .sort({ priority: -1, publishedAt: -1, createdAt: -1 })

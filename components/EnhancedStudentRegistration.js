@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { Download, List, Edit, Trash2, Search, RefreshCw } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Download } from "lucide-react";
 import CSVUploader from "./CSVUploader";
 
 const EnhancedStudentRegistration = ({ schoolId, onSuccess }) => {
@@ -39,16 +39,13 @@ const EnhancedStudentRegistration = ({ schoolId, onSuccess }) => {
     return parsed;
   };
 
-  const [activeTab, setActiveTab] = useState("single"); // 'single', 'bulk', 'list'
+  const [activeTab, setActiveTab] = useState("single"); // 'single' or 'bulk'
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [bulkResult, setBulkResult] = useState(null);
   const [grades, setGrades] = useState([]);
   
-  // List View State
-  const [students, setStudents] = useState([]);
-  const [searchTerm, setSearchTerm] = useState("");
   const [editingId, setEditingId] = useState(null);
 
   // Form State
@@ -95,49 +92,6 @@ const EnhancedStudentRegistration = ({ schoolId, onSuccess }) => {
     };
     fetchGrades();
   }, [schoolId]);
-
-  const fetchStudents = useCallback(async () => {
-    setLoading(true);
-    try {
-      const response = await fetch(`/api/students?limit=100&search=${searchTerm}`);
-      const data = await response.json();
-      if (response.ok) {
-        setStudents(data.students || []);
-      } else {
-        setError(data.message || "Failed to fetch students");
-      }
-    } catch (err) {
-      setError("Error fetching students");
-    } finally {
-      setLoading(false);
-    }
-  }, [searchTerm]);
-
-  useEffect(() => {
-    if (activeTab === 'list') {
-      fetchStudents();
-    }
-  }, [activeTab, fetchStudents]);
-
-  const handleEdit = (student) => {
-    setEditingId(student._id);
-    setFormData({
-      fullName: student.name,
-      phone: student.phone || "",
-      dateOfBirth: student.dob ? new Date(student.dob).toISOString().split('T')[0] : "",
-      gender: student.gender || "",
-      rollNumber: student.rollNumber || "",
-      grade: student.grade || "",
-      address: student.address || "",
-      bloodGroup: student.bloodGroup || "",
-      guardianRelationship: "FATHER", // Default or fetch if available
-      parentName: student.parentName || "",
-      parentContactNumber: student.parentPhone || "",
-      parentEmail: student.parentEmail || "",
-      parentAlternativeContact: student.emergencyContact || "",
-    });
-    setActiveTab('single');
-  };
 
   const handleSubmit = async () => {
     setError("");
@@ -218,7 +172,7 @@ const EnhancedStudentRegistration = ({ schoolId, onSuccess }) => {
       if (editingId) {
         setSuccess("Student updated successfully!");
         setTimeout(() => {
-            setActiveTab('list');
+            setActiveTab('single');
             setEditingId(null);
             setFormData({
                 fullName: "",
@@ -434,12 +388,6 @@ const EnhancedStudentRegistration = ({ schoolId, onSuccess }) => {
             >
                 Bulk Upload
             </button>
-            <button 
-                onClick={() => setActiveTab("list")}
-                className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${activeTab === 'list' ? 'bg-[#0a2f66] text-white' : 'text-[#52657d] hover:bg-white hover:text-[#0a2f66]'}`}
-            >
-                View All
-            </button>
         </div>
       </div>
 
@@ -492,71 +440,6 @@ const EnhancedStudentRegistration = ({ schoolId, onSuccess }) => {
                     </div>
                 </div>
             )}
-        </div>
-      )}
-
-      {activeTab === "list" && (
-        <div className="space-y-4">
-          <div className="flex gap-4 mb-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#7a8aa0] w-4 h-4" />
-              <input
-                type="text"
-                placeholder="Search students..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-white border border-[#d7cdbb] rounded-lg text-[#27344a] focus:ring-2 focus:ring-[#0a2f66] outline-none"
-              />
-            </div>
-            <button 
-              onClick={fetchStudents}
-              className="p-2 bg-white border border-[#d7cdbb] rounded-lg text-[#52657d] hover:text-[#0a2f66]"
-              title="Refresh"
-            >
-              <RefreshCw className="w-4 h-4" />
-            </button>
-          </div>
-
-          <div className="overflow-x-auto rounded-lg border border-[#d7cdbb]">
-            <table className="w-full text-sm text-left text-[#27344a]">
-              <thead className="text-xs text-[#52657d] uppercase bg-[#eaf2ff]">
-                <tr>
-                  <th className="px-4 py-3">Name</th>
-                  <th className="px-4 py-3">Roll No</th>
-                  <th className="px-4 py-3">Grade</th>
-                  <th className="px-4 py-3">Phone</th>
-                  <th className="px-4 py-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {students.length === 0 ? (
-                  <tr>
-                    <td colSpan="5" className="px-4 py-8 text-center text-[#7a8aa0]">
-                      No students found
-                    </td>
-                  </tr>
-                ) : (
-                  students.map((student) => (
-                    <tr key={student._id} className="border-b border-[#d7cdbb] hover:bg-[#f8fbff]">
-                      <td className="px-4 py-3 font-medium text-[#17120a]">{student.name}</td>
-                      <td className="px-4 py-3">{student.rollNumber}</td>
-                      <td className="px-4 py-3">{student.grade}</td>
-                      <td className="px-4 py-3">{student.phone || '-'}</td>
-                      <td className="px-4 py-3 text-right">
-                        <button
-                          onClick={() => handleEdit(student)}
-                          className="text-[#0a2f66] hover:text-[#123f7d] p-1"
-                          title="Edit"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
         </div>
       )}
 

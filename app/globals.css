@@ -531,6 +531,17 @@ table tbody tr:hover {
   color: #d7e9ff !important;
 }
 
+.pratyo-dark-shell .pratyo-sidebar-active {
+  background-color: #f5edff !important;
+  border-color: rgba(139, 0, 230, 0.22) !important;
+  color: #7e00d8 !important;
+}
+
+.pratyo-dark-shell .pratyo-sidebar-active span,
+.pratyo-dark-shell .pratyo-sidebar-active svg {
+  color: #7e00d8 !important;
+}
+
 .pratyo-dark-shell [class*="text-blue-300"],
 .pratyo-dark-shell [class*="text-blue-400"],
 .pratyo-dark-shell [class*="text-sky-300"],
@@ -738,5 +749,26 @@ a[aria-disabled="true"] {
 }
 
 .event-manage-tab-active {
+  color: #ffffff !important;
+}
+
+.pratyo-dark-shell a.pratyo-sidebar-active,
+.pratyo-dark-shell a.pratyo-sidebar-active:visited,
+.pratyo-dark-shell a.pratyo-sidebar-active:hover,
+.pratyo-dark-shell a.pratyo-sidebar-active:focus {
+  background-color: #f5edff !important;
+  border-color: rgba(139, 0, 230, 0.22) !important;
+  color: #7e00d8 !important;
+}
+
+.pratyo-dark-shell a.pratyo-sidebar-active .pratyo-sidebar-label,
+.pratyo-dark-shell a.pratyo-sidebar-active .pratyo-sidebar-icon {
+  color: #7e00d8 !important;
+  opacity: 1 !important;
+}
+
+.pratyo-dark-shell a.pratyo-sidebar-active .pratyo-notification-badge {
+  background-color: #ef4444 !important;
+  border-color: #fecaca !important;
   color: #ffffff !important;
 }

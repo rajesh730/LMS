@@ -6,18 +6,23 @@ import { signOut, useSession } from "next-auth/react";
 import { useEffect } from "react";
 import {
   FaChartPie,
+  FaBullhorn,
   FaBell,
   FaBookOpen,
   FaCalendarAlt,
   FaCog,
+  FaCheckCircle,
   FaFeatherAlt,
+  FaHeartbeat,
   FaSignOutAlt,
   FaSchool,
   FaChalkboardTeacher,
   FaHeadset,
+  FaBullseye,
   FaLightbulb,
   FaUsers,
   FaTimes,
+  FaHandshake,
 } from "react-icons/fa";
 import PratyoLogo from "@/components/brand/PratyoLogo";
 import WorkIndicatorBadge from "@/components/work-indicators/WorkIndicatorBadge";
@@ -28,6 +33,7 @@ const HREF_INDICATOR_KEYS = {
   "/admin/dashboard?tab=events": "admin.events",
   "/admin/dashboard?tab=challenges": "admin.challenges",
   "/admin/support": "admin.support",
+  "/admin/dashboard?tab=spotlight": "admin.spotlight",
   "/school/dashboard?tab=platform-events": "school.platformEvents",
   "/school/dashboard?tab=school-events": "school.schoolEvents",
   "/school/dashboard?tab=challenge-showcase": "school.pratyoPulse",
@@ -41,6 +47,29 @@ const HREF_INDICATOR_KEYS = {
   "/student/writing": "student.writing",
   "/student/magazine": "student.magazine",
 };
+
+const SCHOOL_NAV_GROUPS = [
+  {
+    title: "School Operations",
+    names: [
+      "Overview",
+      "Students",
+      "Teachers",
+      "Platform Events",
+      "School Events",
+      "Student Notices",
+      "Received Notices",
+    ],
+  },
+  {
+    title: "Public Showcase",
+    names: ["School Magazine", "Pratyo Pulse", "Public Profile"],
+  },
+  {
+    title: "Platform",
+    names: ["Settings"],
+  },
+];
 
 export default function Sidebar({
   role,
@@ -64,7 +93,14 @@ export default function Sidebar({
   }, [session]);
 
   const adminLinks = [
-    { name: "Platform Hub", href: "/admin/dashboard", icon: FaChartPie },
+    { name: "Approvals", href: "/admin/dashboard?tab=approvals", icon: FaCheckCircle },
+    { name: "Schools", href: "/admin/dashboard?tab=schools", icon: FaSchool },
+    { name: "Platform Events", href: "/admin/dashboard?tab=events", icon: FaCalendarAlt },
+    { name: "Partners", href: "/admin/dashboard?tab=partners", icon: FaHandshake },
+    { name: "Notices", href: "/admin/dashboard?tab=notices", icon: FaBullhorn },
+    { name: "Student Challenges", href: "/admin/dashboard?tab=challenges", icon: FaFeatherAlt },
+    { name: "School Spotlight", href: "/admin/dashboard?tab=spotlight", icon: FaBullseye },
+    { name: "Diagnostics", href: "/admin/diagnostics", icon: FaHeartbeat },
     { name: "Support Tickets", href: "/admin/support", icon: FaHeadset },
     { name: "Settings", href: "/admin/settings", icon: FaCog },
   ];
@@ -141,13 +177,21 @@ export default function Sidebar({
     links = links.filter(link => link.name === "Settings");
   }
 
+  const groupedLinks =
+    role === "SCHOOL_ADMIN"
+      ? SCHOOL_NAV_GROUPS.map((group) => ({
+          ...group,
+          links: links.filter((link) => group.names.includes(link.name)),
+        })).filter((group) => group.links.length > 0)
+      : [{ title: null, links }];
+
   return (
     <aside
-      className={`pratyo-dark-shell fixed left-0 top-0 z-50 flex h-dvh w-[min(88vw,18rem)] flex-col border-r backdrop-blur-xl transition-transform duration-300 lg:h-screen lg:w-64 lg:translate-x-0 ${
+      className={`pratyo-dark-shell fixed left-0 top-0 z-50 flex h-dvh w-[min(88vw,19rem)] flex-col border-r backdrop-blur-xl transition-transform duration-300 lg:h-screen lg:w-72 lg:translate-x-0 ${
         isMobileOpen ? "translate-x-0" : "-translate-x-full"
       }`}
     >
-      <div className="border-b border-white/10 p-4 sm:p-6">
+      <div className="border-b border-white/10 p-4 sm:p-5">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
           <PratyoLogo variant="icon" compact withSurface />
@@ -171,42 +215,53 @@ export default function Sidebar({
         </div>
       </div>
 
-      <nav className="flex-1 space-y-2 overflow-y-auto p-3 sm:p-4">
-        {links.map((link) => {
-          const Icon = link.icon;
-          const currentHref = pathname + (currentTab ? `?tab=${currentTab}` : "");
-          const isNestedActive =
-            !link.href.includes("?") && pathname?.startsWith(`${link.href}/`);
-          const isActive = link.href === currentHref || isNestedActive;
-          const indicator = getIndicator(HREF_INDICATOR_KEYS[link.href]);
-          return (
-            <Link
-              key={link.href}
-              href={link.href}
-              onClick={onNavigate}
-              aria-current={isActive ? "page" : undefined}
-              className={`group flex min-h-12 items-center gap-3 rounded-xl px-4 py-3 transition-all duration-200 ${isActive
-                  ? "pratyo-active border shadow-sm"
-                  : "text-[#bfd3f5] hover:bg-white/10 hover:text-[#f6fbff]"
-                }`}
-            >
-              <Icon
-                className={`text-lg ${isActive
-                    ? "text-[#d7e9ff]"
-                    : "text-[#6fa6ef] group-hover:text-[#d9e8ff]"
+      <nav className="flex-1 space-y-6 overflow-y-auto p-3 sm:p-4">
+        {groupedLinks.map((group) => (
+          <div key={group.title || "main"} className="space-y-2">
+            {group.title && (
+              <p className="px-3 text-xs font-black uppercase tracking-[0.08em] text-[#b7d4fb]">
+                {group.title}
+              </p>
+            )}
+            {group.links.map((link) => {
+              const Icon = link.icon;
+              const currentHref = pathname + (currentTab ? `?tab=${currentTab}` : "");
+              const isNestedActive =
+                !link.href.includes("?") && pathname?.startsWith(`${link.href}/`);
+              const isActive = link.href === currentHref || isNestedActive;
+              const indicator = getIndicator(HREF_INDICATOR_KEYS[link.href]);
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  onClick={onNavigate}
+                  aria-current={isActive ? "page" : undefined}
+                  className={`group flex min-h-14 items-center gap-3 rounded-2xl px-4 py-3 transition-all duration-200 ${
+                    isActive
+                      ? "pratyo-sidebar-active bg-purple-50 text-purple-700 shadow-sm ring-1 ring-purple-200"
+                      : "text-[#d7e9ff] hover:bg-white/10 hover:text-white"
                   }`}
-              />
-              <span className="min-w-0 flex-1 font-medium leading-tight">
-                {link.name}
-              </span>
-              <WorkIndicatorBadge
-                count={indicator.count}
-                tone={indicator.tone}
-                compact
-              />
-            </Link>
-          );
-        })}
+                >
+                  <Icon
+                    className={`pratyo-sidebar-icon text-lg ${
+                      isActive
+                        ? "text-purple-700"
+                        : "text-[#9fc4f5] group-hover:text-white"
+                    }`}
+                  />
+                  <span className="pratyo-sidebar-label min-w-0 flex-1 text-base font-black leading-tight">
+                    {link.name}
+                  </span>
+                  <WorkIndicatorBadge
+                    count={indicator.count}
+                    tone={indicator.tone}
+                    compact
+                  />
+                </Link>
+              );
+            })}
+          </div>
+        ))}
         {links.length === 0 && (
         <div className="rounded-xl border border-white/10 bg-white/10 p-4 text-sm leading-6 text-[#bfd3f5]">
             Navigation will appear after your account is active.
@@ -217,10 +272,10 @@ export default function Sidebar({
       <div className="border-t border-white/10 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:p-4">
         {session?.user && (
           <div className="mb-3 rounded-xl border border-white/10 bg-white/10 p-3">
-            <p className="truncate text-sm font-semibold">
+            <p className="truncate text-base font-black">
               {session.user.name || session.user.email || "Signed in"}
             </p>
-            <p className="pratyo-muted mt-1 truncate text-xs uppercase tracking-wide">
+            <p className="pratyo-muted mt-1 truncate text-xs font-bold uppercase tracking-wide">
               {String(session.user.role || role || "USER").replaceAll("_", " ")}
             </p>
           </div>
@@ -228,7 +283,7 @@ export default function Sidebar({
         <button
           type="button"
           onClick={() => signOut({ callbackUrl: "/login" })}
-          className="group flex min-h-12 w-full items-center gap-3 rounded-xl px-4 py-3 text-[#d7e9ff] transition-all duration-200 hover:bg-white/10"
+          className="group flex min-h-12 w-full items-center gap-3 rounded-xl px-4 py-3 text-base font-black text-[#d7e9ff] transition-all duration-200 hover:bg-white/10"
         >
           <FaSignOutAlt className="text-lg group-hover:text-white" />
           <span className="font-medium">Logout</span>

@@ -54,24 +54,26 @@ export default function SchoolEventWorkspace({ mode = "platform" }) {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-2xl border border-[#d7cdbb] bg-white p-2 shadow-[0_10px_26px_rgba(10,47,102,0.05)]">
-        <div className="flex flex-wrap gap-2">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setActiveSection(tab.id)}
-              className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
-                selectedSection === tab.id
-                  ? "bg-[#0a2f66] text-white"
-                  : "text-[#0a2f66] hover:bg-[#eaf2ff]"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+      {mode !== "school" && (
+        <div className="rounded-2xl border border-[#d7cdbb] bg-white p-2 shadow-[0_10px_26px_rgba(10,47,102,0.05)]">
+          <div className="flex flex-wrap gap-2">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveSection(tab.id)}
+                className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
+                  selectedSection === tab.id
+                    ? "bg-[#0a2f66] text-white"
+                    : "text-[#0a2f66] hover:bg-[#eaf2ff]"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {mode === "platform" && selectedSection === "invitations" && (
         <SchoolEventInvitations
@@ -104,21 +106,31 @@ export default function SchoolEventWorkspace({ mode = "platform" }) {
       )}
 
       {mode === "school" && selectedSection === "create" && (
-        <EventEditorForm
-          teachers={teachers}
-          ownerMode="school"
-          showFeaturedOnLanding={false}
-          onEventCreated={() => {
-            setRefreshKey((value) => value + 1);
-            setActiveSection("hosted");
-          }}
-        />
+        <div className="space-y-4">
+          <button
+            type="button"
+            onClick={() => setActiveSection("hosted")}
+            className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#dbe5f4] bg-white px-4 text-sm font-black text-[#0a2f66] shadow-sm transition hover:bg-[#f8fbff]"
+          >
+            Back to school events
+          </button>
+          <EventEditorForm
+            teachers={teachers}
+            ownerMode="school"
+            showFeaturedOnLanding={false}
+            onEventCreated={() => {
+              setRefreshKey((value) => value + 1);
+              setActiveSection("hosted");
+            }}
+          />
+        </div>
       )}
 
       {mode === "school" && selectedSection === "hosted" && (
         <SchoolOwnedEventsManager
           teachers={teachers}
           refreshKey={refreshKey}
+          onCreate={() => setActiveSection("create")}
           onChanged={() => setRefreshKey((value) => value + 1)}
         />
       )}

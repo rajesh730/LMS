@@ -5,7 +5,6 @@ import dynamic from "next/dynamic";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import DashboardLayout from "@/components/DashboardLayout";
-import AdminTopNav from "@/components/AdminTopNav";
 import AdminPartnerWorkspace from "@/components/partners/AdminPartnerWorkspace";
 import AdminDailyOverview from "@/components/admin/AdminDailyOverview";
 import CredentialsModal from "@/components/CredentialsModal";
@@ -453,9 +452,6 @@ function AdminDashboardContent() {
           </div>
         }
       />
-
-      {/* Tabs */}
-      <AdminTopNav pendingCount={pendingSchools.length} />
 
       <AdminDailyOverview
         pendingSchools={pendingSchools}

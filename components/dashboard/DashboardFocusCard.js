@@ -46,11 +46,11 @@ export default function DashboardFocusCard({
   return (
     <Link
       href={href}
-      className="group flex min-h-[172px] min-w-0 flex-col rounded-lg border border-[#d7cdbb] bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-[#2f7fdb]/45 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2f7fdb]"
+      className="group flex min-h-[150px] min-w-0 flex-col rounded-2xl border border-[#e6eaf7] bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-purple-200 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-500"
     >
       <div className="flex min-w-0 items-start justify-between gap-3">
         <span
-          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md ${toneClass.icon}`}
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${toneClass.icon}`}
         >
           <Icon className="text-base" />
         </span>

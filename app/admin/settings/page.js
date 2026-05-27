@@ -3,10 +3,7 @@ import { redirect } from "next/navigation";
 import { FaCog } from "react-icons/fa";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import DashboardLayout from "@/components/DashboardLayout";
-import AdminTopNav from "@/components/AdminTopNav";
 import SuperAdminSettingsManager from "@/components/settings/SuperAdminSettingsManager";
-import connectDB from "@/lib/db";
-import User from "@/models/User";
 
 export const dynamic = "force-dynamic";
 
@@ -26,15 +23,8 @@ export default async function AdminSettingsPage() {
     redirect("/");
   }
 
-  await connectDB();
-  const pendingCount = await User.countDocuments({
-    role: "SCHOOL_ADMIN",
-    status: "PENDING",
-  });
-
   return (
     <DashboardLayout>
-      <AdminTopNav pendingCount={pendingCount} />
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
           <h1 className="mb-2 flex items-center gap-3 text-4xl font-bold text-white">

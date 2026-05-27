@@ -3,9 +3,6 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { redirect } from "next/navigation";
 import DashboardLayout from "@/components/DashboardLayout";
 import AdminSupportDashboard from "@/components/support/AdminSupportDashboard";
-import AdminTopNav from "@/components/AdminTopNav";
-import connectDB from '@/lib/db';
-import User from '@/models/User';
 import { FaHeadset } from "react-icons/fa";
 
 export const dynamic = "force-dynamic";
@@ -26,12 +23,8 @@ export default async function AdminSupportPage() {
     redirect("/");
   }
 
-  await connectDB();
-  const pendingCount = await User.countDocuments({ role: 'SCHOOL_ADMIN', status: 'PENDING' });
-
   return (
     <DashboardLayout>
-      <AdminTopNav pendingCount={pendingCount} />
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-white mb-2 flex items-center gap-3">

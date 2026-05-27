@@ -359,6 +359,9 @@ const EventParticipationForm = memo(function EventParticipationForm({
   const selectedParticipantCount = isTeamEvent
     ? totalSelectedTeamMembers
     : formData.selectedStudents.length;
+  const activeSelectedCount = isTeamEvent
+    ? activeTeam.studentIds.length
+    : formData.selectedStudents.length;
 
   const handleStudentToggle = (studentId) => {
     if (isEventLocked) return;
@@ -556,6 +559,439 @@ const EventParticipationForm = memo(function EventParticipationForm({
       setSubmitting(false);
     }
   };
+
+  if (session?.user?.role === "SCHOOL_ADMIN") {
+    return (
+      <form onSubmit={handleSubmit} className="space-y-5">
+        {feedback && (
+          <AlertBanner
+            type={feedback.type}
+            title={feedback.title}
+            message={feedback.message}
+          />
+        )}
+
+        <section className="rounded-xl border border-[#e1e7f2] bg-gradient-to-r from-purple-50 to-white p-4">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="text-[11px] font-black uppercase text-purple-700">
+                School-managed registration
+              </p>
+              <h3 className="mt-1 text-base font-black text-[#17120a]">
+                Phase 1 registration is handled by the school.
+              </h3>
+              <p className="mt-1 text-sm text-[#52657d]">
+                Students can see the event, but registration is submitted by the school.
+              </p>
+            </div>
+            <span className="w-fit rounded-full bg-white px-3 py-1 text-xs font-black text-[#17120a] shadow-sm">
+              {registrationStateLabel}
+            </span>
+          </div>
+        </section>
+
+        {isEventLocked && (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-900">
+            {lockReason}
+          </div>
+        )}
+
+        <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
+          <section className="space-y-4">
+            <div>
+              <h3 className="flex items-center gap-2 text-sm font-black text-[#17120a]">
+                <FaUsers className="text-[#0a2f66]" />
+                {isTeamEvent ? "Team Registration" : "Individual Participant Registration"}
+              </h3>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="rounded-xl border border-purple-100 bg-purple-50 p-4">
+                <p className="text-[11px] font-black uppercase text-purple-700">
+                  {isTeamEvent ? "Selected Team" : "Selected Students"}
+                </p>
+                <p className="mt-2 text-2xl font-black text-[#17120a]">
+                  {activeSelectedCount}
+                </p>
+              </div>
+              <div className="rounded-xl border border-amber-100 bg-amber-50 p-4">
+                <p className="text-[11px] font-black uppercase text-amber-700">
+                  Selected in View
+                </p>
+                <p className="mt-2 text-2xl font-black text-[#17120a]">
+                  {visibleSelectedCount}
+                </p>
+              </div>
+              <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-4">
+                <p className="text-[11px] font-black uppercase text-emerald-700">
+                  Eligible Students
+                </p>
+                <p className="mt-2 text-2xl font-black text-[#17120a]">
+                  {filteredStudents.length}
+                </p>
+              </div>
+            </div>
+
+            {isTeamEvent ? (
+              <div className="rounded-xl border border-[#e1e7f2] bg-white p-4">
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <div>
+                    <h4 className="text-sm font-black text-[#17120a]">Team Setup</h4>
+                    <p className="text-xs font-bold text-[#52657d]">
+                      Build teams, choose captains, then submit.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={isEventLocked}
+                    onClick={() => {
+                      setFormData((prev) => ({
+                        ...prev,
+                        teams: [
+                          ...prev.teams,
+                          {
+                            teamName: buildDefaultTeamName(
+                              schoolDisplayName,
+                              prev.teams.length
+                            ),
+                            captainStudentId: "",
+                            studentIds: [],
+                          },
+                        ],
+                      }));
+                      setActiveTeamIndex((formData.teams || []).length);
+                    }}
+                    className="rounded-lg bg-purple-700 px-3 py-2 text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Add Team
+                  </button>
+                </div>
+
+                <label className="text-xs font-black text-[#52657d]">Team Name</label>
+                <input
+                  type="text"
+                  value={activeTeam.teamName}
+                  disabled={isEventLocked}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      teams: prev.teams.map((team, index) =>
+                        index === activeTeamIndex
+                          ? { ...team, teamName: e.target.value }
+                          : team
+                      ),
+                    }))
+                  }
+                  className="mt-2 h-11 w-full rounded-xl border border-[#dbe5f4] bg-[#f8fbff] px-4 text-sm font-bold text-[#17120a] outline-none focus:border-purple-300 disabled:cursor-not-allowed disabled:opacity-60"
+                />
+
+                <label className="mt-4 block text-xs font-black text-[#52657d]">
+                  Captain
+                </label>
+                <select
+                  value={activeTeam.captainStudentId}
+                  disabled={isEventLocked || activeTeam.studentIds.length === 0}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      teams: prev.teams.map((team, index) =>
+                        index === activeTeamIndex
+                          ? { ...team, captainStudentId: e.target.value }
+                          : team
+                      ),
+                    }))
+                  }
+                  className="mt-2 h-11 w-full rounded-xl border border-[#dbe5f4] bg-white px-4 text-sm font-bold text-[#17120a] outline-none focus:border-purple-300 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <option value="">Select captain</option>
+                  {activeTeam.studentIds.map((studentId) => {
+                    const student = students.find(
+                      (candidate) => String(candidate._id) === String(studentId)
+                    );
+                    return (
+                      <option key={studentId} value={studentId}>
+                        {student?.name || "Selected student"}
+                      </option>
+                    );
+                  })}
+                </select>
+
+                <div className="mt-4 space-y-2">
+                  {(formData.teams || []).map((team, index) => {
+                    const summary = validateTeamDraft(team, {
+                      minTeamSize,
+                      maxTeamSize,
+                    });
+                    return (
+                      <button
+                        key={`${team.teamName || "team"}-${index}`}
+                        type="button"
+                        onClick={() => setActiveTeamIndex(index)}
+                        className={`w-full rounded-xl border px-3 py-2 text-left transition ${
+                          index === activeTeamIndex
+                            ? "border-purple-200 bg-purple-50"
+                            : "border-[#e1e7f2] bg-[#f8fbff] hover:bg-white"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-sm font-black text-[#17120a]">
+                            {team.teamName || `Team ${index + 1}`}
+                          </span>
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[10px] font-black ${
+                              summary.isValid
+                                ? "bg-emerald-100 text-emerald-700"
+                                : "bg-amber-100 text-amber-700"
+                            }`}
+                          >
+                            {summary.isValid ? "Valid" : "Needs fixes"}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-xs font-bold text-[#52657d]">
+                          {team.studentIds.length} members
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm text-[#0a2f66]">
+                <p className="font-black">
+                  Choose students from the list on the right.
+                </p>
+                <p className="mt-1 text-xs font-bold">
+                  This event does not need team names or captains. After submit,
+                  registration is saved to this event.
+                </p>
+              </div>
+            )}
+          </section>
+
+          <section>
+            <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+              <div>
+                <h3 className="flex items-center gap-2 text-sm font-black text-[#17120a]">
+                  <FaUsers className="text-[#0a2f66]" />
+                  Student Management
+                </h3>
+                <p className="mt-1 text-xs font-bold text-[#52657d]">
+                  Manage participation for your students.
+                </p>
+              </div>
+            </div>
+
+            <div className="mb-3 flex flex-wrap gap-2">
+              {[
+                { id: "all", label: "All" },
+                { id: "UNREGISTERED", label: "Unregistered" },
+                { id: "REGISTERED", label: "Registered" },
+                { id: "REJECTED", label: "Rejected" },
+              ].map((filter) => (
+                <button
+                  key={filter.id}
+                  type="button"
+                  onClick={() => setInterestedFilter(filter.id)}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-black transition ${
+                    interestedFilter === filter.id
+                      ? "bg-purple-700 text-white"
+                      : "border border-[#dbe5f4] bg-white text-[#0a2f66] hover:bg-[#f8fbff]"
+                  }`}
+                >
+                  {filter.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="mb-3 grid gap-3 md:grid-cols-[minmax(0,1fr)_150px]">
+              <div className="flex h-11 items-center gap-2 rounded-xl border border-[#dbe5f4] bg-white px-3">
+                <FaSearch className="text-[#75869b]" />
+                <input
+                  type="text"
+                  placeholder="Search students..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="min-w-0 flex-1 bg-transparent text-sm font-bold text-[#17120a] outline-none placeholder:text-[#75869b]"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery("")}
+                    className="text-[#75869b] hover:text-[#0a2f66]"
+                  >
+                    <FaTimes />
+                  </button>
+                )}
+              </div>
+              <select
+                value={gradeFilter}
+                onChange={(e) => setGradeFilter(e.target.value)}
+                className="h-11 rounded-xl border border-[#dbe5f4] bg-white px-3 text-sm font-black text-[#0a2f66] outline-none"
+              >
+                <option value="all">All Grades</option>
+                {Array.isArray(grades) &&
+                  grades.map((grade) => {
+                    const val = grade._id || grade;
+                    const label = grade.name || grade;
+                    return (
+                      <option key={val} value={val}>
+                        {label}
+                      </option>
+                    );
+                  })}
+              </select>
+            </div>
+
+            <div className="overflow-hidden rounded-xl border border-[#e1e7f2] bg-white">
+              {loading ? (
+                <div className="p-6 text-center text-sm font-bold text-[#52657d]">
+                  Loading students...
+                </div>
+              ) : filteredStudents.length === 0 ? (
+                <div className="p-6 text-center">
+                  <p className="font-black text-[#17120a]">
+                    No students match the registration filters.
+                  </p>
+                  <p className="mt-1 text-sm text-[#52657d]">
+                    Clear search, change grade/status filters, or check this event&apos;s registration grades.
+                  </p>
+                </div>
+              ) : (
+                <div className="max-h-[420px] overflow-y-auto">
+                  <label className="flex cursor-pointer items-center gap-3 border-b border-[#e1e7f2] bg-[#f8fbff] p-3 text-sm font-black text-[#17120a]">
+                    <input
+                      type="checkbox"
+                      disabled={isEventLocked}
+                      checked={
+                        filteredStudents.length > 0 &&
+                        filteredStudents
+                          .filter(
+                            (student) =>
+                              !isTeamEvent || !otherTeamStudentIds.has(String(student._id))
+                          )
+                          .every((student) =>
+                            (isTeamEvent
+                              ? activeTeam.studentIds
+                              : formData.selectedStudents
+                            ).includes(String(student._id))
+                          )
+                      }
+                      onChange={(e) => handleSelectAll(e.target.checked)}
+                      className="h-4 w-4 accent-purple-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    />
+                    Select All Visible
+                  </label>
+
+                  <div className="divide-y divide-[#eef2f8]">
+                    {filteredStudents.map((student) => {
+                      const request = participationMap.get(student._id);
+                      const isSelected = isTeamEvent
+                        ? activeTeam.studentIds.includes(String(student._id))
+                        : formData.selectedStudents.includes(String(student._id));
+                      const isAssignedElsewhere =
+                        isTeamEvent && otherTeamStudentIds.has(String(student._id));
+                      const requestStatus = request?.status;
+
+                      return (
+                        <label
+                          key={student._id}
+                          className={`flex cursor-pointer items-center gap-3 px-3 py-2.5 text-sm transition ${
+                            isSelected
+                              ? "bg-purple-50"
+                              : isAssignedElsewhere
+                              ? "cursor-not-allowed bg-slate-50 opacity-70"
+                              : "hover:bg-[#f8fbff]"
+                          }`}
+                        >
+                          <input
+                            disabled={isEventLocked || isAssignedElsewhere}
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => handleStudentToggle(String(student._id))}
+                            className="h-4 w-4 accent-purple-700 disabled:cursor-not-allowed disabled:opacity-50"
+                          />
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate font-black text-[#17120a]">
+                              {student.name}
+                            </span>
+                            <span className="block text-xs font-bold text-[#52657d]">
+                              {student.grade}
+                              {student.rollNumber ? ` - Roll ${student.rollNumber}` : ""}
+                            </span>
+                          </span>
+                          {requestStatus && (
+                            <span
+                              className={`rounded-full px-2 py-0.5 text-[10px] font-black ${
+                                requestStatus === "APPROVED"
+                                  ? "bg-emerald-100 text-emerald-700"
+                                  : requestStatus === "REJECTED"
+                                  ? "bg-rose-100 text-rose-700"
+                                  : "bg-amber-100 text-amber-700"
+                              }`}
+                            >
+                              {requestStatus}
+                            </span>
+                          )}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+        </div>
+
+        <div className="flex justify-end gap-3 border-t border-[#e1e7f2] pt-4">
+          <button
+            type="button"
+            disabled={isEventLocked}
+            onClick={() => {
+              setFormData({
+                teamName: "",
+                captainStudentId: "",
+                selectedStudents: [],
+                teams: [
+                  {
+                    teamName: isTeamEvent
+                      ? buildDefaultTeamName(schoolDisplayName, 0)
+                      : "",
+                    captainStudentId: "",
+                    studentIds: [],
+                  },
+                ],
+              });
+              setActiveTeamIndex(0);
+            }}
+            className="inline-flex min-h-10 items-center rounded-xl border border-[#dbe5f4] bg-white px-5 text-sm font-black text-[#0a2f66] transition hover:bg-[#f8fbff] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Clear
+          </button>
+          <button
+            type="submit"
+            disabled={
+              submitting ||
+              (isTeamEvent
+                ? totalSelectedTeamMembers === 0 || !canSubmitTeamRegistration
+                : formData.selectedStudents.length === 0) ||
+              isEventLocked
+            }
+            className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-purple-700 px-5 text-sm font-black text-white transition hover:bg-purple-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+          >
+            <FaCheck />
+            {isEditing
+              ? isTeamEvent
+                ? "Update Teams"
+                : "Update Participants"
+              : isTeamEvent
+              ? "Submit Teams"
+              : "Submit Students"}{" "}
+            ({selectedParticipantCount})
+          </button>
+        </div>
+      </form>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit}>

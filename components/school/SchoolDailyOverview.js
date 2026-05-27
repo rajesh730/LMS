@@ -180,7 +180,7 @@ export default function SchoolDailyOverview() {
         {[0, 1, 2, 3, 4].map((item) => (
           <div
             key={item}
-            className="h-44 animate-pulse rounded-lg border border-[#d7cdbb] bg-white"
+            className="h-40 animate-pulse rounded-2xl border border-[#e6eaf7] bg-white"
           />
         ))}
       </section>
@@ -197,7 +197,7 @@ export default function SchoolDailyOverview() {
         />
       )}
 
-      <div className="rounded-xl border border-[#d7cdbb] bg-[#f8fbff]/90 p-5 shadow-sm sm:p-6">
+      <div className="rounded-2xl border border-[#e6eaf7] bg-white p-5 shadow-sm">
         <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-normal text-[#52657d]">
@@ -207,11 +207,12 @@ export default function SchoolDailyOverview() {
               What needs school attention?
             </h2>
           </div>
-          <p className="max-w-xl text-sm leading-6 text-[#52657d]">
-            This section gathers the practical admin jobs: review writing,
-            accept platform events, manage school events, read notices, and
-            publish selected student work.
-          </p>
+          <Link
+            href="/school/dashboard?tab=notices"
+            className="text-sm font-black text-purple-700"
+          >
+            View all tasks
+          </Link>
         </div>
 
         <div className="mt-5 grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
@@ -288,14 +289,14 @@ export default function SchoolDailyOverview() {
         <div className="mt-5 flex flex-wrap gap-3 text-sm">
           <Link
             href="/school/dashboard?tab=student-notices"
-            className="inline-flex items-center gap-2 rounded-lg bg-[#0a2f66] px-3 py-2 font-semibold text-white transition hover:bg-[#123f82]"
+            className="inline-flex items-center gap-2 rounded-xl bg-[#0a2f66] px-4 py-2.5 font-black text-white transition hover:bg-[#123f82]"
           >
             <FaBullhorn />
             Send notice to students
           </Link>
           <Link
             href="/school/dashboard?tab=school-events"
-            className="inline-flex items-center gap-2 rounded-lg border border-[#d7cdbb] bg-white px-3 py-2 font-semibold text-[#0a2f66] transition hover:bg-[#eaf2ff]"
+            className="inline-flex items-center gap-2 rounded-xl border border-[#e6eaf7] bg-white px-4 py-2.5 font-black text-[#0a2f66] transition hover:bg-[#eaf2ff]"
           >
             Create or manage school event
           </Link>

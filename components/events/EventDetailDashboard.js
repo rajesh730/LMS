@@ -5,9 +5,12 @@ import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import EventInfoHeader from "./EventInfoHeader";
 import ManagementTabs from "./ManagementTabs";
+import EventEditorForm from "./EventEditorForm";
 import { useSession } from "next-auth/react";
 import { FaArrowLeft } from "react-icons/fa";
 import LoadingState from "@/components/ui/LoadingState";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import AlertBanner from "@/components/ui/AlertBanner";
 import useRealtimeChannel from "@/lib/useRealtimeChannel";
 
 export default function EventDetailDashboard() {
@@ -17,11 +20,15 @@ export default function EventDetailDashboard() {
   const { data: session } = useSession();
 
   const [eventData, setEventData] = useState(null);
+  const [teachers, setTeachers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(
     searchParams.get("tab") || "overview"
   );
   const [loadError, setLoadError] = useState("");
+  const [editingEvent, setEditingEvent] = useState(null);
+  const [archiveTarget, setArchiveTarget] = useState(null);
+  const [feedback, setFeedback] = useState(null);
 
   useEffect(() => {
     const requestedTab = searchParams.get("tab");
@@ -54,6 +61,27 @@ export default function EventDetailDashboard() {
   useEffect(() => {
     fetchEventData();
   }, [fetchEventData]);
+
+  useEffect(() => {
+    const loadTeachers = async () => {
+      try {
+        const res = await fetch("/api/teachers?limit=200", { cache: "no-store" });
+        if (!res.ok) {
+          setTeachers([]);
+          return;
+        }
+        const data = await res.json();
+        setTeachers(Array.isArray(data.teachers) ? data.teachers : []);
+      } catch (error) {
+        console.error("Failed to load teachers", error);
+        setTeachers([]);
+      }
+    };
+
+    if (session?.user?.role === "SCHOOL_ADMIN") {
+      void loadTeachers();
+    }
+  }, [session?.user?.role]);
 
   useRealtimeChannel(
     ["events", eventId ? `event-${eventId}` : null].filter(Boolean),
@@ -94,6 +122,32 @@ export default function EventDetailDashboard() {
   }
 
   const { event, requests, capacityInfo, perSchoolBreakdown } = eventData;
+  const handleArchive = async () => {
+    if (!archiveTarget) return;
+    try {
+      const res = await fetch(`/api/events/${archiveTarget._id}`, {
+        method: "DELETE",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to archive event.");
+      }
+      setFeedback({
+        type: "success",
+        title: "Event archived",
+        message: `${archiveTarget.title} moved to event history.`,
+      });
+      setArchiveTarget(null);
+      await fetchEventData();
+    } catch (error) {
+      setFeedback({
+        type: "error",
+        title: "Event was not archived",
+        message: error.message || "Please retry after checking the connection.",
+      });
+      setArchiveTarget(null);
+    }
+  };
   const backHref =
     session?.user?.role === "SUPER_ADMIN"
       ? "/admin/dashboard?tab=events"
@@ -116,9 +170,18 @@ export default function EventDetailDashboard() {
             className="inline-flex items-center gap-2 rounded-lg border border-[#d7cdbb] bg-white px-4 py-2 text-sm font-semibold text-[#0a2f66] shadow-sm transition hover:bg-[#f8fbff]"
           >
             <FaArrowLeft />
-            {backLabel}
+            {session?.user?.role === "SUPER_ADMIN" ? backLabel : "Back to Events"}
           </Link>
         </div>
+        {feedback && (
+          <div className="mb-5">
+            <AlertBanner
+              type={feedback.type}
+              title={feedback.title}
+              message={feedback.message}
+            />
+          </div>
+        )}
         {/* Management Tabs */}
         <ManagementTabs
           requests={requests}
@@ -128,8 +191,40 @@ export default function EventDetailDashboard() {
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           onDataChange={fetchEventData}
+          onEdit={() => setEditingEvent(event)}
+          onArchive={() => setArchiveTarget(event)}
         />
       </div>
+      {editingEvent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
+          <div className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
+            <EventEditorForm
+              teachers={teachers}
+              ownerMode="school"
+              showFeaturedOnLanding={false}
+              initialData={editingEvent}
+              onEventCreated={async () => {
+                setEditingEvent(null);
+                await fetchEventData();
+              }}
+              onCancel={() => setEditingEvent(null)}
+            />
+          </div>
+        </div>
+      )}
+      <ConfirmDialog
+        open={Boolean(archiveTarget)}
+        title="Archive this event?"
+        message={
+          archiveTarget
+            ? `${archiveTarget.title} will move to event history. You can restore it later from archived events.`
+            : ""
+        }
+        confirmLabel="Archive event"
+        tone="danger"
+        onClose={() => setArchiveTarget(null)}
+        onConfirm={handleArchive}
+      />
     </div>
   );
 }

@@ -3,11 +3,21 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import {
+  FaChartLine,
+  FaCheckCircle,
+  FaCopy,
+  FaDownload,
   FaEdit,
+  FaFilter,
+  FaGraduationCap,
   FaKey,
   FaPlus,
   FaSearch,
   FaTrash,
+  FaUpload,
+  FaUserClock,
+  FaUserGraduate,
+  FaUserSlash,
 } from "react-icons/fa";
 import { TableSkeleton } from "@/components/Skeletons";
 import PaginationControls from "@/components/PaginationControls";
@@ -31,8 +41,9 @@ export default function StudentManager({ initialGrade, hideGradeFilter = false }
   // Filter State
   const [grades, setGrades] = useState([]);
   const [selectedGrade, setSelectedGrade] = useState(initialGrade || "");
-  const [selectedStatus, setSelectedStatus] = useState("ACTIVE");
+  const [selectedStatus, setSelectedStatus] = useState("ALL");
   const [search, setSearch] = useState("");
+  const [studentStats, setStudentStats] = useState(null);
 
   // Edit State
   const [editingStudent, setEditingStudent] = useState(null);
@@ -66,6 +77,24 @@ export default function StudentManager({ initialGrade, hideGradeFilter = false }
     };
     fetchGrades();
   }, []);
+
+  const fetchStudentStats = useCallback(async () => {
+    try {
+      const res = await fetch("/api/school/dashboard/stats", {
+        cache: "no-store",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setStudentStats(data.data?.students || null);
+      }
+    } catch (error) {
+      console.error("Error fetching student stats:", error);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchStudentStats();
+  }, [fetchStudentStats]);
 
   // Fetch Students
   const fetchStudents = useCallback(
@@ -142,6 +171,75 @@ export default function StudentManager({ initialGrade, hideGradeFilter = false }
     setIsEditModalOpen(true);
   };
 
+  const handleCopyLogin = async (student) => {
+    if (!student.username) return;
+    try {
+      await navigator.clipboard.writeText(student.username);
+      setFeedback({
+        type: "success",
+        title: "Login ID copied",
+        message: `${student.username} is ready to share with ${student.name}.`,
+      });
+    } catch (error) {
+      console.error("Could not copy login ID:", error);
+      setFeedback({
+        type: "error",
+        title: "Login ID was not copied",
+        message: "Please copy it manually from the student row.",
+      });
+    }
+  };
+
+  const handleExportCsv = () => {
+    if (students.length === 0) {
+      setFeedback({
+        type: "error",
+        title: "No students to export",
+        message: "Adjust filters or add students before exporting.",
+      });
+      return;
+    }
+
+    const headers = [
+      "Name",
+      "Student ID",
+      "Grade",
+      "Roll Number",
+      "Login ID",
+      "Status",
+      "Parent Name",
+      "Parent Contact",
+      "Email",
+      "Phone",
+    ];
+    const rows = students.map((student) => [
+      student.name || "",
+      student.platformStudentId || "",
+      student.grade || "",
+      student.rollNumber || "",
+      student.username || "",
+      student.status || "",
+      student.parentName || "",
+      student.parentContactNumber || student.parentPhone || "",
+      student.email || "",
+      student.phone || "",
+    ]);
+
+    const escapeCsv = (value) => `"${String(value).replaceAll('"', '""')}"`;
+    const csv = [headers, ...rows]
+      .map((row) => row.map(escapeCsv).join(","))
+      .join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `students-page-${pagination.page || 1}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
+
   const requestDelete = (student) => {
     setConfirmState({
       type: "archive",
@@ -171,6 +269,7 @@ export default function StudentManager({ initialGrade, hideGradeFilter = false }
         message: `${student.name} is no longer shown in active student records.`,
       });
       await fetchStudents(pagination.page);
+      await fetchStudentStats();
     } catch (error) {
       console.error("Error deleting student:", error);
       setConfirmState(null);
@@ -249,6 +348,7 @@ export default function StudentManager({ initialGrade, hideGradeFilter = false }
       }
 
       await fetchStudents(pagination.page);
+      await fetchStudentStats();
       setIsEditModalOpen(false);
       setEditingStudent(null);
       setFeedback({
@@ -268,8 +368,153 @@ export default function StudentManager({ initialGrade, hideGradeFilter = false }
     }
   };
 
+  const statusCounts = studentStats?.byStatus || {};
+  const totalStudentCount =
+    typeof studentStats?.total === "number"
+      ? studentStats.total
+      : pagination.totalStudents || students.length;
+  const activeStudentCount = Number(statusCounts.ACTIVE || 0);
+  const inactiveStudentCount =
+    Number(statusCounts.INACTIVE || 0) + Number(statusCounts.SUSPENDED || 0);
+  const alumniStudentCount = Number(statusCounts.ALUMNI || 0);
+  const participationReady =
+    totalStudentCount > 0
+      ? Math.round((activeStudentCount / totalStudentCount) * 100)
+      : 0;
+
+  const metricCards = [
+    {
+      label: "Total Students",
+      value: totalStudentCount,
+      note: `${activeStudentCount} active`,
+      icon: FaUserGraduate,
+      tone: "purple",
+    },
+    {
+      label: "Active Students",
+      value: activeStudentCount,
+      note: "Ready for events",
+      icon: FaCheckCircle,
+      tone: "emerald",
+    },
+    {
+      label: "Inactive Records",
+      value: inactiveStudentCount,
+      note: "Not active now",
+      icon: FaUserSlash,
+      tone: "amber",
+    },
+    {
+      label: "Participation Ready",
+      value: `${participationReady}%`,
+      note: `${activeStudentCount} of ${totalStudentCount || 0} students`,
+      icon: FaChartLine,
+      tone: "blue",
+    },
+    {
+      label: "Graduated",
+      value: alumniStudentCount,
+      note: "Alumni records",
+      icon: FaGraduationCap,
+      tone: "violet",
+    },
+  ];
+
+  const toneClasses = {
+    purple: "border-purple-100 bg-purple-50 text-purple-700",
+    emerald: "border-emerald-100 bg-emerald-50 text-emerald-700",
+    amber: "border-amber-100 bg-amber-50 text-amber-700",
+    blue: "border-blue-100 bg-blue-50 text-[#0a2f66]",
+    violet: "border-violet-100 bg-violet-50 text-violet-700",
+  };
+
+  const statusStyles = {
+    ACTIVE: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+    INACTIVE: "bg-slate-100 text-slate-600 ring-slate-200",
+    SUSPENDED: "bg-amber-50 text-amber-700 ring-amber-200",
+    ALUMNI: "bg-purple-50 text-purple-700 ring-purple-200",
+  };
+
+  const initialsFor = (name = "Student") =>
+    name
+      .split(" ")
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase())
+      .join("") || "ST";
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
+      {!hideGradeFilter && (
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <h1 className="text-3xl font-black text-[#17120a]">Students</h1>
+            <p className="mt-2 text-base text-[#52657d]">
+              Manage student accounts, login IDs, participation, and access.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              href="/school/dashboard?tab=register-student"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#dbe5f4] bg-white px-4 text-sm font-black text-[#0a2f66] shadow-sm transition hover:bg-[#f8fbff]"
+            >
+              <FaUpload />
+              Import Students
+            </Link>
+            <button
+              type="button"
+              onClick={handleExportCsv}
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#dbe5f4] bg-white px-4 text-sm font-black text-[#0a2f66] shadow-sm transition hover:bg-[#f8fbff]"
+            >
+              <FaDownload />
+              Export CSV
+            </button>
+            <Link
+              href="/school/dashboard?tab=register-student"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-purple-700 px-5 text-sm font-black text-white shadow-sm transition hover:bg-purple-800"
+            >
+              <FaPlus />
+              Add Student
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {!hideGradeFilter && (
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+          {metricCards.map((card) => {
+            const Icon = card.icon;
+            return (
+              <div
+                key={card.label}
+                className="rounded-2xl border border-[#e6eaf7] bg-white p-5 shadow-sm"
+              >
+                <div className="flex items-center gap-4">
+                  <span
+                    className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border ${
+                      toneClasses[card.tone]
+                    }`}
+                  >
+                    <Icon />
+                  </span>
+                  <span className="min-w-0">
+                    <strong className="block text-2xl font-black text-[#17120a]">
+                      {card.value}
+                    </strong>
+                    <span className="block truncate text-sm font-black text-[#24314d]">
+                      {card.label}
+                    </span>
+                    <span className="mt-1 block text-xs font-bold text-[#52657d]">
+                      {card.note}
+                    </span>
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {feedback && (
         <AlertBanner
           type={feedback.type}
@@ -290,78 +535,87 @@ export default function StudentManager({ initialGrade, hideGradeFilter = false }
       )}
 
       {/* Filters */}
-      {!hideGradeFilter && (
-      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 bg-slate-900/50 p-4 rounded-2xl border border-slate-800">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-          <div className="relative w-full sm:w-72">
-            <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+      <div className="rounded-2xl border border-[#e6eaf7] bg-white p-4 shadow-sm">
+        <div className="grid gap-3 lg:grid-cols-[minmax(240px,1fr)_180px_180px_auto]">
+          <div className="relative">
+            <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-[#75869b]" />
             <input
               type="text"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search name, roll, ID..."
-              className="w-full rounded-lg border border-slate-700 bg-slate-800 py-2 pl-10 pr-3 text-white outline-none transition focus:border-blue-500"
+              placeholder="Search by name, roll, login ID, or parent..."
+              className="h-12 w-full rounded-xl border border-[#dbe5f4] bg-[#f8fbff] pl-11 pr-4 text-sm font-semibold outline-none transition focus:border-purple-300"
             />
           </div>
-          <select
-            value={selectedGrade}
-            onChange={(e) => setSelectedGrade(e.target.value)}
-            className="bg-slate-800 text-white p-2 rounded border border-slate-700 focus:border-emerald-500 outline-none"
-          >
-            <option value="">All Grades</option>
-            {grades.map((g) => (
-              <option key={g._id} value={g.originalValue || g._id}>
-                {g.name}
-              </option>
-            ))}
-          </select>
+          {!hideGradeFilter && (
+            <select
+              value={selectedGrade}
+              onChange={(e) => setSelectedGrade(e.target.value)}
+              className="h-12 rounded-xl border border-[#dbe5f4] bg-white px-4 text-sm font-black text-[#24314d] outline-none transition focus:border-purple-300"
+            >
+              <option value="">All Grades</option>
+              {grades.map((g) => (
+                <option key={g._id} value={g.originalValue || g._id}>
+                  {g.name}
+                </option>
+              ))}
+            </select>
+          )}
 
           <select
             value={selectedStatus}
             onChange={(e) => setSelectedStatus(e.target.value)}
-            className="bg-slate-800 text-white p-2 rounded border border-slate-700 focus:border-emerald-500 outline-none"
+            className="h-12 rounded-xl border border-[#dbe5f4] bg-white px-4 text-sm font-black text-[#24314d] outline-none transition focus:border-purple-300"
           >
+            <option value="ALL">All Status</option>
             <option value="ACTIVE">Active Students</option>
             <option value="ALUMNI">Alumni (Graduated)</option>
             <option value="SUSPENDED">Suspended</option>
             <option value="INACTIVE">Inactive</option>
-            <option value="ALL">All Records</option>
           </select>
+          <button
+            type="button"
+            onClick={() => {
+              setSearch("");
+              setSelectedStatus("ALL");
+              setSelectedGrade(initialGrade || "");
+            }}
+            className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-[#dbe5f4] bg-white px-4 text-sm font-black text-[#0a2f66] transition hover:bg-[#f8fbff]"
+          >
+            <FaFilter />
+            Clear Filters
+          </button>
         </div>
-        <Link
-          href="/school/dashboard?tab=register-student"
-          className="inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-4 py-2 rounded-lg transition"
-        >
-          <FaPlus className="text-sm" />
-          Add Student
-        </Link>
       </div>
-      )}
 
       {/* Table */}
-      <div className="overflow-hidden rounded-2xl border border-[#d7cdbb] bg-white shadow-[0_12px_30px_rgba(10,47,102,0.06)]">
+      <div className="overflow-hidden rounded-2xl border border-[#e1e7f2] bg-white shadow-[0_14px_34px_rgba(10,47,102,0.08)]">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm text-[#27344a]">
-            <thead className="bg-[#eaf2ff] text-[#52657d] uppercase text-xs">
+          <table className="w-full min-w-[980px] text-left text-sm text-[#27344a]">
+            <thead className="border-b border-[#e1e7f2] bg-[#f8fbff] text-[11px] uppercase text-[#75869b]">
               <tr>
-                <th className="p-4">Student</th>
-                <th className="p-4">Grade</th>
-                <th className="p-4">Login ID</th>
-                <th className="p-4">Contact</th>
-                <th className="p-4">Parent</th>
-                <th className="p-4 text-right">Actions</th>
+                <th className="w-12 px-4 py-3">
+                  <input type="checkbox" className="h-4 w-4 rounded border-[#c8d4e6]" />
+                </th>
+                <th className="px-4 py-3">Student</th>
+                <th className="px-4 py-3">Grade & Roll</th>
+                <th className="px-4 py-3">Login ID</th>
+                <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3">Parent / Contact</th>
+                <th className="px-4 py-3">Contact</th>
+                <th className="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#d7cdbb]">
+            <tbody className="divide-y divide-[#e1e7f2]">
               {loading ? (
                 <tr>
-                  <td colSpan="6" className="p-8 text-center text-slate-500">
+                  <td colSpan="8" className="p-8 text-center text-slate-500">
                     <TableSkeleton />
                   </td>
                 </tr>
               ) : students.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="p-8 text-center text-slate-500">
+                  <td colSpan="8" className="p-8 text-center text-slate-500">
                     <EmptyState
                       title={search ? "No students match this search" : "No students added yet"}
                       description={
@@ -375,42 +629,94 @@ export default function StudentManager({ initialGrade, hideGradeFilter = false }
               ) : (
                 students.map((student) => (
                   <tr key={student._id} className="transition-colors hover:bg-[#f8fbff]">
-                    <td className="p-4">
-                      <div className="font-bold text-[#17120a]">{student.name}</div>
-                      <div className="text-xs text-[#52657d]">
-                        {student.platformStudentId || "Student ID pending"}
+                    <td className="px-4 py-3">
+                      <input type="checkbox" className="h-4 w-4 rounded border-[#c8d4e6]" />
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-purple-50 text-xs font-black text-purple-700">
+                          {initialsFor(student.name)}
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block truncate font-black text-[#17120a]">
+                            {student.name}
+                          </span>
+                          <span className="block truncate text-xs font-bold text-[#75869b]">
+                            {student.platformStudentId || "Student ID pending"}
+                          </span>
+                        </span>
                       </div>
                     </td>
-                    <td className="p-4">
-                      <div className="text-[#27344a]">Grade: {student.grade}</div>
-                      <div className="text-xs text-[#52657d]">Roll: {student.rollNumber}</div>
-                    </td>
-                    <td className="p-4">
-                      <div className="text-[#27344a]">{student.username || "Username pending"}</div>
-                      <div className="text-xs text-[#52657d]">
-                        Share this as the student login ID
+                    <td className="px-4 py-3">
+                      <div className="font-bold text-[#24314d]">{student.grade || "No grade"}</div>
+                      <div className="text-xs font-semibold text-[#75869b]">
+                        Roll: {student.rollNumber || "-"}
                       </div>
                     </td>
-                    <td className="p-4">
-                      <div className="text-[#27344a]">{student.email}</div>
-                      <div className="text-xs text-[#52657d]">{student.phone}</div>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-[#24314d]">
+                          {student.username || "Pending"}
+                        </span>
+                        {student.username && (
+                          <button
+                            type="button"
+                            onClick={() => handleCopyLogin(student)}
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-[#dbe5f4] text-[#52657d] transition hover:bg-purple-50 hover:text-purple-700"
+                            title="Copy login ID"
+                          >
+                            <FaCopy className="text-xs" />
+                          </button>
+                        )}
+                      </div>
+                      <div className="text-xs font-semibold text-[#75869b]">Student login ID</div>
                     </td>
-                    <td className="p-4">
-                      <div className="text-[#27344a]">{student.parentName}</div>
-                      <div className="text-xs text-[#52657d]">{student.parentPhone}</div>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-black ring-1 ${
+                          statusStyles[String(student.status || "ACTIVE").toUpperCase()] ||
+                          statusStyles.INACTIVE
+                        }`}
+                      >
+                        {String(student.status || "ACTIVE").toUpperCase() === "ACTIVE" ? (
+                          <FaCheckCircle />
+                        ) : (
+                          <FaUserClock />
+                        )}
+                        {student.status || "ACTIVE"}
+                      </span>
                     </td>
-                    <td className="p-4 text-right">
+                    <td className="px-4 py-3">
+                      <div className="font-bold text-[#24314d]">
+                        {student.parentName || "Not provided"}
+                      </div>
+                      <div className="text-xs font-semibold text-[#75869b]">
+                        {student.parentContactNumber ||
+                          student.parentPhone ||
+                          student.parentEmail ||
+                          "No contact"}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="font-semibold text-[#24314d]">
+                        {student.email || "No email"}
+                      </div>
+                      <div className="text-xs font-semibold text-[#75869b]">
+                        {student.phone || "No phone"}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() => handleEdit(student)}
-                          className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#bfd7f7] bg-[#eaf2ff] text-[#0a2f66] transition hover:bg-[#dbeaff]"
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[#dbe5f4] bg-white text-[#0a2f66] transition hover:bg-[#f8fbff]"
                           title="Edit Student"
                         >
                           <FaEdit />
                         </button>
                         <button
                           onClick={() => requestResetPassword(student)}
-                          className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#0a2f66] bg-[#0a2f66] text-white transition hover:bg-[#123f7d]"
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[#dbe5f4] bg-white text-[#0a2f66] transition hover:bg-[#f8fbff]"
                           title="Reset Password"
                         >
                           <FaKey />
@@ -433,7 +739,7 @@ export default function StudentManager({ initialGrade, hideGradeFilter = false }
         
         {/* Pagination */}
         {!loading && students.length > 0 && (
-            <div className="border-t border-[#d7cdbb] p-4">
+            <div className="border-t border-[#e1e7f2] p-4">
                 <PaginationControls
                     currentPage={pagination.page}
                     totalPages={pagination.totalPages}
