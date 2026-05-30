@@ -32,7 +32,8 @@ export default withAuth(
         }
 
         // Protect Student Routes (LMS Learning)
-        if (pathname.startsWith('/student')) {
+        // Allow /student/login without authentication
+        if (pathname.startsWith('/student') && pathname !== '/student/login') {
             if (token?.role !== 'STUDENT') {
                 // Redirect teachers/admins back to their dashboards if they try to access student area
                 if (token?.role === 'TEACHER' || token?.role === 'SCHOOL_ADMIN') {
@@ -44,7 +45,14 @@ export default withAuth(
     },
     {
         callbacks: {
-            authorized: ({ token }) => !!token,
+            authorized: ({ req, token }) => {
+                // Allow /student/login without authentication
+                if (req.nextUrl.pathname === '/student/login') {
+                    return true;
+                }
+                // Require token for all other matched routes
+                return !!token;
+            },
         },
     }
 );

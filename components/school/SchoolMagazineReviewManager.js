@@ -1,11 +1,20 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { FaBookOpen, FaCheck, FaSearch, FaTimes } from "react-icons/fa";
+import {
+  FaBookOpen,
+  FaCheck,
+  FaEllipsisV,
+  FaEye,
+  FaFilter,
+  FaPen,
+  FaQuoteLeft,
+  FaSearch,
+  FaTimes,
+} from "react-icons/fa";
 import AlertBanner from "@/components/ui/AlertBanner";
 import LoadingState from "@/components/ui/LoadingState";
 import EmptyState from "@/components/EmptyState";
-import LifecycleTimeline from "@/components/ui/LifecycleTimeline";
 import PaginationControls from "@/components/PaginationControls";
 
 const FILTERS = [
@@ -26,11 +35,46 @@ function formatDate(value) {
   });
 }
 
-export default function SchoolMagazineReviewManager() {
+function wordCount(value) {
+  return String(value || "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean).length;
+}
+
+function categoryTone(category = "") {
+  const normalized = category.toLowerCase();
+  if (normalized.includes("speech")) return "bg-emerald-50 text-emerald-700";
+  if (normalized.includes("poetry")) return "bg-amber-50 text-amber-700";
+  if (normalized.includes("debate")) return "bg-purple-50 text-purple-700";
+  return "bg-blue-50 text-blue-700";
+}
+
+function IllustrationTile({ category = "" }) {
+  const normalized = category.toLowerCase();
+  const tone = normalized.includes("education")
+    ? "from-[#0d2a5c] via-[#2563eb] to-[#dbeafe]"
+    : normalized.includes("environment")
+    ? "from-[#0f5132] via-[#40a66b] to-[#d9f99d]"
+    : "from-[#dbeafe] via-[#c7d2fe] to-[#f5d0fe]";
+
+  return (
+    <div className={`relative h-[112px] w-[112px] shrink-0 overflow-hidden rounded-lg bg-gradient-to-br ${tone}`}>
+      <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-white/45 to-transparent" />
+      <div className="absolute bottom-0 left-0 h-16 w-24 -skew-x-12 bg-white/35" />
+      <div className="absolute bottom-0 right-0 h-14 w-24 skew-x-12 bg-white/25" />
+      <div className="absolute bottom-5 left-6 h-10 w-14 rounded-t-full bg-white/30" />
+      <div className="absolute right-4 top-4 h-4 w-4 rounded-full bg-white/75" />
+      <div className="absolute left-5 top-8 h-1 w-8 rounded-full bg-white/50" />
+    </div>
+  );
+}
+
+export default function SchoolMagazineReviewManager({ onStatsChange }) {
   const [activeFilter, setActiveFilter] = useState("SUBMITTED");
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState(false);
+  const [busyId, setBusyId] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [selectedSubmission, setSelectedSubmission] = useState(null);
@@ -43,38 +87,42 @@ export default function SchoolMagazineReviewManager() {
     limit: 20,
   });
 
-  const loadSubmissions = useCallback(async (nextFilter = activeFilter, page = 1) => {
-    try {
-      setLoading(true);
-      setError("");
-      const params = new URLSearchParams({
-        status: nextFilter,
-        page: String(page),
-        limit: "12",
-      });
-      if (search.trim()) params.append("search", search.trim());
-      const res = await fetch(`/api/school/magazine-submissions?${params}`, {
-        cache: "no-store",
-      });
-      const payload = await res.json().catch(() => ({}));
+  const loadSubmissions = useCallback(
+    async (nextFilter = activeFilter, page = 1) => {
+      try {
+        setLoading(true);
+        setError("");
+        const params = new URLSearchParams({
+          status: nextFilter,
+          page: String(page),
+          limit: "12",
+        });
+        if (search.trim()) params.append("search", search.trim());
+        const res = await fetch(`/api/school/magazine-submissions?${params}`, {
+          cache: "no-store",
+        });
+        const payload = await res.json().catch(() => ({}));
 
-      if (!res.ok) {
-        throw new Error(payload.message || "Failed to load submissions");
-      }
+        if (!res.ok) {
+          throw new Error(payload.message || "Failed to load submissions");
+        }
 
-      const nextSubmissions = Array.isArray(payload.submissions)
-        ? payload.submissions
-        : [];
-      setSubmissions(nextSubmissions);
-      if (payload.pagination) {
-        setPagination(payload.pagination);
+        setSubmissions(Array.isArray(payload.submissions) ? payload.submissions : []);
+        if (payload.pagination) {
+          setPagination(payload.pagination);
+          onStatsChange?.({
+            reviewTotal: payload.pagination.totalItems || payload.pagination.totalSubmissions || 0,
+            activeReviewFilter: nextFilter,
+          });
+        }
+      } catch (loadError) {
+        setError(loadError.message || "Failed to load submissions");
+      } finally {
+        setLoading(false);
       }
-    } catch (loadError) {
-      setError(loadError.message || "Failed to load submissions");
-    } finally {
-      setLoading(false);
-    }
-  }, [activeFilter, search]);
+    },
+    [activeFilter, onStatsChange, search]
+  );
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -83,25 +131,6 @@ export default function SchoolMagazineReviewManager() {
     return () => clearTimeout(timer);
   }, [activeFilter, loadSubmissions]);
 
-  useEffect(() => {
-    if (!selectedSubmission) return;
-
-    const nextSelected = submissions.find(
-      (submission) => submission.id === selectedSubmission.id
-    );
-
-    if (!nextSelected) {
-      setSelectedSubmission(null);
-      setReviewNote("");
-      return;
-    }
-
-    setSelectedSubmission(nextSelected);
-    setReviewNote((current) =>
-      current === nextSelected.reviewNote ? current : nextSelected.reviewNote || ""
-    );
-  }, [submissions, selectedSubmission]);
-
   const openSubmission = (submission) => {
     setSelectedSubmission(submission);
     setReviewNote(submission.reviewNote || "");
@@ -109,25 +138,22 @@ export default function SchoolMagazineReviewManager() {
     setError("");
   };
 
-  const handleReview = async (action) => {
-    if (!selectedSubmission) return;
+  const handleReview = async (submission, action, note = "") => {
+    if (!submission) return;
 
     try {
-      setBusy(true);
+      setBusyId(submission.id);
       setError("");
       setSuccess("");
 
-      const res = await fetch(
-        `/api/school/magazine-submissions/${selectedSubmission.id}`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action,
-            reviewNote,
-          }),
-        }
-      );
+      const res = await fetch(`/api/school/magazine-submissions/${submission.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action,
+          reviewNote: note,
+        }),
+      });
 
       const payload = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -135,240 +161,251 @@ export default function SchoolMagazineReviewManager() {
       }
 
       setSuccess(payload.message || "Review updated");
+      setSelectedSubmission(null);
+      setReviewNote("");
       await loadSubmissions(activeFilter, pagination.page || 1);
+      onStatsChange?.({ refresh: true });
     } catch (reviewError) {
       setError(reviewError.message || "Failed to review submission");
     } finally {
-      setBusy(false);
+      setBusyId("");
     }
   };
 
-  const showEditableReviewBox = selectedSubmission?.status === "SUBMITTED";
-  const showSavedReviewNote =
-    selectedSubmission?.status !== "SUBMITTED" && reviewNote.trim().length > 0;
-
   return (
-    <div className="space-y-6">
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6">
-        <h2 className="flex items-center gap-3 text-2xl font-bold text-white">
-          <FaBookOpen className="text-emerald-400" />
-          Magazine Review
-        </h2>
-        <p className="mt-2 text-sm text-slate-400">
-          Review student writing, approve the strongest pieces, and send back
-          the ones that need revision.
-        </p>
+    <div className="space-y-4">
+      <div>
+        <h2 className="text-lg font-black text-[#17120a]">Review Queue</h2>
+        <div className="mt-1 h-0.5 w-24 rounded-full bg-purple-700" />
       </div>
 
-      {error && (
-        <AlertBanner type="error" title="Review queue failed" message={error} />
-      )}
-      {success && (
-        <AlertBanner type="success" title="Review saved" message={success} />
-      )}
+      {error && <AlertBanner type="error" title="Review queue failed" message={error} />}
+      {success && <AlertBanner type="success" title="Review saved" message={success} />}
 
-      <div className="flex flex-wrap gap-2">
-        {FILTERS.map((filter) => (
-          <button
-            key={filter.id}
-            type="button"
-            onClick={() => setActiveFilter(filter.id)}
-            className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
-              activeFilter === filter.id
-                ? "bg-blue-600 text-white"
-                : "bg-slate-900/60 text-slate-300 hover:bg-slate-800"
-            }`}
-          >
-            {filter.label}
-          </button>
-        ))}
-      </div>
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-wrap gap-2">
+          {FILTERS.map((filter) => (
+            <button
+              key={filter.id}
+              type="button"
+              onClick={() => setActiveFilter(filter.id)}
+              className={`rounded-lg px-4 py-2 text-xs font-black transition ${
+                activeFilter === filter.id
+                  ? "border-b-2 border-purple-700 bg-purple-50 text-purple-700"
+                  : "text-[#0a2f66] hover:bg-[#f8fbff]"
+              }`}
+            >
+              {filter.label}
+            </button>
+          ))}
+        </div>
 
-      <div className="relative max-w-xl">
-        <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-        <input
-          type="text"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder="Search title, challenge, or content..."
-          className="w-full rounded-xl border border-slate-800 bg-slate-900/60 py-3 pl-10 pr-4 text-white outline-none transition focus:border-blue-500"
-        />
-      </div>
-
-      <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-        <section className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6">
-          <h3 className="text-xl font-bold text-white">
-            Student Submissions ({pagination.totalItems ?? submissions.length})
-          </h3>
-
-          {loading ? (
-            <LoadingState
-              title="Loading submissions"
-              message="Preparing student writing for review."
-              className="mt-6"
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <label className="relative block">
+            <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-[#52657d]" />
+            <input
+              type="text"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search title, challenge, or student..."
+              className="h-10 w-full rounded-lg border border-[#dbe5f4] bg-white pl-9 pr-3 text-xs font-bold text-[#0a2f66] outline-none sm:w-80"
             />
-          ) : submissions.length === 0 ? (
-            <div className="mt-6">
-              <EmptyState
-                icon={FaBookOpen}
-                title="No submissions in this view"
-                description="Student writing will appear here after students submit it for school review."
-              />
-            </div>
-          ) : (
-            <div className="mt-6 space-y-4">
-              {submissions.map((submission) => (
+          </label>
+          <button
+            type="button"
+            onClick={() => loadSubmissions(activeFilter, 1)}
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-[#dbe5f4] bg-white px-4 text-xs font-black text-[#0a2f66] hover:bg-[#f8fbff]"
+          >
+            <FaFilter />
+            Filter
+          </button>
+        </div>
+      </div>
+
+      {loading ? (
+        <LoadingState
+          title="Loading submissions"
+          message="Preparing student writing for review."
+        />
+      ) : submissions.length === 0 ? (
+        <EmptyState
+          icon={FaBookOpen}
+          title="No submissions in this view"
+          description="Student writing will appear here after students submit it for school review."
+        />
+      ) : (
+        <div className="space-y-3">
+          {submissions.map((submission) => (
+            <article
+              key={submission.id}
+              className="grid min-h-[136px] gap-4 overflow-hidden rounded-lg border border-l-4 border-[#e1e7f2] border-l-purple-600 bg-white p-4 shadow-sm md:grid-cols-[112px_minmax(0,1fr)_240px_116px_36px] md:items-center"
+            >
+              <IllustrationTile category={submission.category} />
+
+              <div className="min-w-0">
+                <h3 className="truncate text-[15px] font-black text-[#17120a]">
+                  {submission.title}
+                </h3>
+                <p className="mt-2 truncate text-[11px] font-bold text-[#52657d]">
+                  {submission.authorStudent?.name || "Student"} <span className="px-1">-</span>
+                  {submission.authorStudent?.grade || "Grade"} <span className="px-1">-</span>
+                  Roll {submission.authorStudent?.rollNumber || "-"}
+                </p>
+                <div className="mt-4 flex flex-wrap items-center gap-2">
+                  <span className={`rounded-full px-3 py-1 text-[10px] font-black uppercase leading-none ${categoryTone(submission.category)}`}>
+                    {submission.category || "Essay"}
+                  </span>
+                  {submission.challengeTitle && (
+                    <span className="rounded-full bg-purple-50 px-3 py-1 text-[10px] font-black leading-none text-purple-700">
+                      {submission.challengeTitle}
+                    </span>
+                  )}
+                  <span className="text-[10px] font-bold text-[#52657d]">
+                    Submitted {formatDate(submission.submittedAt || submission.updatedAt)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="h-[96px] rounded-lg bg-[#f8fbff] p-4">
+                <FaQuoteLeft className="mb-2 text-lg text-[#7c3aed]" />
+                <p className="line-clamp-2 text-[11px] font-semibold leading-5 text-[#27364a]">
+                  {submission.content}
+                </p>
+                <p className="mt-2 text-[10px] font-black text-[#52657d]">
+                  {wordCount(submission.content)} words
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 md:flex-col md:items-stretch">
+                {submission.status === "SUBMITTED" && (
+                  <>
+                    <button
+                      type="button"
+                      disabled={busyId === submission.id}
+                      onClick={() => handleReview(submission, "APPROVE")}
+                      className="magazine-review-action inline-flex items-center justify-center gap-2 bg-emerald-50 px-3 text-[11px] font-black text-emerald-700 hover:bg-emerald-100 disabled:opacity-60"
+                    >
+                      <FaCheck />
+                      Approve
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busyId === submission.id}
+                      onClick={() => handleReview(submission, "REJECT")}
+                      className="magazine-review-action inline-flex items-center justify-center gap-2 bg-rose-50 px-3 text-[11px] font-black text-rose-700 hover:bg-rose-100 disabled:opacity-60"
+                    >
+                      <FaTimes />
+                      Reject
+                    </button>
+                  </>
+                )}
                 <button
-                  key={submission.id}
                   type="button"
                   onClick={() => openSubmission(submission)}
-                  className={`w-full rounded-xl border p-4 text-left transition ${
-                    selectedSubmission?.id === submission.id
-                      ? "border-blue-500/40 bg-blue-500/10"
-                      : "border-slate-800 bg-slate-950/70 hover:border-slate-700"
-                  }`}
+                  className="magazine-review-action inline-flex items-center justify-center gap-2 bg-[#f1f5f9] px-3 text-[11px] font-black text-[#0a2f66] hover:bg-[#e6edf6]"
                 >
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <h4 className="text-lg font-semibold text-white">
-                        {submission.title}
-                      </h4>
-                      {submission.submissionSource ===
-                        "PLATFORM_CHALLENGE" && (
-                        <p className="mt-1 text-xs font-semibold text-amber-200">
-                          Challenge:{" "}
-                          {submission.challengeTitle || "Student Challenge"}
-                        </p>
-                      )}
-                      <p className="mt-1 text-sm text-slate-400">
-                        {submission.authorStudent?.name || "Student"} -{" "}
-                        {submission.authorStudent?.grade || "Grade"} - Roll{" "}
-                        {submission.authorStudent?.rollNumber || "-"}
-                      </p>
-                    </div>
-                    <span className="rounded-full bg-slate-800 px-3 py-1 text-xs font-semibold text-slate-200">
-                      {submission.status}
-                    </span>
-                  </div>
-
-                  <div className="mt-3 text-xs text-slate-500">
-                    {submission.submittedAt
-                      ? `Submitted ${formatDate(submission.submittedAt)}`
-                      : `Updated ${formatDate(submission.updatedAt)}`}
-                  </div>
+                  <FaPen />
+                  View & Edit
                 </button>
-              ))}
-              <PaginationControls
-                currentPage={pagination.page || pagination.currentPage || 1}
-                totalPages={pagination.totalPages || 1}
-                onPageChange={(page) => loadSubmissions(activeFilter, page)}
-                totalItems={pagination.totalItems}
-                start={pagination.start}
-                end={pagination.end}
-              />
-            </div>
-          )}
-        </section>
+              </div>
 
-        <section className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6">
-          {!selectedSubmission ? (
-            <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-8 text-center text-sm text-slate-400">
-              Select a student submission to review it here.
-            </div>
-          ) : (
-            <div className="space-y-5">
+              <div className="flex justify-end md:block">
+                <button
+                  type="button"
+                  onClick={() => openSubmission(submission)}
+                  className="magazine-review-icon-action inline-flex items-center justify-center bg-[#f8fbff] text-[#0a2f66] hover:bg-[#e6edf6]"
+                  title="More options"
+                >
+                  <FaEllipsisV />
+                </button>
+              </div>
+            </article>
+          ))}
+
+          <PaginationControls
+            currentPage={pagination.page || pagination.currentPage || 1}
+            totalPages={pagination.totalPages || 1}
+            onPageChange={(page) => loadSubmissions(activeFilter, page)}
+            totalItems={pagination.totalItems}
+            start={pagination.start}
+            end={pagination.end}
+          />
+        </div>
+      )}
+
+      {selectedSubmission && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
+          <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-lg bg-white p-6 shadow-xl">
+            <div className="flex items-start justify-between gap-4">
               <div>
-                <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  {selectedSubmission.category}
+                <div className={`inline-flex rounded-full px-3 py-1 text-[10px] font-black uppercase ${categoryTone(selectedSubmission.category)}`}>
+                  {selectedSubmission.category || "Essay"}
                 </div>
-                {selectedSubmission.submissionSource ===
-                  "PLATFORM_CHALLENGE" && (
-                  <p className="mt-2 text-sm font-semibold text-amber-200">
-                    Challenge response:{" "}
-                    {selectedSubmission.challengeTitle || "Student Challenge"}
-                  </p>
-                )}
-                <h3 className="mt-2 text-2xl font-bold text-white">
+                <h3 className="mt-3 text-2xl font-black text-[#17120a]">
                   {selectedSubmission.title}
                 </h3>
-                <p className="mt-2 text-sm text-slate-400">
+                <p className="mt-2 text-sm font-bold text-[#52657d]">
                   {selectedSubmission.authorStudent?.name || "Student"} -{" "}
                   {selectedSubmission.authorStudent?.grade || "Grade"} - Roll{" "}
                   {selectedSubmission.authorStudent?.rollNumber || "-"}
                 </p>
-                <p className="mt-2 text-xs text-slate-500">
-                  {selectedSubmission.submittedAt
-                    ? `Submitted ${formatDate(selectedSubmission.submittedAt)}`
-                    : `Updated ${formatDate(selectedSubmission.updatedAt)}`}
-                </p>
               </div>
+              <button
+                type="button"
+                onClick={() => setSelectedSubmission(null)}
+                className="text-sm font-black text-[#52657d] hover:text-[#17120a]"
+              >
+                Close
+              </button>
+            </div>
 
-              <LifecycleTimeline
-                title="Review history"
-                items={selectedSubmission.lifecycle}
-              />
+            <article className="mt-5 whitespace-pre-wrap rounded-lg border border-[#e1e7f2] bg-[#f8fbff] p-5 text-sm font-semibold leading-7 text-[#27364a]">
+              {selectedSubmission.content}
+            </article>
 
-              <article className="rounded-xl border border-slate-800 bg-slate-950/70 p-5 text-sm leading-7 text-slate-200 whitespace-pre-wrap">
-                {selectedSubmission.content}
-              </article>
-
-              {showEditableReviewBox && (
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-slate-300">
+            {selectedSubmission.status === "SUBMITTED" ? (
+              <div className="mt-5 space-y-4">
+                <label>
+                  <div className="mb-2 text-sm font-black text-[#52657d]">
                     School Review Note
-                  </label>
+                  </div>
                   <textarea
                     value={reviewNote}
                     onChange={(event) => setReviewNote(event.target.value)}
-                    placeholder="Add guidance for the student or internal editorial note"
-                    className="min-h-[120px] w-full rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-white outline-none transition focus:border-blue-500"
+                    placeholder="Add guidance for the student or an internal editorial note"
+                    className="min-h-28 w-full rounded-lg border border-[#dbe5f4] px-4 py-3 text-sm font-semibold text-[#17120a] outline-none focus:border-purple-500"
                   />
-                </div>
-              )}
-
-              {showSavedReviewNote && (
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-slate-300">
-                    Saved Review Note
-                  </label>
-                  <div className="min-h-[120px] rounded-xl border border-slate-800 bg-slate-950/70 px-4 py-3 text-sm leading-7 text-slate-300 whitespace-pre-wrap">
-                    {reviewNote}
-                  </div>
-                </div>
-              )}
-
-              {selectedSubmission.status === "SUBMITTED" ? (
-                <div className="flex flex-wrap gap-3">
+                </label>
+                <div className="flex flex-wrap justify-end gap-3">
                   <button
                     type="button"
-                    disabled={busy}
-                    onClick={() => handleReview("APPROVE")}
-                    className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:opacity-60"
-                  >
-                    <FaCheck />
-                    {busy ? "Processing..." : "Approve"}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => handleReview("REJECT")}
-                    className="inline-flex items-center gap-2 rounded-xl bg-amber-500/15 px-5 py-3 text-sm font-semibold text-amber-200 transition hover:bg-amber-500/25 disabled:opacity-60"
+                    disabled={busyId === selectedSubmission.id}
+                    onClick={() => handleReview(selectedSubmission, "REJECT", reviewNote)}
+                    className="inline-flex h-10 items-center gap-2 rounded-lg bg-rose-50 px-4 text-sm font-black text-rose-700 hover:bg-rose-100 disabled:opacity-60"
                   >
                     <FaTimes />
-                    {busy ? "Processing..." : "Send Back"}
+                    Reject
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busyId === selectedSubmission.id}
+                    onClick={() => handleReview(selectedSubmission, "APPROVE", reviewNote)}
+                    className="inline-flex h-10 items-center gap-2 rounded-lg bg-emerald-600 px-4 text-sm font-black text-white hover:bg-emerald-700 disabled:opacity-60"
+                  >
+                    <FaCheck />
+                    Approve
                   </button>
                 </div>
-              ) : (
-                <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-4 text-sm text-slate-400">
-                  {selectedSubmission.status === "APPROVED"
-                    ? "This submission has been approved. Publish it from Magazine Publishing when you want students to read it."
-                    : "This submission has already been reviewed."}
-                </div>
-              )}
-            </div>
-          )}
-        </section>
-      </div>
+              </div>
+            ) : (
+              <div className="mt-5 rounded-lg border border-[#e1e7f2] bg-[#f8fbff] p-4 text-sm font-semibold text-[#52657d]">
+                <FaEye className="mb-2 text-[#0a2f66]" />
+                This submission has already been reviewed.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

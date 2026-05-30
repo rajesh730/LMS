@@ -160,11 +160,6 @@ const StudentSchema = new mongoose.Schema(
       ],
     },
     
-    // Legacy field - kept for credential-reset compatibility; do not expose in list APIs.
-    visiblePassword: {
-      type: String,
-    },
-    
     // School Reference
     school: {
       type: mongoose.Schema.Types.ObjectId,

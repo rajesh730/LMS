@@ -2,8 +2,6 @@
 
 import { useEffect } from "react";
 import ChallengeShowcaseList from "@/components/challenges/ChallengeShowcaseList";
-import { FaFeatherAlt } from "react-icons/fa";
-import PageHeader from "@/components/ui/PageHeader";
 import useWorkIndicators from "@/lib/useWorkIndicators";
 
 export default function DashboardChallengeShowcaseClient({
@@ -21,15 +19,11 @@ export default function DashboardChallengeShowcaseClient({
   }, [markSurfaceSeen, seenSurface]);
 
   return (
-    <div className="space-y-6 text-slate-200">
-      <PageHeader
-        icon={FaFeatherAlt}
-        eyebrow="Platform Recognition"
-        title="Pratyo Pulse"
-        description="Read selected student responses from platform challenges and see the schools behind them."
+    <div className="text-[#17120a]">
+      <ChallengeShowcaseList
+        responses={responses}
+        audience={seenSurface?.startsWith("student.") ? "student" : "school"}
       />
-
-      <ChallengeShowcaseList responses={responses} />
     </div>
   );
 }

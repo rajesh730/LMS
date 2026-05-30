@@ -1,7 +1,22 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { FaExternalLinkAlt, FaGlobe, FaSpinner, FaStar } from "react-icons/fa";
+import Link from "next/link";
+import {
+  FaCalendarAlt,
+  FaCheckSquare,
+  FaExternalLinkAlt,
+  FaGlobe,
+  FaImage,
+  FaLink,
+  FaLock,
+  FaPlus,
+  FaSave,
+  FaSpinner,
+  FaStar,
+  FaTrophy,
+  FaUsers,
+} from "react-icons/fa";
 
 const EMPTY_FORM = {
   tagline: "",
@@ -13,12 +28,45 @@ const EMPTY_FORM = {
   publicHighlights: [""],
 };
 
+const FALLBACK_COVER =
+  "https://images.unsplash.com/photo-1562774053-701939374585?auto=format&fit=crop&w=900&q=80";
+
+function eventId(event) {
+  return event?._id || event?.id || "";
+}
+
+function eventLabel(event) {
+  return event?.eventType || event?.type || "COMPETITION";
+}
+
+function visibleHighlights(profile) {
+  return (profile.publicHighlights || []).filter((item) => item.trim());
+}
+
+function normalizeHighlights(highlights = []) {
+  return highlights.map((item) => String(item || "").trim()).filter(Boolean);
+}
+
+function MetricRow({ label, value, icon: Icon }) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-lg border border-[#e1e7f2] bg-white px-4 py-3">
+      <span className="inline-flex items-center gap-2 text-xs font-bold text-[#52657d]">
+        <Icon className="text-purple-700" />
+        {label}
+      </span>
+      <strong className="text-lg font-black text-[#17120a]">{value}</strong>
+    </div>
+  );
+}
+
 export default function ShowcaseProfileManager() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [savedMessage, setSavedMessage] = useState("");
   const [profile, setProfile] = useState(EMPTY_FORM);
   const [eventOptions, setEventOptions] = useState([]);
+  const [showAllEvents, setShowAllEvents] = useState(false);
 
   const publicSchoolUrl = useMemo(() => {
     if (!profile?.school) return "";
@@ -51,7 +99,7 @@ export default function ShowcaseProfileManager() {
           websiteUrl: nextProfile.websiteUrl || "",
           visibility: nextProfile.visibility || "PRIVATE",
           featuredEvents: (nextProfile.featuredEvents || []).map((item) =>
-            typeof item === "string" ? item : item._id
+            typeof item === "string" ? item : item._id || item.id
           ),
           publicHighlights:
             nextProfile.publicHighlights?.length > 0
@@ -60,8 +108,10 @@ export default function ShowcaseProfileManager() {
           school:
             typeof nextProfile.school === "string"
               ? nextProfile.school
-              : nextProfile.school?._id || "",
+              : nextProfile.school?._id || nextProfile.school?.id || "",
+          schoolName: nextProfile.school?.schoolName || nextProfile.school?.name || "",
           highlightMetrics: nextProfile.highlightMetrics || {},
+          updatedAt: nextProfile.updatedAt || null,
         });
 
         setEventOptions(
@@ -112,10 +162,20 @@ export default function ShowcaseProfileManager() {
     });
   };
 
+  const selectAllEvents = () => {
+    const allIds = eventOptions.map(eventId).filter(Boolean);
+    setProfile((prev) => ({
+      ...prev,
+      featuredEvents:
+        prev.featuredEvents?.length === allIds.length ? [] : allIds,
+    }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
     setError("");
+    setSavedMessage("");
 
     try {
       const payload = {
@@ -125,7 +185,7 @@ export default function ShowcaseProfileManager() {
         websiteUrl: profile.websiteUrl,
         visibility: profile.visibility,
         featuredEvents: profile.featuredEvents,
-        publicHighlights: (profile.publicHighlights || []).filter(Boolean),
+        publicHighlights: normalizeHighlights(profile.publicHighlights),
       };
 
       const res = await fetch("/api/school/showcase-profile", {
@@ -145,7 +205,9 @@ export default function ShowcaseProfileManager() {
         school:
           typeof saved.school === "string" ? saved.school : saved.school?._id || "",
         highlightMetrics: saved.highlightMetrics || prev.highlightMetrics,
+        updatedAt: saved.updatedAt || new Date().toISOString(),
       }));
+      setSavedMessage("Showcase profile saved.");
     } catch (saveError) {
       setError(saveError.message);
     } finally {
@@ -155,216 +217,387 @@ export default function ShowcaseProfileManager() {
 
   if (loading) {
     return (
-      <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800 text-slate-300 flex items-center gap-2">
-        <FaSpinner className="animate-spin" />
+      <div className="flex items-center gap-2 rounded-lg border border-[#e1e7f2] bg-white p-6 text-[#52657d] shadow-sm">
+        <FaSpinner className="animate-spin text-purple-700" />
         Loading public showcase profile...
       </div>
     );
   }
 
+  const schoolName = profile.schoolName || "Orbit English School";
+  const tagline = profile.tagline || "Inspiring minds. Building futures.";
+  const coverImage = profile.coverImageUrl || FALLBACK_COVER;
+  const metrics = profile.highlightMetrics || {};
+  const highlights = visibleHighlights(profile);
+  const displayedEvents = showAllEvents ? eventOptions : eventOptions.slice(0, 8);
+
   return (
-    <div className="space-y-6">
-      <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800">
-        <div className="flex items-start justify-between gap-4 mb-6">
-          <div>
-            <h2 className="text-xl font-semibold text-white flex items-center gap-2">
-              <FaGlobe className="text-blue-400" />
-              Public School Showcase
-            </h2>
-            <p className="text-sm text-slate-400 mt-1">
-              Control how your school appears before login, on public event pages,
-              and in featured school sections.
-            </p>
-          </div>
-          {publicSchoolUrl && (
-            <a
-              href={publicSchoolUrl}
-              className="px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-500 text-sm inline-flex items-center gap-2"
-            >
-              View Public Page
-              <FaExternalLinkAlt />
-            </a>
-          )}
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="grid md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm text-slate-300 mb-1">Tagline</label>
-              <input
-                type="text"
-                value={profile.tagline}
-                onChange={(e) =>
-                  setProfile((prev) => ({ ...prev, tagline: e.target.value }))
-                }
-                className="w-full bg-slate-800 text-white rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Where creativity, confidence, and community grow."
-              />
+    <form onSubmit={handleSubmit} className="space-y-5 text-[#17120a]">
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_300px]">
+        <main className="space-y-4">
+          <section className="rounded-lg border border-[#e1e7f2] bg-white p-5 shadow-sm">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div className="flex items-center gap-4">
+                <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-purple-700 text-2xl text-white">
+                  <FaGlobe />
+                </span>
+                <div>
+                  <h1 className="text-2xl font-black text-[#17120a]">
+                    Public School Showcase
+                  </h1>
+                  <p className="mt-2 max-w-xl text-sm font-semibold leading-6 text-[#52657d]">
+                    Control how your school appears before login, on public event pages and in featured school sections.
+                  </p>
+                </div>
+              </div>
+              {publicSchoolUrl && (
+                <Link
+                  href={publicSchoolUrl}
+                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-purple-200 bg-white px-5 text-xs font-black text-purple-700 hover:bg-purple-50"
+                >
+                  View Public Page
+                  <FaExternalLinkAlt />
+                </Link>
+              )}
             </div>
-            <div>
-              <label className="block text-sm text-slate-300 mb-1">Visibility</label>
-              <select
-                value={profile.visibility}
-                onChange={(e) =>
-                  setProfile((prev) => ({ ...prev, visibility: e.target.value }))
-                }
-                className="w-full bg-slate-800 text-white rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="PRIVATE">Private</option>
-                <option value="PUBLIC">Public</option>
-              </select>
-              <p className="text-xs text-slate-500 mt-2">
-                Only approved public achievements appear on your public profile.
-              </p>
-            </div>
-          </div>
+          </section>
 
-          <div>
-            <label className="block text-sm text-slate-300 mb-1">Summary</label>
-            <textarea
-              value={profile.summary}
-              onChange={(e) =>
-                setProfile((prev) => ({ ...prev, summary: e.target.value }))
-              }
-              className="w-full bg-slate-800 text-white rounded p-2 h-28 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Explain your school culture, activity strengths, and what families should know."
-            />
-          </div>
+          <section className="rounded-lg border border-[#e1e7f2] bg-white p-5 shadow-sm">
+            <div className="grid gap-5 md:grid-cols-2">
+              <label>
+                <div className="mb-2 flex items-center gap-2 text-xs font-black text-[#27364a]">
+                  <FaCalendarAlt className="text-[#52657d]" />
+                  Tagline
+                </div>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={profile.tagline}
+                    maxLength={120}
+                    onChange={(e) =>
+                      setProfile((prev) => ({ ...prev, tagline: e.target.value }))
+                    }
+                    className="h-11 w-full rounded-lg border border-[#dbe5f4] bg-white px-3 pr-16 text-sm font-semibold text-[#17120a] outline-none"
+                    placeholder="Inspiring minds. Building futures."
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-[#52657d]">
+                    {(profile.tagline || "").length}/120
+                  </span>
+                </div>
+              </label>
 
-          <div className="grid md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm text-slate-300 mb-1">Cover Image URL</label>
-              <input
-                type="url"
-                value={profile.coverImageUrl}
-                onChange={(e) =>
-                  setProfile((prev) => ({ ...prev, coverImageUrl: e.target.value }))
-                }
-                className="w-full bg-slate-800 text-white rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="https://..."
-              />
+              <label>
+                <div className="mb-2 flex items-center gap-2 text-xs font-black text-[#27364a]">
+                  <FaGlobe className="text-[#52657d]" />
+                  Visibility
+                </div>
+                <select
+                  value={profile.visibility}
+                  onChange={(e) =>
+                    setProfile((prev) => ({ ...prev, visibility: e.target.value }))
+                  }
+                  className="h-11 w-full rounded-lg border border-[#dbe5f4] bg-white px-3 text-sm font-semibold text-[#17120a] outline-none"
+                >
+                  <option value="PRIVATE">Private</option>
+                  <option value="PUBLIC">Public</option>
+                </select>
+                <p className="mt-2 text-xs font-semibold text-[#52657d]">
+                  Only approved public achievements appear on your public profile.
+                </p>
+              </label>
             </div>
-            <div>
-              <label className="block text-sm text-slate-300 mb-1">Website URL</label>
+
+            <label className="mt-5 block">
+              <div className="mb-2 flex items-center gap-2 text-xs font-black text-[#27364a]">
+                <FaCheckSquare className="text-[#52657d]" />
+                Summary
+              </div>
+              <div className="relative">
+                <textarea
+                  value={profile.summary}
+                  maxLength={500}
+                  onChange={(e) =>
+                    setProfile((prev) => ({ ...prev, summary: e.target.value }))
+                  }
+                  className="min-h-28 w-full rounded-lg border border-[#dbe5f4] bg-white px-3 py-3 pb-8 text-sm font-semibold leading-6 text-[#17120a] outline-none"
+                  placeholder="Explain your school culture, activity strengths, and what families should know."
+                />
+                <span className="absolute bottom-3 right-3 text-[10px] font-bold text-[#52657d]">
+                  {(profile.summary || "").length}/500
+                </span>
+              </div>
+            </label>
+          </section>
+
+          <section className="grid gap-4 md:grid-cols-2">
+            <div className="rounded-lg border border-[#e1e7f2] bg-white p-4 shadow-sm">
+              <div className="mb-3 flex items-center gap-2 text-xs font-black text-[#27364a]">
+                <FaImage className="text-[#52657d]" />
+                Cover Image
+              </div>
+              <div className="flex gap-4">
+                <div
+                  className="h-20 w-32 rounded-lg bg-cover bg-center"
+                  style={{ backgroundImage: `url("${coverImage}")` }}
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="text-[11px] font-semibold text-[#52657d]">
+                    Recommended: 1200 x 400px
+                  </p>
+                  <input
+                    type="url"
+                    value={profile.coverImageUrl}
+                    onChange={(e) =>
+                      setProfile((prev) => ({ ...prev, coverImageUrl: e.target.value }))
+                    }
+                    className="mt-3 h-10 w-full rounded-lg border border-[#dbe5f4] px-3 text-xs font-semibold text-[#17120a] outline-none"
+                    placeholder="https://..."
+                  />
+                </div>
+              </div>
+            </div>
+
+            <label className="rounded-lg border border-[#e1e7f2] bg-white p-4 shadow-sm">
+              <div className="mb-3 flex items-center gap-2 text-xs font-black text-[#27364a]">
+                <FaLink className="text-[#52657d]" />
+                Website URL
+              </div>
               <input
                 type="url"
                 value={profile.websiteUrl}
                 onChange={(e) =>
                   setProfile((prev) => ({ ...prev, websiteUrl: e.target.value }))
                 }
-                className="w-full bg-slate-800 text-white rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="h-11 w-full rounded-lg border border-[#dbe5f4] px-3 text-sm font-semibold text-[#17120a] outline-none"
                 placeholder="https://schoolname.edu.np"
               />
-            </div>
-          </div>
+              <p className="mt-2 text-xs font-semibold text-[#52657d]">
+                This link will be displayed on your public profile.
+              </p>
+            </label>
+          </section>
 
-          <div>
-            <div>
-              <label className="block text-sm text-slate-300 mb-2">Featured Events</label>
-              <div className="max-h-56 overflow-y-auto rounded-xl border border-slate-800 bg-slate-950/70 p-3 space-y-2">
-                {eventOptions.length === 0 ? (
-                  <p className="text-sm text-slate-500">
-                    No active events available to feature yet.
-                  </p>
-                ) : (
-                  eventOptions.map((event) => (
+          <section className="rounded-lg border border-[#e1e7f2] bg-white p-5 shadow-sm">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <h2 className="flex items-center gap-2 text-sm font-black text-[#17120a]">
+                  <FaCalendarAlt className="text-purple-700" />
+                  Featured Events
+                </h2>
+                <p className="mt-1 text-xs font-semibold text-[#52657d]">
+                  Select events you want to showcase on your public profile.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={selectAllEvents}
+                className="inline-flex items-center gap-2 text-xs font-black text-purple-700"
+              >
+                Select All
+                <FaCheckSquare />
+              </button>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              {eventOptions.length === 0 ? (
+                <p className="text-sm font-semibold text-[#52657d]">
+                  No active events available to feature yet.
+                </p>
+              ) : (
+                displayedEvents.map((event) => {
+                  const id = eventId(event);
+                  return (
                     <label
-                      key={event._id}
-                      className="flex items-center gap-3 text-sm text-slate-300"
+                      key={id}
+                      className="flex min-h-10 items-center justify-between gap-3 rounded-lg border border-[#e1e7f2] bg-white px-3 py-2 text-xs font-black text-[#0a2f66]"
                     >
-                      <input
-                        type="checkbox"
-                        checked={profile.featuredEvents.includes(event._id)}
-                        onChange={() => toggleSelection("featuredEvents", event._id)}
-                        className="rounded border-slate-600 bg-slate-800 text-blue-500"
-                      />
-                      <span>
-                        {event.title}
-                        <span className="text-slate-500 ml-2">
-                          {event.eventType || "EVENT"}
-                        </span>
+                      <span className="inline-flex min-w-0 items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={profile.featuredEvents.includes(id)}
+                          onChange={() => toggleSelection("featuredEvents", id)}
+                          className="h-4 w-4 accent-purple-700"
+                        />
+                        <span className="truncate">{event.title}</span>
+                      </span>
+                      <span className="rounded-full bg-purple-50 px-2 py-1 text-[9px] font-black uppercase text-purple-700">
+                        {eventLabel(event)}
                       </span>
                     </label>
-                  ))
-                )}
-              </div>
+                  );
+                })
+              )}
             </div>
-          </div>
 
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="block text-sm text-slate-300">Public Highlights</label>
+            {eventOptions.length > 8 && (
+              <button
+                type="button"
+                onClick={() => setShowAllEvents((value) => !value)}
+                className="mx-auto mt-3 block text-xs font-black text-purple-700"
+              >
+                {showAllEvents ? "Show fewer events" : "Show more events"}
+              </button>
+            )}
+          </section>
+
+          <section className="rounded-lg border border-[#e1e7f2] bg-white p-5 shadow-sm">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <h2 className="flex items-center gap-2 text-sm font-black text-[#17120a]">
+                  <FaStar className="text-purple-700" />
+                  Public Highlights
+                </h2>
+                <p className="mt-1 text-xs font-semibold text-[#52657d]">
+                  Add key achievements or strengths to highlight on your public profile.
+                </p>
+              </div>
               <button
                 type="button"
                 onClick={addHighlight}
-                className="text-sm text-blue-400 hover:text-blue-300"
+                className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-purple-200 bg-white px-3 text-xs font-black text-purple-700 hover:bg-purple-50"
               >
-                Add highlight
+                <FaPlus />
+                Add Highlight
               </button>
             </div>
-            <div className="space-y-3">
+
+            <div className="flex flex-wrap gap-2">
               {(profile.publicHighlights || [""]).map((highlight, index) => (
-                <div key={`${index}-${highlight}`} className="flex gap-3">
+                <span
+                  key={`highlight-${index}`}
+                  className="inline-flex items-center gap-2 rounded-lg bg-purple-50 px-3 py-2"
+                >
                   <input
                     type="text"
                     value={highlight}
                     onChange={(e) => updateHighlight(index, e.target.value)}
-                    className="flex-1 bg-slate-800 text-white rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Top 3 in district debate, annual arts festival host, strong student participation..."
+                    className="w-44 bg-transparent text-xs font-black text-purple-800 outline-none"
+                    placeholder="Top achievement..."
                   />
                   <button
                     type="button"
                     onClick={() => removeHighlight(index)}
-                    className="px-3 rounded-lg bg-slate-800 text-slate-200 hover:bg-slate-700"
+                    className="text-xs font-black text-purple-700"
+                    title="Remove highlight"
                   >
-                    Remove
+                    x
                   </button>
-                </div>
+                </span>
               ))}
             </div>
-          </div>
+          </section>
 
-          {error && <p className="text-sm text-red-300">{error}</p>}
+          {error && <p className="text-sm font-bold text-rose-600">{error}</p>}
+          {savedMessage && <p className="text-sm font-bold text-emerald-700">{savedMessage}</p>}
+        </main>
 
-          <div className="flex justify-end">
-            <button
-              type="submit"
-              disabled={saving}
-              className="px-5 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-60"
-            >
-              {saving ? "Saving..." : "Save Showcase Profile"}
-            </button>
-          </div>
-        </form>
-      </div>
+        <aside className="space-y-4">
+          <section className="rounded-lg border border-[#e1e7f2] bg-white p-4 shadow-sm">
+            <h2 className="text-sm font-black text-[#17120a]">Profile Preview</h2>
+            <div className="mt-4 overflow-hidden rounded-lg border border-[#e1e7f2] bg-white">
+              <div
+                className="h-28 w-full bg-cover bg-center"
+                style={{ backgroundImage: `url("${coverImage}")` }}
+              />
+              <div className="p-4">
+                <div className="flex items-start gap-3">
+                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-purple-100 text-purple-700">
+                    <FaLock />
+                  </span>
+                  <div className="min-w-0">
+                    <h3 className="truncate text-lg font-black text-[#17120a]">
+                      {schoolName}
+                    </h3>
+                    <p className="mt-1 line-clamp-2 text-xs font-semibold text-[#52657d]">
+                      {tagline}
+                    </p>
+                  </div>
+                </div>
+                {highlights.length > 0 && (
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {highlights.slice(0, 3).map((highlight, index) => (
+                      <span
+                        key={`preview-highlight-${index}`}
+                        className="rounded-full bg-purple-50 px-2.5 py-1 text-[10px] font-black text-purple-700"
+                      >
+                        {highlight}
+                      </span>
+                    ))}
+                  </div>
+                )}
 
-      <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800">
-        <h3 className="text-lg font-semibold text-white flex items-center gap-2 mb-4">
-          <FaStar className="text-yellow-400" />
-          Public Activity Metrics
-        </h3>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[
-            ["Events Hosted", profile.highlightMetrics?.eventsHosted || 0],
-            ["Joined Events", profile.highlightMetrics?.eventsParticipated || 0],
-            ["Awards", profile.highlightMetrics?.awardsCount || 0],
-            [
-              "Participation Rate",
-              `${profile.highlightMetrics?.studentParticipationRate || 0}%`,
-            ],
-          ].map(([label, value]) => (
-            <div
-              key={label}
-              className="rounded-xl border border-slate-800 bg-slate-950/70 p-4"
-            >
-              <p className="text-xs uppercase tracking-wide text-slate-500">
-                {label}
-              </p>
-              <p className="text-2xl font-bold text-white mt-2">{value}</p>
+                <div className="mt-4 grid grid-cols-4 gap-2 text-center">
+                  {[
+                    ["Events", FaCalendarAlt],
+                    ["Achievements", FaTrophy],
+                    ["Students", FaUsers],
+                    ["Programs", FaBookIcon],
+                  ].map(([label, Icon]) => (
+                    <div key={label}>
+                      <Icon className="mx-auto text-purple-700" />
+                      <div className="mt-1 text-[10px] font-bold text-[#52657d]">
+                        {label}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {publicSchoolUrl && (
+                  <Link
+                    href={publicSchoolUrl}
+                    className="mt-4 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg border border-purple-200 text-xs font-black text-purple-700 hover:bg-purple-50"
+                  >
+                    Visit Public Page
+                    <FaExternalLinkAlt />
+                  </Link>
+                )}
+              </div>
             </div>
-          ))}
-        </div>
+          </section>
+
+          <section className="rounded-lg border border-[#e1e7f2] bg-white p-4 shadow-sm">
+            <h2 className="flex items-center gap-2 text-sm font-black text-[#17120a]">
+              <FaChartIcon />
+              Public Activity Metrics
+            </h2>
+            <p className="mt-2 text-xs font-semibold leading-5 text-[#52657d]">
+              Track how your school is performing on the public platform.
+            </p>
+            <div className="mt-4 space-y-3">
+              <MetricRow label="Events Hosted" value={metrics.eventsHosted || 0} icon={FaCalendarAlt} />
+              <MetricRow label="Joined Events" value={metrics.eventsParticipated || 0} icon={FaUsers} />
+              <MetricRow label="Awards & Achievements" value={metrics.awardsCount || 0} icon={FaTrophy} />
+              <MetricRow
+                label="Participation Rate"
+                value={`${metrics.studentParticipationRate || 0}%`}
+                icon={FaStar}
+              />
+            </div>
+          </section>
+
+          <button
+            type="submit"
+            disabled={saving}
+            className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-purple-700 px-5 text-sm font-black text-white shadow-sm hover:bg-purple-800 disabled:opacity-60"
+          >
+            <FaSave />
+            {saving ? "Saving..." : "Save Showcase Profile"}
+          </button>
+
+          <p className="text-center text-[11px] font-semibold text-[#52657d]">
+            Last updated:{" "}
+            {profile.updatedAt ? new Date(profile.updatedAt).toLocaleString() : "Not saved yet"}
+          </p>
+        </aside>
       </div>
-    </div>
+    </form>
   );
+}
+
+function FaBookIcon(props) {
+  return <FaCheckSquare {...props} />;
+}
+
+function FaChartIcon() {
+  return <span className="text-purple-700">▮▮▮</span>;
 }

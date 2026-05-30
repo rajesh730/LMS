@@ -727,6 +727,31 @@ button[class*="rounded-full"]:not([class*="px-"]):not([class*="py-"]) {
   border-radius: 9999px !important;
 }
 
+.magazine-review-action {
+  min-height: 34px !important;
+  height: 34px !important;
+  border-radius: 0.65rem !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.magazine-review-action:not(:disabled):hover {
+  transform: none !important;
+}
+
+.magazine-review-icon-action {
+  min-height: 34px !important;
+  height: 34px !important;
+  width: 34px !important;
+  border-radius: 0.65rem !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.magazine-review-icon-action:not(:disabled):hover {
+  transform: none !important;
+}
+
 button:disabled,
 button[aria-disabled="true"],
 a[aria-disabled="true"] {

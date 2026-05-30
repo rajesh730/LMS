@@ -131,8 +131,7 @@ export async function PUT(req, { params }) {
                 school: session.user.id,
                 excludeId: id,
             });
-            updateData.visiblePassword = `${cleanFirstName}@123`;
-            updateData.password = await bcrypt.hash(updateData.visiblePassword, 10);
+            updateData.password = await bcrypt.hash(`${cleanFirstName}@123`, 10);
         }
 
         Object.keys(updateData).forEach((key) => {
@@ -233,7 +232,7 @@ export async function PATCH(req, { params }) {
 
         await Student.findByIdAndUpdate(
             id,
-            { password: hashedPassword, visiblePassword: newPassword },
+            { password: hashedPassword },
             { new: true }
         );
 

@@ -32,6 +32,18 @@ async function buildMetrics(schoolId) {
   };
 }
 
+function sanitizeString(value, maxLength) {
+  return String(value || "").trim().slice(0, maxLength);
+}
+
+function sanitizePublicHighlights(value) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => sanitizeString(item, 90))
+    .filter(Boolean)
+    .slice(0, 8);
+}
+
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
@@ -92,15 +104,17 @@ export async function PUT(req) {
       { school: session.user.id },
       {
         $set: {
-          tagline: body.tagline || "",
-          summary: body.summary || "",
-          coverImageUrl: body.coverImageUrl || "",
-          websiteUrl: body.websiteUrl || "",
+          tagline: sanitizeString(body.tagline, 160),
+          summary: sanitizeString(body.summary, 3000),
+          coverImageUrl: sanitizeString(body.coverImageUrl, 1000),
+          websiteUrl: sanitizeString(body.websiteUrl, 1000),
           visibility: ["PRIVATE", "PUBLIC"].includes(body.visibility)
             ? body.visibility
             : "PRIVATE",
-          featuredEvents: body.featuredEvents || [],
-          publicHighlights: body.publicHighlights || [],
+          featuredEvents: Array.isArray(body.featuredEvents)
+            ? body.featuredEvents
+            : [],
+          publicHighlights: sanitizePublicHighlights(body.publicHighlights),
           highlightMetrics: metrics,
         },
       },

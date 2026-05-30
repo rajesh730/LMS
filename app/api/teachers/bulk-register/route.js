@@ -63,7 +63,6 @@ export async function POST(req) {
           designation: teacherData.designation,
           experience: teacherData.experience,
           bloodGroup: teacherData.bloodGroup,
-          visiblePassword: plainPassword,
           school: schoolId,
           roles: ["MENTOR"],
         });

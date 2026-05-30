@@ -448,7 +448,7 @@ export default function EventResultsManager({
             className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-[#dbe5f4] bg-white px-4 text-xs font-black text-[#0a2f66] hover:bg-[#f8fbff] disabled:opacity-50"
           >
             <FaDownload />
-            Bulk Download (ZIP)
+            Bulk Download
           </button>
         </div>
 

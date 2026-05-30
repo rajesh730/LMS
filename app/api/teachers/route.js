@@ -61,7 +61,6 @@ export async function POST(req) {
           subject: t.subject || "General", // Default if not provided
           roles: t.roles || ["MENTOR"],
           password: hashedPassword,
-          visiblePassword: plainPassword,
           school: session.user.id,
         };
         teachersToCreate.push(teacherData);
@@ -145,7 +144,6 @@ export async function POST(req) {
         subject: subject || "General",
         roles: roles || ["MENTOR"],
         employmentType: employmentType || "FULL_TIME",
-        visiblePassword: password,
         password: hashedPassword,
         school: session.user.id,
       });
@@ -310,7 +308,7 @@ export async function GET(req) {
     const [totalTeachers, teachers] = await Promise.all([
       Teacher.countDocuments(query),
       Teacher.find(query)
-        .select("-password -visiblePassword")
+        .select("-password")
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
@@ -375,7 +373,6 @@ export async function PATCH(req, { params }) {
     await Teacher.findOneAndUpdate(
       { _id: id, school: session.user.id, isDeleted: { $ne: true } },
       {
-        visiblePassword: newPassword,
         password: hashedPassword,
       },
       { new: true },

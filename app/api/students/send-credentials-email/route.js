@@ -1,5 +1,6 @@
 import { successResponse, errorResponse } from "../../../../lib/apiResponse.js";
 import { requireApiSession } from "../../../../lib/authz.js";
+import { sendStudentCredentialsEmail } from "../../../../lib/emailService.js";
 
 export async function POST(req) {
   try {
@@ -25,89 +26,28 @@ export async function POST(req) {
       return errorResponse(400, "Missing required fields");
     }
 
-    // Email template kept ready for a real provider. Do not log passwords.
-    const emailHtml = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <style>
-            body { font-family: Arial, sans-serif; background-color: #f5f5f5; }
-            .container { max-width: 600px; margin: 0 auto; background-color: white; padding: 20px; border-radius: 8px; }
-            .header { background-color: #3b82f6; color: white; padding: 20px; border-radius: 4px; text-align: center; }
-            .content { padding: 20px 0; }
-            .field { margin: 15px 0; }
-            .label { font-weight: bold; color: #333; }
-            .value { background-color: #f0f0f0; padding: 10px; border-radius: 4px; font-family: monospace; margin-top: 5px; }
-            .footer { color: #666; font-size: 12px; margin-top: 20px; border-top: 1px solid #eee; padding-top: 10px; }
-            .warning { background-color: #fef3c7; border: 1px solid #fbbf24; color: #92400e; padding: 10px; border-radius: 4px; margin: 10px 0; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1>Student Login Credentials</h1>
-            </div>
+    // Send email via Resend
+    const emailResult = await sendStudentCredentialsEmail(
+      parentEmail,
+      parentName,
+      studentName,
+      username,
+      password
+    );
 
-            <div class="content">
-              <p>Dear <strong>${parentName}</strong>,</p>
-
-              <p>
-                Your child <strong>${studentName}</strong> has been successfully registered in our school management system.
-                Below are the login credentials for accessing the student account.
-              </p>
-
-              <div class="field">
-                <div class="label">Username:</div>
-                <div class="value">${username}</div>
-              </div>
-
-              <div class="field">
-                <div class="label">Password:</div>
-                <div class="value">${password}</div>
-              </div>
-
-              <div class="warning">
-                <strong>⚠️ Important:</strong> Please keep these credentials safe. 
-                We recommend changing the password on the first login.
-              </div>
-
-              <p>
-                <strong>Next Steps:</strong>
-              </p>
-              <ul>
-                <li>Log in to the student portal using the credentials above</li>
-                <li>Change the password to something only you know</li>
-                <li>Update any additional student information if needed</li>
-                <li>Contact school administration if you need assistance</li>
-              </ul>
-
-              <p>
-                Best regards,<br>
-                <strong>School Management System</strong>
-              </p>
-            </div>
-
-            <div class="footer">
-              <p>
-                This email was sent automatically. Please do not reply to this email.
-                If you have questions, please contact your school administration.
-              </p>
-            </div>
-          </div>
-        </body>
-      </html>
-    `;
-
-    // TODO: Send email via a production provider such as SendGrid, Resend, or SES.
-    void emailHtml;
+    if (!emailResult.success) {
+      console.error("Email sending failed:", emailResult.error);
+      return errorResponse(500, "Failed to send credentials email: " + emailResult.error);
+    }
 
     // Send success response
     return successResponse(
       200,
-      "Credentials email prepared",
+      "Credentials email sent successfully",
       {
-        message: "Email provider is not configured yet.",
+        message: "Student credentials email has been sent to " + parentEmail,
         recipientEmail: parentEmail,
+        messageId: emailResult.messageId,
       }
     );
   } catch (error) {

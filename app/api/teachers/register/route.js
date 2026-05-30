@@ -79,7 +79,7 @@ export async function POST(req) {
       designation,
       experience,
       bloodGroup,
-      visiblePassword: password, // Store plain text for admin visibility
+      password: hashedPassword,
       school: schoolId,
       roles: ["MENTOR"],
     });

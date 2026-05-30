@@ -74,7 +74,6 @@ export async function POST(req) {
           school: session.user.id,
           username,
           password: hashedPassword,
-          visiblePassword: password,
         });
         createdCredentials.push({ username, password });
       }
@@ -175,7 +174,6 @@ export async function POST(req) {
         rollNumber: normalizedRollNumber,
         username,
         password: hashedPassword,
-        visiblePassword: generatedPassword,
         school: session.user.id,
         ...otherData
       });

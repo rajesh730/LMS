@@ -4,6 +4,7 @@ import SupportTicket from "@/models/SupportTicket";
 import connectDB from "@/lib/db";
 import { successResponse, errorResponse } from "@/lib/apiResponse";
 import { publishWorkIndicatorsUpdate } from "@/lib/workIndicatorRealtime";
+import { sendTicketResolutionEmail } from "@/lib/emailService";
 
 export async function GET(req, { params }) {
   try {
@@ -161,25 +162,18 @@ export async function PATCH(req, { params }) {
         const schoolEmail = updatedTicket.school.email;
         const schoolName = updatedTicket.schoolName;
 
-        // Email template (in production, use a proper email service like SendGrid, Mailgun, etc.)
-        const emailBody = `
-Dear ${schoolName},
+        const emailResult = await sendTicketResolutionEmail(
+          schoolEmail,
+          schoolName,
+          updatedTicket.title,
+          String(updatedTicket._id),
+          message || "Thank you for contacting our support team. Your issue has been resolved."
+        );
 
-Your support ticket has been resolved!
-
-Ticket: ${updatedTicket.title}
-Status: Resolved
-Resolution: ${message || "Thank you for contacting our support team. Your issue has been resolved."}
-
-Ticket ID: ${updatedTicket._id}
-
-If you have any further questions, please feel free to create a new support ticket.
-
-Best regards,
-E-Grantha Support Team
-        `;
-
-        // TODO: Integrate actual email service (SendGrid, Mailgun, etc.)
+        if (!emailResult.success) {
+          console.warn("Failed to send ticket resolution email:", emailResult.error);
+          // Don't fail the request if email fails
+        }
       } catch (emailError) {
         console.error("Error sending notification email:", emailError);
         // Don't fail the request if email fails
