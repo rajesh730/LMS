@@ -202,20 +202,20 @@ table,
 [class*="text-blue-400"],
 [class*="text-sky-300"],
 [class*="text-sky-400"],
-[class*="text-emerald-50"],
-[class*="text-emerald-100"],
-[class*="text-emerald-200"],
-[class*="text-emerald-300"],
-[class*="text-emerald-400"],
 [class*="text-yellow-300"],
-[class*="text-yellow-400"],
-[class*="text-amber-300"],
-[class*="text-amber-400"] {
+[class*="text-yellow-400"] {
   color: var(--brand-navy) !important;
 }
 
 [class*="text-white"] {
   color: var(--brand-ink) !important;
+}
+
+[class~="bg-[#4326e8]"] [class*="text-white"],
+[class~="bg-[#4326e8]"][class*="text-white"],
+button[class~="bg-[#4326e8]"],
+button[class~="bg-[#4326e8]"] * {
+  color: #ffffff !important;
 }
 
 .top-school-badge {
@@ -269,10 +269,7 @@ a[class~="bg-[#2f7fdb]"] {
 }
 
 [class*="bg-[#ffb21c]"]:not([class*="selection:bg"]),
-[class*="hover:bg-[#ffc44d]"],
-[class*="bg-amber"],
-[class*="bg-yellow"],
-[class*="bg-orange"] {
+[class*="hover:bg-[#ffc44d]"] {
   background-color: var(--brand-blue) !important;
   color: #ffffff !important;
 }
@@ -359,6 +356,44 @@ table tbody tr:hover {
   background: rgba(255, 255, 255, 0.88);
   border: 1px solid var(--brand-border);
   box-shadow: 0 14px 40px rgba(10, 47, 102, 0.08);
+}
+
+.pratyo-home-shell [class*="text-white"] {
+  color: #ffffff !important;
+}
+
+.pratyo-home-shell [class*="bg-[#4326e8]"] {
+  background-color: #4326e8 !important;
+}
+
+.pratyo-home-shell .home-primary-action,
+.pratyo-home-shell .home-primary-action *,
+.pratyo-home-shell a.home-primary-action,
+.pratyo-home-shell a.home-primary-action:visited,
+.pratyo-home-shell a.home-primary-action:hover,
+.pratyo-home-shell a.home-primary-action:focus {
+  color: #ffffff !important;
+}
+
+.public-primary-action,
+.public-primary-action *,
+a.public-primary-action,
+a.public-primary-action:visited,
+a.public-primary-action:hover,
+a.public-primary-action:focus,
+button.public-primary-action,
+button.public-primary-action:hover,
+button.public-primary-action:focus {
+  color: #ffffff !important;
+}
+
+.public-nav-active,
+.public-nav-active *,
+a.public-nav-active,
+a.public-nav-active:visited,
+a.public-nav-active:hover,
+a.public-nav-active:focus {
+  color: #ffffff !important;
 }
 
 .pratyo-soft-panel {
@@ -532,29 +567,22 @@ table tbody tr:hover {
 }
 
 .pratyo-dark-shell .pratyo-sidebar-active {
-  background-color: #f5edff !important;
+  background-color: #6d28d9 !important;
   border-color: rgba(139, 0, 230, 0.22) !important;
-  color: #7e00d8 !important;
+  color: #ffffff !important;
 }
 
 .pratyo-dark-shell .pratyo-sidebar-active span,
 .pratyo-dark-shell .pratyo-sidebar-active svg {
-  color: #7e00d8 !important;
+  color: #ffffff !important;
 }
 
 .pratyo-dark-shell [class*="text-blue-300"],
 .pratyo-dark-shell [class*="text-blue-400"],
 .pratyo-dark-shell [class*="text-sky-300"],
 .pratyo-dark-shell [class*="text-sky-400"],
-.pratyo-dark-shell [class*="text-emerald-50"],
-.pratyo-dark-shell [class*="text-emerald-100"],
-.pratyo-dark-shell [class*="text-emerald-200"],
-.pratyo-dark-shell [class*="text-emerald-300"],
-.pratyo-dark-shell [class*="text-emerald-400"],
 .pratyo-dark-shell [class*="text-yellow-300"],
-.pratyo-dark-shell [class*="text-yellow-400"],
-.pratyo-dark-shell [class*="text-amber-300"],
-.pratyo-dark-shell [class*="text-amber-400"] {
+.pratyo-dark-shell [class*="text-yellow-400"] {
   color: #d7e9ff !important;
 }
 
@@ -781,14 +809,14 @@ a[aria-disabled="true"] {
 .pratyo-dark-shell a.pratyo-sidebar-active:visited,
 .pratyo-dark-shell a.pratyo-sidebar-active:hover,
 .pratyo-dark-shell a.pratyo-sidebar-active:focus {
-  background-color: #f5edff !important;
+  background-color: #6d28d9 !important;
   border-color: rgba(139, 0, 230, 0.22) !important;
-  color: #7e00d8 !important;
+  color: #ffffff !important;
 }
 
 .pratyo-dark-shell a.pratyo-sidebar-active .pratyo-sidebar-label,
 .pratyo-dark-shell a.pratyo-sidebar-active .pratyo-sidebar-icon {
-  color: #7e00d8 !important;
+  color: #ffffff !important;
   opacity: 1 !important;
 }
 

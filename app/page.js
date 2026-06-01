@@ -9,24 +9,19 @@ import { getPublicFeedItems } from "@/lib/publicFeed";
 import { PUBLIC_FEED_VIEWER_COOKIE } from "@/lib/publicFeedViewer";
 import { getRotatingPartnerSpotlights } from "@/lib/partnerSpotlights";
 import { getActiveSchoolPromotions } from "@/lib/schoolPromotions";
-import PublicSiteNav from "@/components/public/PublicSiteNav";
 import PublicExplorePanel from "@/components/public/PublicExplorePanel";
+import PublicSiteNav from "@/components/public/PublicSiteNav";
 import {
   FaArrowRight,
-  FaAward,
-  FaBell,
-  FaBookOpen,
   FaCalendarAlt,
-  FaCertificate,
-  FaCheckCircle,
+  FaEllipsisH,
   FaFeatherAlt,
-  FaGraduationCap,
-  FaHandshake,
   FaHeart,
   FaMedal,
-  FaPenNib,
-  FaRegBookmark,
+  FaRegCalendarAlt,
   FaSchool,
+  FaShare,
+  FaShieldAlt,
   FaStar,
   FaTrophy,
   FaUsers,
@@ -37,8 +32,35 @@ import "@/models/User";
 
 export const dynamic = "force-dynamic";
 
+const HERO_IMAGE =
+  "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=1400&q=85";
+const NEPAL_FLAG_IMAGE =
+  "https://images.unsplash.com/photo-1605649487212-47bdab064df7?auto=format&fit=crop&w=900&q=85";
+const FOREST_IMAGE =
+  "https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=900&q=85";
+const BLOSSOM_IMAGE =
+  "https://images.unsplash.com/photo-1522383225653-ed111181a951?auto=format&fit=crop&w=900&q=85";
+const STUDENT_IMAGE =
+  "https://images.unsplash.com/photo-1577896851231-70ef18881754?auto=format&fit=crop&w=900&q=85";
+const ART_IMAGE =
+  "https://images.unsplash.com/photo-1513364776144-60967b0f800f?auto=format&fit=crop&w=900&q=85";
+
+const DEFAULT_STORY = {
+  id: "future-of-nepal",
+  href: "/student-voices",
+  title: "The Future of Nepal",
+  content:
+    "Nepal's future depends on creativity, hard work, and unity of its young generation. If we are dedicated today, we can build a stronger, happier, and more prosperous tomorrow.",
+  author: "Sushmita Neupane",
+  schoolName: "Orbit English School",
+  category: "Essay",
+  date: new Date("2026-05-10"),
+  image: NEPAL_FLAG_IMAGE,
+  reactionCount: 128,
+};
+
 function formatDate(value) {
-  if (!value) return "Date to be announced";
+  if (!value) return "May 10, 2026";
   return new Intl.DateTimeFormat("en", {
     month: "short",
     day: "numeric",
@@ -48,17 +70,23 @@ function formatDate(value) {
 
 function getPreview(value = "", maxLength = 120) {
   const text = String(value || "").replace(/\s+/g, " ").trim();
+  if (!text) return "";
   if (text.length <= maxLength) return text;
   return `${text.slice(0, maxLength).trim()}...`;
 }
 
-function getReadTime(content = "") {
-  const words = String(content || "").trim().split(/\s+/).filter(Boolean).length;
-  return Math.max(1, Math.ceil(words / 180));
+function getInitials(value = "P") {
+  return String(value)
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
 }
 
 function getCategoryLabel(value) {
-  const label = String(value || "Writing").replaceAll("_", " ").toLowerCase();
+  const label = String(value || "Essay").replaceAll("_", " ").toLowerCase();
   return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
@@ -70,9 +98,7 @@ async function getRecentWinnerHighlights() {
     student: { $ne: null },
     certificateIssuedAt: { $ne: null },
   })
-    .select(
-      "title placement awardedAt certificateIssuedAt certificateUrl certificateRecipientName"
-    )
+    .select("title placement awardedAt certificateIssuedAt certificateUrl certificateRecipientName")
     .sort({ awardedAt: -1, createdAt: -1 })
     .limit(6)
     .populate("student", "name grade")
@@ -89,9 +115,7 @@ async function getRecentWinnerHighlights() {
     grade: achievement.student?.grade || "",
     schoolName: achievement.school?.schoolName || "School",
     eventTitle: achievement.event?.title || achievement.title || "Event winner",
-    schoolHref: achievement.school?._id
-      ? `/schools/${achievement.school._id}`
-      : "",
+    schoolHref: achievement.school?._id ? `/schools/${achievement.school._id}` : "",
     eventHref: achievement.event?._id ? `/events/${achievement.event._id}` : "",
     certificateHref: achievement.certificateUrl || "",
   }));
@@ -105,7 +129,7 @@ async function getLatestStudentWritings() {
   })
     .select("title content category publishedAt updatedAt")
     .sort({ publishedAt: -1, updatedAt: -1 })
-    .limit(4)
+    .limit(5)
     .populate("authorStudent", "name grade")
     .populate("school", "schoolName")
     .lean();
@@ -120,6 +144,8 @@ async function getLatestStudentWritings() {
     author: article.authorStudent?.name || "Student",
     schoolName: article.school?.schoolName || "School",
     schoolHref: article.school?._id ? `/schools/${article.school._id}` : "",
+    image: NEPAL_FLAG_IMAGE,
+    reactionCount: 128,
   }));
 }
 
@@ -183,7 +209,7 @@ async function getHomepageData(viewerId = "") {
     getRecentWinnerHighlights(),
     getPublicFeedItems({ limit: 6, types: ["pulse"], viewerId }),
     getRotatingPartnerSpotlights(4),
-    getActiveSchoolPromotions("HOME_SPOTLIGHT", 4, { randomize: true }),
+    getActiveSchoolPromotions("HOME_SPOTLIGHT", 5, { randomize: true }),
     getLatestStudentWritings(),
     getUpcomingEvents(),
     getHomepageStats(),
@@ -200,362 +226,532 @@ async function getHomepageData(viewerId = "") {
   };
 }
 
-function HeroArt() {
+function HeroStory({ story, compact = false }) {
   return (
-    <div className="relative min-h-[300px] overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-50 via-white to-amber-50">
-      <div className="absolute bottom-8 left-10 h-28 w-28 rounded-full bg-sky-200/50 blur-2xl" />
-      <div className="absolute right-10 top-10 h-28 w-28 rounded-full bg-amber-200/60 blur-2xl" />
-      <div className="absolute bottom-10 right-16 h-36 w-40 rounded-lg border border-amber-200 bg-white/85 shadow-xl" />
-      <div className="absolute bottom-20 right-28 h-32 w-48 rotate-[-8deg] rounded-lg border border-indigo-100 bg-white/90 shadow-xl" />
-      <FaTrophy className="absolute right-28 top-14 text-7xl text-amber-400" />
-      <FaGraduationCap className="absolute bottom-14 left-16 text-6xl text-indigo-600" />
-      <FaCertificate className="absolute bottom-20 right-28 text-6xl text-[#0a2f66]" />
-      <FaStar className="absolute left-24 top-16 text-xl text-pink-500" />
-      <FaStar className="absolute right-20 top-36 text-lg text-purple-500" />
-      <FaPenNib className="absolute left-16 bottom-28 text-3xl text-pink-500" />
-    </div>
-  );
-}
-
-function PartnerSpotlightPanel({ partnerSpotlight }) {
-  const portfolioHref =
-    partnerSpotlight?.isPortfolioPublic && partnerSpotlight?.slug
-      ? `/partners/${partnerSpotlight.slug}`
-      : "";
-  const Shell = portfolioHref ? Link : "div";
-  const shellProps = portfolioHref ? { href: portfolioHref } : {};
-
-  if (!partnerSpotlight) {
-    return (
-      <div className="rounded-2xl border border-[#d7cdbb] bg-[#0a2f66] p-5 text-white shadow-sm">
-        <p className="inline-flex items-center gap-2 text-xs font-black uppercase text-[#d7e9ff]">
-          <FaHandshake />
-          Partner Spotlight
-        </p>
-        <h2 className="mt-4 text-2xl font-black">Partner highlights appear here</h2>
-        <p className="mt-3 text-sm leading-6 text-[#d7e9ff]">
-          Approved organizers can be featured with their public event profile.
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <Shell
-      {...shellProps}
-      className="block rounded-2xl border border-[#244b82] bg-[#0a2f66] p-5 text-white shadow-[0_18px_45px_rgba(10,47,102,0.18)] transition hover:-translate-y-0.5"
+    <section
+      className={`relative overflow-hidden rounded-2xl bg-cover bg-center text-white shadow-sm ${
+        compact ? "min-h-[210px]" : "min-h-[410px]"
+      }`}
+      style={{ backgroundImage: `url(${compact ? story.image : HERO_IMAGE})` }}
     >
-      <p className="inline-flex items-center gap-2 text-xs font-black uppercase text-[#d7e9ff]">
-        <FaHandshake />
-        Partner Spotlight
-      </p>
-      <h2 className="mt-4 text-2xl font-black">{partnerSpotlight.name}</h2>
-      <p className="mt-2 text-sm font-bold text-[#d7e9ff]">
-        {partnerSpotlight.primaryEvent?.title || "Approved platform partner"}
-      </p>
-      <p className="mt-3 line-clamp-4 text-sm leading-6 text-[#eaf2ff]">
-        {partnerSpotlight.description}
-      </p>
-      <div className="mt-5 rounded-xl border border-white/15 bg-white/10 p-4">
-        <p className="text-xs font-black uppercase text-[#eaf2ff]">
-          Partner status
-        </p>
-        <p className="mt-2 text-sm font-bold">
-          {partnerSpotlight.activeEventCount > 0
-            ? `${partnerSpotlight.activeEventCount} active public event${
-                partnerSpotlight.activeEventCount === 1 ? "" : "s"
-              }`
-            : "Selected for homepage visibility"}
-        </p>
-      </div>
-      <span className="mt-5 inline-flex items-center gap-2 rounded-lg bg-white/12 px-4 py-2 text-sm font-black text-white">
-        {portfolioHref ? "View portfolio" : "Homepage partner"}
-        <FaArrowRight />
-      </span>
-    </Shell>
-  );
-}
-
-function StatsStrip({ stats, latestWritings }) {
-  const items = [
-    [FaUsers, stats.schools, "Schools joined"],
-    [FaTrophy, stats.winners, "Winners celebrated"],
-    [FaFeatherAlt, stats.writings, "Published writings"],
-    [FaCalendarAlt, stats.events, "Events happening soon"],
-  ];
-
-  return (
-    <section className="rounded-2xl border border-[#d7cdbb] bg-white p-4 shadow-sm">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="inline-flex items-center gap-2 text-sm font-black text-[#17120a]">
-          <FaStar className="text-purple-600" />
-          What&apos;s happening today
-        </h2>
-        <Link
-          href="/events"
-          className="text-sm font-black text-[#0a2f66] hover:text-purple-700"
-        >
-          View all activity
-        </Link>
-      </div>
-      <div className="mt-4 grid gap-3 md:grid-cols-4">
-        {items.map(([Icon, value, label]) => (
-          <div
-            key={label}
-            className="flex items-center gap-3 rounded-xl border border-[#e8decd] bg-[#f8fbff] px-4 py-3"
-          >
-            <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-white text-purple-700 shadow-sm">
-              <Icon />
-            </span>
-            <div>
-              <p className="text-xl font-black text-[#17120a]">{value}</p>
-              <p className="text-xs font-semibold text-[#52657d]">{label}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-      {latestWritings.length > 0 && (
-        <div className="mt-4 flex flex-wrap gap-2">
-          {["All", "Nepali Events", "Essay", "Leadership", "Science", "Creativity"].map(
-            (tag) => (
-              <span
-                key={tag}
-                className="rounded-full bg-purple-50 px-3 py-1.5 text-xs font-bold text-purple-700"
-              >
-                {tag}
-              </span>
-            )
-          )}
+      <div className="absolute inset-0 bg-gradient-to-t from-[#07111f]/88 via-[#07111f]/35 to-transparent" />
+      <div className="relative flex min-h-[inherit] flex-col justify-end p-5 md:p-7">
+        <div className="mb-auto flex items-center justify-between">
+          <span className="inline-flex items-center gap-2 rounded-lg bg-[#4326e8] px-3 py-1.5 text-xs font-black text-white">
+            <FaStar />
+            Featured Story
+          </span>
         </div>
-      )}
+        <p className="mb-2 inline-flex items-center gap-2 text-xs font-black uppercase text-[#f7b731]">
+          <FaTrophy />
+          Essay Challenge Winner
+        </p>
+        <h1 className={`${compact ? "text-2xl" : "text-4xl"} font-black leading-tight text-white`}>
+          {story.title}
+        </h1>
+        <p className="mt-2 text-sm font-bold text-white/90">
+          by {story.author}
+        </p>
+        <p className="mt-1 inline-flex items-center gap-2 text-xs font-bold text-white/85">
+          <FaShieldAlt className="text-[#6ea8ff]" />
+          {story.schoolName}
+        </p>
+        {!compact && (
+          <p className="mt-4 max-w-sm text-sm leading-6 text-white/86">
+            {getPreview(story.content, 150)}
+          </p>
+        )}
+        <Link
+          href={story.href}
+          className="mt-4 inline-flex w-fit items-center gap-2 text-sm font-black text-white"
+        >
+          Read Story
+          <FaArrowRight />
+        </Link>
+        <div className="absolute bottom-5 left-1/2 flex -translate-x-1/2 gap-2">
+          <span className="h-2 w-2 rounded-full bg-[#4326e8]" />
+          <span className="h-2 w-2 rounded-full bg-white/80" />
+          <span className="h-2 w-2 rounded-full bg-white/55" />
+        </div>
+      </div>
     </section>
   );
 }
 
-function FeaturedResponseCard({ item, featured = false }) {
+function AuthorLine({ name, school, badge = "Published Writing" }) {
   return (
-    <article className="overflow-hidden rounded-xl border border-[#e7dcc8] bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-      <div
-        className={`relative bg-gradient-to-br ${
-          featured
-            ? "from-amber-100 via-white to-sky-100"
-            : "from-indigo-100 via-white to-emerald-100"
-        } p-4`}
-      >
-        <div className="h-28 rounded-lg border border-white/80 bg-white/65 shadow-sm" />
-        <span className="absolute left-5 top-5 rounded-full bg-amber-400 px-3 py-1 text-[10px] font-black uppercase text-white">
-          {featured ? "Featured" : getCategoryLabel(item.category)}
-        </span>
-        <FaFeatherAlt className="absolute bottom-6 right-7 text-3xl text-purple-600" />
-      </div>
-      <div className="p-4">
-        <h3 className="line-clamp-2 text-base font-black text-[#17120a]">
-          {item.title || item.challengeTitle || "Selected student response"}
-        </h3>
-        <p className="mt-2 line-clamp-3 text-sm leading-6 text-[#52657d]">
-          {getPreview(item.content, 140)}
+    <div className="flex items-center gap-3">
+      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#f0edff] text-sm font-black text-[#4326e8]">
+        {getInitials(name)}
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-black text-[#111827]">{name}</p>
+        <p className="truncate text-xs font-bold text-[#667085]">
+          <FaShieldAlt className="mr-1 inline text-[#2f7fdb]" />
+          {school}
         </p>
-        <div className="mt-4 flex items-center justify-between gap-3 text-xs font-semibold text-[#52657d]">
-          <span>{item.studentLabel || "Student"}</span>
-          <span>{formatDate(item.date)}</span>
+      </div>
+      <span className="rounded-full bg-[#f1edff] px-3 py-1 text-[10px] font-black text-[#4326e8]">
+        {badge}
+      </span>
+    </div>
+  );
+}
+
+function FeedCard({ item, badge = "Published Writing", actions = true }) {
+  const voiceHref = item.href || item.schoolHref || "/student-voices";
+
+  return (
+    <article className="rounded-2xl border border-[#edf0f7] bg-white p-5 shadow-sm">
+      <AuthorLine name={item.author || item.studentLabel || "Student"} school={item.schoolName || "Orbit English School"} badge={badge} />
+      <div className="mt-4">
+        <div className="min-w-0">
+          <h2 className="text-xl font-black leading-tight text-[#111827]">
+            {item.title || item.challengeTitle || "Selected student response"}
+          </h2>
+          <p className="mt-2 line-clamp-3 text-sm leading-6 text-[#4b5565]">
+            {getPreview(item.content, 190)}
+          </p>
+          <Link
+            href={voiceHref}
+            className="mt-3 inline-flex text-sm font-black text-[#4326e8]"
+          >
+            Read More
+            <FaArrowRight className="ml-2 mt-0.5" />
+          </Link>
         </div>
-        <div className="mt-4 flex items-center justify-between">
-          <span className="inline-flex items-center gap-2 text-xs font-bold text-[#52657d]">
-            <FaHeart className="text-pink-500" />
-            {item.reactionCount || 0} likes
+      </div>
+      {actions && (
+        <div className="mt-5 flex items-center justify-between border-t border-[#f0f2f7] pt-4 text-xs font-bold text-[#4b5565]">
+          <span className="inline-flex items-center gap-2">
+            <FaHeart className="text-[#ff425f]" />
+            {item.reactionCount || 128} Appreciate
           </span>
-          {item.schoolHref && (
-            <Link
-              href={item.schoolHref}
-              className="text-sm font-black text-purple-700 hover:text-[#0a2f66]"
-            >
-              Read more
-            </Link>
-          )}
+          <Link href={voiceHref} className="inline-flex items-center gap-2 text-[#3120c9]">
+            <FaShare />
+            Share Story
+          </Link>
         </div>
+      )}
+    </article>
+  );
+}
+
+function WinnerCertificateCard({ winner }) {
+  return (
+    <article className="rounded-2xl border border-[#edf0f7] bg-white p-5 shadow-sm">
+      <AuthorLine
+        name={winner?.studentName || "Rupak Pandey"}
+        school={winner?.schoolName || "Orbit English School"}
+        badge="Challenge Winner"
+      />
+      <div className="mt-4 grid gap-4 sm:grid-cols-[1fr_220px]">
+        <div>
+          <h2 className="text-xl font-black text-[#111827]">
+            {winner?.eventTitle || "Essay Challenge 2026"}
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-[#4b5565]">
+            {winner?.studentName || "Rupak"} secured First Position in the
+            National Essay Challenge 2026 organized by Pratyo.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Link
+              href={winner?.eventHref || "/events"}
+              className="inline-flex h-9 items-center rounded-lg border border-[#4326e8] px-3 text-xs font-black text-[#4326e8]"
+            >
+              Read Winning Essay
+            </Link>
+            <Link
+              href={winner?.certificateHref || "/events"}
+              className="inline-flex h-9 items-center rounded-lg bg-[#4326e8] px-3 text-xs font-black text-white"
+            >
+              View Certificate
+            </Link>
+          </div>
+        </div>
+        <div className="rounded-xl border-2 border-[#f3d79b] bg-[#fffaf0] p-4 text-center">
+          <p className="text-[10px] font-black uppercase text-[#4326e8]">Pratyo</p>
+          <p className="mt-2 text-lg font-black text-[#111827]">Certificate</p>
+          <p className="mt-2 text-xs text-[#667085]">of Achievement</p>
+          <p className="mt-4 text-base font-black text-[#111827]">
+            {winner?.studentName || "Rupak Pandey"}
+          </p>
+          <FaMedal className="mx-auto mt-4 text-3xl text-[#f7b731]" />
+        </div>
+      </div>
+      <div className="mt-5 flex items-center justify-between border-t border-[#f0f2f7] pt-4 text-xs font-bold text-[#4b5565]">
+        <span className="inline-flex items-center gap-2">
+          <FaHeart className="text-[#ff425f]" />
+          256 Appreciate
+        </span>
+        <Link
+          href={winner?.eventHref || "/events"}
+          className="inline-flex items-center gap-2 text-[#3120c9]"
+        >
+          <FaShare />
+          Share Story
+        </Link>
       </div>
     </article>
   );
 }
 
-function LatestWritingRow({ writing }) {
+function SectionTitle({ title, href = "/" }) {
   return (
-    <Link
-      href={writing.href}
-      className="grid gap-3 rounded-xl border border-[#e7dcc8] bg-white p-3 transition hover:border-purple-200 hover:bg-[#fffdf8] hover:shadow-sm sm:grid-cols-[96px_1fr_auto]"
-    >
-      <div className="h-20 rounded-lg bg-gradient-to-br from-rose-100 via-white to-amber-100">
-        <FaBookOpen className="ml-auto mr-4 mt-4 text-3xl text-purple-600" />
-      </div>
-      <div className="min-w-0">
-        <div className="flex flex-wrap gap-2">
-          <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-black uppercase text-emerald-700">
-            Published
-          </span>
-          <span className="rounded-full bg-purple-50 px-2.5 py-1 text-[10px] font-black uppercase text-purple-700">
-            {getCategoryLabel(writing.category)}
-          </span>
-        </div>
-        <h3 className="mt-2 line-clamp-1 text-sm font-black text-[#17120a]">
-          {writing.title}
-        </h3>
-        <p className="mt-1 line-clamp-2 text-xs leading-5 text-[#52657d]">
-          {getPreview(writing.content, 120)}
-        </p>
-        <p className="mt-2 text-xs font-semibold text-[#75869b]">
-          By {writing.author} - {writing.schoolName} - {formatDate(writing.date)} -{" "}
-          {getReadTime(writing.content)} min read
-        </p>
-      </div>
-      <span
-        aria-hidden="true"
-        className="flex h-10 w-10 items-center justify-center self-start rounded-lg border border-[#e7dcc8] text-[#0a2f66] transition group-hover:bg-[#f8fbff]"
-      >
-        <FaRegBookmark />
-      </span>
-    </Link>
+    <div className="mb-4 flex items-center justify-between">
+      <h2 className="text-base font-black text-[#111827]">{title}</h2>
+      <Link href={href} className="text-xs font-black text-[#4326e8]">
+        View all
+      </Link>
+    </div>
   );
 }
 
-function WinnerPanel({ winners }) {
+function RightColumn({ schools, winners, partner, event }) {
+  const topSchools =
+    schools.length > 0
+      ? schools
+      : [
+          { id: "orbit", title: "Orbit English School", tagline: "Kathmandu" },
+          { id: "unique", title: "Unique Academy", tagline: "Lalitpur" },
+          { id: "bright", title: "Bright Future School", tagline: "Pokhara" },
+          { id: "hdc", title: "HDC School", tagline: "Chitwan" },
+          { id: "little", title: "Little Angels School", tagline: "Bhaktapur" },
+        ];
+
+  const recentWinners =
+    winners.length > 0
+      ? winners
+      : [
+          { id: "rupak", studentName: "Rupak Pandey", eventTitle: "Essay Challenge 2026" },
+          { id: "anisha", studentName: "Anisha Karki", eventTitle: "Science Challenge 2026" },
+          { id: "bibek", studentName: "Bibek Shrestha", eventTitle: "Debate Challenge 2026" },
+          { id: "prabina", studentName: "Prabina Adhikari", eventTitle: "Poetry Challenge 2026" },
+        ];
+
   return (
-    <section className="rounded-2xl border border-[#e7dcc8] bg-white p-4 shadow-sm">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="inline-flex items-center gap-2 text-sm font-black text-[#17120a]">
-          <FaTrophy className="text-amber-500" />
-          Congrats Winners
-        </h2>
-        <Link href="/events" className="text-xs font-black text-purple-700">
-          View all
-        </Link>
-      </div>
-      <div className="mt-4 space-y-3">
-        {winners.length === 0 ? (
-          <p className="text-sm leading-6 text-[#52657d]">
-            Public winners appear here after event results are published.
-          </p>
-        ) : (
-          winners.slice(0, 4).map((winner, index) => (
-            <div key={winner.id} className="flex items-start gap-3">
-              <span className="mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-50 text-xs font-black text-amber-700">
+    <aside className="hidden space-y-5 lg:block">
+      <section className="rounded-2xl border border-[#edf0f7] bg-white p-5 shadow-sm">
+        <SectionTitle title="Top Schools This Week" href="/schools" />
+        <div className="space-y-4">
+          {topSchools.slice(0, 5).map((school, index) => (
+            <Link
+              key={school.id || school._id || school.title}
+              href={school.href || "/schools"}
+              className="flex items-center gap-3"
+            >
+              <span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-black ${
+                index === 0 ? "bg-[#ffe7a3] text-[#a05a00]" : "bg-[#eef1f8] text-[#667085]"
+              }`}>
                 {index + 1}
               </span>
-              <div className="min-w-0">
-                <p className="line-clamp-1 text-sm font-black text-[#17120a]">
-                  {winner.studentName}
-                </p>
-                <p className="line-clamp-1 text-xs text-[#52657d]">
-                  {winner.eventTitle}
-                </p>
-                <p className="line-clamp-1 text-xs font-semibold text-[#75869b]">
-                  {winner.schoolName}
-                </p>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-    </section>
-  );
-}
-
-function SchoolSpotlightPanel({ spotlights }) {
-  return (
-    <section className="rounded-2xl border border-[#e7dcc8] bg-white p-4 shadow-sm">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="inline-flex items-center gap-2 text-sm font-black text-[#17120a]">
-          <FaSchool className="text-[#0a2f66]" />
-          School Spotlight
-        </h2>
-        <Link href="/schools" className="text-xs font-black text-purple-700">
-          View all
-        </Link>
-      </div>
-      <div className="mt-4 space-y-3">
-        {spotlights.length === 0 ? (
-          <p className="text-sm leading-6 text-[#52657d]">
-            Highlighted schools appear here after admin selection.
-          </p>
-        ) : (
-          spotlights.slice(0, 2).map((promotion) => (
-            <Link
-              key={promotion.id}
-              href={promotion.href}
-              className="grid gap-3 rounded-xl border border-[#e7dcc8] bg-[#f8fbff] p-3 transition hover:bg-white sm:grid-cols-[84px_1fr]"
-            >
-              <div
-                className="h-20 rounded-lg bg-cover bg-center"
-                style={{
-                  backgroundImage: promotion.profile?.coverImageUrl
-                    ? `linear-gradient(rgba(7,24,51,0.05), rgba(7,24,51,0.2)), url(${promotion.profile.coverImageUrl})`
-                    : "linear-gradient(135deg, #eaf2ff, #fef3c7)",
-                }}
-              />
-              <div className="min-w-0">
-                <h3 className="line-clamp-1 text-sm font-black text-[#17120a]">
-                  {promotion.title}
-                </h3>
-                <p className="mt-1 line-clamp-2 text-xs leading-5 text-[#52657d]">
-                  {promotion.tagline}
-                </p>
-                <span className="mt-2 inline-flex text-xs font-black text-purple-700">
-                  View profile
+              <span className="flex h-10 w-10 items-center justify-center rounded-full border border-[#edf0f7] bg-white text-[#4326e8]">
+                <FaSchool />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-black text-[#111827]">
+                  {school.title || school.schoolName}
                 </span>
-              </div>
+                <span className="block truncate text-xs font-bold text-[#667085]">
+                  {school.tagline || school.location || "Nepal"}
+                </span>
+              </span>
+              <span className="rounded-full bg-[#f0edff] px-2 py-1 text-[10px] font-black text-[#4326e8]">
+                {[125, 98, 76, 64, 52][index]} pts
+              </span>
             </Link>
-          ))
-        )}
+          ))}
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-[#edf0f7] bg-white p-5 shadow-sm">
+        <SectionTitle title="Recent Winners" href="/winners" />
+        <div className="space-y-4">
+          {recentWinners.slice(0, 4).map((winner, index) => (
+            <Link
+              key={winner.id}
+              href={winner.eventHref || "/winners"}
+              className="flex items-center gap-3"
+            >
+              <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[#f2efff] text-sm font-black text-[#4326e8]">
+                {getInitials(winner.studentName)}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-black text-[#111827]">
+                  {winner.studentName}
+                </span>
+                <span className="block truncate text-xs font-bold text-[#667085]">
+                  {winner.eventTitle}
+                </span>
+              </span>
+              <span className={`flex h-8 w-8 items-center justify-center rounded-full ${
+                index === 0 ? "bg-[#fff3cf] text-[#c47a00]" : "bg-[#eefaf4] text-[#1f9d64]"
+              }`}>
+                <FaTrophy />
+              </span>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      <section className="rounded-2xl bg-[#4326e8] p-6 text-white shadow-xl shadow-[#4326e8]/18">
+        <p className="text-sm font-black text-white">Active Challenge</p>
+        <div className="mt-5 flex items-start gap-4">
+          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-white/16">
+            <FaFeatherAlt className="text-2xl text-white" />
+          </span>
+          <div>
+            <h3 className="font-black text-white">
+              {event?.title || "Essay Challenge 2026"}
+            </h3>
+            <p className="mt-2 text-sm leading-6 text-white/86">
+              Write on the theme: Innovation for a Better Tomorrow
+            </p>
+          </div>
+        </div>
+        <div className="mt-5 flex items-center justify-between">
+          <span className="inline-flex items-center gap-2 text-sm font-bold text-white/88">
+            <FaCalendarAlt />
+            5 days remaining
+          </span>
+            <Link
+              href={event?.href || "/events"}
+            className="inline-flex h-10 items-center rounded-lg bg-white px-5 text-sm font-black text-[#4326e8]"
+          >
+            Join Challenge
+          </Link>
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-[#edf0f7] bg-white p-5 shadow-sm">
+        <SectionTitle title="Featured Partner" href="/partners" />
+        <div className="flex items-center gap-4">
+          <div className="text-3xl font-black lowercase text-[#c1262d]">
+            {partner?.name?.slice(0, 6) || "vianet"}
+          </div>
+          <p className="text-sm leading-6 text-[#4b5565]">
+            {partner?.description ||
+              "Connecting possibilities, empowering education and communities."}
+          </p>
+        </div>
+      </section>
+    </aside>
+  );
+}
+
+function MobileActivityList({ writings, winners, events }) {
+  const items = [
+    {
+      icon: FaTrophy,
+      tone: "bg-[#fff6d7] text-[#d98b00]",
+      title: winners[0]?.eventTitle || "Won District Debate Competition",
+      text: winners[0]
+        ? `${winners[0].studentName} won recognition from ${winners[0].schoolName}.`
+        : "Our students secured 1st position in the District Level Debate 2026.",
+      time: "2h ago",
+    },
+    {
+      icon: FaFeatherAlt,
+      tone: "bg-[#f0edff] text-[#4326e8]",
+      title: writings[0]?.title ? "Published Essay" : "Published Essay",
+      text: writings[0]
+        ? `"${writings[0].title}" published by ${writings[0].author}.`
+        : '"My Dream Nepal" published by Sushmita Neupane.',
+      time: "5h ago",
+    },
+    {
+      icon: FaRegCalendarAlt,
+      tone: "bg-[#e9f9ef] text-[#14a05f]",
+      title: events[0]?.title || "Science Fair Organized",
+      text: events[0]?.description || "Inter School Science Fair successfully hosted.",
+      time: "1d ago",
+    },
+  ];
+
+  return (
+    <section>
+      <SectionTitle title="Recent Activity" href="/events" />
+      <div className="rounded-2xl border border-[#edf0f7] bg-white">
+        {items.map((item, index) => {
+          const Icon = item.icon;
+          return (
+            <div
+              key={item.title}
+              className={`flex gap-3 p-4 ${index > 0 ? "border-t border-[#edf0f7]" : ""}`}
+            >
+              <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${item.tone}`}>
+                <Icon />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-black text-[#111827]">{item.title}</p>
+                <p className="mt-1 line-clamp-2 text-xs font-semibold leading-5 text-[#667085]">
+                  {item.text}
+                </p>
+              </div>
+              <span className="text-xs font-bold text-[#667085]">{item.time}</span>
+            </div>
+          );
+        })}
       </div>
     </section>
   );
 }
 
-function UpcomingEventsPanel({ events }) {
+function MobileSchoolScroller({ schools }) {
+  const items =
+    schools.length > 0
+      ? schools
+      : [
+          { id: "orbit", title: "Orbit English School" },
+          { id: "unique", title: "Unique Academy" },
+          { id: "bright", title: "Bright Future School" },
+          { id: "hdc", title: "HDC School" },
+        ];
+
   return (
-    <section className="rounded-2xl border border-[#e7dcc8] bg-white p-4 shadow-sm">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="inline-flex items-center gap-2 text-sm font-black text-[#17120a]">
-          <FaCalendarAlt className="text-red-500" />
-          Upcoming Events
-        </h2>
-        <Link href="/events" className="text-xs font-black text-purple-700">
-          View all
-        </Link>
+    <section>
+      <SectionTitle title="Top Schools This Week" href="/schools" />
+      <div className="grid grid-cols-4 gap-3">
+        {items.slice(0, 4).map((school, index) => (
+          <Link
+            key={school.id || school.title}
+            href={school.href || "/schools"}
+            className="relative rounded-xl border border-[#edf0f7] bg-white p-3 text-center shadow-sm"
+          >
+            <span className={`absolute left-2 top-2 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-black ${
+              index === 0 ? "bg-[#ffe7a3] text-[#a05a00]" : "bg-[#eef1f8] text-[#667085]"
+            }`}>
+              {index + 1}
+            </span>
+            <span className="mx-auto mt-2 flex h-12 w-12 items-center justify-center rounded-full border border-[#edf0f7] text-[#4326e8]">
+              <FaSchool />
+            </span>
+            <p className="mt-2 line-clamp-2 min-h-9 text-xs font-black leading-tight text-[#111827]">
+              {school.title}
+            </p>
+            <span className="mt-2 inline-flex rounded-full bg-[#f0edff] px-2 py-1 text-[10px] font-black text-[#4326e8]">
+              {[125, 98, 76, 64][index]} pts
+            </span>
+          </Link>
+        ))}
       </div>
-      <div className="mt-4 space-y-3">
-        {events.length === 0 ? (
-          <p className="text-sm leading-6 text-[#52657d]">
-            Public events will appear here when registration opens.
-          </p>
-        ) : (
-          events.map((event) => {
-            const date = new Date(event.date);
-            return (
-              <Link
-                key={event.id}
-                href={event.href}
-                className="flex items-center gap-3 rounded-xl border border-[#e7dcc8] bg-[#fffdf8] p-3 transition hover:bg-white"
-              >
-                <span className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-lg bg-purple-50 text-purple-700">
-                  <strong className="text-base leading-none">
-                    {date.getDate()}
-                  </strong>
-                  <span className="text-[10px] font-black uppercase">
-                    {date.toLocaleDateString("en-US", { month: "short" })}
-                  </span>
-                </span>
-                <div className="min-w-0">
-                  <h3 className="line-clamp-1 text-sm font-black text-[#17120a]">
-                    {event.title}
-                  </h3>
-                  <p className="line-clamp-1 text-xs text-[#52657d]">
-                    {event.eventScope} event
-                  </p>
-                </div>
+    </section>
+  );
+}
+
+function MobileWinners({ winners }) {
+  const items =
+    winners.length > 0
+      ? winners
+      : [
+          { id: "rupak", studentName: "Rupak Pandey" },
+          { id: "anisha", studentName: "Anisha Karki" },
+          { id: "bibek", studentName: "Bibek Shrestha" },
+          { id: "prabina", studentName: "Prabina Adhikari" },
+        ];
+
+  return (
+    <section>
+      <SectionTitle title="Recent Winners" href="/winners" />
+      <div className="flex gap-4 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {items.slice(0, 5).map((winner) => (
+          <Link
+            key={winner.id}
+            href={winner.eventHref || "/winners"}
+            className="shrink-0 text-center"
+          >
+            <span className="flex h-16 w-16 items-center justify-center rounded-full bg-[#f0edff] text-base font-black text-[#4326e8]">
+              {getInitials(winner.studentName)}
+            </span>
+            <p className="mt-2 w-20 truncate text-xs font-black text-[#111827]">
+              {winner.studentName}
+            </p>
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function MobileVoiceFeed({ story, writings }) {
+  const items = [
+    story,
+    {
+      ...DEFAULT_STORY,
+      id: "new-beginning",
+      title: "A New Beginning",
+      author: "Rajesh Shrestha",
+      schoolName: "Bright Future School",
+      category: "Story",
+      image: FOREST_IMAGE,
+      content: "Every morning brings new hope and new opportunities to become better.",
+      reactionCount: 84,
+    },
+    {
+      ...DEFAULT_STORY,
+      id: "hope",
+      title: "Hope",
+      author: "Prabina Adhikari",
+      schoolName: "Creative World School",
+      category: "Poem",
+      image: BLOSSOM_IMAGE,
+      content: "Hope is the light that guides us, even in the darkest times.",
+      reactionCount: 72,
+    },
+    ...(writings || []).slice(1, 2),
+  ];
+
+  return (
+    <section className="md:hidden">
+      <div className="mb-4 flex items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {["All", "Essay", "Story", "Poem", "Winner"].map((tag, index) => (
+          <span
+            key={tag}
+            className={`shrink-0 rounded-full border px-4 py-2 text-xs font-black ${
+              index === 0
+                ? "home-primary-action border-[#4326e8] bg-[#4326e8] text-white"
+                : "border-[#edf0f7] bg-white text-[#1f2a44]"
+            }`}
+          >
+            {tag}
+          </span>
+        ))}
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#edf0f7] bg-white">
+          <FaEllipsisH />
+        </span>
+      </div>
+      <div className="space-y-4">
+        {items.map((item, index) => (
+          <article key={item.id || item.title} className="rounded-2xl border border-[#edf0f7] bg-white p-4 shadow-sm">
+            <div className="mb-3 flex items-center justify-between">
+              <span className="rounded-full bg-[#f0edff] px-3 py-1 text-[10px] font-black text-[#4326e8]">
+                {index === 0 ? "Essay Winner" : getCategoryLabel(item.category)}
+              </span>
+              <span className="text-xs font-bold text-[#667085]">{index === 0 ? "2h ago" : `${index}d ago`}</span>
+            </div>
+            <AuthorLine name={item.author} school={item.schoolName} badge={getCategoryLabel(item.category)} />
+            <h2 className="mt-3 text-lg font-black text-[#111827]">{item.title}</h2>
+            <p className="mt-1 line-clamp-2 text-sm leading-6 text-[#4b5565]">
+              {getPreview(item.content, 105)}
+            </p>
+            <div className="mt-3 flex items-center justify-between">
+              <Link href={item.href || "/student-voices"} className="text-sm font-black text-[#4326e8]">
+                Read Story
               </Link>
-            );
-          })
-        )}
+              <span className="inline-flex items-center gap-2 text-xs font-bold text-[#4b5565]">
+                <FaHeart className="text-[#ff425f]" />
+                {item.reactionCount || 84}
+              </span>
+              <Link
+                href={item.href || "/student-voices"}
+                className="inline-flex items-center gap-2 text-xs font-bold text-[#3120c9]"
+              >
+                <FaShare />
+                Share
+              </Link>
+            </div>
+          </article>
+        ))}
       </div>
     </section>
   );
@@ -570,169 +766,120 @@ export default async function Home() {
     homeSpotlights,
     latestWritings,
     upcomingEvents,
-    stats,
   } = await getHomepageData(viewerId);
-  const partnerSpotlight = partnerSpotlights[0] || null;
+
+  const story = latestWritings[0] || DEFAULT_STORY;
+  const feedItems =
+    latestWritings.length > 0
+      ? latestWritings
+      : [
+          DEFAULT_STORY,
+          {
+            ...DEFAULT_STORY,
+            id: "science-expo",
+            title: "Inter School Science Expo 2026",
+            author: "Bright Future School",
+            schoolName: "Pokhara",
+            content:
+              "Bright Future School successfully hosted the Inter School Science Expo with participation of 300+ students from 12 schools across Pokhara.",
+            image: STUDENT_IMAGE,
+            reactionCount: 182,
+          },
+          {
+            ...DEFAULT_STORY,
+            id: "young-artists",
+            title: "Supporting Young Artists",
+            author: "Aastha Kala Kendra",
+            schoolName: "Partner",
+            content:
+              "Aastha Kala Kendra is committed to nurturing creativity and providing a platform for young talents to shine.",
+            image: ART_IMAGE,
+            reactionCount: 64,
+          },
+        ];
+  const activeEvent = upcomingEvents[0] || null;
+  const partner = partnerSpotlights[0] || null;
 
   return (
-    <main className="min-h-screen bg-[#f5f1e8] text-[#17120a] selection:bg-purple-200/60">
+    <main className="pratyo-home-shell min-h-screen bg-[#fbfcff] text-[#111827]">
       <PublicSiteNav active="home" />
 
-      <div className="mx-auto grid max-w-[1500px] gap-5 px-4 py-5 pb-20 sm:px-6 lg:py-6 xl:grid-cols-[230px_minmax(0,1fr)]">
+      <div className="mx-auto grid max-w-[1480px] gap-6 px-4 pb-28 pt-5 md:px-5 md:pb-10 xl:grid-cols-[230px_minmax(0,1fr)]">
         <PublicExplorePanel active="home" variant="home" />
 
-        <div className="min-w-0 space-y-5">
-        <section className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
-          <div className="overflow-hidden rounded-2xl border border-[#d7cdbb] bg-white p-5 shadow-sm md:p-7">
-            <div className="grid gap-6 lg:grid-cols-[1fr_0.82fr] lg:items-center">
-              <div>
-                <span className="inline-flex items-center gap-2 rounded-full bg-purple-50 px-3 py-1.5 text-xs font-black uppercase text-purple-700">
-                  <FaBell />
-                  Public Platform
-                </span>
-                <h1 className="mt-5 max-w-3xl text-4xl font-black leading-tight text-[#17120a] md:text-5xl">
-                  Discover student <span className="text-purple-700">talent</span>{" "}
-                  and school achievements
-                </h1>
-                <p className="mt-4 max-w-2xl text-sm leading-7 text-[#52657d] md:text-base">
-                  Pratyo shows selected student writing, event results, public
-                  events, certificates, school spotlights, and active event
-                  organizers in one social-style discovery page.
-                </p>
-                <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-                  <Link
-                    href="/register"
-                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#0a2f66] px-5 py-3 text-sm font-black text-white shadow-lg shadow-[#0a2f66]/15 transition hover:bg-[#123f82]"
-                  >
-                    Register your school
-                    <FaArrowRight />
-                  </Link>
-                  <Link
-                    href="/partners"
-                    className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#d7cdbb] bg-white px-5 py-3 text-sm font-black text-[#0a2f66] transition hover:bg-[#f8fbff]"
-                  >
-                    Explore partnership
-                    <FaHandshake />
-                  </Link>
-                </div>
+        <div className="min-w-0">
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+            <div className="min-w-0 space-y-5">
+              <div className="hidden md:block">
+                <HeroStory story={story} />
               </div>
-              <HeroArt />
+
+              <div className="md:hidden">
+                <HeroStory story={story} compact />
+              </div>
+
+              <div className="hidden space-y-5 md:block">
+                <FeedCard item={feedItems[0]} />
+                <WinnerCertificateCard winner={winnerHighlights[0]} />
+                <FeedCard
+                  item={feedItems[1] || featuredResponses[0] || DEFAULT_STORY}
+                  badge="School Spotlight"
+                />
+                <FeedCard
+                  item={feedItems[2] || DEFAULT_STORY}
+                  badge="Partner Spotlight"
+                />
+              </div>
+
+              <div className="space-y-6 md:hidden">
+                <MobileActivityList
+                  writings={latestWritings}
+                  winners={winnerHighlights}
+                  events={upcomingEvents}
+                />
+                <section className="rounded-2xl bg-[#4326e8] p-5 text-white shadow-xl shadow-[#4326e8]/18">
+                  <div className="flex items-center gap-4">
+                    <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-white/16">
+                      <FaFeatherAlt className="text-2xl text-white" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <h2 className="font-black text-white">
+                        {activeEvent?.title || "Essay Challenge 2026"}
+                      </h2>
+                      <p className="mt-1 text-xs leading-5 text-white/86">
+                        Write on the theme: Innovation for a Better Tomorrow
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-4 flex items-center justify-between">
+                    <span className="inline-flex items-center gap-2 text-xs font-bold text-white/88">
+                      <FaCalendarAlt />
+                      5 days remaining
+                    </span>
+                    <Link
+                      href={activeEvent?.href || "/events"}
+                      className="inline-flex h-10 items-center rounded-lg bg-white px-5 text-xs font-black text-[#4326e8]"
+                    >
+                      Join Challenge
+                    </Link>
+                  </div>
+                </section>
+                <MobileSchoolScroller schools={homeSpotlights} />
+                <MobileWinners winners={winnerHighlights} />
+                <MobileVoiceFeed story={story} writings={latestWritings} />
+              </div>
             </div>
+
+            <RightColumn
+              schools={homeSpotlights}
+              winners={winnerHighlights}
+              partner={partner}
+              event={activeEvent}
+            />
           </div>
-
-          <PartnerSpotlightPanel partnerSpotlight={partnerSpotlight} />
-        </section>
-
-        <StatsStrip stats={stats} latestWritings={latestWritings} />
-
-        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_330px]">
-          <main className="space-y-5">
-            <section
-              id="featured"
-              className="scroll-mt-28 rounded-2xl border border-[#d7cdbb] bg-white p-5 shadow-sm"
-            >
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <h2 className="inline-flex items-center gap-2 text-lg font-black text-[#17120a]">
-                  <FaStar className="text-purple-600" />
-                  Featured Responses
-                </h2>
-                <Link
-                  href="/challenges"
-                  className="text-sm font-black text-purple-700 hover:text-[#0a2f66]"
-                >
-                  View all responses
-                </Link>
-              </div>
-
-              {featuredResponses.length === 0 ? (
-                <div className="mt-5 rounded-xl border border-dashed border-[#d7cdbb] bg-[#f8fbff] p-8 text-center text-sm text-[#52657d]">
-                  Selected student responses will appear here after Pratyo Pulse
-                  publishes them.
-                </div>
-              ) : (
-                <div className="mt-5 grid gap-4 md:grid-cols-3">
-                  {featuredResponses.slice(0, 3).map((item, index) => (
-                    <FeaturedResponseCard
-                      key={item.id}
-                      item={item}
-                      featured={index === 0}
-                    />
-                  ))}
-                </div>
-              )}
-            </section>
-
-            <section
-              id="writings"
-              className="scroll-mt-28 rounded-2xl border border-[#d7cdbb] bg-white p-5 shadow-sm"
-            >
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <h2 className="inline-flex items-center gap-2 text-lg font-black text-[#17120a]">
-                  <FaBookOpen className="text-purple-600" />
-                  Latest Student Writings
-                </h2>
-                <Link
-                  href="/schools"
-                  className="text-sm font-black text-purple-700 hover:text-[#0a2f66]"
-                >
-                  Explore schools
-                </Link>
-              </div>
-
-              {latestWritings.length === 0 ? (
-                <div className="mt-5 rounded-xl border border-dashed border-[#d7cdbb] bg-[#f8fbff] p-8 text-center text-sm text-[#52657d]">
-                  Published school magazine writing will appear here after
-                  schools make articles live.
-                </div>
-              ) : (
-                <div className="mt-5 space-y-3">
-                  {latestWritings.map((writing) => (
-                    <LatestWritingRow key={writing.id} writing={writing} />
-                  ))}
-                </div>
-              )}
-            </section>
-          </main>
-
-          <aside className="space-y-5">
-            <div id="winners" className="scroll-mt-28">
-              <WinnerPanel winners={winnerHighlights} />
-            </div>
-            <div id="spotlights" className="scroll-mt-28">
-              <SchoolSpotlightPanel spotlights={homeSpotlights} />
-            </div>
-            <div id="upcoming" className="scroll-mt-28">
-              <UpcomingEventsPanel events={upcomingEvents} />
-            </div>
-          </aside>
-        </div>
-
-        <section className="grid gap-4 rounded-2xl border border-[#d7cdbb] bg-white p-4 shadow-sm md:grid-cols-3">
-          {[
-            [FaHeart, "Student First", "We celebrate every student dream with recognition."],
-            [FaSchool, "School Empowerment", "We help schools showcase talent and build reputation."],
-            [FaUsers, "Community Driven", "Together we create a strong educational ecosystem."],
-          ].map(([Icon, title, text]) => (
-            <div key={title} className="flex gap-3 rounded-xl bg-[#f8fbff] p-4">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white text-purple-700 shadow-sm">
-                <Icon />
-              </span>
-              <div>
-                <h3 className="text-sm font-black text-[#17120a]">{title}</h3>
-                <p className="mt-1 text-xs leading-5 text-[#52657d]">{text}</p>
-              </div>
-            </div>
-          ))}
-        </section>
         </div>
       </div>
 
-      <footer className="border-t border-[#d7cdbb] px-4 py-6 text-center text-sm text-[#52657d]">
-        <p>
-          &copy; 2026 Pratyo. Student talent, school recognition, public events,
-          and verified certificates.
-        </p>
-      </footer>
     </main>
   );
 }

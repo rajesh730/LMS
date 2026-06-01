@@ -7,15 +7,11 @@ import {
   FaBuilding,
   FaCheckCircle,
   FaFilter,
-  FaGraduationCap,
   FaLayerGroup,
   FaMapMarkerAlt,
-  FaRegEye,
   FaSchool,
   FaSearch,
-  FaShieldAlt,
   FaSlidersH,
-  FaStar,
   FaSyncAlt,
   FaTrophy,
   FaUsers,
@@ -49,228 +45,174 @@ function getCategory(school) {
   return "Public Profiles";
 }
 
-function SchoolVisual({ school, className = "" }) {
-  const image = school.profile?.coverImageUrl;
+function scoreSchool(school) {
   return (
-    <div
-      className={`relative overflow-hidden bg-[#eef6ff] ${className}`.trim()}
-      style={
-        image
-          ? {
-              backgroundImage: `linear-gradient(rgba(255,255,255,0.04), rgba(7,24,51,0.18)), url(${image})`,
-              backgroundPosition: "center",
-              backgroundSize: "cover",
-            }
-          : undefined
-      }
-    >
-      {!image && (
-        <>
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(168,85,247,0.18),transparent_26%),radial-gradient(circle_at_82%_70%,rgba(245,158,11,0.18),transparent_28%)]" />
-          <FaSchool className="absolute bottom-4 right-5 text-6xl text-[#0a2f66]/25" />
-          <FaGraduationCap className="absolute left-5 top-5 text-4xl text-purple-600/40" />
-        </>
-      )}
-    </div>
+    metricValue(school, "eventsHosted") * 12 +
+    metricValue(school, "eventsParticipated") * 8 +
+    metricValue(school, "awardsCount") * 16 +
+    Number(school.studentCount || 0)
   );
 }
 
-function SelectShell({ label, value, children }) {
+function SchoolMark({ school, size = "h-12 w-12" }) {
+  const image = school.profile?.coverImageUrl;
+  return (
+    <span
+      className={`flex shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#f4f1ff] text-lg font-black text-[#4326e8] ${size}`.trim()}
+    >
+      {image ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={image} alt="" className="h-full w-full object-cover" />
+      ) : (
+        (school.name || "S").charAt(0).toUpperCase()
+      )}
+    </span>
+  );
+}
+
+function SelectField({ label, value, onChange, options }) {
   return (
     <label className="block min-w-0">
       <span className="mb-1.5 flex items-center gap-2 text-[10px] font-black uppercase text-[#52657d]">
-        <FaFilter className="text-purple-700" />
+        <FaFilter className="text-[#4326e8]" />
         {label}
       </span>
-      {children || (
-        <div className="flex min-h-11 items-center justify-between rounded-xl border border-[#e6eaf7] bg-white px-3 text-sm font-bold text-[#24314d]">
-          <span className="truncate">{value}</span>
-          <FaSlidersH className="shrink-0 text-[#0a2f66]" />
-        </div>
-      )}
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="min-h-11 w-full rounded-lg border border-[#e6eaf7] bg-white px-3 text-sm font-bold text-[#24314d] outline-none transition focus:border-[#4326e8] focus:ring-4 focus:ring-[#4326e8]/10"
+      >
+        {options.map((option) => (
+          <option key={option}>{option}</option>
+        ))}
+      </select>
     </label>
   );
 }
 
-function FeaturedSchoolCard({ school, premium = false }) {
+function StatStrip({ totals }) {
+  const stats = [
+    [totals.schoolCount, "Schools", FaSchool],
+    [totals.eventCount, "Events", FaLayerGroup],
+    [totals.awardCount, "Awards", FaTrophy],
+    [totals.studentCount, "Students", FaUsers],
+  ];
+
+  return (
+    <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      {stats.map(([value, label, Icon]) => (
+        <div
+          key={label}
+          className="flex items-center gap-3 rounded-xl border border-[#e6eaf7] bg-white p-4 shadow-sm"
+        >
+          <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#f4f1ff] text-[#4326e8]">
+            <Icon />
+          </span>
+          <span>
+            <strong className="block text-xl font-black text-[#17120a]">
+              {numberLabel(value)}
+            </strong>
+            <span className="text-xs font-bold text-[#52657d]">{label}</span>
+          </span>
+        </div>
+      ))}
+    </section>
+  );
+}
+
+function FeaturedSchools({ schools }) {
+  if (!schools.length) return null;
+
+  return (
+    <section className="rounded-xl border border-[#e6eaf7] bg-white p-4 shadow-sm">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-sm font-black text-[#17120a]">
+          Top Schools This Week
+        </h2>
+            <Link href="#schools" className="text-xs font-black text-[#4326e8]">
+              View all
+            </Link>
+      </div>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {schools.slice(0, 4).map((school, index) => (
+          <Link
+            key={`${school.id}-${index}`}
+            href={`/schools/${school.id}`}
+            className="flex min-w-0 items-center gap-3 rounded-lg border border-[#e6eaf7] bg-[#f8f9fd] p-3 transition hover:border-[#cfc4ff] hover:bg-white"
+          >
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-50 text-xs font-black text-amber-700">
+              {index + 1}
+            </span>
+            <SchoolMark school={school} size="h-11 w-11" />
+            <span className="min-w-0">
+              <strong className="block truncate text-sm text-[#17120a]">
+                {school.name}
+              </strong>
+              <span className="text-xs font-black text-[#4326e8]">
+                {numberLabel(scoreSchool(school))} pts
+              </span>
+            </span>
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function SchoolRow({ school }) {
+  const category = getCategory(school);
+  const metrics = [
+    [metricValue(school, "eventsHosted"), "Hosted", FaBuilding],
+    [metricValue(school, "eventsParticipated"), "Joined", FaLayerGroup],
+    [metricValue(school, "awardsCount"), "Awards", FaTrophy],
+    [school.studentCount, "Students", FaUsers],
+  ];
+
   return (
     <Link
       href={`/schools/${school.id}`}
-      className="group overflow-hidden rounded-xl border border-[#e6eaf7] bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-purple-200 hover:shadow-lg"
+      className="group grid gap-4 rounded-xl border border-[#e6eaf7] bg-white p-4 shadow-sm transition hover:border-[#cfc4ff] hover:shadow-md md:grid-cols-[64px_minmax(0,1fr)_auto]"
     >
-      <div className="relative">
-        <SchoolVisual school={school} className="h-[104px]" />
-        <span
-          className={`absolute left-2 top-2 rounded-md px-2 py-1 text-[9px] font-black uppercase text-white shadow-sm ${
-            premium ? "bg-amber-400" : "bg-blue-600"
-          }`}
-        >
-          {premium ? "Premium" : "Featured"}
-        </span>
-      </div>
-      <div className="relative px-4 pb-4 pt-0">
-        <div className="-mt-7 mb-2">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full border-[3px] border-white bg-gradient-to-br from-purple-600 to-[#0a2f66] text-lg font-black text-white shadow-md">
-            {school.name.charAt(0)}
-          </div>
+      <SchoolMark school={school} size="h-14 w-14" />
+      <div className="min-w-0">
+        <div className="flex flex-wrap gap-2">
+          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-black uppercase text-emerald-800">
+            <FaCheckCircle />
+            Verified
+          </span>
+          <span className="rounded-full bg-[#f4f1ff] px-2.5 py-1 text-[10px] font-black uppercase text-[#4326e8]">
+            {category}
+          </span>
         </div>
-        <h3 className="line-clamp-1 text-[15px] font-black text-[#17120a] group-hover:text-purple-700">
+        <h3 className="mt-2 break-words text-base font-black text-[#17120a] group-hover:text-[#4326e8]">
           {school.name}
         </h3>
-        <p className="mt-1 line-clamp-1 text-[11px] font-semibold text-[#52657d]">
-          <FaMapMarkerAlt className="mr-1 inline text-[#0a2f66]" />
-          {school.location || "Location not listed"}
+        <p className="mt-1 flex items-start gap-2 text-sm leading-5 text-[#52657d]">
+          <FaMapMarkerAlt className="mt-1 shrink-0 text-[#4326e8]" />
+          <span>{school.location || "Location not listed"}</span>
         </p>
-        <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-          {[
-            [metricValue(school, "eventsHosted"), "Events", FaBuilding, "text-red-500"],
-            [metricValue(school, "awardsCount"), "Awards", FaTrophy, "text-amber-500"],
-            [school.studentCount, "Students", FaUsers, "text-cyan-600"],
-          ].map(([value, label, Icon, color]) => (
-            <div key={label} className="min-w-0">
-              <p className="inline-flex items-center justify-center gap-1 text-xs font-black text-[#17120a]">
-                <Icon className={color} />
-                {numberLabel(value)}
-              </p>
-              <p className="mt-0.5 truncate text-[10px] font-semibold text-[#52657d]">
-                {label}
-              </p>
-            </div>
-          ))}
-        </div>
-        <span className="mt-3 inline-flex min-h-8 w-full items-center justify-center gap-2 rounded-lg border border-purple-200 text-xs font-black text-purple-700 transition group-hover:bg-purple-50">
-          View Portfolio
-          <FaArrowRight />
-        </span>
-      </div>
-    </Link>
-  );
-}
-
-function SchoolGridCard({ school }) {
-  return (
-    <Link
-      href={`/schools/${school.id}`}
-      className="group overflow-hidden rounded-xl border border-[#e6eaf7] bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-purple-200 hover:shadow-lg"
-    >
-      <div className="relative">
-        <SchoolVisual school={school} className="h-[104px]" />
-        <span className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[9px] font-black uppercase text-emerald-700 shadow-sm">
-          <FaCheckCircle />
-          Verified
-        </span>
-      </div>
-      <div className="relative px-4 pb-4 pt-0">
-        <div className="-mt-7 mb-2">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full border-[3px] border-white bg-gradient-to-br from-purple-600 to-[#0a2f66] text-lg font-black text-white shadow-md">
-            {school.name.charAt(0)}
-          </div>
-        </div>
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h3 className="line-clamp-1 text-[15px] font-black text-[#17120a] group-hover:text-purple-700">
-              {school.name}
-            </h3>
-            <p className="mt-1 line-clamp-1 text-[11px] font-semibold text-[#52657d]">
-              <FaMapMarkerAlt className="mr-1 inline text-[#0a2f66]" />
-              {school.location || "Location not listed"}
-            </p>
-          </div>
-          <FaArrowRight className="mt-1 shrink-0 text-purple-700 opacity-0 transition group-hover:opacity-100" />
-        </div>
-        <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-          {[
-            [metricValue(school, "eventsHosted"), "Events", FaBuilding, "text-red-500"],
-            [metricValue(school, "awardsCount"), "Awards", FaTrophy, "text-amber-500"],
-            [school.studentCount, "Students", FaUsers, "text-cyan-600"],
-          ].map(([value, label, Icon, color]) => (
-            <div key={label} className="min-w-0">
-              <p className="inline-flex items-center justify-center gap-1 text-xs font-black text-[#17120a]">
-                <Icon className={color} />
-                {numberLabel(value)}
-              </p>
-              <p className="mt-0.5 truncate text-[10px] font-semibold text-[#52657d]">
-                {label}
-              </p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </Link>
-  );
-}
-
-function RightRail({ totals }) {
-  return (
-    <aside className="hidden lg:block">
-      <div className="sticky top-24 space-y-5">
-        <section className="rounded-2xl border border-[#e6eaf7] bg-white p-5 shadow-sm">
-          <h2 className="text-sm font-black text-[#17120a]">
-            Why Schools Join Pratyo?
-          </h2>
-          <div className="mt-4 space-y-4">
-            {[
-              [FaRegEye, "Increase Visibility", "Show achievements to students and parents."],
-              [FaStar, "Build Reputation", "Highlight awards, events, and student success."],
-              [FaUsers, "Connect & Collaborate", "Partner with other schools and organizers."],
-              [FaGraduationCap, "Empower Students", "Provide opportunities that inspire growth."],
-            ].map(([Icon, title, text]) => (
-              <div key={title} className="flex gap-3">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-purple-50 text-purple-700">
-                  <Icon />
-                </span>
-                <span>
-                  <strong className="block text-sm text-[#17120a]">{title}</strong>
-                  <span className="text-xs leading-5 text-[#52657d]">{text}</span>
-                </span>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="overflow-hidden rounded-2xl bg-gradient-to-br from-purple-700 to-[#0a2f66] p-5 text-white shadow-[0_18px_45px_rgba(88,28,135,0.22)]">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h2 className="text-sm font-black">Is your school active?</h2>
-              <p className="mt-2 text-xs leading-5 text-white/80">
-                Claim your profile to update info, add events, and highlight achievements.
-              </p>
-            </div>
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/15">
-              <FaShieldAlt className="text-2xl text-amber-300" />
+        {school.profile?.summary && (
+          <p className="mt-2 line-clamp-2 text-sm leading-5 text-[#52657d]">
+            {school.profile.summary}
+          </p>
+        )}
+        <div className="mt-3 grid gap-2 text-xs sm:grid-cols-4">
+          {metrics.map(([value, label, Icon]) => (
+            <span
+              key={label}
+              className="flex items-center gap-2 rounded-lg bg-[#f8f9fd] px-3 py-2 font-bold text-[#24314d]"
+            >
+              <Icon className="text-[#4326e8]" />
+              {numberLabel(value)} {label}
             </span>
-          </div>
-          <Link
-            href="/register"
-            className="mt-5 inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-white px-4 text-sm font-black text-purple-700"
-          >
-            Claim School Profile
-            <FaArrowRight />
-          </Link>
-        </section>
-
-        <section className="rounded-2xl border border-[#e6eaf7] bg-white p-5 shadow-sm">
-          <h2 className="text-sm font-black text-[#17120a]">Top Categories</h2>
-          <div className="mt-4 space-y-3">
-            {[
-              ["Active Profiles", totals.schoolCount, FaSchool],
-              ["Events Hosted", totals.hostedEventCount, FaBuilding],
-              ["Awards Earned", totals.awardCount, FaTrophy],
-              ["Joined Events", totals.joinedEventCount, FaLayerGroup],
-              ["Students Listed", totals.studentCount, FaUsers],
-            ].map(([label, value, Icon]) => (
-              <div key={label} className="flex items-center gap-3 rounded-xl bg-[#f8fbff] px-3 py-2">
-                <Icon className="text-purple-700" />
-                <span className="min-w-0 flex-1 text-sm font-bold text-[#24314d]">{label}</span>
-                <span className="rounded-full bg-white px-2 py-1 text-xs font-black text-[#52657d]">
-                  {numberLabel(value)}
-                </span>
-              </div>
-            ))}
-          </div>
-        </section>
+          ))}
+        </div>
       </div>
-    </aside>
+      <span className="inline-flex min-h-10 items-center justify-center gap-2 self-center rounded-lg border border-[#e6eaf7] px-4 text-sm font-black text-[#4326e8] transition group-hover:bg-[#f4f1ff]">
+        View Profile
+        <FaArrowRight />
+      </span>
+    </Link>
   );
 }
 
@@ -292,20 +234,14 @@ export default function PublicSchoolsDirectory({ schools = [], spotlights = [], 
         profile: promotion.profile || {},
       }));
     }
-    return [...schools]
-      .sort(
-        (a, b) =>
-          metricValue(b, "awardsCount") +
-          metricValue(b, "eventsHosted") -
-          (metricValue(a, "awardsCount") + metricValue(a, "eventsHosted"))
-      )
-      .slice(0, 4);
+    return [...schools].sort((a, b) => scoreSchool(b) - scoreSchool(a)).slice(0, 6);
   }, [schools, spotlights]);
 
   const provinces = useMemo(
     () => ["All Provinces", ...new Set(schools.map(getProvince))],
     [schools]
   );
+
   const districts = useMemo(() => {
     const scopedSchools =
       province === "All Provinces"
@@ -313,6 +249,7 @@ export default function PublicSchoolsDirectory({ schools = [], spotlights = [], 
         : schools.filter((school) => getProvince(school) === province);
     return ["All Districts", ...new Set(scopedSchools.map(getDistrict))];
   }, [province, schools]);
+
   const categories = useMemo(
     () => ["All Categories", ...new Set(schools.map(getCategory))],
     [schools]
@@ -328,6 +265,7 @@ export default function PublicSchoolsDirectory({ schools = [], spotlights = [], 
         if (district !== "All Districts" && getDistrict(school) !== district) return false;
         if (category !== "All Categories" && getCategory(school) !== category) return false;
         if (quickView === "Most Awarded" && metricValue(school, "awardsCount") === 0) return false;
+        if (quickView === "Event Hosts" && metricValue(school, "eventsHosted") === 0) return false;
         return true;
       })
       .sort((a, b) => {
@@ -337,107 +275,94 @@ export default function PublicSchoolsDirectory({ schools = [], spotlights = [], 
         if (sort === "Most Awarded") {
           return metricValue(b, "awardsCount") - metricValue(a, "awardsCount");
         }
-        return (
-          metricValue(b, "eventsHosted") +
-          metricValue(b, "eventsParticipated") +
-          metricValue(b, "awardsCount") -
-          (metricValue(a, "eventsHosted") +
-            metricValue(a, "eventsParticipated") +
-            metricValue(a, "awardsCount"))
-        );
+        return scoreSchool(b) - scoreSchool(a);
       });
   }, [category, district, province, query, quickView, schools, sort]);
 
-  return (
-    <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)_280px]">
-      <div className="min-w-0 space-y-5">
-        <section className="overflow-hidden rounded-2xl border border-[#e6eaf7] bg-white shadow-sm">
-          <div className="grid gap-4 p-6 lg:grid-cols-[minmax(0,1fr)_420px] lg:items-center lg:p-7">
-            <div className="min-w-0">
-              <p className="text-[11px] font-black uppercase text-purple-700">
-                Explore Schools
-              </p>
-              <h1 className="mt-3 max-w-2xl text-4xl font-black leading-tight text-[#17120a] md:text-5xl">
-                Discover active schools driving{" "}
-                <span className="text-purple-700">talent</span> and{" "}
-                <span className="text-amber-500">excellence</span>
-              </h1>
-              <p className="mt-4 max-w-xl text-sm leading-6 text-[#52657d] md:text-base md:leading-7">
-                Find schools participating in events, celebrating achievements,
-                and nurturing student potential across Nepal.
-              </p>
-            </div>
+  const clearFilters = () => {
+    setQuery("");
+    setProvince("All Provinces");
+    setDistrict("All Districts");
+    setCategory("All Categories");
+    setSort("Most Active");
+    setQuickView("All Schools");
+  };
 
-            <div className="relative min-h-64 overflow-hidden rounded-2xl bg-gradient-to-br from-[#f8fbff] via-white to-amber-50">
-              <SchoolVisual school={featuredSchools[0] || schools[0] || { profile: {} }} className="absolute inset-x-7 top-7 h-44 rounded-[2rem]" />
-              <div className="absolute bottom-6 left-1/2 grid w-[88%] -translate-x-1/2 grid-cols-3 gap-2 rounded-2xl border border-[#e6eaf7] bg-white/95 p-3 shadow-xl">
-                {[
-                  [totals.schoolCount, "Schools"],
-                  [totals.eventCount, "Events"],
-                  [totals.studentCount, "Students"],
-                ].map(([value, label]) => (
-                  <div key={label} className="text-center">
-                    <p className="text-lg font-black text-[#0a2f66]">{numberLabel(value)}</p>
-                    <p className="text-[10px] font-bold text-[#52657d]">{label}</p>
-                  </div>
-                ))}
-              </div>
+  return (
+    <div className="min-w-0">
+      <div className="min-w-0 space-y-5">
+        <section className="rounded-xl border border-[#e6eaf7] bg-white p-5 shadow-sm">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div className="min-w-0">
+              <p className="text-[11px] font-black uppercase text-[#4326e8]">
+                Schools
+              </p>
+              <h1 className="mt-2 max-w-3xl text-3xl font-black leading-tight text-[#17120a] md:text-4xl">
+                Discover verified school profiles, events, and achievements.
+              </h1>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-[#52657d]">
+                A clean public directory for students, parents, and partners to
+                explore active schools on Pratyo.
+              </p>
             </div>
+            <Link
+              href="/register"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#4326e8] px-5 text-sm font-black text-white transition hover:bg-[#3217d3]"
+            >
+              Register School
+              <FaArrowRight />
+            </Link>
           </div>
         </section>
 
-        <section className="rounded-2xl border border-[#e6eaf7] bg-white p-4 shadow-sm">
+        <StatStrip totals={totals} />
+        <FeaturedSchools schools={featuredSchools} />
+
+        <section className="rounded-xl border border-[#e6eaf7] bg-white p-4 shadow-sm">
           <div className="grid gap-3 lg:grid-cols-[1.4fr_1fr_1fr_1fr_1fr_auto] lg:items-end">
             <label className="block min-w-0">
               <span className="mb-1.5 flex items-center gap-2 text-[10px] font-black uppercase text-[#52657d]">
-                <FaSearch className="text-purple-700" />
+                <FaSearch className="text-[#4326e8]" />
                 Search
               </span>
               <input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search schools by name or location..."
-                className="min-h-11 w-full rounded-xl border border-[#e6eaf7] bg-white px-4 text-sm font-semibold text-[#24314d] outline-none transition placeholder:text-[#8a9ab1] focus:border-purple-300 focus:ring-4 focus:ring-purple-50"
+                placeholder="Search school or location..."
+                className="min-h-11 w-full rounded-lg border border-[#e6eaf7] bg-[#f8f9fd] px-4 text-sm font-semibold text-[#24314d] outline-none transition placeholder:text-[#8a9ab1] focus:border-[#4326e8] focus:bg-white focus:ring-4 focus:ring-[#4326e8]/10"
               />
             </label>
-            <SelectShell label="Province">
-              <select
-                value={province}
-                onChange={(event) => {
-                  setProvince(event.target.value);
-                  setDistrict("All Districts");
-                }}
-                className="min-h-11 w-full rounded-xl border border-[#e6eaf7] bg-white px-3 text-sm font-bold text-[#24314d] outline-none"
-              >
-                {provinces.map((item) => <option key={item}>{item}</option>)}
-              </select>
-            </SelectShell>
-            <SelectShell label="District">
-              <select value={district} onChange={(event) => setDistrict(event.target.value)} className="min-h-11 w-full rounded-xl border border-[#e6eaf7] bg-white px-3 text-sm font-bold text-[#24314d] outline-none">
-                {districts.map((item) => <option key={item}>{item}</option>)}
-              </select>
-            </SelectShell>
-            <SelectShell label="Category">
-              <select value={category} onChange={(event) => setCategory(event.target.value)} className="min-h-11 w-full rounded-xl border border-[#e6eaf7] bg-white px-3 text-sm font-bold text-[#24314d] outline-none">
-                {categories.map((item) => <option key={item}>{item}</option>)}
-              </select>
-            </SelectShell>
-            <SelectShell label="Sort By">
-              <select value={sort} onChange={(event) => setSort(event.target.value)} className="min-h-11 w-full rounded-xl border border-[#e6eaf7] bg-white px-3 text-sm font-bold text-[#24314d] outline-none">
-                {["Most Active", "Most Awarded", "Recently Joined"].map((item) => <option key={item}>{item}</option>)}
-              </select>
-            </SelectShell>
+            <SelectField
+              label="Province"
+              value={province}
+              onChange={(value) => {
+                setProvince(value);
+                setDistrict("All Districts");
+              }}
+              options={provinces}
+            />
+            <SelectField
+              label="District"
+              value={district}
+              onChange={setDistrict}
+              options={districts}
+            />
+            <SelectField
+              label="Category"
+              value={category}
+              onChange={setCategory}
+              options={categories}
+            />
+            <SelectField
+              label="Sort By"
+              value={sort}
+              onChange={setSort}
+              options={["Most Active", "Most Awarded", "Recently Joined"]}
+            />
             <button
               type="button"
-              onClick={() => {
-                setQuery("");
-                setProvince("All Provinces");
-                setDistrict("All Districts");
-                setCategory("All Categories");
-                setSort("Most Active");
-                setQuickView("All Schools");
-              }}
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#e6eaf7] px-4 text-sm font-black text-[#0a2f66] transition hover:bg-[#f8fbff]"
+              onClick={clearFilters}
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-[#e6eaf7] px-4 text-sm font-black text-[#0a2f66] transition hover:bg-[#f8f9fd]"
             >
               <FaSyncAlt />
               Clear
@@ -445,20 +370,15 @@ export default function PublicSchoolsDirectory({ schools = [], spotlights = [], 
           </div>
 
           <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
-            {[
-              "All Schools",
-              "Most Active",
-              "Most Awarded",
-              "Recently Joined",
-            ].map((item) => (
+            {["All Schools", "Most Active", "Most Awarded", "Event Hosts", "Recently Joined"].map((item) => (
               <button
                 key={item}
                 type="button"
                 onClick={() => setQuickView(item)}
                 className={`min-h-10 shrink-0 rounded-full px-4 text-xs font-black transition ${
                   quickView === item
-                    ? "bg-purple-700 text-white"
-                    : "border border-[#e6eaf7] bg-white text-[#24314d] hover:bg-purple-50 hover:text-purple-700"
+                    ? "bg-[#4326e8] text-white"
+                    : "border border-[#e6eaf7] bg-white text-[#24314d] hover:bg-[#f4f1ff] hover:text-[#4326e8]"
                 }`}
               >
                 {item}
@@ -467,27 +387,7 @@ export default function PublicSchoolsDirectory({ schools = [], spotlights = [], 
           </div>
         </section>
 
-        <section id="spotlights" className="scroll-mt-28 space-y-4">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-black text-[#17120a]">Featured Schools</h2>
-              <p className="text-xs font-semibold text-[#52657d]">
-                Spotlighted schools making an impact
-              </p>
-            </div>
-            <Link href="#schools" className="inline-flex items-center gap-2 text-sm font-black text-purple-700">
-              View all featured
-              <FaArrowRight />
-            </Link>
-          </div>
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            {featuredSchools.slice(0, 4).map((school, index) => (
-              <FeaturedSchoolCard key={`${school.id}-${index}`} school={school} premium={index > 1} />
-            ))}
-          </div>
-        </section>
-
-        <section id="schools" className="scroll-mt-28 space-y-4">
+        <section id="schools" className="scroll-mt-28 space-y-3">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
               <h2 className="text-lg font-black text-[#17120a]">All Schools</h2>
@@ -495,27 +395,25 @@ export default function PublicSchoolsDirectory({ schools = [], spotlights = [], 
                 Showing {filteredSchools.length} of {schools.length} schools
               </p>
             </div>
-            <Link href="/register" className="inline-flex items-center gap-2 text-sm font-black text-purple-700">
-              Register your school
-              <FaArrowRight />
-            </Link>
+            <span className="inline-flex items-center gap-2 text-xs font-black text-[#52657d]">
+              <FaSlidersH className="text-[#4326e8]" />
+              Filters update instantly
+            </span>
           </div>
 
           {filteredSchools.length === 0 ? (
-            <div className="rounded-2xl border border-[#e6eaf7] bg-white p-10 text-center text-sm font-semibold text-[#52657d]">
+            <div className="rounded-xl border border-[#e6eaf7] bg-white p-8 text-center text-sm font-semibold text-[#52657d]">
               No schools match these filters yet.
             </div>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div className="space-y-3">
               {filteredSchools.map((school) => (
-                <SchoolGridCard key={school.id} school={school} />
+                <SchoolRow key={school.id} school={school} />
               ))}
             </div>
           )}
         </section>
       </div>
-
-      <RightRail totals={totals} />
     </div>
   );
 }

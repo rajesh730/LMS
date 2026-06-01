@@ -21,7 +21,6 @@ import {
   FaMapMarkerAlt,
   FaMedal,
   FaPenNib,
-  FaRegBookmark,
   FaSchool,
   FaShareAlt,
   FaStar,
@@ -351,7 +350,7 @@ export default async function PublicSchoolPage({ params }) {
   const coverImage = profile?.coverImageUrl;
 
   return (
-    <main className="min-h-screen bg-[#f5f1e8] pb-24 text-[#17120a]">
+    <main className="min-h-screen bg-[#f8f9fd] pb-24 text-[#17120a]">
       <PublicSiteNav active="schools" />
 
       <div className="mx-auto grid max-w-[1500px] gap-5 px-4 py-5 sm:px-6 xl:grid-cols-[230px_minmax(0,1fr)]">
@@ -371,20 +370,13 @@ export default async function PublicSchoolPage({ params }) {
             <span>{school.schoolName}</span>
           </div>
           <div className="flex gap-2">
-            <button
-              type="button"
+            <Link
+              href={`/schools/${school._id}`}
               className="inline-flex items-center gap-2 rounded-lg border border-[#d7cdbb] bg-white px-3 py-2 text-[#0a2f66] transition hover:bg-[#f8fbff]"
             >
               <FaShareAlt />
-              Share
-            </button>
-            <button
-              type="button"
-              className="inline-flex items-center gap-2 rounded-lg bg-purple-700 px-3 py-2 text-white transition hover:bg-purple-600"
-            >
-              <FaStar />
-              Follow School
-            </button>
+              Share Profile
+            </Link>
           </div>
         </div>
 
@@ -633,7 +625,7 @@ export default async function PublicSchoolPage({ params }) {
               <FaBookOpen className="text-purple-700" />
               Latest Student Writings
             </h2>
-            <Link href="/" className="text-sm font-black text-purple-700">
+            <Link href="/student-voices" className="text-sm font-black text-purple-700">
               View all writings
             </Link>
           </div>
@@ -643,7 +635,7 @@ export default async function PublicSchoolPage({ params }) {
                 icon={FaBookOpen}
                 title="No published writings yet"
                 description="Published school magazine articles will appear here."
-                actionHref="/"
+                actionHref="/student-voices"
                 actionLabel="Explore writing"
               />
             </div>

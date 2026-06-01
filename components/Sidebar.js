@@ -238,14 +238,14 @@ export default function Sidebar({
                   aria-current={isActive ? "page" : undefined}
                   className={`group flex min-h-14 items-center gap-3 rounded-2xl px-4 py-3 transition-all duration-200 ${
                     isActive
-                      ? "pratyo-sidebar-active bg-purple-50 text-purple-700 shadow-sm ring-1 ring-purple-200"
+                      ? "pratyo-sidebar-active bg-purple-600 text-white shadow-sm ring-1 ring-purple-500"
                       : "text-[#d7e9ff] hover:bg-white/10 hover:text-white"
                   }`}
                 >
                   <Icon
                     className={`pratyo-sidebar-icon text-lg ${
                       isActive
-                        ? "text-purple-700"
+                        ? "text-white"
                         : "text-[#9fc4f5] group-hover:text-white"
                     }`}
                   />

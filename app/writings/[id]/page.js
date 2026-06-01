@@ -111,7 +111,7 @@ export default async function PublicWritingPage({ params }) {
 
   return (
     <main className="min-h-screen bg-[#f5f1e8] text-[#17120a]">
-      <PublicSiteNav active="home" />
+      <PublicSiteNav active="student-voices" />
       <PublicWritingReader
         article={data.article}
         relatedArticles={data.relatedArticles}
