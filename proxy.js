@@ -44,6 +44,9 @@ export default withAuth(
         }
     },
     {
+        pages: {
+            signIn: '/login',
+        },
         callbacks: {
             authorized: ({ req, token }) => {
                 // Allow /student/login without authentication

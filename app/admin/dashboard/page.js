@@ -6,7 +6,6 @@ import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import DashboardLayout from "@/components/DashboardLayout";
 import AdminPartnerWorkspace from "@/components/partners/AdminPartnerWorkspace";
-import AdminDailyOverview from "@/components/admin/AdminDailyOverview";
 import CredentialsModal from "@/components/CredentialsModal";
 import NoticeManager from "@/components/NoticeManager";
 import StudentChallengeManager from "@/components/admin/StudentChallengeManager";
@@ -171,7 +170,6 @@ function AdminDashboardContent() {
         const failedSummary = failed
           .map((result) => `${result.label}: ${result.error}`)
           .join(" | ");
-        console.warn("Some admin dashboard data failed to load:", failedSummary);
         setLoadError(
           `Some dashboard data could not load: ${failed
             .map((result) => result.label)
@@ -179,7 +177,6 @@ function AdminDashboardContent() {
         );
       }
     } catch (error) {
-      console.error("Error fetching data", error);
       setLoadError(
         "Dashboard data could not load. Please check the server/database connection and try refresh."
       );
@@ -218,18 +215,14 @@ function AdminDashboardContent() {
     try {
       setConfirmState((current) => (current ? { ...current, busy: true } : current));
       setActionFeedback(null);
-      console.log(`Updating school ${schoolId} to status: ${newStatus}`);
       const res = await fetch(`/api/schools/${schoolId}/status`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),
       });
-      console.log("Response status:", res.status);
       const data = await res.json();
-      console.log("Response data:", data);
       
       if (res.ok) {
-        console.log("Status updated successfully");
         setSchools(
           schools.map((s) =>
             s._id === schoolId ? { ...s, status: newStatus } : s
@@ -241,7 +234,6 @@ function AdminDashboardContent() {
           message: `School is now ${newStatus}.`,
         });
       } else {
-        console.error("❌ Status update failed:", data.message);
         setActionFeedback({
           type: "error",
           title: "School status update failed",
@@ -249,7 +241,6 @@ function AdminDashboardContent() {
         });
       }
     } catch (error) {
-      console.error("❌ Error updating status", error);
       setActionFeedback({
         type: "error",
         title: "School status update failed",
@@ -297,7 +288,6 @@ function AdminDashboardContent() {
         message: `New credentials are ready for ${school.schoolName}.`,
       });
     } catch (error) {
-      console.error("Error resetting school password", error);
       setActionFeedback({
         type: "error",
         title: "Password reset failed",
@@ -343,7 +333,6 @@ function AdminDashboardContent() {
         });
       } else {
         const data = await res.json();
-        console.error("Failed to delete event:", data);
         const msg = `Failed: ${data.message} (${res.status})`;
         setLastError(msg);
         setActionFeedback({
@@ -353,7 +342,6 @@ function AdminDashboardContent() {
         });
       }
     } catch (error) {
-      console.error("Error deleting event", error);
       setLastError(`Error: ${error.message}`);
       setActionFeedback({
         type: "error",
@@ -390,7 +378,7 @@ function AdminDashboardContent() {
         });
       }
     } catch (error) {
-      console.error("Error updating status:", error);
+      // Error already handled in state
     }
   };
 
@@ -412,52 +400,9 @@ function AdminDashboardContent() {
     <DashboardLayout>
       <PageHeader
         icon={FaLayerGroup}
-        eyebrow="Platform control room"
-        title="Super Admin Dashboard"
-        description="Approve schools, run platform events, publish notices, manage partners, and select student challenge responses for Pratyo Pulse."
-        meta={
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4">
-              <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
-                Pending Schools
-              </p>
-              <p className="mt-1 text-2xl font-black text-white">
-                {pendingSchools.length}
-              </p>
-            </div>
-            <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4">
-              <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
-                Platform Events
-              </p>
-              <p className="mt-1 text-2xl font-black text-white">
-                {platformEvents.length}
-              </p>
-            </div>
-            <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4">
-              <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
-                Schools
-              </p>
-              <p className="mt-1 text-2xl font-black text-white">
-                {schools.length}
-              </p>
-            </div>
-            <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4">
-              <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
-                Partners
-              </p>
-              <p className="mt-1 text-2xl font-black text-white">
-                {partners.length}
-              </p>
-            </div>
-          </div>
-        }
-      />
-
-      <AdminDailyOverview
-        pendingSchools={pendingSchools}
-        activeEvents={activeEvents}
-        partners={partners}
-        proposals={proposals}
+        eyebrow="Admin"
+        title="Dashboard"
+        description="Use the left menu to approve schools, manage events, publish notices, and update platform settings."
       />
 
       {(loading || loadError) && (

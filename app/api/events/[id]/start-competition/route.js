@@ -30,7 +30,15 @@ export async function POST(req, props) {
 
     await dbConnect();
     const params = await props.params;
-    const body = await req.json().catch(() => ({}));
+    let body;
+    try {
+      body = await req.json();
+    } catch (error) {
+      return NextResponse.json(
+        { message: "Invalid JSON in request body" },
+        { status: 400 }
+      );
+    }
     const requestIds = Array.isArray(body.requestIds)
       ? body.requestIds.map(String).filter(Boolean)
       : [];

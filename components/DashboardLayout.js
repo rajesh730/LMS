@@ -30,10 +30,10 @@ export default function DashboardLayout({ children }) {
     // Keep auth transitions from looking like a broken blank screen.
     if (!session) {
         return (
-            <div className="flex min-h-screen items-center justify-center bg-[#f5f1e8] px-4 text-[#17120a]">
+            <div className="flex min-h-screen items-center justify-center bg-[#fbfcff] px-4 text-[#10142f]">
                 <div className="text-center">
                     <PratyoLogo variant="icon" compact withSurface />
-                    <p className="mt-4 text-sm font-semibold text-[#0a2f66]">
+                    <p className="mt-4 text-sm font-semibold text-[#4326e8]">
                         Loading your workspace...
                     </p>
                 </div>
@@ -42,7 +42,7 @@ export default function DashboardLayout({ children }) {
     }
 
     return (
-        <div className="min-h-screen bg-[#f5f1e8] text-[#17120a] font-sans selection:bg-[#2f7fdb]/25">
+        <div className="min-h-screen bg-[#fbfcff] text-[#10142f] font-sans selection:bg-[#4326e8]/18">
             {isNavOpen && (
                 <button
                     type="button"
@@ -57,15 +57,15 @@ export default function DashboardLayout({ children }) {
                 onNavigate={() => setIsNavOpen(false)}
             />
 
-            <header className="sticky top-0 z-30 border-b border-[#d7cdbb] bg-white/95 px-4 py-3 text-[#0a2f66] shadow-sm backdrop-blur-xl lg:hidden">
+            <header className="sticky top-0 z-30 border-b border-[#e6eaf7] bg-white/95 px-4 py-3 text-[#4326e8] shadow-sm backdrop-blur-xl lg:hidden">
                 <div className="flex items-center justify-between gap-3">
                     <div className="flex min-w-0 items-center gap-3">
                         <PratyoLogo variant="icon" compact withSurface />
                         <div className="min-w-0">
-                            <p className="truncate text-sm font-bold text-[#0a2f66]">
+                            <p className="truncate text-sm font-bold text-[#4326e8]">
                                 {session?.user?.name || "Pratyo"}
                             </p>
-                            <p className="text-xs font-black uppercase tracking-wide text-[#52657d]">
+                            <p className="text-xs font-black uppercase tracking-wide text-[#526071]">
                                 {String(session?.user?.role || "Dashboard").replaceAll("_", " ")}
                             </p>
                         </div>
@@ -73,7 +73,7 @@ export default function DashboardLayout({ children }) {
                     <button
                         type="button"
                         onClick={() => setIsNavOpen(true)}
-                        className="rounded-full border border-[#d7cdbb] p-3 text-[#0a2f66] transition hover:bg-[#f8fbff]"
+                        className="rounded-full border border-[#e6eaf7] p-3 text-[#4326e8] transition hover:bg-[#f4f1ff]"
                         aria-label="Open navigation"
                     >
                         <FaBars />

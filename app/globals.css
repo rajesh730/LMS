@@ -1,35 +1,42 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f5f1e8;
-  --foreground: #17120a;
-  --brand-navy: #0a2f66;
-  --brand-navy-deep: #071833;
-  --brand-blue: #2f7fdb;
-  --brand-gold: #2f7fdb;
-  --brand-cream: #f8fbff;
+  --background: #fbfcff;
+  --foreground: #10142f;
+  --brand-primary: #4326e8;
+  --brand-primary-hover: #3217d3;
+  --brand-primary-soft: #f4f1ff;
+  --brand-primary-border: #d9dcf2;
+  --brand-navy: var(--brand-primary);
+  --brand-navy-deep: #10142f;
+  --brand-blue: var(--brand-primary);
+  --brand-gold: #f7b731;
+  --brand-cream: #fbfcff;
   --brand-paper: #ffffff;
-  --brand-border: #d7cdbb;
-  --brand-muted: #52657d;
-  --brand-ink: #17120a;
-  --brand-soft-blue: #eaf2ff;
-  --font-display:
-    "Aptos Display", "Segoe UI Variable Display", "Avenir Next",
-    "Trebuchet MS", sans-serif;
-  --font-body:
-    "Aptos", "Segoe UI Variable Text", "Segoe UI", "Source Sans 3",
-    "Noto Sans", "Helvetica Neue", Arial, sans-serif;
+  --brand-border: #e6eaf7;
+  --brand-muted: #526071;
+  --brand-ink: #10142f;
+  --brand-soft-blue: var(--brand-primary-soft);
+  --font-ui:
+    "Inter", "Segoe UI Variable", "Segoe UI", system-ui, -apple-system,
+    BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  --font-display: var(--font-ui);
+  --font-body: var(--font-ui);
   --font-code:
     "Cascadia Code", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-  --button-primary: #0a2f66;
-  --button-primary-hover: #123f82;
-  --button-primary-soft: rgba(10, 47, 102, 0.1);
+  --leading-heading: 1.16;
+  --leading-body: 1.62;
+  --leading-compact: 1.32;
+  --leading-control: 1.18;
+  --button-primary: var(--brand-primary);
+  --button-primary-hover: var(--brand-primary-hover);
+  --button-primary-soft: rgba(67, 38, 232, 0.1);
   --button-secondary: #ffffff;
   --button-secondary-hover: #eaf2ff;
   --button-danger: #b42318;
   --button-danger-hover: #9f1f14;
   --button-radius: 0.9rem;
-  --button-shadow: 0 10px 22px rgba(10, 47, 102, 0.14);
+  --button-shadow: 0 10px 22px rgba(67, 38, 232, 0.18);
 }
 
 @theme inline {
@@ -41,8 +48,8 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #f5f1e8;
-    --foreground: #17120a;
+    --background: #fbfcff;
+    --foreground: #10142f;
   }
 }
 
@@ -52,12 +59,18 @@ body {
   overflow-x: hidden;
 }
 
+html {
+  font-size: 16px;
+  text-size-adjust: 100%;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-body);
-  font-size: 16px;
-  line-height: 1.6;
+  font-size: 15.5px;
+  font-weight: 400;
+  line-height: var(--leading-body);
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -65,14 +78,19 @@ body {
     "kern" 1,
     "liga" 1,
     "calt" 1;
-  background-image:
-    radial-gradient(circle at 16% 8%, rgba(47, 127, 219, 0.14), transparent 28%),
-    radial-gradient(circle at 84% 14%, rgba(10, 47, 102, 0.12), transparent 26%),
-    linear-gradient(135deg, #f8fbff 0%, #f5f1e8 52%, #eaf2ff 100%);
+  background-image: none;
+}
+
+button,
+input,
+optgroup,
+select,
+textarea {
+  font: inherit;
 }
 
 ::selection {
-  background: rgba(47, 127, 219, 0.22);
+  background: rgba(67, 38, 232, 0.18);
   color: var(--brand-navy);
 }
 
@@ -85,9 +103,10 @@ h6,
 .pratyo-heading {
   color: var(--brand-ink);
   font-family: var(--font-display);
-  font-weight: 800;
+  font-weight: 760;
   letter-spacing: 0;
-  line-height: 1.08;
+  line-height: var(--leading-heading);
+  text-wrap: balance;
 }
 
 h1 {
@@ -97,23 +116,37 @@ h1 {
 p,
 li,
 .pratyo-copy {
-  line-height: 1.72;
+  color: inherit;
+  line-height: var(--leading-body);
+}
+
+button,
+a,
+input,
+select,
+textarea,
+th,
+td,
+label,
+small {
+  letter-spacing: 0;
 }
 
 small,
 label,
 .pratyo-label {
   letter-spacing: 0;
+  line-height: var(--leading-compact);
 }
 
 label {
   color: #27344a;
-  font-weight: 700;
+  font-weight: 650;
 }
 
 strong,
 b {
-  font-weight: 760;
+  font-weight: 700;
 }
 
 code,
@@ -125,15 +158,15 @@ pre,
 }
 
 [class~="font-black"] {
-  font-weight: 800 !important;
+  font-weight: 760 !important;
 }
 
 [class~="font-bold"] {
-  font-weight: 750 !important;
+  font-weight: 700 !important;
 }
 
 [class~="font-semibold"] {
-  font-weight: 700 !important;
+  font-weight: 650 !important;
 }
 
 [class~="tracking-tight"] {
@@ -148,7 +181,12 @@ pre,
 [class*="text-6xl"],
 [class*="text-7xl"] {
   letter-spacing: 0 !important;
-  line-height: 1.04 !important;
+  line-height: 1.08 !important;
+}
+
+[class*="text-4xl"] {
+  letter-spacing: 0 !important;
+  line-height: 1.12 !important;
 }
 
 table,
@@ -156,6 +194,19 @@ table,
 [class*="text-2xl"],
 [class*="text-3xl"] {
   font-variant-numeric: tabular-nums;
+}
+
+table {
+  font-size: 0.94rem;
+  line-height: 1.45;
+}
+
+th {
+  font-weight: 700;
+}
+
+td {
+  font-weight: 500;
 }
 
 /* Pulse-inspired app theme. These overrides keep layouts intact while moving
@@ -226,9 +277,19 @@ button[class~="bg-[#4326e8]"] * {
 
 [class~="bg-[#0a2f66]"],
 [class~="bg-[#2f7fdb]"],
+[class~="bg-[#4326e8]"],
 [class~="bg-blue-500"],
 [class~="bg-blue-600"],
 [class~="bg-blue-700"],
+[class~="bg-indigo-500"],
+[class~="bg-indigo-600"],
+[class~="bg-indigo-700"],
+[class~="bg-purple-500"],
+[class~="bg-purple-600"],
+[class~="bg-purple-700"],
+[class~="bg-violet-500"],
+[class~="bg-violet-600"],
+[class~="bg-violet-700"],
 [class~="bg-emerald-600"],
 [class~="bg-emerald-700"] {
   background-color: var(--brand-navy) !important;
@@ -237,9 +298,19 @@ button[class~="bg-[#4326e8]"] * {
 
 [class~="bg-[#0a2f66]"] *,
 [class~="bg-[#2f7fdb]"] *,
+[class~="bg-[#4326e8]"] *,
 [class~="bg-blue-500"] *,
 [class~="bg-blue-600"] *,
 [class~="bg-blue-700"] *,
+[class~="bg-indigo-500"] *,
+[class~="bg-indigo-600"] *,
+[class~="bg-indigo-700"] *,
+[class~="bg-purple-500"] *,
+[class~="bg-purple-600"] *,
+[class~="bg-purple-700"] *,
+[class~="bg-violet-500"] *,
+[class~="bg-violet-600"] *,
+[class~="bg-violet-700"] *,
 [class~="bg-emerald-600"] *,
 [class~="bg-emerald-700"] *,
 button[class~="bg-blue-500"],
@@ -248,24 +319,67 @@ button[class~="bg-blue-700"],
 a[class~="bg-blue-500"],
 a[class~="bg-blue-600"],
 a[class~="bg-blue-700"],
+button[class~="bg-indigo-500"],
+button[class~="bg-indigo-600"],
+button[class~="bg-indigo-700"],
+a[class~="bg-indigo-500"],
+a[class~="bg-indigo-600"],
+a[class~="bg-indigo-700"],
+button[class~="bg-purple-500"],
+button[class~="bg-purple-600"],
+button[class~="bg-purple-700"],
+a[class~="bg-purple-500"],
+a[class~="bg-purple-600"],
+a[class~="bg-purple-700"],
+button[class~="bg-violet-500"],
+button[class~="bg-violet-600"],
+button[class~="bg-violet-700"],
+a[class~="bg-violet-500"],
+a[class~="bg-violet-600"],
+a[class~="bg-violet-700"],
 button[class~="bg-emerald-600"],
 button[class~="bg-emerald-700"],
 a[class~="bg-emerald-600"],
 a[class~="bg-emerald-700"],
 button[class~="bg-[#0a2f66]"],
 button[class~="bg-[#2f7fdb]"],
+button[class~="bg-[#4326e8]"],
 a[class~="bg-[#0a2f66]"],
-a[class~="bg-[#2f7fdb]"] {
+a[class~="bg-[#2f7fdb]"],
+a[class~="bg-[#4326e8]"] {
   color: #ffffff !important;
 }
 
 [class*="bg-blue-500/"],
 [class*="bg-blue-400/"],
-[class*="bg-emerald-500/"],
-[class*="bg-purple-500/"] {
-  background-color: rgba(47, 127, 219, 0.1) !important;
-  border-color: rgba(47, 127, 219, 0.24) !important;
+[class*="bg-indigo-500/"],
+[class*="bg-purple-500/"],
+[class*="bg-violet-500/"],
+[class*="bg-emerald-500/"] {
+  background-color: rgba(67, 38, 232, 0.1) !important;
+  border-color: rgba(67, 38, 232, 0.22) !important;
   color: var(--brand-navy) !important;
+}
+
+[class*="bg-blue-50"],
+[class*="bg-indigo-50"],
+[class*="bg-purple-50"],
+[class*="bg-violet-50"] {
+  background-color: var(--brand-primary-soft) !important;
+}
+
+[class*="border-blue"],
+[class*="border-indigo"],
+[class*="border-purple"],
+[class*="border-violet"] {
+  border-color: var(--brand-primary-border) !important;
+}
+
+[class*="text-blue"],
+[class*="text-indigo"],
+[class*="text-purple"],
+[class*="text-violet"] {
+  color: var(--brand-primary) !important;
 }
 
 [class*="bg-[#ffb21c]"]:not([class*="selection:bg"]),
@@ -301,6 +415,45 @@ a[class~="bg-[#2f7fdb]"] {
   color: var(--brand-navy) !important;
 }
 
+[class~="bg-[#f5f1e8]"] {
+  background-color: var(--background) !important;
+}
+
+[class~="bg-[#eaf2ff]"],
+[class~="bg-[#dbeaff]"],
+[class~="bg-[#eef4ff]"],
+[class~="bg-[#fbf8ff]"] {
+  background-color: var(--brand-primary-soft) !important;
+}
+
+[class*="text-[#0a2f66]"],
+[class*="text-[#2f7fdb]"],
+[class*="text-[#145ab2]"],
+[class*="text-[#1150a1]"] {
+  color: var(--brand-primary) !important;
+}
+
+[class*="border-[#d7cdbb]"],
+[class*="border-[#bfd7f7]"],
+[class*="border-[#b9d5f6]"],
+[class*="border-[#7fb1ee]"] {
+  border-color: var(--brand-primary-border) !important;
+}
+
+[class*="ring-purple"],
+[class*="ring-violet"],
+[class*="ring-indigo"],
+[class*="ring-blue"] {
+  --tw-ring-color: rgba(67, 38, 232, 0.24) !important;
+}
+
+[class*="after:bg-purple"]::after,
+[class*="after:bg-violet"]::after,
+[class*="after:bg-indigo"]::after,
+[class*="after:bg-blue"]::after {
+  background-color: var(--brand-primary) !important;
+}
+
 [class*="bg-[#fffaf0]"],
 [class*="bg-[#fffdf8]"] {
   background-color: #f8fbff !important;
@@ -311,7 +464,8 @@ select,
 textarea {
   color: var(--brand-ink);
   font-family: var(--font-body);
-  line-height: 1.45;
+  font-weight: 500;
+  line-height: var(--leading-compact);
   background-color: rgba(255, 255, 255, 0.92);
   border-color: rgba(10, 47, 102, 0.22);
 }
@@ -333,6 +487,12 @@ a {
   font-family: var(--font-body);
   text-underline-offset: 3px;
   -webkit-tap-highlight-color: rgba(47, 127, 219, 0.14);
+}
+
+button,
+[role="button"],
+a[class*="rounded"] {
+  line-height: var(--leading-control);
 }
 
 button:focus-visible,
@@ -363,7 +523,7 @@ table tbody tr:hover {
 }
 
 .pratyo-home-shell [class*="bg-[#4326e8]"] {
-  background-color: #4326e8 !important;
+  background-color: var(--brand-primary) !important;
 }
 
 .pratyo-home-shell .home-primary-action,
@@ -535,9 +695,10 @@ a.public-nav-active:focus {
 }
 
 .pratyo-dark-shell {
-  background-color: rgba(8, 27, 57, 0.96) !important;
-  border-color: rgba(143, 196, 255, 0.2) !important;
-  color: #eef5ff !important;
+  background-color: #ffffff !important;
+  border-color: var(--brand-border) !important;
+  box-shadow: 10px 0 30px rgba(67, 38, 232, 0.06);
+  color: var(--brand-ink) !important;
 }
 
 .pratyo-dark-shell [class*="text-white"],
@@ -557,18 +718,18 @@ a.public-nav-active:focus {
 }
 
 .pratyo-dark-shell .pratyo-muted {
-  color: #9fc3ef !important;
+  color: var(--brand-muted) !important;
 }
 
 .pratyo-dark-shell .pratyo-active {
-  background-color: rgba(47, 127, 219, 0.22) !important;
-  border-color: rgba(143, 196, 255, 0.44) !important;
-  color: #d7e9ff !important;
+  background-color: var(--brand-primary-soft) !important;
+  border-color: var(--brand-primary-border) !important;
+  color: var(--brand-primary) !important;
 }
 
 .pratyo-dark-shell .pratyo-sidebar-active {
-  background-color: #6d28d9 !important;
-  border-color: rgba(139, 0, 230, 0.22) !important;
+  background-color: var(--brand-primary) !important;
+  border-color: rgba(67, 38, 232, 0.22) !important;
   color: #ffffff !important;
 }
 
@@ -577,13 +738,31 @@ a.public-nav-active:focus {
   color: #ffffff !important;
 }
 
+.pratyo-dark-shell a:not(.pratyo-sidebar-active) {
+  color: #27344a !important;
+}
+
+.pratyo-dark-shell a:not(.pratyo-sidebar-active):hover {
+  background-color: var(--brand-primary-soft) !important;
+  color: var(--brand-primary) !important;
+}
+
+.pratyo-dark-shell a:not(.pratyo-sidebar-active) .pratyo-sidebar-icon {
+  color: var(--brand-muted) !important;
+}
+
+.pratyo-dark-shell a:not(.pratyo-sidebar-active):hover .pratyo-sidebar-icon,
+.pratyo-dark-shell a:not(.pratyo-sidebar-active):hover .pratyo-sidebar-label {
+  color: var(--brand-primary) !important;
+}
+
 .pratyo-dark-shell [class*="text-blue-300"],
 .pratyo-dark-shell [class*="text-blue-400"],
 .pratyo-dark-shell [class*="text-sky-300"],
 .pratyo-dark-shell [class*="text-sky-400"],
 .pratyo-dark-shell [class*="text-yellow-300"],
 .pratyo-dark-shell [class*="text-yellow-400"] {
-  color: #d7e9ff !important;
+  color: var(--brand-primary) !important;
 }
 
 /* Consistent product buttons.
@@ -594,7 +773,8 @@ a.public-nav-active:focus {
 .pratyo-btn {
   min-height: 2.75rem;
   border-radius: var(--button-radius) !important;
-  font-weight: 800;
+  font-weight: 700;
+  line-height: var(--leading-control);
   letter-spacing: 0;
   transition:
     transform 160ms ease,
@@ -613,9 +793,19 @@ a.public-nav-active:focus {
 
 :is(button, a)[class~="bg-[#0a2f66]"],
 :is(button, a)[class~="bg-[#2f7fdb]"],
+:is(button, a)[class~="bg-[#4326e8]"],
 :is(button, a)[class~="bg-blue-500"],
 :is(button, a)[class~="bg-blue-600"],
 :is(button, a)[class~="bg-blue-700"],
+:is(button, a)[class~="bg-indigo-500"],
+:is(button, a)[class~="bg-indigo-600"],
+:is(button, a)[class~="bg-indigo-700"],
+:is(button, a)[class~="bg-purple-500"],
+:is(button, a)[class~="bg-purple-600"],
+:is(button, a)[class~="bg-purple-700"],
+:is(button, a)[class~="bg-violet-500"],
+:is(button, a)[class~="bg-violet-600"],
+:is(button, a)[class~="bg-violet-700"],
 :is(button, a)[class~="bg-emerald-500"],
 :is(button, a)[class~="bg-emerald-600"],
 :is(button, a)[class~="bg-emerald-700"],
@@ -624,16 +814,26 @@ a.public-nav-active:focus {
 :is(button, a)[class~="bg-green-700"],
 .pratyo-btn-primary {
   background: linear-gradient(135deg, var(--button-primary), var(--button-primary-hover)) !important;
-  border: 1px solid rgba(10, 47, 102, 0.18) !important;
+  border: 1px solid rgba(67, 38, 232, 0.2) !important;
   box-shadow: var(--button-shadow) !important;
   color: #ffffff !important;
 }
 
 :is(button, a)[class~="bg-[#0a2f66]"] *,
 :is(button, a)[class~="bg-[#2f7fdb]"] *,
+:is(button, a)[class~="bg-[#4326e8]"] *,
 :is(button, a)[class~="bg-blue-500"] *,
 :is(button, a)[class~="bg-blue-600"] *,
 :is(button, a)[class~="bg-blue-700"] *,
+:is(button, a)[class~="bg-indigo-500"] *,
+:is(button, a)[class~="bg-indigo-600"] *,
+:is(button, a)[class~="bg-indigo-700"] *,
+:is(button, a)[class~="bg-purple-500"] *,
+:is(button, a)[class~="bg-purple-600"] *,
+:is(button, a)[class~="bg-purple-700"] *,
+:is(button, a)[class~="bg-violet-500"] *,
+:is(button, a)[class~="bg-violet-600"] *,
+:is(button, a)[class~="bg-violet-700"] *,
 :is(button, a)[class~="bg-emerald-500"] *,
 :is(button, a)[class~="bg-emerald-600"] *,
 :is(button, a)[class~="bg-emerald-700"] *,
@@ -646,9 +846,19 @@ a.public-nav-active:focus {
 
 :is(button, a)[class~="bg-[#0a2f66]"]:not(:disabled):hover,
 :is(button, a)[class~="bg-[#2f7fdb]"]:not(:disabled):hover,
+:is(button, a)[class~="bg-[#4326e8]"]:not(:disabled):hover,
 :is(button, a)[class~="bg-blue-500"]:not(:disabled):hover,
 :is(button, a)[class~="bg-blue-600"]:not(:disabled):hover,
 :is(button, a)[class~="bg-blue-700"]:not(:disabled):hover,
+:is(button, a)[class~="bg-indigo-500"]:not(:disabled):hover,
+:is(button, a)[class~="bg-indigo-600"]:not(:disabled):hover,
+:is(button, a)[class~="bg-indigo-700"]:not(:disabled):hover,
+:is(button, a)[class~="bg-purple-500"]:not(:disabled):hover,
+:is(button, a)[class~="bg-purple-600"]:not(:disabled):hover,
+:is(button, a)[class~="bg-purple-700"]:not(:disabled):hover,
+:is(button, a)[class~="bg-violet-500"]:not(:disabled):hover,
+:is(button, a)[class~="bg-violet-600"]:not(:disabled):hover,
+:is(button, a)[class~="bg-violet-700"]:not(:disabled):hover,
 :is(button, a)[class~="bg-emerald-500"]:not(:disabled):hover,
 :is(button, a)[class~="bg-emerald-600"]:not(:disabled):hover,
 :is(button, a)[class~="bg-emerald-700"]:not(:disabled):hover,
@@ -656,8 +866,8 @@ a.public-nav-active:focus {
 :is(button, a)[class~="bg-green-600"]:not(:disabled):hover,
 :is(button, a)[class~="bg-green-700"]:not(:disabled):hover,
 .pratyo-btn-primary:not(:disabled):hover {
-  background: linear-gradient(135deg, var(--button-primary-hover), #184f9d) !important;
-  box-shadow: 0 14px 28px rgba(10, 47, 102, 0.2) !important;
+  background: linear-gradient(135deg, var(--button-primary-hover), #2913b8) !important;
+  box-shadow: 0 14px 28px rgba(67, 38, 232, 0.24) !important;
 }
 
 :is(button, a)[class~="bg-slate-600"],
@@ -809,8 +1019,8 @@ a[aria-disabled="true"] {
 .pratyo-dark-shell a.pratyo-sidebar-active:visited,
 .pratyo-dark-shell a.pratyo-sidebar-active:hover,
 .pratyo-dark-shell a.pratyo-sidebar-active:focus {
-  background-color: #6d28d9 !important;
-  border-color: rgba(139, 0, 230, 0.22) !important;
+  background-color: var(--brand-primary) !important;
+  border-color: rgba(67, 38, 232, 0.22) !important;
   color: #ffffff !important;
 }
 

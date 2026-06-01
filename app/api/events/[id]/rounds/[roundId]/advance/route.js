@@ -46,7 +46,15 @@ export async function POST(req, props) {
     }
     const currentRound = await repairLegacyRoundMetadata(roundRecord);
 
-    const body = await req.json().catch(() => ({}));
+    let body;
+    try {
+      body = await req.json();
+    } catch (error) {
+      return NextResponse.json(
+        { message: "Invalid JSON in request body" },
+        { status: 400 }
+      );
+    }
     const target = body.target === "final" ? "final" : "next";
 
     const result = await advanceSelectedParticipants({

@@ -7,7 +7,6 @@ import {
   FaCalendarAlt,
   FaHandshake,
   FaHome,
-  FaPenNib,
   FaSchool,
   FaSearch,
   FaTimes,
@@ -17,7 +16,6 @@ import PratyoLogo from "@/components/brand/PratyoLogo";
 
 const MOBILE_ITEMS = [
   { label: "Home", href: "/", key: "home", icon: FaHome },
-  { label: "Student Voices", href: "/student-voices", key: "student-voices", icon: FaPenNib },
   { label: "Winners", href: "/winners", key: "winners", icon: FaTrophy },
   { label: "Schools", href: "/schools", key: "schools", icon: FaSchool },
   { label: "Events", href: "/events", key: "events", icon: FaCalendarAlt },

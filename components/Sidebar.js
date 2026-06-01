@@ -191,7 +191,7 @@ export default function Sidebar({
         isMobileOpen ? "translate-x-0" : "-translate-x-full"
       }`}
     >
-      <div className="border-b border-white/10 p-4 sm:p-5">
+      <div className="border-b border-[#e6eaf7] p-4 sm:p-5">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
           <PratyoLogo variant="icon" compact withSurface />
@@ -207,7 +207,7 @@ export default function Sidebar({
           <button
             type="button"
             onClick={onNavigate}
-            className="rounded-lg p-2 transition hover:bg-white/10 lg:hidden"
+            className="rounded-lg p-2 text-[#27344a] transition hover:bg-[#f4f1ff] hover:text-[#4326e8] lg:hidden"
             aria-label="Close navigation"
           >
             <FaTimes />
@@ -219,7 +219,7 @@ export default function Sidebar({
         {groupedLinks.map((group) => (
           <div key={group.title || "main"} className="space-y-2">
             {group.title && (
-              <p className="px-3 text-xs font-black uppercase tracking-[0.08em] text-[#b7d4fb]">
+              <p className="px-3 text-xs font-black uppercase tracking-[0.08em] text-[#7a8499]">
                 {group.title}
               </p>
             )}
@@ -238,15 +238,15 @@ export default function Sidebar({
                   aria-current={isActive ? "page" : undefined}
                   className={`group flex min-h-14 items-center gap-3 rounded-2xl px-4 py-3 transition-all duration-200 ${
                     isActive
-                      ? "pratyo-sidebar-active bg-purple-600 text-white shadow-sm ring-1 ring-purple-500"
-                      : "text-[#d7e9ff] hover:bg-white/10 hover:text-white"
+                      ? "pratyo-sidebar-active bg-[#4326e8] text-white shadow-sm ring-1 ring-[#4326e8]/20"
+                      : "text-[#27344a] hover:bg-[#f4f1ff] hover:text-[#4326e8]"
                   }`}
                 >
                   <Icon
                     className={`pratyo-sidebar-icon text-lg ${
                       isActive
                         ? "text-white"
-                        : "text-[#9fc4f5] group-hover:text-white"
+                        : "text-[#526071] group-hover:text-[#4326e8]"
                     }`}
                   />
                   <span className="pratyo-sidebar-label min-w-0 flex-1 text-base font-black leading-tight">
@@ -263,15 +263,15 @@ export default function Sidebar({
           </div>
         ))}
         {links.length === 0 && (
-        <div className="rounded-xl border border-white/10 bg-white/10 p-4 text-sm leading-6 text-[#bfd3f5]">
+        <div className="rounded-xl border border-[#e6eaf7] bg-[#f8f9fd] p-4 text-sm leading-6 text-[#526071]">
             Navigation will appear after your account is active.
           </div>
         )}
       </nav>
 
-      <div className="border-t border-white/10 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:p-4">
+      <div className="border-t border-[#e6eaf7] p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:p-4">
         {session?.user && (
-          <div className="mb-3 rounded-xl border border-white/10 bg-white/10 p-3">
+          <div className="mb-3 rounded-xl border border-[#e6eaf7] bg-[#f8f9fd] p-3">
             <p className="truncate text-base font-black">
               {session.user.name || session.user.email || "Signed in"}
             </p>
@@ -283,9 +283,9 @@ export default function Sidebar({
         <button
           type="button"
           onClick={() => signOut({ callbackUrl: "/login" })}
-          className="group flex min-h-12 w-full items-center gap-3 rounded-xl px-4 py-3 text-base font-black text-[#d7e9ff] transition-all duration-200 hover:bg-white/10"
+          className="group flex min-h-12 w-full items-center gap-3 rounded-xl px-4 py-3 text-base font-black text-[#27344a] transition-all duration-200 hover:bg-[#f4f1ff] hover:text-[#4326e8]"
         >
-          <FaSignOutAlt className="text-lg group-hover:text-white" />
+          <FaSignOutAlt className="text-lg group-hover:text-[#4326e8]" />
           <span className="font-medium">Logout</span>
         </button>
       </div>

@@ -5,10 +5,10 @@ import {
   FaCalendarAlt,
   FaClock,
   FaSchool,
-  FaShareAlt,
   FaUser,
 } from "react-icons/fa";
 import PublicExplorePanel from "@/components/public/PublicExplorePanel";
+import PublicShareButton from "@/components/public/PublicShareButton";
 
 function formatDate(value) {
   if (!value) return "";
@@ -49,7 +49,7 @@ export default function PublicWritingReader({
   return (
     <div className="mx-auto max-w-[1500px] px-4 py-5 pb-16 sm:px-6">
       <div className="grid gap-5 xl:grid-cols-[230px_minmax(0,1fr)]">
-        <PublicExplorePanel active="student-voices" />
+        <PublicExplorePanel active="home" />
 
         <main className="min-w-0">
           <article className="rounded-xl border border-[#e6eaf7] bg-white p-5 shadow-sm md:p-8">
@@ -61,13 +61,12 @@ export default function PublicWritingReader({
                 <FaArrowLeft />
                 Back to Home
               </Link>
-              <Link
+              <PublicShareButton
                 href={currentHref}
+                title={article.title}
+                label="Share Story"
                 className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-[#d9dcf2] bg-white px-4 text-sm font-black text-[#4326e8] transition hover:bg-[#f8f7ff]"
-              >
-                <FaShareAlt />
-                Share Story
-              </Link>
+              />
             </div>
 
             <div className="mt-8 max-w-4xl">

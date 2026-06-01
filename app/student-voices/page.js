@@ -157,10 +157,10 @@ export default async function StudentVoicesPage({ searchParams }) {
 
   return (
     <main className="min-h-screen bg-[#fbfcff] text-[#10142f]">
-      <PublicSiteNav active="student-voices" searchPlaceholder="Search student voices..." />
+      <PublicSiteNav active="home" searchPlaceholder="Search student voices..." />
 
       <div className="mx-auto grid max-w-[1500px] gap-6 px-4 py-6 pb-16 sm:px-6 xl:grid-cols-[230px_minmax(0,1fr)]">
-        <PublicExplorePanel active="student-voices" />
+        <PublicExplorePanel active="home" />
 
         <div className="min-w-0 space-y-6">
           <section className="rounded-2xl border border-[#eceef8] bg-white p-6 shadow-sm">

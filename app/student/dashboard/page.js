@@ -4,9 +4,8 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
-import { FaBell, FaGraduationCap } from "react-icons/fa";
+import { FaGraduationCap } from "react-icons/fa";
 import StudentActivityOverview from "@/components/student/StudentActivityOverview";
-import StudentDailyOverview from "@/components/student/StudentDailyOverview";
 import StudentNotificationCenter from "@/components/student/StudentNotificationCenter";
 import PageHeader from "@/components/ui/PageHeader";
 import LoadingState from "@/components/ui/LoadingState";
@@ -51,23 +50,13 @@ export default function StudentDashboard() {
       <div className="max-w-6xl mx-auto">
         <PageHeader
           icon={FaGraduationCap}
-          eyebrow="Student home"
-          title="Your activity dashboard"
-          description="Start with today's updates, then explore achievements, certificates, school notices, writing tasks, and magazine articles from one simple place."
+          eyebrow="Student"
+          title="Dashboard"
+          description="See your activity, notices, events, writing, and achievements from one place."
           action={<StudentNotificationCenter />}
-          meta={
-            <div className="inline-flex items-center gap-2 rounded-full border border-[#d7cdbb] bg-[#eaf2ff] px-3 py-2 text-xs font-semibold text-[#0a2f66]">
-              <FaBell className="text-[#0a2f66]" />
-              Notices and event updates are kept in the left menu.
-            </div>
-          }
         />
 
-        <div className="mt-8">
-          <StudentDailyOverview />
-        </div>
-
-        <div className="mt-8">
+        <div className="mt-6">
           <StudentActivityOverview />
         </div>
       </div>

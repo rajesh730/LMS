@@ -8,7 +8,6 @@ import {
   FaMapMarkerAlt,
   FaRegCalendarAlt,
   FaSchool,
-  FaShareAlt,
   FaTrophy,
   FaUsers,
 } from "react-icons/fa";
@@ -19,6 +18,7 @@ import EventNotice from "@/models/EventNotice";
 import ParticipationRequest from "@/models/ParticipationRequest";
 import PublicEventNoticeList from "@/components/events/PublicEventNoticeList";
 import PublicExplorePanel from "@/components/public/PublicExplorePanel";
+import PublicShareButton from "@/components/public/PublicShareButton";
 import PublicSiteNav from "@/components/public/PublicSiteNav";
 import { PublicPageShell } from "@/components/public/PublicLayout";
 import "@/models/ExternalOrganizer";
@@ -302,13 +302,12 @@ export default async function PublicEventPage({ params }) {
                 <FaArrowLeft />
                 Back to Events
               </Link>
-              <Link
+              <PublicShareButton
                 href={`/events/${event._id}`}
+                title={event.title}
+                label="Share Event"
                 className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-[#d9dcf2] bg-white px-4 text-sm font-black text-[#4326e8] transition hover:bg-[#f8f7ff]"
-              >
-                <FaShareAlt />
-                Share Event
-              </Link>
+              />
             </div>
 
             <div className="mt-8 max-w-4xl">

@@ -517,7 +517,15 @@ async function upsertResults(req, props) {
       );
     }
 
-    const body = await req.json().catch(() => ({}));
+    let body;
+    try {
+      body = await req.json();
+    } catch (error) {
+      return NextResponse.json(
+        { message: "Invalid JSON in request body" },
+        { status: 400 }
+      );
+    }
     const publishPublicly = Boolean(body.publishPublicly);
     const resultsPublished = Boolean(body.resultsPublished);
     const correctionReason = String(body.correctionReason || "").trim();

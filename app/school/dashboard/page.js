@@ -2,19 +2,16 @@
 
 import { Suspense, useState, useEffect } from "react";
 import dynamic from "next/dynamic";
-import { useSession, signOut } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
 import Sidebar from "@/components/Sidebar";
 import CredentialsModal from "@/components/CredentialsModal";
 import SchoolNotificationCenter from "@/components/school/SchoolNotificationCenter";
 import SchoolNoticeBoard from "@/components/school/SchoolNoticeBoard";
-import SchoolDailyOverview from "@/components/school/SchoolDailyOverview";
-import WorkIndicatorBadge from "@/components/work-indicators/WorkIndicatorBadge";
-import useWorkIndicators from "@/lib/useWorkIndicators";
 import AlertBanner from "@/components/ui/AlertBanner";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import LoadingState from "@/components/ui/LoadingState";
+import PageHeader from "@/components/ui/PageHeader";
 
 const StudentManager = dynamic(
   () => import("@/components/dashboard/StudentManager"),
@@ -105,122 +102,11 @@ const DashboardChallengeShowcase = dynamic(
   }
 );
 import {
-  FaCalendarCheck,
-  FaFeatherAlt,
-  FaSignOutAlt,
-  FaBullhorn,
   FaClock,
   FaSchool,
-  FaArrowRight,
-  FaBookReader,
-  FaTrophy,
-  FaUsers,
   FaBars,
-  FaSearch,
-  FaRocket,
-  FaFlag,
-  FaCheckCircle,
-  FaExternalLinkAlt,
 } from "react-icons/fa";
 import SchoolEventWorkspace from "@/components/events/SchoolEventWorkspace";
-
-function SchoolCommandHero({ schoolName }) {
-  return (
-    <section className="overflow-hidden rounded-2xl border border-[#e6eaf7] bg-white p-5 shadow-sm md:p-6">
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-center">
-        <div>
-          <div className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1.5 text-[11px] font-black uppercase text-[#0a2f66]">
-            <FaSchool />
-            School Command Center
-          </div>
-          <h1 className="mt-4 max-w-2xl text-3xl font-black leading-tight text-[#17120a] md:text-5xl">
-            Manage the work that students see every day
-          </h1>
-          <p className="mt-4 max-w-2xl text-sm leading-7 text-[#52657d]">
-            Use this hub to register students, run events, send notices, publish
-            magazine articles, and showcase selected achievements.
-          </p>
-          <div className="mt-6 grid gap-3 sm:grid-cols-3">
-            {[
-              ["First", "Add students and teachers", FaUsers],
-              ["Then", "Run events and notices", FaCalendarCheck],
-              ["Finally", "Publish results and writing", FaFlag],
-            ].map(([step, text, Icon]) => (
-              <div
-                key={step}
-                className="flex items-center gap-3 rounded-xl border border-[#e6eaf7] bg-[#f8fbff] p-3"
-              >
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-purple-700 shadow-sm">
-                  <Icon />
-                </span>
-                <span>
-                  <span className="block text-[10px] font-black uppercase text-[#52657d]">
-                    {step}
-                  </span>
-                  <strong className="block text-xs text-[#17120a]">{text}</strong>
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="relative min-h-72 overflow-hidden rounded-2xl bg-gradient-to-br from-[#f8fbff] via-white to-emerald-50">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(96,165,250,0.22),transparent_25%),radial-gradient(circle_at_80%_78%,rgba(16,185,129,0.2),transparent_28%)]" />
-          <div className="absolute bottom-8 left-1/2 h-36 w-48 -translate-x-1/2 rounded-t-3xl border border-[#cfe0f6] bg-white shadow-xl" />
-          <div className="absolute bottom-8 left-1/2 h-24 w-14 -translate-x-1/2 rounded-t-xl bg-[#dbeaff]" />
-          <div className="absolute bottom-44 left-1/2 h-20 w-20 -translate-x-1/2 rounded-full border-8 border-white bg-[#eaf2ff] shadow-lg" />
-          <FaFlag className="absolute left-1/2 top-10 -translate-x-1/2 text-5xl text-[#0a2f66]" />
-          <FaRocket className="absolute bottom-8 right-10 text-5xl text-purple-700" />
-          <div className="absolute bottom-6 left-6 max-w-[12rem] rounded-xl bg-white/90 p-3 text-xs font-bold text-[#0a2f66] shadow-sm">
-            {schoolName || "Your school"} workspace is ready.
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function QuickActionCard({
-  href,
-  icon: Icon,
-  title,
-  description,
-  indicator,
-  tone = "blue",
-}) {
-  const toneMap = {
-    blue: "border-[#b9d5f6] bg-[#eaf2ff] text-[#0a2f66] hover:border-[#7fb1ee]",
-    emerald:
-      "border-[#b9d5f6] bg-[#eaf2ff] text-[#0a2f66] hover:border-[#7fb1ee]",
-    amber:
-      "border-[#b9d5f6] bg-[#eaf2ff] text-[#0a2f66] hover:border-[#7fb1ee]",
-    purple:
-      "border-[#b9d5f6] bg-[#eaf2ff] text-[#0a2f66] hover:border-[#7fb1ee]",
-    cyan: "border-[#b9d5f6] bg-white text-[#0a2f66] hover:border-[#7fb1ee]",
-  };
-
-  return (
-    <Link
-      href={href}
-      className={`group rounded-2xl border p-5 shadow-[0_10px_28px_rgba(10,47,102,0.08)] transition hover:-translate-y-0.5 ${toneMap[tone] || toneMap.blue
-        }`}
-    >
-      <div className="flex items-start justify-between gap-4">
-        <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#dbeaff] text-[#0a2f66]">
-          <Icon className="text-xl" />
-        </span>
-        <span className="flex items-center gap-2">
-          <WorkIndicatorBadge
-            count={indicator?.count}
-            tone={indicator?.tone}
-          />
-          <FaArrowRight className="text-[#17120a] transition group-hover:translate-x-1 group-hover:text-[#0a2f66]" />
-        </span>
-      </div>
-      <h3 className="mt-5 text-lg font-bold text-[#17120a]">{title}</h3>
-      <p className="mt-2 text-sm leading-6 text-[#344f77]">{description}</p>
-    </Link>
-  );
-}
 
 function SchoolDashboardContent() {
   const { data: session, status } = useSession();
@@ -276,9 +162,6 @@ function SchoolDashboardContent() {
 
   const isPending = session?.user?.status === "PENDING";
   const isRestricted = isPending;
-  const { getIndicator } = useWorkIndicators({
-    enabled: status === "authenticated" && !isPending,
-  });
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
@@ -559,32 +442,17 @@ function SchoolDashboardContent() {
             >
               <FaBars />
             </button>
-            <label className="relative hidden min-w-0 flex-1 md:block">
-              <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-[#75869b]" />
-              <input
-                type="search"
-                placeholder="Search students, events, notices..."
-                className="h-11 w-full max-w-xl rounded-xl border border-[#e6eaf7] bg-[#f8fbff] pl-11 pr-4 text-sm font-semibold text-[#24314d] outline-none transition placeholder:text-[#8a9ab1] focus:border-purple-300 focus:ring-4 focus:ring-purple-50"
-              />
-            </label>
-            <div className="ml-auto flex items-center gap-3">
-            <SchoolNotificationCenter />
-            <div className="hidden text-right md:block">
-              <div className="text-sm font-black text-[#17120a]">
-                {session?.user?.name}
-              </div>
-              <div className="text-xs text-[#52657d]">
-                {session?.user?.email}
-              </div>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-black text-[#10142f]">
+                School Dashboard
+              </p>
+              <p className="truncate text-xs font-bold text-[#526071]">
+                {session?.user?.name || session?.user?.email}
+              </p>
             </div>
-            <button
-              onClick={() => signOut()}
-              className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-[#0a2f66] text-white transition hover:bg-[#123f82]"
-              aria-label="Sign out"
-            >
-              <FaSignOutAlt />
-            </button>
-          </div>
+            <div className="ml-auto flex items-center gap-3">
+              <SchoolNotificationCenter />
+            </div>
           </div>
         </header>
 
@@ -628,95 +496,14 @@ function SchoolDashboardContent() {
           <>
             {activeTab === "overview" && (
               <>
-                <SchoolCommandHero schoolName={session?.user?.name} />
+                <PageHeader
+                  icon={FaSchool}
+                  eyebrow="School workspace"
+                  title="Dashboard"
+                  description="Use the left menu to manage students, teachers, events, notices, magazine writing, and your public profile."
+                />
                 <div className="mt-5">
                   <DashboardOverview />
-                </div>
-                <div className="mt-5">
-                  <SchoolDailyOverview />
-                </div>
-
-                <section className="mt-5 rounded-2xl border border-[#e6eaf7] bg-white p-5 shadow-sm">
-                  <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-                    <div>
-                      <p className="text-xs font-bold uppercase tracking-normal text-[#52657d]">
-                        Quick actions
-                      </p>
-                      <h2 className="mt-2 text-2xl font-bold text-[#17120a]">
-                        Pick the work area you need
-                      </h2>
-                    </div>
-                    <p className="max-w-xl text-sm leading-6 text-[#344f77]">
-                      These shortcuts match the real school workflow: students,
-                      events, student notices, publishing, and school spotlight.
-                    </p>
-                  </div>
-
-                  <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                    <QuickActionCard
-                      href="/school/dashboard?tab=students"
-                      icon={FaUsers}
-                      title="Students"
-                      description="Add student accounts, view credentials, and keep profiles ready for events and writing."
-                      tone="blue"
-                    />
-                    <QuickActionCard
-                      href="/school/dashboard?tab=platform-events"
-                      icon={FaCalendarCheck}
-                      title="Platform Events"
-                      description="Accept platform invitations and manage the teams your school sends."
-                      indicator={getIndicator("school.platformEvents")}
-                      tone="emerald"
-                    />
-                    <QuickActionCard
-                      href="/school/dashboard?tab=school-events"
-                      icon={FaSchool}
-                      title="School Events"
-                      description="Create internal competitions, register participants, run rounds, and prepare certificates."
-                      indicator={getIndicator("school.schoolEvents")}
-                      tone="cyan"
-                    />
-                    <QuickActionCard
-                      href="/school/dashboard?tab=student-notices"
-                      icon={FaBullhorn}
-                      title="Student Notices"
-                      description="Send announcements directly to every student in your school dashboard."
-                      tone="amber"
-                    />
-                    <QuickActionCard
-                      href="/school/dashboard?tab=magazine"
-                      icon={FaFeatherAlt}
-                      title="School Magazine"
-                      description="Review student writing and publish selected articles for the school community."
-                      indicator={getIndicator("school.magazine")}
-                      tone="purple"
-                    />
-                    <QuickActionCard
-                      href="/school/dashboard?tab=challenge-showcase"
-                      icon={FaTrophy}
-                      title="Pratyo Pulse"
-                      description="See platform-selected student challenge responses and promote strong work."
-                      indicator={getIndicator("school.pratyoPulse")}
-                      tone="emerald"
-                    />
-                  </div>
-                </section>
-
-                <div className="mt-8">
-                  <AlertBanner
-                    type="info"
-                    title="Production note"
-                    message="Keep daily announcements inside Student Notices, use School Magazine only for approved writing, and use Public Profile when you are ready to promote school achievements."
-                    action={
-                      <Link
-                        href="/school/dashboard?tab=showcase"
-                        className="inline-flex items-center gap-2 rounded-lg bg-[#0a2f66] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#123f82]"
-                      >
-                        Open public profile
-                        <FaExternalLinkAlt />
-                      </Link>
-                    }
-                  />
                 </div>
               </>
             )}

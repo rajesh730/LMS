@@ -36,7 +36,15 @@ export async function POST(request) {
 
     await connectDB();
 
-    const body = await request.json().catch(() => ({}));
+    let body;
+    try {
+      body = await request.json();
+    } catch (error) {
+      return NextResponse.json(
+        { message: "Invalid JSON in request body" },
+        { status: 400 }
+      );
+    }
     const action = normalizeAction(body);
     const requestedNotifications = normalizeNotifications(body);
 

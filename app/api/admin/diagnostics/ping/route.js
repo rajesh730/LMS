@@ -32,7 +32,15 @@ export async function POST(request) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await request?.json?.().catch(() => ({}));
+    let body;
+    try {
+      body = await request.json();
+    } catch (error) {
+      return NextResponse.json(
+        { message: "Invalid JSON in request body" },
+        { status: 400 }
+      );
+    }
     const channel = normalizeChannel(body);
 
     if (!channel) {

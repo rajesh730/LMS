@@ -78,7 +78,9 @@ export async function GET(request) {
         unsubscribers.forEach((unsubscribe) => unsubscribe());
         try {
           controller.close();
-        } catch (_error) {}
+        } catch (error) {
+          console.error("Error closing realtime stream:", error);
+        }
       };
 
       request.signal.addEventListener("abort", closeStream, { once: true });

@@ -13,6 +13,16 @@ const nextConfig = {
 
   // Production optimizations
   poweredByHeader: false, // Remove X-Powered-By header for security
+
+  async redirects() {
+    return [
+      {
+        source: "/challenges",
+        destination: "/events",
+        permanent: false,
+      },
+    ];
+  },
 };
 
 export default nextConfig;
