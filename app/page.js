@@ -6,7 +6,6 @@ import Event from "@/models/Event";
 import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
 import User from "@/models/User";
 import { getPublicFeedItems } from "@/lib/publicFeed";
-import { PUBLIC_FEED_VIEWER_COOKIE } from "@/lib/publicFeedViewer";
 import { getRotatingPartnerSpotlights } from "@/lib/partnerSpotlights";
 import { getActiveSchoolPromotions } from "@/lib/schoolPromotions";
 import PublicExplorePanel from "@/components/public/PublicExplorePanel";
@@ -26,7 +25,6 @@ import {
   FaTrophy,
   FaUsers,
 } from "react-icons/fa";
-import "@/models/PlatformChallenge";
 import "@/models/Student";
 import "@/models/User";
 
@@ -194,7 +192,7 @@ async function getHomepageStats() {
   return { schools, winners, writings, events };
 }
 
-async function getHomepageData(viewerId = "") {
+async function getHomepageData() {
   await connectDB();
 
   const [
@@ -207,7 +205,7 @@ async function getHomepageData(viewerId = "") {
     stats,
   ] = await Promise.all([
     getRecentWinnerHighlights(),
-    getPublicFeedItems({ limit: 6, types: ["pulse"], viewerId }),
+    getPublicFeedItems({ limit: 6, types: ["result", "event"] }),
     getRotatingPartnerSpotlights(4),
     getActiveSchoolPromotions("HOME_SPOTLIGHT", 5, { randomize: true }),
     getLatestStudentWritings(),
@@ -307,7 +305,7 @@ function FeedCard({ item, badge = "Published Writing", actions = true }) {
       <div className="mt-4">
         <div className="min-w-0">
           <h2 className="text-xl font-black leading-tight text-[#111827]">
-            {item.title || item.challengeTitle || "Selected student response"}
+            {item.title || "Published student writing"}
           </h2>
           <p className="mt-2 line-clamp-3 text-sm leading-6 text-[#4b5565]">
             {getPreview(item.content, 190)}
@@ -758,7 +756,6 @@ function MobileVoiceFeed({ story, writings }) {
 }
 
 export default async function Home() {
-  const viewerId = (await cookies()).get(PUBLIC_FEED_VIEWER_COOKIE)?.value || "";
   const {
     winnerHighlights,
     featuredResponses,
@@ -766,7 +763,7 @@ export default async function Home() {
     homeSpotlights,
     latestWritings,
     upcomingEvents,
-  } = await getHomepageData(viewerId);
+  } = await getHomepageData();
 
   const story = latestWritings[0] || DEFAULT_STORY;
   const feedItems =

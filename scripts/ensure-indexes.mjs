@@ -13,8 +13,6 @@ import ExternalOrganizer from "../models/ExternalOrganizer.js";
 import FAQ from "../models/FAQ.js";
 import Notice from "../models/Notice.js";
 import ParticipationRequest from "../models/ParticipationRequest.js";
-import PlatformChallenge from "../models/PlatformChallenge.js";
-import PlatformChallengeSubmission from "../models/PlatformChallengeSubmission.js";
 import RoundParticipant from "../models/RoundParticipant.js";
 import RoundSubmission from "../models/RoundSubmission.js";
 import SchoolConfig from "../models/SchoolConfig.js";
@@ -42,8 +40,6 @@ const models = [
   FAQ,
   Notice,
   ParticipationRequest,
-  PlatformChallenge,
-  PlatformChallengeSubmission,
   RoundParticipant,
   RoundSubmission,
   SchoolConfig,

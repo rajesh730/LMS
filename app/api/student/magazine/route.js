@@ -41,7 +41,7 @@ export async function GET() {
 
     const articles = await SchoolMagazineArticle.find({
       school: student.school,
-      isPublished: true,
+      isMagazinePublished: true,
       isDeleted: { $ne: true },
     })
       .populate("authorStudent", "name grade rollNumber")
@@ -54,8 +54,6 @@ export async function GET() {
         title: article.title,
         content: article.content,
         category: article.category,
-        submissionSource: article.submissionSource || "FREE_WRITE",
-        challengeTitle: article.challengeTitle || "",
         publishedAt: article.publishedAt,
         authorStudent: article.authorStudent
           ? {

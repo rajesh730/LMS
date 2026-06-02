@@ -7,9 +7,7 @@ import { publishWorkIndicatorsUpdate } from "@/lib/workIndicatorRealtime";
 
 const ALLOWED_SURFACES = new Set([
   "student.magazine",
-  "student.pratyoPulse",
   "student.events",
-  "school.pratyoPulse",
 ]);
 
 export async function POST(request) {

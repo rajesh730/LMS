@@ -22,20 +22,6 @@ jest.mock("@/models/EventNotice", () => ({
   },
 }));
 
-jest.mock("@/models/PlatformChallengeSubmission", () => ({
-  __esModule: true,
-  default: {
-    countDocuments: jest.fn(),
-  },
-}));
-
-jest.mock("@/models/PublicFeedReaction", () => ({
-  __esModule: true,
-  default: {
-    countDocuments: jest.fn(),
-  },
-}));
-
 jest.mock("@/models/Event", () => ({
   __esModule: true,
   default: {
@@ -71,8 +57,6 @@ jest.mock("@/lib/realtimeBus", () => ({
 import { getServerSession } from "next-auth";
 import Notice from "@/models/Notice";
 import EventNotice from "@/models/EventNotice";
-import PlatformChallengeSubmission from "@/models/PlatformChallengeSubmission";
-import PublicFeedReaction from "@/models/PublicFeedReaction";
 import Event from "@/models/Event";
 import {
   getRealtimeHealthSnapshot,
@@ -114,8 +98,6 @@ describe("admin diagnostics routes", () => {
       .mockResolvedValueOnce(3)
       .mockResolvedValueOnce(4);
     EventNotice.countDocuments.mockResolvedValue(5);
-    PlatformChallengeSubmission.countDocuments.mockResolvedValue(6);
-    PublicFeedReaction.countDocuments.mockResolvedValue(7);
     Event.countDocuments.mockResolvedValue(8);
 
     const response = await GET();
@@ -149,10 +131,6 @@ describe("admin diagnostics routes", () => {
       platformNoticeCount: 3,
       studentNoticeCount: 4,
       eventNoticeCount: 5,
-    });
-    expect(body.publicFeed).toEqual({
-      publicPulseCount: 6,
-      publicReactionCount: 7,
     });
     expect(body.publicEvents).toEqual({
       publicEventCount: 8,

@@ -3,7 +3,9 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
+import Student from "@/models/Student";
 import { buildMagazineLifecycle } from "@/lib/lifecycle";
+import { getEquivalentGradeValues } from "@/lib/schoolGrades";
 
 export async function GET(request) {
   try {
@@ -17,12 +19,24 @@ export async function GET(request) {
 
     const { searchParams } = new URL(request.url);
     const view = String(searchParams.get("view") || "published").toLowerCase();
+    const grade = String(searchParams.get("grade") || "ALL").trim();
 
     const query = { school: session.user.id, isDeleted: { $ne: true } };
     if (view === "approved") {
       query.status = "APPROVED";
+    } else if (view === "magazine") {
+      query.isMagazinePublished = true;
     } else {
       query.isPublished = true;
+    }
+    if (grade && grade.toUpperCase() !== "ALL") {
+      const gradeValues = getEquivalentGradeValues(grade);
+      const studentIds = await Student.find({
+        school: session.user.id,
+        isDeleted: { $ne: true },
+        grade: { $in: gradeValues },
+      }).distinct("_id");
+      query.authorStudent = { $in: studentIds };
     }
 
     const articles = await SchoolMagazineArticle.find(query)
@@ -42,10 +56,11 @@ export async function GET(request) {
         content: article.content,
         category: article.category,
         submissionSource: article.submissionSource || "FREE_WRITE",
-        challengeTitle: article.challengeTitle || "",
         status: article.status,
         isPublished: Boolean(article.isPublished),
+        isMagazinePublished: Boolean(article.isMagazinePublished),
         publishedAt: article.publishedAt,
+        magazinePublishedAt: article.magazinePublishedAt,
         reviewedAt: article.reviewedAt,
         updatedAt: article.updatedAt,
         lifecycle: buildMagazineLifecycle(article),

@@ -1,17 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import {
   FaArrowRight,
   FaAward,
   FaCalendarAlt,
-  FaEllipsisH,
   FaSchool,
-  FaThumbsUp,
   FaTrophy,
   FaUsers,
 } from "react-icons/fa";
-import useRealtimeChannel from "@/lib/useRealtimeChannel";
 
 function formatDate(value) {
   if (!value) return "Date to be announced";
@@ -83,138 +80,6 @@ function SchoolSpotlightCard({ promotion, compact = false, className = "" }) {
         </div>
       </div>
     </a>
-  );
-}
-
-function PulseFeedCard({ item }) {
-  const [expanded, setExpanded] = useState(false);
-  const [liked, setLiked] = useState(Boolean(item.likedByViewer));
-  const [reactionCount, setReactionCount] = useState(item.reactionCount ?? 0);
-  const [likePending, setLikePending] = useState(false);
-  const content = String(item.content || "");
-  const needsReadMore = content.length > 220;
-  const primaryLabel = item.challengeTitle || item.schoolName || "Pratyo Pulse";
-  const showTitle =
-    item.title &&
-    String(item.title).trim().toLowerCase() !==
-      String(primaryLabel).trim().toLowerCase();
-  const schoolInitials = getInitials(item.schoolName);
-
-  useEffect(() => {
-    setLiked(Boolean(item.likedByViewer));
-    setReactionCount(item.reactionCount ?? 0);
-  }, [item.likedByViewer, item.reactionCount]);
-
-  const toggleLike = async () => {
-    if (likePending) return;
-
-    const previousLiked = liked;
-    const previousReactionCount = reactionCount;
-    const optimisticLiked = !previousLiked;
-
-    setLikePending(true);
-    setLiked(optimisticLiked);
-    setReactionCount((current) =>
-      Math.max(0, current + (optimisticLiked ? 1 : -1))
-    );
-
-    try {
-      const res = await fetch(`/api/public/feed/${item.id}/like`, {
-        method: "POST",
-      });
-      const payload = await res.json().catch(() => ({}));
-
-      if (!res.ok) {
-        throw new Error(payload.message || "Failed to update like");
-      }
-
-      setLiked(Boolean(payload.liked));
-      setReactionCount(Math.max(0, Number(payload.reactionCount) || 0));
-    } catch (_error) {
-      setLiked(previousLiked);
-      setReactionCount(previousReactionCount);
-    } finally {
-      setLikePending(false);
-    }
-  };
-
-  return (
-    <article className="bg-white px-5 py-3.5 sm:px-6">
-      <div className="flex items-start gap-3">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[#dce9fa] bg-[#f8fbff] text-[13px] font-black uppercase tracking-[0.08em] text-[#0a2f66]">
-          {schoolInitials}
-        </div>
-        <div className="min-w-0 flex-1 flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="line-clamp-2 text-[15px] font-black leading-5 text-slate-950">
-              {primaryLabel}
-            </p>
-            <div className="mt-1 flex min-w-0 items-center gap-1.5 text-[11px] text-slate-500">
-              <span className="shrink-0 whitespace-nowrap">{formatDate(item.date)}</span>
-              <span className="shrink-0 text-slate-300">|</span>
-              <span className="truncate">{item.schoolName || "School community"}</span>
-            </div>
-          </div>
-          <button
-            type="button"
-            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
-            aria-label="Post options"
-          >
-            <FaEllipsisH className="text-xs" />
-          </button>
-        </div>
-      </div>
-      {showTitle ? (
-        <h3 className="mt-3 text-[18px] font-black leading-6 text-[#145ab2]">
-          {item.title}
-        </h3>
-      ) : null}
-      <p
-        className={`${showTitle ? "mt-3" : "mt-4"} whitespace-pre-line break-words text-[15px] leading-8 text-slate-800 ${
-          needsReadMore && !expanded ? "line-clamp-4" : ""
-        }`}
-      >
-        {content}
-        {needsReadMore && !expanded ? "..." : ""}
-      </p>
-      {needsReadMore && (
-        <button
-          type="button"
-          onClick={() => setExpanded((current) => !current)}
-          className="mt-2 text-sm font-semibold text-slate-500 transition hover:text-slate-700"
-        >
-          {expanded ? "Show less" : "Read more"}
-        </button>
-      )}
-      <div className="mt-4 flex items-center justify-between gap-3 border-t border-slate-200 pt-3 text-sm text-slate-500">
-        <button
-          type="button"
-          onClick={toggleLike}
-          disabled={likePending}
-          className={`inline-flex items-center gap-2 transition ${
-            liked ? "text-[#145ab2]" : "hover:text-slate-700"
-          } ${likePending ? "cursor-wait opacity-70" : ""}`}
-          aria-pressed={liked}
-        >
-          <FaThumbsUp />
-          {reactionCount}
-        </button>
-        {item.schoolHref ? (
-          <a
-            href={item.schoolHref}
-            className="inline-flex items-center gap-2 rounded-full bg-[#f6f9ff] px-3 py-1.5 text-xs font-black uppercase tracking-[0.1em] text-[#0a2f66] transition hover:bg-[#eaf2ff]"
-          >
-            <FaSchool />
-            Visit school
-          </a>
-        ) : (
-          <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.12em] text-slate-400">
-            <FaSchool />
-            School
-          </span>
-        )}
-      </div>
-    </article>
   );
 }
 
@@ -305,7 +170,6 @@ function EventFeedCard({ item }) {
 }
 
 function FeedCard({ item }) {
-  if (item.type === "pulse") return <PulseFeedCard item={item} />;
   if (item.type === "result") return <ResultFeedCard item={item} />;
   return <EventFeedCard item={item} />;
 }
@@ -323,27 +187,6 @@ export default function PublicFeedList({
   const [hasMore, setHasMore] = useState(initialHasMore);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
-  useRealtimeChannel(
-    "public-feed",
-    useCallback((payload) => {
-      if (payload.payload?.kind === "like-updated" && payload.payload?.itemId) {
-        setItems((current) =>
-          current.map((item) =>
-            item.id === payload.payload.itemId
-              ? {
-                  ...item,
-                  reactionCount: payload.payload.reactionCount,
-                }
-              : item
-          )
-        );
-      }
-    }, []),
-    {
-      enabled: feedType === "pulse" || feedType === "all",
-    }
-  );
 
   const loadMore = async () => {
     if (!hasMore || loading) return;
@@ -391,19 +234,10 @@ export default function PublicFeedList({
 
   return (
     <div
-      className={
-        feedType === "pulse"
-          ? "overflow-hidden border-y border-slate-200 bg-white"
-          : "space-y-4"
-      }
+      className="space-y-4"
     >
       {items.map((item, index) => (
-        <div
-          key={item.id}
-          className={
-            feedType === "pulse" && index > 0 ? "border-t border-slate-200" : ""
-          }
-        >
+        <div key={item.id}>
           <FeedCard item={item} />
         </div>
       ))}

@@ -25,8 +25,6 @@ function serializeArticle(article) {
     title: article.title,
     content: article.content,
     category: article.category,
-    submissionSource: article.submissionSource || "FREE_WRITE",
-    challengeTitle: article.challengeTitle || "",
     publishedAt: article.publishedAt,
     authorStudent: article.authorStudent
       ? {
@@ -71,7 +69,7 @@ export async function GET(_request, props) {
     const article = await SchoolMagazineArticle.findOne({
       _id: params.id,
       school: student.school,
-      isPublished: true,
+      isMagazinePublished: true,
       isDeleted: { $ne: true },
     })
       .populate("authorStudent", "name grade rollNumber")
@@ -88,7 +86,7 @@ export async function GET(_request, props) {
       _id: { $ne: article._id },
       school: student.school,
       category: article.category,
-      isPublished: true,
+      isMagazinePublished: true,
       isDeleted: { $ne: true },
     })
       .populate("authorStudent", "name grade rollNumber")

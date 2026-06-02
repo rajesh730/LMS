@@ -32,7 +32,16 @@ export async function PATCH(request, props) {
     const body = await request.json();
     const action = String(body.action || "").toUpperCase();
 
-    if (!["PUBLISH", "UNPUBLISH"].includes(action)) {
+    if (
+      ![
+        "PUBLISH",
+        "UNPUBLISH",
+        "PUBLISH_HOMEPAGE",
+        "UNPUBLISH_HOMEPAGE",
+        "PUBLISH_MAGAZINE",
+        "UNPUBLISH_MAGAZINE",
+      ].includes(action)
+    ) {
       return NextResponse.json(
         { message: "Invalid magazine action" },
         { status: 400 }
@@ -42,24 +51,38 @@ export async function PATCH(request, props) {
     const before = {
       isPublished: article.isPublished,
       publishedAt: article.publishedAt,
+      isMagazinePublished: article.isMagazinePublished,
+      magazinePublishedAt: article.magazinePublishedAt,
       status: article.status,
     };
 
-    if (action === "PUBLISH") {
+    if (["PUBLISH", "PUBLISH_HOMEPAGE", "PUBLISH_MAGAZINE"].includes(action)) {
       if (article.status !== "APPROVED") {
         return NextResponse.json(
           { message: "Only approved articles can be published" },
           { status: 400 }
         );
       }
+    }
 
+    if (action === "PUBLISH" || action === "PUBLISH_HOMEPAGE") {
       article.isPublished = true;
       article.publishedAt = article.publishedAt || new Date();
     }
 
-    if (action === "UNPUBLISH") {
+    if (action === "UNPUBLISH" || action === "UNPUBLISH_HOMEPAGE") {
       article.isPublished = false;
       article.publishedAt = null;
+    }
+
+    if (action === "PUBLISH_MAGAZINE") {
+      article.isMagazinePublished = true;
+      article.magazinePublishedAt = article.magazinePublishedAt || new Date();
+    }
+
+    if (action === "UNPUBLISH_MAGAZINE") {
+      article.isMagazinePublished = false;
+      article.magazinePublishedAt = null;
     }
 
     await article.save();
@@ -72,15 +95,23 @@ export async function PATCH(request, props) {
       after: {
         isPublished: article.isPublished,
         publishedAt: article.publishedAt,
+        isMagazinePublished: article.isMagazinePublished,
+        magazinePublishedAt: article.magazinePublishedAt,
         status: article.status,
       },
     });
 
+    const messageByAction = {
+      PUBLISH: "Article published to the homepage",
+      PUBLISH_HOMEPAGE: "Article published to the homepage",
+      UNPUBLISH: "Article removed from the homepage",
+      UNPUBLISH_HOMEPAGE: "Article removed from the homepage",
+      PUBLISH_MAGAZINE: "Article published to the school magazine",
+      UNPUBLISH_MAGAZINE: "Article removed from the school magazine",
+    };
+
     return NextResponse.json({
-      message:
-        action === "PUBLISH"
-          ? "Article published to the school magazine"
-          : "Article removed from the school magazine",
+      message: messageByAction[action] || "Article updated",
       article,
     });
   } catch (error) {

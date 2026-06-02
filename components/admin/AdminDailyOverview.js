@@ -5,8 +5,6 @@ import { useEffect, useMemo, useState } from "react";
 import {
   FaBell,
   FaCalendarAlt,
-  FaCheckCircle,
-  FaFeatherAlt,
   FaBullseye,
   FaHeadset,
   FaHandshake,
@@ -34,11 +32,8 @@ export default function AdminDailyOverview({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [notices, setNotices] = useState([]);
-  const [challenges, setChallenges] = useState([]);
-  const [challengeSubmissions, setChallengeSubmissions] = useState([]);
   const [totals, setTotals] = useState({
     notices: 0,
-    challengeSubmissions: 0,
   });
   const { getIndicator } = useWorkIndicators();
 
@@ -50,19 +45,13 @@ export default function AdminDailyOverview({
         setLoading(true);
         setError("");
 
-        const [noticesRes, challengesRes, submissionsRes] = await Promise.all([
+        const [noticesRes] = await Promise.all([
           fetch("/api/notices?scope=PLATFORM&limit=5", { cache: "no-store" }),
-          fetch("/api/admin/challenges", { cache: "no-store" }),
-          fetch("/api/admin/challenges/submissions?status=SUBMITTED&limit=5", {
-            cache: "no-store",
-          }),
         ]);
 
-        const [noticesPayload, challengesPayload, submissionsPayload] =
+        const [noticesPayload] =
           await Promise.all([
             noticesRes.json().catch(() => ({})),
-            challengesRes.json().catch(() => ({})),
-            submissionsRes.json().catch(() => ({})),
           ]);
 
         if (!active) return;
@@ -72,31 +61,15 @@ export default function AdminDailyOverview({
             ? noticesPayload.notices
             : []
         );
-        setChallenges(
-          challengesRes.ok && Array.isArray(challengesPayload.challenges)
-            ? challengesPayload.challenges
-            : []
-        );
-        setChallengeSubmissions(
-          submissionsRes.ok && Array.isArray(submissionsPayload.submissions)
-            ? submissionsPayload.submissions
-            : []
-        );
         setTotals({
           notices:
             noticesPayload.pagination?.totalItems ??
             noticesPayload.notices?.length ??
             0,
-          challengeSubmissions:
-            submissionsPayload.pagination?.totalItems ??
-            submissionsPayload.submissions?.length ??
-            0,
         });
 
         const failedSources = [
           !noticesRes.ok && "platform notices",
-          !challengesRes.ok && "student challenges",
-          !submissionsRes.ok && "challenge submissions",
         ].filter(Boolean);
 
         if (failedSources.length > 0) {
@@ -129,16 +102,12 @@ export default function AdminDailyOverview({
       )[0] || null,
     [activeEvents]
   );
-  const publishedChallenges = challenges.filter(
-    (challenge) => challenge.status === "PUBLISHED"
-  );
   const latestNotice = notices[0] || null;
-  const latestSubmission = challengeSubmissions[0] || null;
 
   if (loading) {
     return (
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
-        {[0, 1, 2, 3, 4, 5].map((item) => (
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {[0, 1, 2, 3].map((item) => (
           <div key={item} className="h-44 animate-pulse rounded-lg border border-[#d7cdbb] bg-white" />
         ))}
       </section>
@@ -167,7 +136,7 @@ export default function AdminDailyOverview({
           </div>
           <p className="max-w-xl text-sm leading-6 text-[#52657d]">
             A quick operational view for approvals, flagship events, notices,
-            partners, and student challenge publishing.
+            partners, and school publishing activity.
           </p>
         </div>
 
@@ -211,31 +180,6 @@ export default function AdminDailyOverview({
             }
             actionLabel="Open notices"
             tone="emerald"
-          />
-
-          <DashboardFocusCard
-            href="/admin/dashboard?tab=challenges"
-            icon={FaFeatherAlt}
-            badge={`${totals.challengeSubmissions} to review`}
-            title={latestSubmission?.title || "No challenge submissions waiting"}
-            description={
-              latestSubmission?.student?.name
-                ? `Submission from ${latestSubmission.student.name}.`
-                : "Review student responses and select the best for Pratyo Pulse."
-            }
-            actionLabel="Review challenges"
-            indicator={getIndicator("admin.challenges")}
-            tone="violet"
-          />
-
-          <DashboardFocusCard
-            href="/admin/dashboard?tab=challenges"
-            icon={FaCheckCircle}
-            badge={`${publishedChallenges.length} live`}
-            title="Student challenge program"
-            description="Published challenges are visible to students and can produce Pratyo Pulse responses."
-            actionLabel="Manage challenges"
-            tone="rose"
           />
 
           <DashboardFocusCard

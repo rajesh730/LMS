@@ -37,22 +37,22 @@ describe("POST /api/me/work-indicators/seen", () => {
     const response = await POST(
       new Request("http://localhost/api/me/work-indicators/seen", {
         method: "POST",
-        body: JSON.stringify({ surface: "student.pratyoPulse" }),
+        body: JSON.stringify({ surface: "student.magazine" }),
       })
     );
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(body.surface).toBe("student.pratyoPulse");
+    expect(body.surface).toBe("student.magazine");
     expect(body.seenAt).toBeTruthy();
     expect(connectDB).toHaveBeenCalledTimes(1);
     expect(UserSurfaceSeenState.updateOne).toHaveBeenCalledWith(
-      { user: "student-1", surface: "student.pratyoPulse" },
+      { user: "student-1", surface: "student.magazine" },
       expect.objectContaining({
         $set: expect.objectContaining({
           user: "student-1",
           role: "STUDENT",
-          surface: "student.pratyoPulse",
+          surface: "student.magazine",
         }),
       }),
       { upsert: true }

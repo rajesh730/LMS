@@ -6,8 +6,6 @@ import {
   FaBell,
   FaBookOpen,
   FaCalendarAlt,
-  FaFeatherAlt,
-  FaLightbulb,
   FaPenNib,
 } from "react-icons/fa";
 import DashboardFocusCard from "@/components/dashboard/DashboardFocusCard";
@@ -29,7 +27,6 @@ export default function StudentDailyOverview() {
   const [error, setError] = useState("");
   const [notices, setNotices] = useState([]);
   const [events, setEvents] = useState([]);
-  const [challenges, setChallenges] = useState([]);
   const [articles, setArticles] = useState([]);
   const { getIndicator } = useWorkIndicators();
 
@@ -41,19 +38,17 @@ export default function StudentDailyOverview() {
         }
         setError("");
 
-        const [noticeRes, eventRes, challengeRes, magazineRes] =
+        const [noticeRes, eventRes, magazineRes] =
           await Promise.all([
             fetch("/api/student/notifications?limit=5", { cache: "no-store" }),
             fetch("/api/student/eligible-events", { cache: "no-store" }),
-            fetch("/api/student/challenges", { cache: "no-store" }),
             fetch("/api/student/magazine", { cache: "no-store" }),
           ]);
 
-        const [noticePayload, eventPayload, challengePayload, magazinePayload] =
+        const [noticePayload, eventPayload, magazinePayload] =
           await Promise.all([
             noticeRes.json().catch(() => ({})),
             eventRes.json().catch(() => ({})),
-            challengeRes.json().catch(() => ({})),
             magazineRes.json().catch(() => ({})),
           ]);
 
@@ -67,11 +62,6 @@ export default function StudentDailyOverview() {
             ? eventPayload.data
             : []
         );
-        setChallenges(
-          challengeRes.ok && Array.isArray(challengePayload.challenges)
-            ? challengePayload.challenges
-            : []
-        );
         setArticles(
           magazineRes.ok && Array.isArray(magazinePayload.articles)
             ? magazinePayload.articles
@@ -81,7 +71,6 @@ export default function StudentDailyOverview() {
         const failedSources = [
           !noticeRes.ok && "notices",
           !eventRes.ok && "events",
-          !challengeRes.ok && "challenges",
           !magazineRes.ok && "magazine",
         ].filter(Boolean);
 
@@ -128,7 +117,6 @@ export default function StudentDailyOverview() {
     [events]
   );
 
-  const openChallenge = challenges.find((challenge) => !challenge.response);
   const latestNotice = notices[0] || null;
   const latestArticle = articles[0] || null;
 
@@ -171,7 +159,7 @@ export default function StudentDailyOverview() {
           </p>
         </div>
 
-        <div className="mt-5 grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
+        <div className="mt-5 grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <DashboardFocusCard
             href="/student/notices"
             icon={FaBell}
@@ -207,17 +195,10 @@ export default function StudentDailyOverview() {
           <DashboardFocusCard
             href="/student/writing"
             icon={FaPenNib}
-            badge={`${challenges.length} tasks`}
-            title={openChallenge?.title || "No pending writing task"}
-            description={
-              openChallenge?.prompt ||
-              "When the platform publishes a challenge, you can respond from My Writing."
-            }
-            meta={
-              openChallenge
-                ? `Deadline: ${formatDate(openChallenge.deadline)}`
-                : "You are caught up"
-            }
+            badge="Writing"
+            title="My Writing"
+            description="Write blog articles, opinions, research, creative writing, and poems for school review."
+            meta="Draft and submit"
             indicator={getIndicator("student.writing")}
             tone="blue"
           />
@@ -240,26 +221,9 @@ export default function StudentDailyOverview() {
             tone="violet"
           />
 
-          <DashboardFocusCard
-            href="/student/challenges"
-            icon={FaLightbulb}
-            badge={`${challenges.length} pulses`}
-            title="Pratyo Pulse"
-            description="See platform-selected student challenge responses and new public showcase updates."
-            meta="Public showcase"
-            indicator={getIndicator("student.pratyoPulse")}
-            tone="amber"
-          />
         </div>
 
         <div className="mt-5 flex flex-wrap gap-3 text-sm">
-          <Link
-            href="/student/challenges"
-            className="inline-flex items-center gap-2 rounded-lg border border-[#d7cdbb] bg-white px-3 py-2 font-semibold text-[#0a2f66] transition hover:bg-[#eaf2ff]"
-          >
-            <FaFeatherAlt />
-            View public challenge showcase
-          </Link>
           <Link
             href="/student/writing"
             className="inline-flex items-center gap-2 rounded-lg bg-[#0a2f66] px-3 py-2 font-semibold text-white transition hover:bg-[#123f82]"

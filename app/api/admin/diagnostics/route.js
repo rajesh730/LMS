@@ -4,8 +4,6 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import Notice from "@/models/Notice";
 import EventNotice from "@/models/EventNotice";
-import PlatformChallengeSubmission from "@/models/PlatformChallengeSubmission";
-import PublicFeedReaction from "@/models/PublicFeedReaction";
 import Event from "@/models/Event";
 import { getRealtimeHealthSnapshot } from "@/lib/realtimeBus";
 
@@ -22,8 +20,6 @@ export async function GET() {
       platformNoticeCount,
       studentNoticeCount,
       eventNoticeCount,
-      publicPulseCount,
-      publicReactionCount,
       publicEventCount,
     ] = await Promise.all([
       Notice.countDocuments({
@@ -45,11 +41,6 @@ export async function GET() {
         isDeleted: { $ne: true },
         round: null,
       }),
-      PlatformChallengeSubmission.countDocuments({
-        status: "SELECTED",
-        isPublic: true,
-      }),
-      PublicFeedReaction.countDocuments({}),
       Event.countDocuments({
         status: "APPROVED",
         visibility: "PUBLIC",
@@ -69,10 +60,6 @@ export async function GET() {
         platformNoticeCount,
         studentNoticeCount,
         eventNoticeCount,
-      },
-      publicFeed: {
-        publicPulseCount,
-        publicReactionCount,
       },
       publicEvents: {
         publicEventCount,

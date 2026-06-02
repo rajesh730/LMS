@@ -3,7 +3,7 @@ export default function manifest() {
     name: "Pratyo",
     short_name: "Pratyo",
     description:
-      "School events, results, showcases, certificates, notices, and student challenges in one connected platform.",
+      "School events, results, magazines, certificates, notices, and student writing in one connected platform.",
     start_url: "/",
     display: "standalone",
     background_color: "#071833",

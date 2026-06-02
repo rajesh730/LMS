@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   FaBookOpen,
-  FaBookmark,
   FaCalendarAlt,
   FaChevronRight,
   FaClock,
@@ -24,21 +23,15 @@ import EmptyState from "@/components/EmptyState";
 import LoadingState from "@/components/ui/LoadingState";
 import useRealtimeChannel from "@/lib/useRealtimeChannel";
 import useWorkIndicators from "@/lib/useWorkIndicators";
+import { normalizeWritingCategory } from "@/lib/writingCategories";
 
 const CATEGORY_META = {
-  ESSAY: {
-    label: "Essay",
+  BLOG_ARTICLE: {
+    label: "Blog Article",
     accent: "text-indigo-700",
     chip: "border-indigo-200 bg-indigo-50 text-indigo-700",
     art: "from-indigo-100 via-white to-sky-100",
     icon: FaBookOpen,
-  },
-  STORY: {
-    label: "Story",
-    accent: "text-rose-700",
-    chip: "border-rose-200 bg-rose-50 text-rose-700",
-    art: "from-rose-100 via-white to-orange-100",
-    icon: FaBookmark,
   },
   POEM: {
     label: "Poem",
@@ -47,8 +40,8 @@ const CATEGORY_META = {
     art: "from-fuchsia-100 via-white to-violet-100",
     icon: FaFeatherAlt,
   },
-  REPORT: {
-    label: "Report",
+  RESEARCH: {
+    label: "Research",
     accent: "text-emerald-700",
     chip: "border-emerald-200 bg-emerald-50 text-emerald-700",
     art: "from-emerald-100 via-white to-cyan-100",
@@ -61,7 +54,7 @@ const CATEGORY_META = {
     art: "from-amber-100 via-white to-yellow-100",
     icon: FaStar,
   },
-  OTHER: {
+  CREATIVE_WRITING: {
     label: "Creative Writing",
     accent: "text-purple-700",
     chip: "border-purple-200 bg-purple-50 text-purple-700",
@@ -71,8 +64,7 @@ const CATEGORY_META = {
 };
 
 function normalizeCategory(value) {
-  const category = String(value || "OTHER").toUpperCase();
-  return CATEGORY_META[category] ? category : "OTHER";
+  return normalizeWritingCategory(value);
 }
 
 function getCategoryMeta(value) {

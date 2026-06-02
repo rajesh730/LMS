@@ -3,8 +3,10 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
+import Student from "@/models/Student";
 import { buildMagazineLifecycle } from "@/lib/lifecycle";
 import { buildPagination, escapeRegex, parsePagination } from "@/lib/pagination";
+import { getEquivalentGradeValues } from "@/lib/schoolGrades";
 
 export async function GET(request) {
   try {
@@ -19,6 +21,7 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const status = String(searchParams.get("status") || "ALL").toUpperCase();
     const search = String(searchParams.get("search") || "").trim();
+    const grade = String(searchParams.get("grade") || "ALL").trim();
     const { page, limit, skip } = parsePagination(searchParams, {
       limit: 20,
       maxLimit: 100,
@@ -33,8 +36,16 @@ export async function GET(request) {
       query.$or = [
         { title: { $regex: safeSearch, $options: "i" } },
         { content: { $regex: safeSearch, $options: "i" } },
-        { challengeTitle: { $regex: safeSearch, $options: "i" } },
       ];
+    }
+    if (grade && grade.toUpperCase() !== "ALL") {
+      const gradeValues = getEquivalentGradeValues(grade);
+      const studentIds = await Student.find({
+        school: session.user.id,
+        isDeleted: { $ne: true },
+        grade: { $in: gradeValues },
+      }).distinct("_id");
+      query.authorStudent = { $in: studentIds };
     }
 
     const [totalSubmissions, submissions] = await Promise.all([
@@ -64,7 +75,6 @@ export async function GET(request) {
         content: article.content,
         category: article.category,
         submissionSource: article.submissionSource || "FREE_WRITE",
-        challengeTitle: article.challengeTitle || "",
         status: article.status,
         reviewNote: article.reviewNote || "",
         submittedAt: article.submittedAt,

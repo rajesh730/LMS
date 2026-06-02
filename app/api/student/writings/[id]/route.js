@@ -6,6 +6,7 @@ import Student from "@/models/Student";
 import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
 import { publishWorkIndicatorsUpdate } from "@/lib/workIndicatorRealtime";
 import { notifySchoolMagazineSubmitted } from "@/lib/magazineNotifications";
+import { normalizeWritingCategory } from "@/lib/writingCategories";
 
 function buildStudentLookup(session) {
   return {
@@ -56,9 +57,14 @@ export async function PATCH(request, props) {
       );
     }
 
-    if (!["DRAFT", "REJECTED", "SUBMITTED"].includes(article.status)) {
+    if (!["DRAFT", "REJECTED"].includes(article.status)) {
       return NextResponse.json(
-        { message: "This writing can no longer be changed" },
+        {
+          message:
+            article.status === "SUBMITTED"
+              ? "This writing is already with your school for review"
+              : "This writing can no longer be changed",
+        },
         { status: 400 }
       );
     }
@@ -66,7 +72,7 @@ export async function PATCH(request, props) {
     const body = await request.json();
     const nextTitle = String(body.title || "").trim();
     const nextContent = String(body.content || "").trim();
-    const nextCategory = String(body.category || article.category).toUpperCase();
+    const nextCategory = normalizeWritingCategory(body.category || article.category);
     const requestedStatus =
       String(body.status || "").toUpperCase() === "SUBMITTED"
         ? "SUBMITTED"
@@ -241,7 +247,7 @@ export async function POST(request, props) {
       authorStudent: student._id,
       title: `${article.title} (Revision)`,
       content: article.content,
-      category: article.category,
+      category: normalizeWritingCategory(article.category),
       submissionSource: "FREE_WRITE",
       status: "DRAFT",
     });

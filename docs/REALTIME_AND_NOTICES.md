@@ -1,12 +1,11 @@
 # Realtime And Notices
 
-This document explains how the current realtime, likes, and notice-delivery system works in Pratyo, how to configure it, and how to QA it safely.
+This document explains how the current realtime and notice-delivery system works in Pratyo, how to configure it, and how to QA it safely.
 
 ## Scope
 
 This guide covers:
 
-- public feed like sync
 - student and school notification delivery
 - persisted read and unread state
 - public event notice realtime updates
@@ -17,14 +16,12 @@ This guide does not cover:
 
 - general event CRUD
 - certificate generation
-- challenge review workflows outside public feed reactions
+- magazine review workflows
 
 ## Main Building Blocks
 
 ### Core data models
 
-- `models/PublicFeedReaction.js`
-  Stores server-backed reactions for public pulse posts.
 - `models/Notice.js`
   Stores platform notices and school notices.
 - `models/EventNotice.js`
@@ -39,7 +36,7 @@ This guide does not cover:
 - `lib/noticeRealtime.js`
   Publishes notice-related realtime events to the right channels.
 - `lib/publicFeed.js`
-  Builds public feed payloads, including persisted reaction counts and viewer state.
+  Builds public feed payloads for public events and results.
 - `lib/studentNotifications.js`
   Builds student notification payloads with `isRead` and `unreadCount`.
 - `lib/schoolNotifications.js`
@@ -71,7 +68,7 @@ This guide does not cover:
 Current channels in use:
 
 - `public-feed`
-  Used for public like-count refresh.
+  Used for public feed refresh events.
 - `student-notifications`
   Used for student bell and student notice board refresh.
 - `school-notifications`
@@ -114,18 +111,15 @@ If Redis vars are present:
 
 ## Flow Summary
 
-### 1. Public likes
+### 1. Public feed refresh
 
-When a visitor likes a public pulse post:
+When public feed content changes:
 
-1. `POST /api/public/feed/[id]/like` stores or removes `PublicFeedReaction`.
-2. The API recalculates the server reaction count.
-3. The API publishes a `public-feed` realtime event.
-4. Open public feed clients refresh that item count immediately.
+1. The server publishes a `public-feed` realtime event.
+2. Open public feed clients refresh their visible event and result cards.
 
 Key files:
 
-- `app/api/public/feed/[id]/like/route.js`
 - `components/public/PublicFeedList.js`
 
 ### 2. Student and school notices
@@ -281,12 +275,11 @@ Run these checks before shipping realtime or notice changes.
    - event toast appears
 4. Archive the notice and confirm it disappears on refresh event flow.
 
-### E. Public like flow
+### E. Public feed flow
 
 1. Open the public home page in two browsers.
-2. Like a public pulse post in browser A.
-3. Confirm browser B updates the count shortly after.
-4. Unlike in browser A and confirm browser B decrements.
+2. Send a diagnostics ping for `public-feed`.
+3. Confirm browser B receives the feed refresh signal shortly after.
 
 ### F. Read and unread controls
 
@@ -311,11 +304,11 @@ Use this check in staging before running more than one app instance in productio
    - Redis publish attempts increase after pings
    - Redis poll attempts increase while streams are open
    - Redis publish and poll failures stay at `0`
-7. Repeat the public like check with browser A and browser B routed to different instances.
+7. Repeat the public feed ping check with browser A and browser B routed to different instances.
 
 If the ping only reaches the same instance that sent it, Redis sharing is not active.
 
-Diagnostic pings use `kind: "diagnostic-ping"`. They do not create notices, likes, or user-facing records.
+Diagnostic pings use `kind: "diagnostic-ping"`. They do not create notices or user-facing records.
 
 ## Common Failure Modes
 

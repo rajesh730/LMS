@@ -10,7 +10,6 @@ import {
   FaHeartbeat,
   FaRedoAlt,
   FaSatelliteDish,
-  FaThumbsUp,
 } from "react-icons/fa";
 import useRealtimeChannel from "@/lib/useRealtimeChannel";
 
@@ -23,7 +22,7 @@ const DIAGNOSTIC_CHANNELS = [
   {
     id: "public-feed",
     label: "Public feed",
-    description: "Verifies like/feed realtime delivery.",
+    description: "Verifies public feed realtime delivery.",
   },
   {
     id: "student-notifications",
@@ -266,7 +265,7 @@ export default function AdminDiagnosticsPanel() {
               Platform Diagnostics
             </h1>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-[#52657d]">
-              Verify realtime delivery, likes, notices, and core public counters without
+              Verify realtime delivery, notices, and core public counters without
               jumping across multiple accounts and screens.
             </p>
           </div>
@@ -311,7 +310,7 @@ export default function AdminDiagnosticsPanel() {
         </div>
       ) : summary ? (
         <>
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             <StatCard
               icon={FaBell}
               label="Platform Notices"
@@ -328,11 +327,6 @@ export default function AdminDiagnosticsPanel() {
               label="Public Events"
               value={summary.publicEvents?.publicEventCount ?? 0}
               tone="amber"
-            />
-            <StatCard
-              icon={FaThumbsUp}
-              label="Public Likes"
-              value={summary.publicFeed?.publicReactionCount ?? 0}
             />
           </div>
 
@@ -377,12 +371,6 @@ export default function AdminDiagnosticsPanel() {
                   </span>
                 </p>
                 <p className="mt-2">
-                  Public pulse posts:{" "}
-                  <span className="font-semibold text-[#17120a]">
-                    {summary.publicFeed?.publicPulseCount ?? 0}
-                  </span>
-                </p>
-                <p className="mt-2">
                   Student-targeted notices:{" "}
                   <span className="font-semibold text-[#17120a]">
                     {summary.notifications?.studentNoticeCount ?? 0}
@@ -395,7 +383,7 @@ export default function AdminDiagnosticsPanel() {
                 <p className="mt-2 leading-6">
                   Use the ping buttons to verify each channel can receive a published
                   realtime event on demand. Diagnostic payloads use a safe kind and do
-                  not create notices or likes.
+                  not create notices or user-facing records.
                 </p>
               </div>
 

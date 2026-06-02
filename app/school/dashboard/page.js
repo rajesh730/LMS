@@ -93,14 +93,6 @@ const SchoolMagazineManager = dynamic(
     ),
   }
 );
-const DashboardChallengeShowcase = dynamic(
-  () => import("@/components/challenges/DashboardChallengeShowcase"),
-  {
-    loading: () => (
-      <LoadingState title="Loading Pratyo Pulse" message="Preparing selected student responses." />
-    ),
-  }
-);
 import {
   FaClock,
   FaSchool,
@@ -531,8 +523,6 @@ function SchoolDashboardContent() {
               <SchoolEventWorkspace mode="platform" />
             )}
             {activeTab === "school-events" && <SchoolEventWorkspace mode="school" />}
-            {activeTab === "challenge-showcase" && <DashboardChallengeShowcase />}
-
             {activeTab === "student-notices" && <StudentNoticeManager />}
             {activeTab === "notices" && <SchoolNoticeBoard />}
             {activeTab === "magazine" && <SchoolMagazineManager />}

@@ -8,7 +8,6 @@ import DashboardLayout from "@/components/DashboardLayout";
 import AdminPartnerWorkspace from "@/components/partners/AdminPartnerWorkspace";
 import CredentialsModal from "@/components/CredentialsModal";
 import NoticeManager from "@/components/NoticeManager";
-import StudentChallengeManager from "@/components/admin/StudentChallengeManager";
 import SchoolPromotionManager from "@/components/admin/SchoolPromotionManager";
 import PageHeader from "@/components/ui/PageHeader";
 import AlertBanner from "@/components/ui/AlertBanner";
@@ -616,7 +615,6 @@ function AdminDashboardContent() {
         />
       )}
 
-      {activeTab === "challenges" && <StudentChallengeManager />}
 
       {activeTab === "spotlight" && <SchoolPromotionManager />}
 

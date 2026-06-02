@@ -8,7 +8,6 @@ import {
   FaClipboardCheck,
   FaFeatherAlt,
   FaBullhorn,
-  FaTrophy,
 } from "react-icons/fa";
 import DashboardFocusCard from "@/components/dashboard/DashboardFocusCard";
 import AlertBanner from "@/components/ui/AlertBanner";
@@ -30,12 +29,10 @@ export default function SchoolDailyOverview() {
   const [invitations, setInvitations] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [events, setEvents] = useState([]);
-  const [challengeWinners, setChallengeWinners] = useState([]);
   const [totals, setTotals] = useState({
     submissions: 0,
     invitations: 0,
     notifications: 0,
-    challengeWinners: 0,
   });
 
   const load = useCallback(
@@ -51,7 +48,6 @@ export default function SchoolDailyOverview() {
           invitationsRes,
           notificationsRes,
           eventsRes,
-          challengeWinnersRes,
         ] = await Promise.all([
           fetch("/api/school/magazine-submissions?status=SUBMITTED&limit=5", {
             cache: "no-store",
@@ -61,7 +57,6 @@ export default function SchoolDailyOverview() {
           }),
           fetch("/api/school/notifications?limit=5", { cache: "no-store" }),
           fetch("/api/events", { cache: "no-store" }),
-          fetch("/api/school/challenge-winners?limit=5", { cache: "no-store" }),
         ]);
 
         const [
@@ -69,13 +64,11 @@ export default function SchoolDailyOverview() {
           invitationsPayload,
           notificationsPayload,
           eventsPayload,
-          challengeWinnersPayload,
         ] = await Promise.all([
           submissionsRes.json().catch(() => ({})),
           invitationsRes.json().catch(() => ({})),
           notificationsRes.json().catch(() => ({})),
           eventsRes.json().catch(() => ({})),
-          challengeWinnersRes.json().catch(() => ({})),
         ]);
 
         setSubmissions(
@@ -98,12 +91,6 @@ export default function SchoolDailyOverview() {
             ? eventsPayload.events
             : []
         );
-        setChallengeWinners(
-          challengeWinnersRes.ok &&
-            Array.isArray(challengeWinnersPayload.submissions)
-            ? challengeWinnersPayload.submissions
-            : []
-        );
         setTotals({
           submissions:
             submissionsPayload.pagination?.totalItems ??
@@ -117,10 +104,6 @@ export default function SchoolDailyOverview() {
             notificationsPayload.pagination?.totalItems ??
             notificationsPayload.notifications?.length ??
             0,
-          challengeWinners:
-            challengeWinnersPayload.pagination?.totalItems ??
-            challengeWinnersPayload.submissions?.length ??
-            0,
         });
 
         const failedSources = [
@@ -128,7 +111,6 @@ export default function SchoolDailyOverview() {
           !invitationsRes.ok && "event invitations",
           !notificationsRes.ok && "notifications",
           !eventsRes.ok && "events",
-          !challengeWinnersRes.ok && "challenge showcase",
         ].filter(Boolean);
 
         if (failedSources.length > 0) {
@@ -170,14 +152,10 @@ export default function SchoolDailyOverview() {
       (a, b) => new Date(a.date || 0) - new Date(b.date || 0)
     )[0] || null;
   const latestNotice = notifications[0] || null;
-  const winnerToAdd = challengeWinners.find(
-    (submission) => !submission.addedToSchoolMagazine
-  );
-
   if (loading) {
     return (
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-        {[0, 1, 2, 3, 4].map((item) => (
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {[0, 1, 2, 3].map((item) => (
           <div
             key={item}
             className="h-40 animate-pulse rounded-2xl border border-[#e6eaf7] bg-white"
@@ -215,7 +193,7 @@ export default function SchoolDailyOverview() {
           </Link>
         </div>
 
-        <div className="mt-5 grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
+        <div className="mt-5 grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <DashboardFocusCard
             href="/school/dashboard?tab=magazine"
             icon={FaFeatherAlt}
@@ -271,19 +249,6 @@ export default function SchoolDailyOverview() {
             tone="rose"
           />
 
-          <DashboardFocusCard
-            href="/school/dashboard?tab=challenge-showcase"
-            icon={FaTrophy}
-            badge={`${totals.challengeWinners} selected`}
-            title={winnerToAdd?.title || "No showcase responses to add"}
-            description={
-              winnerToAdd?.student?.name
-                ? `Selected response by ${winnerToAdd.student.name}.`
-                : "Platform-selected student responses can be added to your school magazine."
-            }
-            actionLabel="Open showcase"
-            tone="rose"
-          />
         </div>
 
         <div className="mt-5 flex flex-wrap gap-3 text-sm">

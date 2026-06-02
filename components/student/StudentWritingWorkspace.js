@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   FaBold,
   FaBookOpen,
-  FaBookmark,
   FaCalendarAlt,
   FaCheckCircle,
   FaClock,
@@ -29,6 +28,7 @@ import {
   FaQuoteRight,
   FaRegFileAlt,
   FaRedo,
+  FaSchool,
   FaStar,
   FaTags,
   FaTimes,
@@ -43,10 +43,14 @@ import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import LoadingState from "@/components/ui/LoadingState";
 import useRealtimeChannel from "@/lib/useRealtimeChannel";
 import useWorkIndicators from "@/lib/useWorkIndicators";
+import {
+  WRITING_CATEGORIES,
+  normalizeWritingCategory,
+} from "@/lib/writingCategories";
 
 const CATEGORY_META = {
-  ESSAY: {
-    label: "Essay",
+  BLOG_ARTICLE: {
+    label: "Blog Article",
     icon: FaBookOpen,
     accent: "text-indigo-700",
     chip: "border-indigo-200 bg-indigo-50 text-indigo-700",
@@ -59,8 +63,8 @@ const CATEGORY_META = {
     chip: "border-fuchsia-200 bg-fuchsia-50 text-fuchsia-700",
     art: "from-fuchsia-100 via-white to-violet-100",
   },
-  REPORT: {
-    label: "Report",
+  RESEARCH: {
+    label: "Research",
     icon: FaLayerGroup,
     accent: "text-emerald-700",
     chip: "border-emerald-200 bg-emerald-50 text-emerald-700",
@@ -73,14 +77,7 @@ const CATEGORY_META = {
     chip: "border-amber-200 bg-amber-50 text-amber-700",
     art: "from-amber-100 via-white to-yellow-100",
   },
-  STORY: {
-    label: "Story",
-    icon: FaBookmark,
-    accent: "text-rose-700",
-    chip: "border-rose-200 bg-rose-50 text-rose-700",
-    art: "from-rose-100 via-white to-orange-100",
-  },
-  OTHER: {
+  CREATIVE_WRITING: {
     label: "Creative Writing",
     icon: FaPenNib,
     accent: "text-purple-700",
@@ -116,11 +113,17 @@ const STATUS_META = {
   },
 };
 
-const CATEGORY_OPTIONS = Object.keys(CATEGORY_META);
+const LIBRARY_FILTERS = [
+  ["ALL", "All Writing"],
+  ["FREE", "Free Writing"],
+  ["SCHOOL", "School Writing"],
+  ["MAGAZINE", "School Magazine"],
+];
+
+const CATEGORY_OPTIONS = WRITING_CATEGORIES;
 
 function normalizeCategory(value) {
-  const category = String(value || "OTHER").toUpperCase();
-  return CATEGORY_META[category] ? category : "OTHER";
+  return normalizeWritingCategory(value);
 }
 
 function getCategoryMeta(value) {
@@ -129,6 +132,66 @@ function getCategoryMeta(value) {
 
 function getStatusMeta(value) {
   return STATUS_META[String(value || "DRAFT").toUpperCase()] || STATUS_META.DRAFT;
+}
+
+function getLibraryBucket(writing) {
+  if (writing.isMagazinePublished) return "MAGAZINE";
+  if (
+    writing.submissionSource === "FREE_WRITE" &&
+    String(writing.status || "DRAFT").toUpperCase() === "DRAFT"
+  ) {
+    return "FREE";
+  }
+  return "SCHOOL";
+}
+
+function getLibraryMeta(writing) {
+  const bucket = getLibraryBucket(writing);
+  const meta = {
+    FREE: {
+      label: "Free Writing",
+      icon: FaPenNib,
+      chip: "border-rose-200 bg-rose-50 text-rose-800",
+    },
+    SCHOOL: {
+      label: "School Writing",
+      icon: FaSchool,
+      chip: "border-indigo-200 bg-indigo-50 text-indigo-800",
+    },
+    MAGAZINE: {
+      label: "School Magazine",
+      icon: FaBookOpen,
+      chip: "border-emerald-200 bg-emerald-50 text-emerald-800",
+    },
+  };
+  return meta[bucket];
+}
+
+function getWorkflowMessage(writing) {
+  const bucket = getLibraryBucket(writing);
+  const status = String(writing.status || "DRAFT").toUpperCase();
+
+  if (bucket === "MAGAZINE") {
+    return "Published in your school magazine and visible to students from your school.";
+  }
+
+  if (status === "DRAFT") {
+    return "Private draft. Keep editing, then send it to school review when it is ready.";
+  }
+
+  if (status === "SUBMITTED") {
+    return "Sent to school review. Your school will approve it for publishing or send it back with notes.";
+  }
+
+  if (status === "APPROVED") {
+    return "Approved by your school. It is waiting for the school to publish it in the magazine.";
+  }
+
+  if (status === "REJECTED") {
+    return "Returned with review notes. Revise it, then send it back to school review.";
+  }
+
+  return "Writing is saved in your library.";
 }
 
 function formatDate(value) {
@@ -170,11 +233,8 @@ function buildEmptyForm() {
     id: "",
     title: "",
     content: "",
-    category: "ESSAY",
+    category: "BLOG_ARTICLE",
     status: "DRAFT",
-    challengeId: "",
-    challengeTitle: "",
-    challengePrompt: "",
   };
 }
 
@@ -213,7 +273,12 @@ function CategoryArt({ category, className = "" }) {
   );
 }
 
-function WritingStudioHero({ student, writings, counts, totalWords, onNewDraft }) {
+function WritingStudioHero({
+  student,
+  writings,
+  libraryCounts,
+  onNewDraft,
+}) {
   return (
     <section className="relative overflow-hidden rounded-2xl border border-[#e7dcc8] bg-white shadow-[0_18px_50px_rgba(10,47,102,0.08)]">
       <div className="grid gap-6 p-5 md:p-8 xl:grid-cols-[1fr_0.86fr]">
@@ -227,20 +292,19 @@ function WritingStudioHero({ student, writings, counts, totalWords, onNewDraft }
           </h1>
           <p className="mt-4 max-w-xl text-sm leading-6 text-[#52657d] md:text-base">
             Express your ideas, stories, and creativity. Your words can become a
-            draft, a school magazine article, or a platform challenge response.
+            draft, a school magazine article, or a platform prompt response.
           </p>
 
           <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {[
-              [FaFileAlt, writings.length, "Writings", "purple"],
-              [FaRegFileAlt, counts.DRAFT, "Drafts", "pink"],
-              [FaPaperPlane, counts.SUBMITTED, "Review", "amber"],
-              [FaEye, totalWords, "Words", "emerald"],
+              [FaPenNib, libraryCounts.FREE, "Free Writing", "rose"],
+              [FaSchool, libraryCounts.SCHOOL, "School Writing", "indigo"],
+              [FaBookOpen, libraryCounts.MAGAZINE, "School Magazine", "emerald"],
             ].map(([Icon, value, label, tone]) => {
               const tones = {
                 purple: "border-purple-100 bg-purple-50 text-purple-700",
-                pink: "border-pink-100 bg-pink-50 text-pink-700",
-                amber: "border-amber-100 bg-amber-50 text-amber-700",
+                rose: "border-rose-100 bg-rose-50 text-rose-700",
+                indigo: "border-indigo-100 bg-indigo-50 text-indigo-700",
                 emerald: "border-emerald-100 bg-emerald-50 text-emerald-700",
               };
               return (
@@ -301,76 +365,101 @@ function WritingStudioHero({ student, writings, counts, totalWords, onNewDraft }
   );
 }
 
-function ChallengeStrip({ challenges, loading, onRespond }) {
-  if (loading) {
-    return (
-      <LoadingState
-        title="Loading challenges"
-        message="Preparing active platform writing topics."
-      />
-    );
-  }
-
-  if (challenges.length === 0) {
-    return (
-      <section className="rounded-xl border border-[#e7dcc8] bg-white p-5 shadow-sm">
-        <EmptyState
-          icon={FaLightbulb}
-          title="No active challenges"
-          description="Platform writing topics will appear here when super admin publishes a new challenge."
-        />
-      </section>
-    );
-  }
+function WritingWorkflowPanel({ libraryCounts, onSelectLibrary, onSelectStatus }) {
+  const steps = [
+    {
+      id: "ALL",
+      title: "All Writing",
+      count: libraryCounts.ALL,
+      icon: FaFileAlt,
+      tone: "border-purple-100 bg-purple-50 text-purple-800",
+      next: "See every draft, review item, magazine article, and platform publication together.",
+      action: () => {
+        onSelectLibrary("ALL");
+        onSelectStatus("ALL");
+      },
+    },
+    {
+      id: "FREE",
+      title: "Free Writing",
+      count: libraryCounts.FREE,
+      icon: FaPenNib,
+      tone: "border-rose-100 bg-rose-50 text-rose-800",
+      next: "Private drafts stay here until the student sends them to school review.",
+      action: () => {
+        onSelectLibrary("FREE");
+        onSelectStatus("DRAFT");
+      },
+    },
+    {
+      id: "SCHOOL",
+      title: "School Review",
+      count: libraryCounts.SCHOOL,
+      icon: FaSchool,
+      tone: "border-indigo-100 bg-indigo-50 text-indigo-800",
+      next: "School reviews submitted work, approves strong pieces, or returns notes for revision.",
+      action: () => {
+        onSelectLibrary("SCHOOL");
+        onSelectStatus("ALL");
+      },
+    },
+    {
+      id: "MAGAZINE",
+      title: "School Magazine",
+      count: libraryCounts.MAGAZINE,
+      icon: FaBookOpen,
+      tone: "border-emerald-100 bg-emerald-50 text-emerald-800",
+      next: "Approved and published articles become visible in the school magazine.",
+      action: () => {
+        onSelectLibrary("MAGAZINE");
+        onSelectStatus("APPROVED");
+      },
+    },
+  ];
 
   return (
-    <section className="space-y-3">
-      {challenges.map((challenge) => (
-        <article
-          key={challenge.id}
-          className="flex flex-col gap-4 rounded-xl border border-amber-200 bg-gradient-to-r from-amber-50 via-white to-rose-50 p-4 shadow-sm md:flex-row md:items-center md:justify-between"
-        >
-          <div className="flex min-w-0 items-start gap-4">
-            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-amber-400 text-white shadow-sm">
-              <FaTrophy className="text-xl" />
-            </span>
-            <div className="min-w-0">
-              <p className="text-[11px] font-black uppercase text-amber-700">
-                Active Challenge
-              </p>
-              <h2 className="mt-1 line-clamp-1 text-base font-black text-[#17120a]">
-                {challenge.title}
-              </h2>
-              <p className="mt-1 line-clamp-2 text-sm leading-6 text-[#52657d]">
-                {challenge.prompt}
-              </p>
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-3 md:justify-end">
-            {challenge.deadline && (
-              <div className="rounded-lg border-l border-amber-200 px-4 text-sm">
-                <p className="text-xs font-semibold text-[#52657d]">
-                  Submit before
-                </p>
-                <p className="font-black text-red-600">
-                  {formatShortDate(challenge.deadline)}
-                </p>
+    <section className="rounded-xl border border-[#e7dcc8] bg-white p-5 shadow-sm">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h2 className="text-lg font-black text-[#17120a]">Writing Workflow</h2>
+          <p className="mt-1 text-sm leading-6 text-[#52657d]">
+            Draft freely, send polished work to school review, publish approved
+            pieces in the magazine, and track platform-selected responses.
+          </p>
+        </div>
+        <span className="text-xs font-black uppercase text-purple-700">
+          4 clear views
+        </span>
+      </div>
+
+      <div className="mt-4 grid gap-3 lg:grid-cols-4">
+        {steps.map((step) => {
+          const Icon = step.icon;
+          return (
+            <button
+              key={step.id}
+              type="button"
+              onClick={step.action}
+              className={`min-h-36 rounded-lg border p-4 text-left transition hover:-translate-y-0.5 hover:shadow-sm ${step.tone}`}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/85">
+                  <Icon />
+                </span>
+                <strong className="text-2xl font-black text-[#17120a]">
+                  {step.count || 0}
+                </strong>
               </div>
-            )}
-            {challenge.response ? (
-              <StatusPill status={challenge.response.status} />
-            ) : (
-              <button
-                type="button"
-                onClick={() => onRespond(challenge)}
-                className="inline-flex items-center gap-2 rounded-lg border border-purple-200 bg-white px-4 py-2 text-sm font-bold text-purple-700 transition hover:bg-purple-50"
-              >
-                View Details
-              </button>
-            )}
-          </div>
-        </article>
-      ))}
+              <h3 className="mt-3 text-sm font-black text-[#17120a]">
+                {step.title}
+              </h3>
+              <p className="mt-2 text-xs font-semibold leading-5 text-[#40516b]">
+                {step.next}
+              </p>
+            </button>
+          );
+        })}
+      </div>
     </section>
   );
 }
@@ -463,37 +552,20 @@ function WritingEditor({
           className="min-h-12 rounded-lg border border-[#e0d4bf] bg-white px-4 text-sm text-[#17120a] outline-none transition focus:border-purple-400"
         />
 
-        {!form.challengeId ? (
-          <select
-            value={form.category}
-            onChange={(event) =>
-              setForm((current) => ({ ...current, category: event.target.value }))
-            }
-            className="min-h-12 rounded-lg border border-[#e0d4bf] bg-white px-4 text-sm text-[#17120a] outline-none transition focus:border-purple-400"
-          >
-            {CATEGORY_OPTIONS.map((option) => (
-              <option key={option} value={option}>
-                {CATEGORY_META[option].label}
-              </option>
-            ))}
-          </select>
-        ) : (
-          <div className="flex min-h-12 items-center rounded-lg border border-purple-200 bg-purple-50 px-4 text-sm font-bold text-purple-700">
-            Challenge
-          </div>
-        )}
+        <select
+          value={form.category}
+          onChange={(event) =>
+            setForm((current) => ({ ...current, category: event.target.value }))
+          }
+          className="min-h-12 rounded-lg border border-[#e0d4bf] bg-white px-4 text-sm text-[#17120a] outline-none transition focus:border-purple-400"
+        >
+          {CATEGORY_OPTIONS.map((option) => (
+            <option key={option} value={option}>
+              {CATEGORY_META[option].label}
+            </option>
+          ))}
+        </select>
       </div>
-
-      {form.challengeId && (
-        <div className="mx-4 mb-4 rounded-lg border border-purple-200 bg-purple-50 p-4 text-sm text-purple-800">
-          <p className="font-bold">Challenge response: {form.challengeTitle}</p>
-          {form.challengePrompt && (
-            <p className="mt-2 line-clamp-3 whitespace-pre-wrap leading-6 text-[#40516b]">
-              {form.challengePrompt}
-            </p>
-          )}
-        </div>
-      )}
 
       <EditorToolbar />
 
@@ -537,17 +609,15 @@ function WritingEditor({
         </div>
 
         <div className="flex flex-wrap gap-2">
-          {!form.challengeId && (
-            <button
-              type="button"
-              disabled={saving}
-              onClick={() => onSave("DRAFT")}
-              className="inline-flex items-center gap-2 rounded-lg border border-purple-200 bg-white px-4 py-2 text-sm font-bold text-purple-700 transition hover:bg-purple-50 disabled:opacity-60"
-            >
-              <FaEdit />
-              {saving ? "Saving..." : form.id ? "Update Draft" : "Save Draft"}
-            </button>
-          )}
+          <button
+            type="button"
+            disabled={saving}
+            onClick={() => onSave("DRAFT")}
+            className="inline-flex items-center gap-2 rounded-lg border border-purple-200 bg-white px-4 py-2 text-sm font-bold text-purple-700 transition hover:bg-purple-50 disabled:opacity-60"
+          >
+            <FaEdit />
+            {saving ? "Saving..." : form.id ? "Update Draft" : "Save Draft"}
+          </button>
           <button
             type="button"
             disabled={saving}
@@ -557,13 +627,11 @@ function WritingEditor({
             <FaPaperPlane />
             {saving
               ? "Submitting..."
-              : form.challengeId
-              ? "Submit Response"
               : form.status === "REJECTED"
               ? "Edit & Resubmit"
-              : "Submit for Review"}
+              : "Send to School Review"}
           </button>
-          {(form.id || form.title || form.content || form.challengeId) && (
+          {(form.id || form.title || form.content) && (
             <button
               type="button"
               onClick={onReset}
@@ -588,17 +656,20 @@ function WritingListItem({
 }) {
   const categoryMeta = getCategoryMeta(writing.category);
   const statusMeta = getStatusMeta(writing.status);
-  const canEdit = ["DRAFT", "REJECTED", "SUBMITTED"].includes(writing.status);
-  const canDelete = ["DRAFT", "REJECTED"].includes(writing.status);
+  const libraryMeta = getLibraryMeta(writing);
+  const LibraryIcon = libraryMeta.icon;
+  const canEdit = ["DRAFT", "REJECTED"].includes(writing.status);
+  const canDelete =
+    ["DRAFT", "REJECTED"].includes(writing.status);
   const canRevise = writing.status === "APPROVED";
   const actionLabel =
     writing.status === "APPROVED"
       ? "Read"
-      : writing.status === "DRAFT"
+    : writing.status === "DRAFT"
       ? "Edit"
-      : writing.status === "REJECTED"
+    : writing.status === "REJECTED"
       ? "Revise"
-      : "Continue";
+      : "Read";
 
   return (
     <article className="grid gap-4 rounded-xl border border-[#e7dcc8] bg-white p-3 shadow-sm transition hover:border-purple-200 hover:shadow-md md:grid-cols-[128px_1fr_auto]">
@@ -612,6 +683,12 @@ function WritingListItem({
           >
             {categoryMeta.label}
           </span>
+          <span
+            className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold ${libraryMeta.chip}`}
+          >
+            <LibraryIcon />
+            {libraryMeta.label}
+          </span>
         </div>
         <h3 className="mt-2 line-clamp-1 text-base font-black text-[#17120a]">
           {writing.title}
@@ -619,16 +696,14 @@ function WritingListItem({
         <p className="mt-1 line-clamp-2 text-sm leading-6 text-[#52657d]">
           {getPreview(writing.content, 160)}
         </p>
-        {writing.submissionSource === "PLATFORM_CHALLENGE" && (
-          <p className="mt-1 text-xs font-bold text-purple-700">
-            Challenge: {writing.challengeTitle || "Student Challenge"}
-          </p>
-        )}
         {writing.reviewNote && (
           <p className="mt-2 line-clamp-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold leading-5 text-red-700">
             School note: {writing.reviewNote}
           </p>
         )}
+        <p className="mt-2 line-clamp-2 text-xs font-semibold leading-5 text-[#52657d]">
+          {getWorkflowMessage(writing)}
+        </p>
         <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs font-semibold text-[#75869b]">
           <span>{formatShortDate(writing.updatedAt)}</span>
           <span>{getWordCount(writing.content)} words</span>
@@ -693,7 +768,7 @@ function WritingListItem({
   );
 }
 
-function SidebarPanels({ counts, totalWords }) {
+function SidebarPanels({ counts, libraryCounts, totalWords }) {
   const tips = [
     ["Write from the heart", "Your authentic voice connects with readers.", FaHeart],
     ["Edit and reflect", "Good writing becomes clearer after revision.", FaEdit],
@@ -749,6 +824,25 @@ function SidebarPanels({ counts, totalWords }) {
           </div>
         </div>
       </section>
+
+      <section className="rounded-xl border border-[#e7dcc8] bg-white p-4 shadow-sm">
+        <h2 className="text-sm font-black text-[#17120a]">Writing Breakdown</h2>
+        <div className="mt-4 space-y-3 text-sm">
+          {[
+            ["Free Writing", libraryCounts.FREE, FaPenNib],
+            ["School Writing", libraryCounts.SCHOOL, FaSchool],
+            ["School Magazine", libraryCounts.MAGAZINE, FaBookOpen],
+          ].map(([label, value, Icon]) => (
+            <div key={label} className="flex items-center justify-between gap-3">
+              <span className="inline-flex items-center gap-2 text-[#52657d]">
+                <Icon className="text-xs text-purple-600" />
+                {label}
+              </span>
+              <strong className="text-[#17120a]">{value}</strong>
+            </div>
+          ))}
+        </div>
+      </section>
     </aside>
   );
 }
@@ -757,15 +851,14 @@ export default function StudentWritingWorkspace() {
   const { markSurfaceSeen } = useWorkIndicators();
   const [student, setStudent] = useState(null);
   const [writings, setWritings] = useState([]);
-  const [challenges, setChallenges] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [challengesLoading, setChallengesLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [form, setForm] = useState(buildEmptyForm());
   const [readingWriting, setReadingWriting] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [activeLibrary, setActiveLibrary] = useState("ALL");
   const [activeStatus, setActiveStatus] = useState("ALL");
   const [editorMode, setEditorMode] = useState("WRITE");
 
@@ -789,39 +882,19 @@ export default function StudentWritingWorkspace() {
     }
   }, []);
 
-  const loadChallenges = useCallback(async ({ silent = false } = {}) => {
-    try {
-      if (!silent) setChallengesLoading(true);
-      const res = await fetch("/api/student/challenges", { cache: "no-store" });
-      const payload = await res.json().catch(() => ({}));
-
-      if (!res.ok) {
-        throw new Error(payload.message || "Failed to load student challenges");
-      }
-
-      setChallenges(Array.isArray(payload.challenges) ? payload.challenges : []);
-    } catch (loadError) {
-      setError(loadError.message || "Failed to load student challenges");
-    } finally {
-      if (!silent) setChallengesLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
     void markSurfaceSeen("student.writing");
   }, [markSurfaceSeen]);
 
   useEffect(() => {
     void loadWritings();
-    void loadChallenges();
-  }, [loadChallenges, loadWritings]);
+  }, [loadWritings]);
 
   useRealtimeChannel(
     ["student-notifications", "work-indicators"],
     useCallback(() => {
       void loadWritings({ silent: true });
-      void loadChallenges({ silent: true });
-    }, [loadChallenges, loadWritings])
+    }, [loadWritings])
   );
 
   const resetForm = useCallback(() => {
@@ -838,75 +911,16 @@ export default function StudentWritingWorkspace() {
       id: writing.id,
       title: writing.title || "",
       content: writing.content || "",
-      category: writing.category || "ESSAY",
+      category: normalizeCategory(writing.category),
       status: writing.status || "DRAFT",
-      challengeId: writing.challenge || "",
-      challengeTitle: writing.challengeTitle || "",
-      challengePrompt: "",
     });
   }, []);
-
-  const startChallengeResponse = useCallback(
-    (challenge) => {
-      setSuccess("");
-      setError("");
-      setEditorMode("WRITE");
-
-      if (challenge.response?.id) {
-        const existingWriting = writings.find(
-          (writing) => writing.id === challenge.response.id
-        );
-        if (existingWriting) {
-          startEdit(existingWriting);
-          return;
-        }
-      }
-
-      setForm({
-        ...buildEmptyForm(),
-        title: challenge.title,
-        category: "ESSAY",
-        challengeId: challenge.id,
-        challengeTitle: challenge.title,
-        challengePrompt: challenge.prompt,
-      });
-    },
-    [startEdit, writings]
-  );
 
   const handleSave = async (nextStatus = "DRAFT") => {
     try {
       setSaving(true);
       setError("");
       setSuccess("");
-
-      if (form.challengeId) {
-        if (nextStatus !== "SUBMITTED") {
-          setError("Challenge responses are submitted directly to platform review.");
-          return;
-        }
-
-        const res = await fetch("/api/student/challenge-submissions", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            challengeId: form.challengeId,
-            title: form.title,
-            content: form.content,
-            category: form.category,
-          }),
-        });
-
-        const payload = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          throw new Error(payload.message || "Failed to submit challenge response");
-        }
-
-        setSuccess(payload.message || "Challenge response submitted");
-        resetForm();
-        await loadChallenges();
-        return;
-      }
 
       const url = form.id
         ? `/api/student/writings/${form.id}`
@@ -921,7 +935,6 @@ export default function StudentWritingWorkspace() {
           content: form.content,
           category: form.category,
           status: nextStatus,
-          challengeId: form.challengeId,
         }),
       });
 
@@ -933,7 +946,6 @@ export default function StudentWritingWorkspace() {
       setSuccess(payload.message || "Writing saved");
       resetForm();
       await loadWritings();
-      await loadChallenges();
     } catch (saveError) {
       setError(saveError.message || "Failed to save writing");
     } finally {
@@ -1004,14 +1016,31 @@ export default function StudentWritingWorkspace() {
     return nextCounts;
   }, [writings]);
 
+  const libraryCounts = useMemo(() => {
+    const nextCounts = {
+      ALL: writings.length,
+      FREE: 0,
+      SCHOOL: 0,
+      MAGAZINE: 0,
+    };
+    writings.forEach((writing) => {
+      const bucket = getLibraryBucket(writing);
+      nextCounts[bucket] = (nextCounts[bucket] || 0) + 1;
+    });
+    return nextCounts;
+  }, [writings]);
+
   const filteredWritings = useMemo(
     () =>
-      activeStatus === "ALL"
-        ? writings
-        : writings.filter(
-            (writing) => String(writing.status || "").toUpperCase() === activeStatus
-          ),
-    [activeStatus, writings]
+      writings.filter((writing) => {
+        const matchesLibrary =
+          activeLibrary === "ALL" || getLibraryBucket(writing) === activeLibrary;
+        const matchesStatus =
+          activeStatus === "ALL" ||
+          String(writing.status || "").toUpperCase() === activeStatus;
+        return matchesLibrary && matchesStatus;
+      }),
+    [activeLibrary, activeStatus, writings]
   );
 
   const totalWords = useMemo(
@@ -1020,28 +1049,26 @@ export default function StudentWritingWorkspace() {
   );
 
   const activeEditingLabel = useMemo(() => {
-    if (form.challengeId) return "Challenge Response";
     if (!form.id) return "New Draft";
     return form.status === "REJECTED" ? "Revision Draft" : "Editing Draft";
-  }, [form.challengeId, form.id, form.status]);
+  }, [form.id, form.status]);
 
   return (
     <div className="space-y-5 text-[#27344a]">
       <WritingStudioHero
         student={student}
         writings={writings}
-        counts={counts}
-        totalWords={totalWords}
+        libraryCounts={libraryCounts}
         onNewDraft={resetForm}
       />
 
       {error && <AlertBanner type="error" title="Action needed" message={error} />}
       {success && <AlertBanner type="success" message={success} />}
 
-      <ChallengeStrip
-        challenges={challenges}
-        loading={challengesLoading}
-        onRespond={startChallengeResponse}
+      <WritingWorkflowPanel
+        libraryCounts={libraryCounts}
+        onSelectLibrary={setActiveLibrary}
+        onSelectStatus={setActiveStatus}
       />
 
       <div className="grid gap-5 xl:grid-cols-[1fr_310px]">
@@ -1061,10 +1088,11 @@ export default function StudentWritingWorkspace() {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h2 className="text-lg font-black text-[#17120a]">
-                  My Writings
+                  Writing Library
                 </h2>
                 <p className="mt-1 text-sm text-[#52657d]">
-                  Drafts, school review items, published pieces, and revisions.
+                  Free writing, school review work, and school magazine pieces
+                  in one manageable view.
                 </p>
               </div>
               <select
@@ -1072,12 +1100,56 @@ export default function StudentWritingWorkspace() {
                 onChange={(event) => setActiveStatus(event.target.value)}
                 className="min-h-10 rounded-lg border border-[#e0d4bf] bg-white px-3 text-sm font-bold text-[#40516b] outline-none transition focus:border-purple-400"
               >
-                <option value="ALL">Sort: Latest</option>
+                <option value="ALL">All statuses</option>
                 <option value="DRAFT">Drafts</option>
                 <option value="SUBMITTED">Under Review</option>
                 <option value="APPROVED">Published</option>
                 <option value="REJECTED">Needs Revision</option>
               </select>
+            </div>
+
+            <div className="mt-4 grid gap-3 md:grid-cols-5">
+              {LIBRARY_FILTERS.map(([bucket, label]) => {
+                const active = activeLibrary === bucket;
+                const Icon =
+                  bucket === "FREE"
+                    ? FaPenNib
+                    : bucket === "SCHOOL"
+                    ? FaSchool
+                    : bucket === "MAGAZINE"
+                    ? FaBookOpen
+                    : FaFileAlt;
+                return (
+                  <button
+                    key={bucket}
+                    type="button"
+                    onClick={() => setActiveLibrary(bucket)}
+                    className={`flex min-h-20 items-center justify-between rounded-lg border px-4 py-3 text-left transition ${
+                      active
+                        ? "border-purple-300 bg-purple-50 text-purple-800 shadow-sm"
+                        : "border-[#e7dcc8] bg-white text-[#40516b] hover:border-purple-200"
+                    }`}
+                  >
+                    <span>
+                      <span className="block text-xs font-black uppercase">
+                        {label}
+                      </span>
+                      <strong className="mt-1 block text-2xl font-black text-[#17120a]">
+                        {libraryCounts[bucket] || 0}
+                      </strong>
+                    </span>
+                    <span
+                      className={`flex h-10 w-10 items-center justify-center rounded-lg ${
+                        active
+                          ? "bg-white text-purple-700"
+                          : "bg-[#f8fbff] text-[#75869b]"
+                      }`}
+                    >
+                      <Icon />
+                    </span>
+                  </button>
+                );
+              })}
             </div>
 
             <div className="mt-4 flex flex-wrap gap-2">
@@ -1114,7 +1186,7 @@ export default function StudentWritingWorkspace() {
                 <EmptyState
                   icon={FaFileAlt}
                   title="No writing yet"
-                  description="Start your first draft or respond to a platform challenge when one is available."
+                  description="Start your first draft or respond to a platform prompt when one is available."
                 />
               </div>
             ) : filteredWritings.length === 0 ? (
@@ -1122,7 +1194,7 @@ export default function StudentWritingWorkspace() {
                 <EmptyState
                   icon={FaFileAlt}
                   title="Nothing in this status"
-                  description="Choose another status to see more writing."
+                  description="Choose another category or status to see more writing."
                 />
               </div>
             ) : (
@@ -1142,7 +1214,11 @@ export default function StudentWritingWorkspace() {
           </section>
         </main>
 
-        <SidebarPanels counts={counts} totalWords={totalWords} />
+        <SidebarPanels
+          counts={counts}
+          libraryCounts={libraryCounts}
+          totalWords={totalWords}
+        />
       </div>
 
       {readingWriting && (
@@ -1159,10 +1235,20 @@ export default function StudentWritingWorkspace() {
                   >
                     {getCategoryMeta(readingWriting.category).label}
                   </span>
+                  <span
+                    className={`inline-flex rounded-full border px-3 py-1 text-xs font-bold ${
+                      getLibraryMeta(readingWriting).chip
+                    }`}
+                  >
+                    {getLibraryMeta(readingWriting).label}
+                  </span>
                 </div>
                 <h2 className="mt-4 text-3xl font-black leading-tight text-[#17120a] md:text-4xl">
                   {readingWriting.title}
                 </h2>
+                <p className="mt-3 max-w-2xl rounded-lg border border-[#e7dcc8] bg-[#fffdf8] px-4 py-3 text-sm font-semibold leading-6 text-[#52657d]">
+                  {getWorkflowMessage(readingWriting)}
+                </p>
                 <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-sm font-semibold text-[#52657d]">
                   <span className="inline-flex items-center gap-1.5">
                     <FaCalendarAlt />

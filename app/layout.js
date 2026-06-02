@@ -11,11 +11,11 @@ export const metadata = {
     template: "%s | Pratyo",
   },
   description:
-    "School events, results, showcases, certificates, notices, and student challenges in one connected platform.",
+    "School events, results, magazines, certificates, notices, and student writing in one connected platform.",
   applicationName: "Pratyo",
   keywords: [
     "school events",
-    "student challenges",
+    "student writing",
     "school magazine",
     "certificates",
     "talent platform",
@@ -35,7 +35,7 @@ export const metadata = {
   openGraph: {
     title: "Pratyo",
     description:
-      "School events, results, showcases, certificates, notices, and student challenges in one connected platform.",
+      "School events, results, magazines, certificates, notices, and student writing in one connected platform.",
     url: siteUrl,
     siteName: "Pratyo",
     type: "website",
@@ -52,7 +52,7 @@ export const metadata = {
     card: "summary_large_image",
     title: "Pratyo",
     description:
-      "School events, results, showcases, certificates, notices, and student challenges in one connected platform.",
+      "School events, results, magazines, certificates, notices, and student writing in one connected platform.",
     images: ["/pratyo-logo.png"],
   },
   manifest: "/manifest.webmanifest",

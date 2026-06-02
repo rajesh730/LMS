@@ -19,7 +19,6 @@ import {
   FaChalkboardTeacher,
   FaHeadset,
   FaBullseye,
-  FaLightbulb,
   FaUsers,
   FaTimes,
   FaHandshake,
@@ -31,18 +30,15 @@ import useWorkIndicators from "@/lib/useWorkIndicators";
 const HREF_INDICATOR_KEYS = {
   "/admin/dashboard?tab=approvals": "admin.approvals",
   "/admin/dashboard?tab=events": "admin.events",
-  "/admin/dashboard?tab=challenges": "admin.challenges",
   "/admin/support": "admin.support",
   "/admin/dashboard?tab=spotlight": "admin.spotlight",
   "/school/dashboard?tab=platform-events": "school.platformEvents",
   "/school/dashboard?tab=school-events": "school.schoolEvents",
-  "/school/dashboard?tab=challenge-showcase": "school.pratyoPulse",
   "/school/dashboard?tab=student-notices": "school.studentNotices",
   "/school/dashboard?tab=notices": "school.receivedNotices",
   "/school/dashboard?tab=magazine": "school.magazine",
   "/school/support": "school.support",
   "/student/events": "student.events",
-  "/student/challenges": "student.pratyoPulse",
   "/student/notices": "student.notices",
   "/student/writing": "student.writing",
   "/student/magazine": "student.magazine",
@@ -63,7 +59,7 @@ const SCHOOL_NAV_GROUPS = [
   },
   {
     title: "Public Showcase",
-    names: ["School Magazine", "Pratyo Pulse", "Public Profile"],
+    names: ["School Magazine", "Public Profile"],
   },
   {
     title: "Platform",
@@ -98,7 +94,6 @@ export default function Sidebar({
     { name: "Platform Events", href: "/admin/dashboard?tab=events", icon: FaCalendarAlt },
     { name: "Partners", href: "/admin/dashboard?tab=partners", icon: FaHandshake },
     { name: "Notices", href: "/admin/dashboard?tab=notices", icon: FaBullhorn },
-    { name: "Student Challenges", href: "/admin/dashboard?tab=challenges", icon: FaFeatherAlt },
     { name: "School Spotlight", href: "/admin/dashboard?tab=spotlight", icon: FaBullseye },
     { name: "Diagnostics", href: "/admin/diagnostics", icon: FaHeartbeat },
     { name: "Support Tickets", href: "/admin/support", icon: FaHeadset },
@@ -118,11 +113,6 @@ export default function Sidebar({
       name: "School Events",
       href: "/school/dashboard?tab=school-events",
       icon: FaCalendarAlt,
-    },
-    {
-      name: "Pratyo Pulse",
-      href: "/school/dashboard?tab=challenge-showcase",
-      icon: FaLightbulb,
     },
     {
       name: "Student Notices",
@@ -158,7 +148,6 @@ export default function Sidebar({
   const studentLinks = [
     { name: "My Activity", href: "/student/dashboard", icon: FaSchool },
     { name: "Events", href: "/student/events", icon: FaCalendarAlt },
-    { name: "Pratyo Pulse", href: "/student/challenges", icon: FaLightbulb },
     { name: "Notices", href: "/student/notices", icon: FaBell },
     { name: "My Writing", href: "/student/writing", icon: FaFeatherAlt },
     { name: "School Magazine", href: "/student/magazine", icon: FaBookOpen },

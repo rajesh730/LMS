@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { ALL_WRITING_CATEGORIES } from "@/lib/writingCategories";
 
 const SchoolMagazineArticleSchema = new mongoose.Schema(
   {
@@ -28,26 +29,14 @@ const SchoolMagazineArticleSchema = new mongoose.Schema(
     },
     category: {
       type: String,
-      enum: ["ESSAY", "POEM", "REPORT", "OPINION", "STORY", "OTHER"],
-      default: "ESSAY",
+      enum: ALL_WRITING_CATEGORIES,
+      default: "BLOG_ARTICLE",
     },
     submissionSource: {
       type: String,
-      enum: ["FREE_WRITE", "PLATFORM_CHALLENGE"],
+      enum: ["FREE_WRITE"],
       default: "FREE_WRITE",
       index: true,
-    },
-    challenge: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "PlatformChallenge",
-      default: null,
-      index: true,
-    },
-    challengeTitle: {
-      type: String,
-      default: "",
-      trim: true,
-      maxlength: 180,
     },
     status: {
       type: String,
@@ -78,6 +67,15 @@ const SchoolMagazineArticleSchema = new mongoose.Schema(
       type: String,
       enum: ["SCHOOL_ONLY", "REGISTERED_SCHOOLS"],
       default: "SCHOOL_ONLY",
+    },
+    isMagazinePublished: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    magazinePublishedAt: {
+      type: Date,
+      default: null,
     },
     isPublished: {
       type: Boolean,
@@ -118,10 +116,6 @@ SchoolMagazineArticleSchema.index({
 SchoolMagazineArticleSchema.index({
   authorStudent: 1,
   updatedAt: -1,
-});
-SchoolMagazineArticleSchema.index({
-  authorStudent: 1,
-  challenge: 1,
 });
 SchoolMagazineArticleSchema.index({
   school: 1,

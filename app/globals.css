@@ -209,7 +209,7 @@ td {
   font-weight: 500;
 }
 
-/* Pulse-inspired app theme. These overrides keep layouts intact while moving
+/* Pratyo app theme. These overrides keep layouts intact while moving
    legacy dark Tailwind surfaces into the warmer production palette. */
 [class*="bg-slate-950"],
 [class*="bg-slate-900"],

@@ -12,7 +12,6 @@ Work indicators are the small badges that tell a user where something needs atte
 
 - `admin.approvals`: pending school accounts.
 - `admin.events`: pending platform event proposals and pending events.
-- `admin.challenges`: submitted platform challenge responses needing review.
 - `admin.support`: open support tickets.
 - `admin.spotlight`: school spotlight requests or campaigns needing platform attention.
 
@@ -22,7 +21,6 @@ These usually clear when the admin completes the action, not simply by opening t
 
 - `school.receivedNotices`: unread platform or event notices sent to the school. Clears through mark-read actions.
 - `school.magazine`: student writing submitted to the school magazine. Clears when articles are approved, rejected, or otherwise removed from the submitted queue.
-- `school.pratyoPulse`: platform-selected student challenge responses that are new to the school since the surface was last opened.
 - `school.platformEvents`: pending platform event invitations.
 - `school.schoolEvents`: pending participation requests for school-run events.
 - `school.support`: open school support tickets.
@@ -33,7 +31,6 @@ These usually clear when the admin completes the action, not simply by opening t
 - `student.writing`: draft or rejected writing that needs student action.
 - `student.events`: event updates published since the student last opened the events workspace.
 - `student.magazine`: newly published magazine articles since the student last opened the magazine.
-- `student.pratyoPulse`: selected public challenge responses since the student last opened Pratyo Pulse.
 
 ## Implementation Map
 

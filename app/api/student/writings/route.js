@@ -6,6 +6,7 @@ import Student from "@/models/Student";
 import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
 import { publishWorkIndicatorsUpdate } from "@/lib/workIndicatorRealtime";
 import { notifySchoolMagazineSubmitted } from "@/lib/magazineNotifications";
+import { normalizeWritingCategory } from "@/lib/writingCategories";
 
 function buildStudentLookup(session) {
   return {
@@ -51,19 +52,23 @@ export async function GET() {
 
     return NextResponse.json({
       writings: writings.map((article) => ({
-        id: String(article._id),
-        title: article.title,
-        content: article.content,
-        category: article.category,
-        submissionSource: article.submissionSource || "FREE_WRITE",
-        challenge: article.challenge ? String(article.challenge) : null,
-        challengeTitle: article.challengeTitle || "",
-        status: article.status,
-        reviewNote: article.reviewNote || "",
-        submittedAt: article.submittedAt,
-        reviewedAt: article.reviewedAt,
-        updatedAt: article.updatedAt,
-        createdAt: article.createdAt,
+          id: String(article._id),
+          sourceType: "SCHOOL_MAGAZINE_ARTICLE",
+          title: article.title,
+          content: article.content,
+          category: article.category,
+          submissionSource: article.submissionSource || "FREE_WRITE",
+          status: article.status,
+          reviewNote: article.reviewNote || "",
+          isPublished: Boolean(article.isPublished),
+          isMagazinePublished: Boolean(article.isMagazinePublished),
+          isFeatured: Boolean(article.isFeatured),
+          publicationScope: article.publicationScope || "SCHOOL_ONLY",
+          submittedAt: article.submittedAt,
+          reviewedAt: article.reviewedAt,
+          publishedAt: article.publishedAt,
+          updatedAt: article.updatedAt,
+          createdAt: article.createdAt,
       })),
       student: {
         id: String(student._id),
@@ -105,8 +110,7 @@ export async function POST(request) {
     const body = await request.json();
     const title = String(body.title || "").trim();
     const content = String(body.content || "").trim();
-    const category = String(body.category || "ESSAY").toUpperCase();
-    const challengeId = String(body.challengeId || "").trim();
+    const category = normalizeWritingCategory(body.category);
     const requestedStatus =
       String(body.status || "").toUpperCase() === "SUBMITTED"
         ? "SUBMITTED"
@@ -115,13 +119,6 @@ export async function POST(request) {
     if (!title || !content) {
       return NextResponse.json(
         { message: "Title and content are required" },
-        { status: 400 }
-      );
-    }
-
-    if (challengeId) {
-      return NextResponse.json(
-        { message: "Challenge responses must use platform challenge submission" },
         { status: 400 }
       );
     }
