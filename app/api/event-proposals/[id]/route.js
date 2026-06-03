@@ -7,6 +7,7 @@ import EventProposal, { EVENT_PROPOSAL_ROLES } from "@/models/EventProposal";
 import ExternalOrganizer from "@/models/ExternalOrganizer";
 import { syncEventSchoolInvitations } from "@/lib/eventInvitations";
 import { validateEventDates } from "@/lib/eventDates";
+import { publishWorkIndicatorsUpdate } from "@/lib/workIndicatorRealtime";
 
 export const dynamic = "force-dynamic";
 
@@ -99,6 +100,16 @@ function recordStatusChange(proposal, nextStatus, session, action, note = "") {
   proposal.reviewedBy = session.user.id;
   proposal.reviewedAt = new Date();
   proposal.archivedAt = nextStatus === "ARCHIVED" ? new Date() : null;
+}
+
+function restoredProposalStatus(proposal) {
+  if (proposal.linkedEvent || proposal.status === "CONVERTED_TO_EVENT") {
+    return "CONVERTED_TO_EVENT";
+  }
+  if (proposal.organizer) {
+    return "APPROVED";
+  }
+  return "UNDER_REVIEW";
 }
 
 async function approveOrganizerForProposal(proposal, body) {
@@ -298,21 +309,19 @@ export async function PUT(req, props) {
           body.adminNotes || ""
         );
       }
-    } else if (action === "reopen") {
-      if (proposal.linkedEvent || proposal.status === "CONVERTED_TO_EVENT") {
-        return NextResponse.json(
-          {
-            success: false,
-            message:
-              "Published proposals cannot be reopened. Archive them if they no longer need attention.",
-          },
-          { status: 400 }
-        );
-      }
-
+    } else if (action === "restore") {
       recordStatusChange(
         proposal,
-        "UNDER_REVIEW",
+        restoredProposalStatus(proposal),
+        session,
+        action,
+        body.adminNotes || ""
+      );
+      proposal.adminNotes = body.adminNotes ?? proposal.adminNotes;
+    } else if (action === "reopen") {
+      recordStatusChange(
+        proposal,
+        restoredProposalStatus(proposal),
         session,
         action,
         body.adminNotes || ""
@@ -392,6 +401,12 @@ export async function PUT(req, props) {
     }
 
     await proposal.save();
+
+    publishWorkIndicatorsUpdate("partner-proposal-updated", {
+      proposalId: String(proposal._id),
+      status: proposal.status,
+      action,
+    });
 
     const populated = await EventProposal.findById(proposal._id)
       .populate("organizer", "organizationName slug verificationStatus profileVisibility")

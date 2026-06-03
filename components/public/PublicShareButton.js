@@ -15,11 +15,6 @@ export default function PublicShareButton({
     const url = new URL(href, window.location.origin).toString();
 
     try {
-      if (navigator.share) {
-        await navigator.share({ title, url });
-        return;
-      }
-
       if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(url);
         setCopied(true);
@@ -27,14 +22,14 @@ export default function PublicShareButton({
         return;
       }
     } catch (error) {
-      if (error?.name === "AbortError") return;
+      console.error(`Failed to copy ${title} link`, error);
     }
 
-    window.location.href = url;
+    window.prompt("Copy this link", url);
   }
 
   return (
-    <button type="button" onClick={handleShare} className={className}>
+    <button type="button" onClick={handleShare} className={className} aria-live="polite">
       {copied ? <FaCheck /> : <FaShareAlt />}
       {copied ? "Link copied" : label}
     </button>

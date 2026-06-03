@@ -57,7 +57,7 @@ export default function StudentLogin() {
 
   if (status === "authenticated") {
     return (
-      <div className="min-h-screen bg-[#f5f1e8] px-4 py-6 text-[#17120a]">
+      <div className="min-h-screen bg-[#fbfcff] px-4 py-6 text-[#17120a]">
         <div className="mx-auto mb-8 flex max-w-5xl flex-wrap items-center justify-between gap-3">
           <Link href="/" className="text-sm font-semibold text-[#0a2f66] hover:underline">
             Back to home
@@ -125,11 +125,8 @@ export default function StudentLogin() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f5f1e8] px-4 py-6 text-[#17120a]">
-      {/* Background decorative elements */}
-      <div className="absolute top-0 right-0 w-72 h-72 rounded-full bg-[#2f7fdb]/15 mix-blend-multiply blur-3xl animate-blob" />
-      <div className="absolute bottom-0 left-0 w-72 h-72 rounded-full bg-[#0a2f66]/10 mix-blend-multiply blur-3xl animate-blob animation-delay-2000" />
-      <div className="absolute top-1/2 left-1/2 w-72 h-72 rounded-full bg-white/70 mix-blend-multiply blur-3xl animate-blob animation-delay-4000" />
+    <div className="relative min-h-screen overflow-hidden bg-[#fbfcff] px-4 py-6 text-[#17120a]">
+      <div className="pratyo-brand-surface-soft pointer-events-none absolute inset-x-0 top-0 h-52 opacity-95" />
 
       <div className="relative z-10 mx-auto mb-8 flex max-w-5xl flex-wrap items-center justify-between gap-3">
         <Link href="/" className="text-sm font-semibold text-[#0a2f66] hover:underline">
@@ -301,31 +298,6 @@ export default function StudentLogin() {
       </div>
 
       {/* Additional CSS for animations */}
-      <style jsx>{`
-        @keyframes blob {
-          0%, 100% {
-            transform: translate(0, 0) scale(1);
-          }
-          33% {
-            transform: translate(30px, -50px) scale(1.1);
-          }
-          66% {
-            transform: translate(-20px, 20px) scale(0.9);
-          }
-        }
-
-        .animate-blob {
-          animation: blob 7s infinite;
-        }
-
-        .animation-delay-2000 {
-          animation-delay: 2s;
-        }
-
-        .animation-delay-4000 {
-          animation-delay: 4s;
-        }
-      `}</style>
     </div>
   );
 }

@@ -1,7 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import {
+  FaEye,
+  FaPause,
+  FaPlay,
+  FaSearch,
+  FaStar,
+  FaSyncAlt,
+} from "react-icons/fa";
 
 function label(value) {
   return String(value || "")
@@ -12,6 +20,10 @@ function label(value) {
 
 function normalizeEmail(value) {
   return String(value || "").trim().toLowerCase();
+}
+
+function normalizePhone(value) {
+  return String(value || "").replace(/[^\d+]/g, "");
 }
 
 function formatDate(value) {
@@ -32,36 +44,12 @@ function canUsePartnerSpotlight(partner) {
   return partner.verificationStatus === "VERIFIED";
 }
 
-function spotlightLabel(status) {
-  if (status === "ACTIVE") return "Active";
-  if (status === "PAUSED") return "Paused";
-  return "Off";
-}
-
 function proposalStatusLabel(status) {
   if (status === "REJECTED") return "Declined";
   if (status === "UNDER_REVIEW") return "Under review";
+  if (status === "APPROVED") return "Approved partner";
   if (status === "CONVERTED_TO_EVENT") return "Event published";
   return label(status);
-}
-
-function partnerStatusSummary(partner) {
-  const verification =
-    partner.verificationStatus === "VERIFIED"
-      ? "Approved"
-      : label(partner.verificationStatus || "Pending");
-  const visibility =
-    partner.profileVisibility === "PUBLIC"
-      ? "Public portfolio"
-      : "Private portfolio";
-  const trust =
-    partner.trustLevel === "FEATURED_PARTNER"
-      ? "Featured partner"
-      : partner.trustLevel === "APPROVED_PARTNER"
-      ? "Standard partner"
-      : "Request only";
-
-  return `${verification} - ${visibility} - ${trust}`;
 }
 
 const PROPOSAL_FILTERS = [
@@ -75,8 +63,7 @@ const PROPOSAL_FILTERS = [
     id: "PUBLISHED",
     label: "Published",
     matches: (proposal) =>
-      proposal.status !== "ARCHIVED" &&
-      (proposal.status === "CONVERTED_TO_EVENT" || Boolean(proposal.linkedEvent)),
+      proposal.status === "CONVERTED_TO_EVENT",
   },
   {
     id: "DECLINED",
@@ -114,21 +101,21 @@ const EVENT_MODES = ["UNDECIDED", "ONLINE", "ONSITE", "HYBRID"];
 
 function proposalStatusClass(status) {
   if (status === "CONVERTED_TO_EVENT") {
-    return "border-emerald-500/25 bg-emerald-500/10 text-emerald-300";
+    return "border-emerald-200 bg-emerald-50 text-emerald-700";
   }
   if (status === "APPROVED") {
-    return "border-cyan-500/25 bg-cyan-500/10 text-cyan-300";
+    return "border-cyan-200 bg-cyan-50 text-cyan-800";
   }
   if (status === "UNDER_REVIEW") {
-    return "border-blue-500/25 bg-blue-500/10 text-blue-300";
+    return "border-blue-200 bg-blue-50 text-blue-800";
   }
   if (["DECLINED", "REJECTED"].includes(status)) {
-    return "border-rose-500/25 bg-rose-500/10 text-rose-300";
+    return "border-rose-200 bg-rose-50 text-rose-700";
   }
   if (status === "ARCHIVED") {
-    return "border-slate-700 bg-slate-900 text-slate-400";
+    return "border-slate-200 bg-slate-100 text-slate-600";
   }
-  return "border-amber-500/25 bg-amber-500/10 text-amber-300";
+  return "border-[#cfc4ff] bg-[#f4f1ff] text-[#4326e8]";
 }
 
 function proposalActionMessage(action) {
@@ -140,7 +127,7 @@ function proposalActionMessage(action) {
     return "Platform event published from this proposal.";
   }
   if (action === "decline" || action === "reject") return "Proposal declined.";
-  if (action === "reopen") return "Proposal reopened for review.";
+  if (action === "restore" || action === "reopen") return "Proposal restored.";
   if (action === "archive") return "Proposal archived.";
   if (action === "update") return "Proposal updated successfully.";
   return "Proposal updated.";
@@ -154,6 +141,9 @@ export default function AdminPartnerWorkspace({ onChanged }) {
   const [editingProposal, setEditingProposal] = useState(null);
   const [publishingProposal, setPublishingProposal] = useState(null);
   const [proposalFilter, setProposalFilter] = useState("ACTIVE");
+  const [partnerSearch, setPartnerSearch] = useState("");
+  const [partnerStatusFilter, setPartnerStatusFilter] = useState("ALL");
+  const [activePartnerTab, setActivePartnerTab] = useState("proposals");
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -220,6 +210,7 @@ export default function AdminPartnerWorkspace({ onChanged }) {
       proposals.filter(filter.matches).length,
     ])
   );
+  const activeProposalCount = proposalFilterCounts.ACTIVE || 0;
 
   const updatePartner = async (partnerId, patch) => {
     setMessage("");
@@ -236,6 +227,38 @@ export default function AdminPartnerWorkspace({ onChanged }) {
     } catch (error) {
       setMessage(error.message);
     }
+  };
+
+  const filteredPartners = useMemo(() => {
+    const needle = partnerSearch.trim().toLowerCase();
+    return partners.filter((partner) => {
+      const spotlightStatus = partner.spotlightStatus || "OFF";
+      const searchable = [
+        partner.organizationName,
+        partner.contactName,
+        partner.contactEmail,
+        partner.location,
+        partner.verificationStatus,
+        partner.profileVisibility,
+        partner.trustLevel,
+        spotlightStatus,
+        partner.spotlightPriority,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+      if (needle && !searchable.includes(needle)) return false;
+      if (partnerStatusFilter !== "ALL" && spotlightStatus !== partnerStatusFilter) {
+        return false;
+      }
+      return true;
+    });
+  }, [partnerSearch, partnerStatusFilter, partners]);
+
+  const clearPartnerFilters = () => {
+    setPartnerSearch("");
+    setPartnerStatusFilter("ALL");
   };
 
   const handleEditProposalSubmit = (event) => {
@@ -275,20 +298,63 @@ export default function AdminPartnerWorkspace({ onChanged }) {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6">
+      <div className="rounded-2xl border border-[#e1e7f2] bg-white p-2 shadow-sm">
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setActivePartnerTab("proposals")}
+            className={`inline-flex min-h-12 items-center gap-2 rounded-xl px-5 text-sm font-black transition ${
+              activePartnerTab === "proposals"
+                ? "bg-[#4326e8] text-white"
+                : "text-[#24314d] hover:bg-[#f8f9fd] hover:text-[#4326e8]"
+            }`}
+          >
+            Partner Proposals
+            {activeProposalCount > 0 && (
+              <span
+                className={`inline-flex min-h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-black ${
+                  activePartnerTab === "proposals"
+                    ? "bg-white text-[#4326e8]"
+                    : "bg-red-500 text-white"
+                }`}
+              >
+                {activeProposalCount > 99 ? "99+" : activeProposalCount}
+              </span>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => setActivePartnerTab("spotlight")}
+            className={`inline-flex min-h-12 items-center rounded-xl px-5 text-sm font-black transition ${
+              activePartnerTab === "spotlight"
+                ? "bg-[#4326e8] text-white"
+                : "text-[#24314d] hover:bg-[#f8f9fd] hover:text-[#4326e8]"
+            }`}
+          >
+            Partner Spotlight
+          </button>
+        </div>
+      </div>
+
+      {message && (
+        <p className="rounded-lg border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">
+          {message}
+        </p>
+      )}
+
+      {activePartnerTab === "proposals" && (
+      <div className="rounded-2xl border border-[#e1e7f2] bg-white p-6 shadow-[0_14px_34px_rgba(10,47,102,0.08)]">
         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
           <div>
-            <h2 className="text-xl font-semibold text-white">
+            <h2 className="text-2xl font-black text-[#001233]">
               Partner Proposals
             </h2>
-            <p className="text-sm text-slate-400 mt-1">
+            <p className="mt-1 text-sm font-semibold text-[#52657d]">
               Review organizer requests, approve partner profiles, and publish
               events only when they are ready.
             </p>
           </div>
         </div>
-
-        {message && <p className="text-sm text-emerald-300 mt-4">{message}</p>}
 
         <div className="mt-6 flex flex-wrap gap-2">
           {PROPOSAL_FILTERS.map((filter) => (
@@ -299,7 +365,7 @@ export default function AdminPartnerWorkspace({ onChanged }) {
               className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
                 proposalFilter === filter.id
                   ? "bg-blue-600 text-white shadow-lg shadow-blue-950/20"
-                  : "bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white"
+                  : "border border-[#d2dcf2] bg-white text-[#4326e8] hover:bg-[#f8f9fd]"
               }`}
             >
               {filter.label} ({proposalFilterCounts[filter.id] || 0})
@@ -309,7 +375,7 @@ export default function AdminPartnerWorkspace({ onChanged }) {
 
         <div className="grid gap-4 mt-6">
           {filteredProposals.length === 0 ? (
-            <p className="rounded-2xl border border-slate-800 bg-slate-950/70 p-5 text-slate-500">
+            <p className="rounded-xl border border-[#e6eaf7] bg-[#f8f9fd] p-6 text-center text-sm font-semibold text-[#52657d]">
               No partner proposals in this view.
             </p>
           ) : (
@@ -320,15 +386,20 @@ export default function AdminPartnerWorkspace({ onChanged }) {
                   normalizeEmail(partner.contactEmail) ===
                     normalizeEmail(proposal.contactEmail)
               );
-              const resolvedPartner = proposal.organizer || emailMatchedPartner;
+              const phoneMatchedPartner = partners.find(
+                (partner) =>
+                  normalizePhone(partner.contactPhone) &&
+                  normalizePhone(partner.contactPhone) ===
+                    normalizePhone(proposal.contactPhone)
+              );
+              const resolvedPartner =
+                proposal.organizer || emailMatchedPartner || phoneMatchedPartner;
               const isDeclined = ["DECLINED", "REJECTED"].includes(
                 proposal.status
               );
-              const isPublished =
-                proposal.status === "CONVERTED_TO_EVENT" ||
-                Boolean(proposal.linkedEvent);
+              const isPublished = proposal.status === "CONVERTED_TO_EVENT";
               const isArchived = proposal.status === "ARCHIVED";
-              const canEditProposal = !isPublished && !isArchived;
+              const canEditProposal = !isPublished && !isDeclined && !isArchived;
               const canApprovePartner =
                 ["NEW", "UNDER_REVIEW"].includes(proposal.status) ||
                 (proposal.status === "APPROVED" && !proposal.organizer);
@@ -337,69 +408,99 @@ export default function AdminPartnerWorkspace({ onChanged }) {
               const canDeclineProposal =
                 ["NEW", "UNDER_REVIEW", "APPROVED"].includes(proposal.status) &&
                 !proposal.linkedEvent;
-              const canReopenProposal =
-                (isDeclined || isArchived) && !proposal.linkedEvent;
+              const canRestoreProposal = isDeclined || isArchived;
               const canArchiveProposal = !isArchived;
+              const canViewEvent = isPublished && Boolean(proposal.linkedEvent);
 
               return (
                 <article
                   key={proposal._id}
-                  className="rounded-2xl border border-slate-800 bg-slate-950/70 p-5"
+                  className="rounded-xl border border-[#e1e7f2] bg-white p-5 shadow-sm transition hover:border-[#cfc4ff] hover:shadow-md"
                 >
-                  <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-                    <div className="space-y-3">
+                  <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_220px]">
+                    <div className="min-w-0 space-y-4">
                       <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="text-lg font-bold text-white">
+                        <h3 className="text-xl font-black text-[#001233]">
                           {proposal.eventTitle}
                         </h3>
                         <span
-                          className={`rounded-full border px-3 py-1 text-xs font-semibold ${proposalStatusClass(
+                          className={`rounded-full border px-3 py-1 text-xs font-black ${proposalStatusClass(
                             proposal.status
                           )}`}
                         >
                           {proposalStatusLabel(proposal.status)}
                         </span>
                         {emailMatchedPartner && !proposal.organizer && (
-                          <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs text-emerald-300">
+                          <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
                             Email match
                           </span>
                         )}
+                        {phoneMatchedPartner && !proposal.organizer && (
+                          <span className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-bold text-[#0a2f66]">
+                            Phone match
+                          </span>
+                        )}
                       </div>
-                      <p className="text-sm text-slate-300">
-                        {proposal.organizationName} wants to join as{" "}
-                        {(proposal.proposedRoles || []).map(label).join(", ")}.
-                      </p>
-                      <p className="text-sm text-slate-500 max-w-4xl">
+                      <div>
+                        <p className="text-base font-black text-[#17120a]">
+                          {proposal.organizationName}
+                        </p>
+                        <p className="mt-1 text-sm font-semibold text-[#52657d]">
+                          {(proposal.proposedRoles || []).map(label).join(", ")}
+                        </p>
+                      </div>
+                      <p className="max-w-4xl text-sm leading-6 text-[#344f77]">
                         {proposal.eventDescription}
                       </p>
-                      <div className="grid md:grid-cols-3 gap-3 text-xs text-slate-400">
-                        <div>Contact: {proposal.contactName}</div>
-                        <div>Email: {proposal.contactEmail}</div>
-                        <div>Mode: {label(proposal.eventMode)}</div>
-                        <div>Date: {formatDate(proposal.preferredDate)}</div>
+                      <div className="grid gap-3 rounded-xl border border-[#e6eaf7] bg-[#f8f9fd] p-4 text-xs font-bold text-[#52657d] md:grid-cols-3">
                         <div>
-                          Grades:{" "}
+                          <span className="block text-[10px] uppercase text-[#75869b]">Contact</span>
+                          {proposal.contactName}
+                        </div>
+                        <div>
+                          <span className="block text-[10px] uppercase text-[#75869b]">Email</span>
+                          {proposal.contactEmail}
+                        </div>
+                        <div>
+                          <span className="block text-[10px] uppercase text-[#75869b]">Phone</span>
+                          {proposal.contactPhone || "Not provided"}
+                        </div>
+                        <div>
+                          <span className="block text-[10px] uppercase text-[#75869b]">Mode</span>
+                          {label(proposal.eventMode)}
+                        </div>
+                        <div>
+                          <span className="block text-[10px] uppercase text-[#75869b]">Date</span>
+                          {formatDate(proposal.preferredDate)}
+                        </div>
+                        <div>
+                          <span className="block text-[10px] uppercase text-[#75869b]">Grades</span>
                           {proposal.targetGrades?.length
                             ? proposal.targetGrades.join(", ")
                             : "All / not specified"}
                         </div>
                         <div>
-                          Expected students: {proposal.expectedStudents || "N/A"}
+                          <span className="block text-[10px] uppercase text-[#75869b]">Expected Students</span>
+                          {proposal.expectedStudents || "N/A"}
                         </div>
                         <div>
-                          Linked event: {proposal.linkedEvent?.title || "Not yet"}
+                          <span className="block text-[10px] uppercase text-[#75869b]">Linked Event</span>
+                          {proposal.linkedEvent?.title || "Not yet"}
                         </div>
                         <div>
-                          Last reviewed: {formatDate(proposal.reviewedAt)}
+                          <span className="block text-[10px] uppercase text-[#75869b]">Last Reviewed</span>
+                          {formatDate(proposal.reviewedAt)}
                         </div>
                       </div>
                       {resolvedPartner && (
-                        <p className="text-xs text-emerald-300">
+                        <p className="text-xs font-bold text-emerald-700">
                           Partner profile: {resolvedPartner.organizationName}
                           {resolvedPartner.slug ? (
                             <Link
                               href={`/partners/${resolvedPartner.slug}`}
-                              className="ml-2 underline hover:text-emerald-200"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="ml-2 underline hover:text-emerald-600"
                             >
                               View portfolio
                             </Link>
@@ -408,12 +509,12 @@ export default function AdminPartnerWorkspace({ onChanged }) {
                       )}
                     </div>
 
-                    <div className="flex flex-wrap gap-2 lg:justify-end">
+                    <div className="flex flex-col gap-2 xl:items-stretch">
                       {canEditProposal && (
                         <button
                           type="button"
                           onClick={() => setEditingProposal(proposal)}
-                          className="rounded-lg bg-blue-600 hover:bg-blue-500 text-white px-3 py-2 text-sm"
+                          className="inline-flex min-h-10 items-center justify-center rounded-lg bg-[#4326e8] px-4 text-sm font-black text-white transition hover:bg-[#3217d3]"
                         >
                           Edit
                         </button>
@@ -424,7 +525,7 @@ export default function AdminPartnerWorkspace({ onChanged }) {
                           onClick={() =>
                             updateProposal(proposal, "mark_reviewing")
                           }
-                          className="rounded-lg bg-slate-700 hover:bg-slate-600 text-white px-3 py-2 text-sm"
+                          className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#d2dcf2] bg-white px-4 text-sm font-black text-[#0a2f66] transition hover:bg-[#f8f9fd]"
                         >
                           Review
                         </button>
@@ -435,7 +536,7 @@ export default function AdminPartnerWorkspace({ onChanged }) {
                           onClick={() =>
                             updateProposal(proposal, "approve_partner")
                           }
-                          className="rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 text-sm"
+                          className="inline-flex min-h-10 items-center justify-center rounded-lg bg-emerald-600 px-4 text-sm font-black text-white transition hover:bg-emerald-700"
                         >
                           Approve Partner
                         </button>
@@ -444,15 +545,15 @@ export default function AdminPartnerWorkspace({ onChanged }) {
                         <button
                           type="button"
                           onClick={() => setPublishingProposal(proposal)}
-                          className="rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white px-3 py-2 text-sm"
+                          className="inline-flex min-h-10 items-center justify-center rounded-lg bg-[#0a2f66] px-4 text-sm font-black text-white transition hover:bg-[#123f82]"
                         >
                           Publish Event
                         </button>
                       )}
-                      {proposal.linkedEvent && (
+                      {canViewEvent && (
                         <Link
                           href={`/admin/events/${proposal.linkedEvent._id}/manage`}
-                          className="rounded-lg bg-slate-700 hover:bg-slate-600 text-white px-3 py-2 text-sm"
+                          className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#d2dcf2] bg-white px-4 text-sm font-black text-[#0a2f66] transition hover:bg-[#f8f9fd]"
                         >
                           View Event
                         </Link>
@@ -461,25 +562,25 @@ export default function AdminPartnerWorkspace({ onChanged }) {
                         <button
                           type="button"
                           onClick={() => updateProposal(proposal, "decline")}
-                          className="rounded-lg bg-red-600 hover:bg-red-500 text-white px-3 py-2 text-sm"
+                          className="inline-flex min-h-10 items-center justify-center rounded-lg bg-rose-600 px-4 text-sm font-black text-white transition hover:bg-rose-700"
                         >
                           Decline
                         </button>
                       )}
-                      {canReopenProposal && (
+                      {canRestoreProposal && (
                         <button
                           type="button"
-                          onClick={() => updateProposal(proposal, "reopen")}
-                          className="rounded-lg bg-blue-600 hover:bg-blue-500 text-white px-3 py-2 text-sm"
+                          onClick={() => updateProposal(proposal, "restore")}
+                          className="inline-flex min-h-10 items-center justify-center rounded-lg bg-[#4326e8] px-4 text-sm font-black text-white transition hover:bg-[#3217d3]"
                         >
-                          Reopen
+                          Restore
                         </button>
                       )}
                       {canArchiveProposal && (
                         <button
                           type="button"
                           onClick={() => updateProposal(proposal, "archive")}
-                          className="rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-2 text-sm"
+                          className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#d2dcf2] bg-white px-4 text-sm font-black text-[#52657d] transition hover:bg-[#f8f9fd]"
                         >
                           Archive
                         </button>
@@ -492,173 +593,211 @@ export default function AdminPartnerWorkspace({ onChanged }) {
           )}
         </div>
       </div>
+      )}
 
-      <div>
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6">
-          <h2 className="text-xl font-semibold text-white mb-4">
-            Partner Profiles
-          </h2>
-          <div className="grid gap-4">
-            {partners.length === 0 ? (
-              <p className="text-slate-500 italic">No partners created yet.</p>
-            ) : (
-              partners.map((partner) => {
-                const spotlightStatus = partner.spotlightStatus || "OFF";
-                const spotlightReady = canUsePartnerSpotlight(partner);
-                const nextSpotlightStatus =
-                  spotlightStatus === "ACTIVE" ? "PAUSED" : "ACTIVE";
+      {activePartnerTab === "spotlight" && (
+      <div className="space-y-4">
+        <div className="rounded-xl border border-[#e6eaf7] bg-white p-4 shadow-sm">
+          <div className="mb-4">
+            <h2 className="text-xl font-black text-[#001233]">
+              Partner Spotlight
+            </h2>
+            <p className="mt-1 text-sm font-semibold text-[#52657d]">
+              Control homepage partner spotlight visibility for every partner.
+            </p>
+          </div>
 
-                return (
-                  <article
-                    key={partner._id}
-                    className="rounded-2xl border border-slate-800 bg-slate-950/70 p-5"
-                  >
-                    <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-                      <div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="text-lg font-bold text-white">
-                            {partner.organizationName}
-                          </h3>
-                          <span
-                            className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                              spotlightStatus === "ACTIVE"
-                                ? "border border-emerald-500/25 bg-emerald-500/10 text-emerald-300"
-                                : spotlightStatus === "PAUSED"
-                                ? "border border-amber-500/25 bg-amber-500/10 text-amber-300"
-                                : "border border-slate-700 bg-slate-900 text-slate-400"
-                            }`}
-                          >
-                            Homepage {spotlightLabel(spotlightStatus)}
-                          </span>
-                        </div>
-                        <p className="text-sm text-slate-400 mt-1">
-                          {(partner.partnerRoles || []).map(label).join(", ")}
-                        </p>
-                        <p className="text-xs text-slate-500 mt-2">
-                          {partnerStatusSummary(partner)}
-                        </p>
-                        {partner.description && (
-                          <p className="text-sm text-slate-400 mt-3 max-w-2xl">
-                            {partner.description}
-                          </p>
-                        )}
-                      </div>
-                      <div className="flex flex-wrap gap-2 md:justify-end">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const nextVisibility =
-                              partner.profileVisibility === "PUBLIC"
-                                ? "PRIVATE"
-                                : "PUBLIC";
-                            updatePartner(partner._id, {
-                              profileVisibility: nextVisibility,
-                            });
-                          }}
-                          className="rounded-lg bg-slate-700 hover:bg-slate-600 text-white px-3 py-2 text-sm"
-                        >
-                          {partner.profileVisibility === "PUBLIC"
-                            ? "Hide Portfolio"
-                            : "Show Portfolio"}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            updatePartner(partner._id, {
-                              trustLevel:
-                                partner.trustLevel === "FEATURED_PARTNER"
-                                  ? "APPROVED_PARTNER"
-                                  : "FEATURED_PARTNER",
-                            })
-                          }
-                          className="rounded-lg bg-blue-600 hover:bg-blue-500 text-white px-3 py-2 text-sm"
-                        >
-                          {partner.trustLevel === "FEATURED_PARTNER"
-                            ? "Standard Partner"
-                            : "Featured Partner"}
-                        </button>
-                        {partner.profileVisibility === "PUBLIC" && (
-                          <Link
-                            href={`/partners/${partner.slug}`}
-                            className="rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 text-sm"
-                          >
-                            View Portfolio
-                          </Link>
-                        )}
-                      </div>
-                    </div>
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
+            <label className="block min-w-0 lg:flex-1">
+              <span className="mb-1.5 flex items-center gap-2 text-[10px] font-black uppercase text-[#52657d]">
+                <FaSearch className="text-[#4326e8]" />
+                Search partner
+              </span>
+              <input
+                value={partnerSearch}
+                onChange={(event) => setPartnerSearch(event.target.value)}
+                placeholder="Search partner, contact, email, status, or location..."
+                className="min-h-11 w-full rounded-lg border border-[#d2dcf2] bg-[#f8f9fd] px-4 text-sm font-semibold text-[#24314d] outline-none transition placeholder:text-[#75869b] focus:border-[#4326e8] focus:bg-white focus:ring-4 focus:ring-[#4326e8]/10"
+              />
+            </label>
+            <label className="block min-w-0 lg:w-64">
+              <span className="mb-1.5 block text-[10px] font-black uppercase text-[#52657d]">
+                Spotlight
+              </span>
+              <select
+                value={partnerStatusFilter}
+                onChange={(event) => setPartnerStatusFilter(event.target.value)}
+                className="min-h-11 w-full rounded-lg border border-[#d2dcf2] bg-white px-3 text-sm font-bold text-[#24314d] outline-none transition focus:border-[#4326e8] focus:ring-4 focus:ring-[#4326e8]/10"
+              >
+                <option value="ALL">All Status</option>
+                <option value="ACTIVE">Active</option>
+                <option value="PAUSED">Paused</option>
+                <option value="OFF">Off</option>
+              </select>
+            </label>
+            <button
+              type="button"
+              onClick={clearPartnerFilters}
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-[#e6eaf7] px-4 text-sm font-black text-[#0a2f66] transition hover:bg-[#f8f9fd]"
+            >
+              <FaSyncAlt />
+              Clear
+            </button>
+          </div>
+        </div>
 
-                    <div className="mt-5 rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
-                      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                        <div>
-                          <h4 className="text-sm font-bold text-white">
-                            Homepage Spotlight
-                          </h4>
-                          <p className="mt-1 text-xs leading-5 text-slate-400">
-                            Show this approved partner in the homepage partner
-                            panel. Public portfolio and active event connection
-                            are separate optional settings.
-                          </p>
+        <section className="overflow-hidden rounded-xl border border-[#e6eaf7] bg-white shadow-sm">
+          {partners.length === 0 ? (
+            <div className="p-8 text-center text-sm font-semibold text-[#52657d]">
+              No partners created yet.
+            </div>
+          ) : filteredPartners.length === 0 ? (
+            <div className="p-8 text-center text-sm font-semibold text-[#52657d]">
+              No partners match these filters.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[1120px] text-left text-sm text-[#001233]">
+                <thead className="bg-[#f8f9fd] text-xs uppercase text-[#43516a]">
+                  <tr>
+                    <th className="p-4">Partner</th>
+                    <th className="p-4">Contact</th>
+                    <th className="p-4">Email</th>
+                    <th className="p-4">Spotlight</th>
+                    <th className="p-4">Rotation</th>
+                    <th className="p-4">Views</th>
+                    <th className="p-4">Portfolio</th>
+                    <th className="p-4 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredPartners.map((partner) => {
+                    const spotlightStatus = partner.spotlightStatus || "OFF";
+                    const spotlightReady = canUsePartnerSpotlight(partner);
+                    const priority = partner.spotlightPriority || "STANDARD";
+                    const isActive = spotlightStatus === "ACTIVE";
+                    const statusClass =
+                      spotlightStatus === "ACTIVE"
+                        ? "bg-emerald-50 text-emerald-700"
+                        : spotlightStatus === "PAUSED"
+                        ? "bg-[#eaf2ff] text-[#0a2f66]"
+                        : "bg-slate-100 text-[#52657d]";
+
+                    return (
+                      <tr
+                        key={partner._id}
+                        className="border-t border-[#e6eaf7] transition hover:bg-[#fbfcff]"
+                      >
+                        <td className="p-4 font-black text-[#001233]">
+                          <div>{partner.organizationName}</div>
+                          <div className="mt-1 max-w-xs truncate text-xs font-semibold text-[#52657d]">
+                            {partner.location || "Location not listed"}
+                          </div>
                           {!spotlightReady && (
-                            <p className="mt-2 text-xs text-amber-300">
-                              Approve this partner before showing it on the
-                              homepage.
-                            </p>
+                            <div className="mt-1 text-xs font-bold text-amber-700">
+                              Verify partner before activating spotlight.
+                            </div>
                           )}
-                        </div>
-                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                          <select
-                            value={partner.spotlightPriority || "STANDARD"}
-                            disabled={!spotlightReady}
-                            onChange={(event) =>
-                              updatePartner(partner._id, {
-                                spotlightPriority: event.target.value,
-                              })
-                            }
-                            className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white disabled:cursor-not-allowed disabled:opacity-50"
+                        </td>
+                        <td className="p-4 font-semibold">
+                          {partner.contactName || "-"}
+                        </td>
+                        <td className="p-4 font-semibold">
+                          {partner.contactEmail || "-"}
+                        </td>
+                        <td className="p-4">
+                          <span
+                            className={`inline-flex rounded-full px-3 py-1 text-xs font-black ${statusClass}`}
                           >
-                            <option value="STANDARD">Normal visibility</option>
-                            <option value="FEATURED">Priority visibility</option>
-                          </select>
+                            {spotlightStatus}
+                          </span>
+                        </td>
+                        <td className="p-4">
                           <button
                             type="button"
                             disabled={!spotlightReady}
                             onClick={() =>
                               updatePartner(partner._id, {
-                                spotlightStatus: nextSpotlightStatus,
+                                spotlightPriority:
+                                  priority === "FEATURED" ? "STANDARD" : "FEATURED",
+                                spotlightStatus:
+                                  spotlightStatus === "OFF" ? "ACTIVE" : spotlightStatus,
                               })
                             }
-                            className="rounded-lg bg-cyan-600 px-3 py-2 text-sm font-semibold text-white hover:bg-cyan-500 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500"
+                            className={`inline-flex min-h-10 items-center gap-2 rounded-lg px-4 text-sm font-black transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                              priority === "FEATURED"
+                                ? "bg-[#4326e8] text-white shadow-sm hover:bg-[#3217d3]"
+                                : "border border-[#d2dcf2] bg-[#f8f9fd] text-[#4326e8] shadow-sm hover:border-[#4326e8]/35 hover:bg-[#efe9ff]"
+                            }`}
                           >
-                            {spotlightStatus === "ACTIVE"
-                              ? "Pause Homepage"
-                              : spotlightStatus === "PAUSED"
-                              ? "Resume Homepage"
-                              : "Show on Homepage"}
+                            <FaStar />
+                            {priority === "FEATURED" ? "Featured" : "Standard"}
                           </button>
-                          {spotlightStatus !== "OFF" && (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                updatePartner(partner._id, {
-                                  spotlightStatus: "OFF",
-                                })
-                              }
-                              className="rounded-lg bg-slate-800 px-3 py-2 text-sm font-semibold text-slate-200 hover:bg-slate-700"
+                        </td>
+                        <td className="p-4 text-xs font-bold text-[#52657d]">
+                          {partner.spotlightImpressionCount || 0} views
+                        </td>
+                        <td className="p-4">
+                          {partner.profileVisibility === "PUBLIC" ? (
+                            <Link
+                              href={`/partners/${partner.slug}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#d2dcf2] px-4 text-sm font-black text-[#0a2f66] transition hover:bg-[#f8f9fd]"
                             >
-                              Remove from Homepage
-                            </button>
+                              <FaEye />
+                              View
+                            </Link>
+                          ) : (
+                            <span className="text-xs font-bold text-[#52657d]">
+                              Private
+                            </span>
                           )}
-                        </div>
-                      </div>
-                    </div>
-                  </article>
-                );
-              })
-            )}
-          </div>
-        </div>
+                        </td>
+                        <td className="p-4">
+                          <div className="flex justify-end">
+                            {isActive ? (
+                              <button
+                                type="button"
+                                disabled={!spotlightReady}
+                                onClick={() =>
+                                  updatePartner(partner._id, {
+                                    spotlightStatus: "PAUSED",
+                                    spotlightPriority: "STANDARD",
+                                  })
+                                }
+                                className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-[#efe9ff] px-4 text-sm font-black text-[#4326e8] transition hover:bg-[#e6ddff] disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                <FaPause />
+                                Pause
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                disabled={!spotlightReady}
+                                onClick={() =>
+                                  updatePartner(partner._id, {
+                                    spotlightStatus: "ACTIVE",
+                                  })
+                                }
+                                className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-[#4326e8] px-4 text-sm font-black text-white transition hover:bg-[#3217d3] disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                <FaPlay />
+                                Activate
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
       </div>
+      )}
 
       {editingProposal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">

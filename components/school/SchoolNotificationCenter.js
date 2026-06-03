@@ -4,10 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FaBell } from "react-icons/fa";
 import {
-  NotificationBulkActions,
   NotificationMeta,
   NotificationNewBadge,
-  NotificationReadToggleButton,
   NotificationTypeBadge,
 } from "@/components/notifications/NotificationUi";
 import useNotificationInbox from "@/lib/useNotificationInbox";
@@ -33,8 +31,6 @@ export default function SchoolNotificationCenter() {
     unreadCount,
     loadNotifications,
     markNotificationsRead,
-    toggleNotificationReadState,
-    updateNotificationsReadState,
   } = useNotificationInbox({
     listUrl: "/api/school/notifications",
     readUrl: "/api/school/notifications/read",
@@ -110,21 +106,6 @@ export default function SchoolNotificationCenter() {
                   Event notices and platform updates for your dashboard
                 </p>
               </div>
-              {notifications.length > 0 && (
-                <NotificationBulkActions
-                  compact
-                  onMarkAllUnread={() =>
-                    void updateNotificationsReadState("unread", notifications, {
-                      allVisible: true,
-                    })
-                  }
-                  onMarkAllRead={() =>
-                    void updateNotificationsReadState("read", notifications, {
-                      allVisible: true,
-                    })
-                  }
-                />
-              )}
             </div>
           </div>
 
@@ -186,13 +167,6 @@ export default function SchoolNotificationCenter() {
                       </div>
                     </div>
                   </button>
-                  <div className="mt-3 flex justify-end">
-                    <NotificationReadToggleButton
-                      notification={notification}
-                      onToggle={(item) => void toggleNotificationReadState(item)}
-                      size="xs"
-                    />
-                  </div>
                 </div>
               ))}
               <a

@@ -35,7 +35,7 @@ function label(value) {
 function PartnerLogo({ partner, className = "" }) {
   return (
     <div
-      className={`flex items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-purple-700 to-[#0a2f66] text-white shadow-lg ${className}`.trim()}
+      className={`pratyo-brand-surface flex items-center justify-center overflow-hidden rounded-2xl text-white shadow-lg ${className}`.trim()}
     >
       {partner.logoUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
@@ -52,12 +52,12 @@ function PartnerLogo({ partner, className = "" }) {
 function HeroArt() {
   return (
     <div className="relative hidden min-h-56 overflow-hidden rounded-2xl lg:block">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_78%_22%,rgba(245,158,11,0.28),transparent_28%),radial-gradient(circle_at_28%_70%,rgba(168,85,247,0.18),transparent_26%)]" />
+      <div className="pratyo-brand-surface absolute inset-0" />
       <div className="absolute bottom-5 left-9 h-24 w-32 -rotate-6 rounded-2xl border border-white/80 bg-white/75 shadow-xl" />
       <div className="absolute bottom-8 right-8 h-28 w-40 rotate-6 rounded-2xl border border-white/80 bg-white/70 shadow-xl" />
       <FaTrophy className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-8xl text-amber-400 drop-shadow" />
-      <FaUsers className="absolute bottom-12 left-14 text-4xl text-purple-700/70" />
-      <FaHandshake className="absolute right-16 top-12 text-5xl text-[#0a2f66]/65" />
+      <FaUsers className="absolute bottom-12 left-14 text-4xl text-white/70" />
+      <FaHandshake className="absolute right-16 top-12 text-5xl text-white/65" />
     </div>
   );
 }
@@ -158,7 +158,7 @@ function ImpactSidebar({ metrics, schools, partner }) {
         )}
       </section>
 
-      <section className="overflow-hidden rounded-2xl bg-gradient-to-br from-purple-700 to-[#0a2f66] p-5 text-white shadow-[0_18px_45px_rgba(88,28,135,0.22)]">
+      <section className="pratyo-brand-surface overflow-hidden rounded-2xl p-5 text-white shadow-[0_18px_45px_rgba(10,47,102,0.18)]">
         <h2 className="text-base font-black">Want to collaborate?</h2>
         <p className="mt-2 text-sm leading-6 text-white/80">
           New organizations can submit an event idea for platform review.
@@ -304,7 +304,7 @@ export default async function PartnerPortfolioPage({ params }) {
         <PublicExplorePanel active="partners" variant="partners" />
 
         <div className="min-w-0 space-y-5">
-          <section className="overflow-hidden rounded-2xl border border-[#e6eaf7] bg-gradient-to-br from-white via-purple-50 to-amber-50 p-5 shadow-sm md:p-7">
+          <section className="overflow-hidden rounded-2xl border border-[#e6eaf7] bg-white p-5 shadow-sm md:p-7">
             <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_390px] lg:items-center">
               <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
                 <PartnerLogo partner={partner} className="h-24 w-24 shrink-0" />
@@ -402,9 +402,9 @@ export default async function PartnerPortfolioPage({ params }) {
                       trusted opportunities where they can learn, compete, and grow.
                     </p>
                   </div>
-                  <div className="relative h-40 overflow-hidden rounded-xl bg-gradient-to-br from-[#eef6ff] via-white to-amber-50">
-                    <FaHandshake className="absolute bottom-8 left-10 text-5xl text-purple-700/75" />
-                    <FaTrophy className="absolute right-10 top-8 text-6xl text-amber-400" />
+                  <div className="pratyo-brand-surface relative h-40 overflow-hidden rounded-xl">
+                    <FaHandshake className="absolute bottom-8 left-10 text-5xl text-white/70" />
+                    <FaTrophy className="absolute right-10 top-8 text-6xl text-white/78" />
                   </div>
                 </div>
               </SectionCard>

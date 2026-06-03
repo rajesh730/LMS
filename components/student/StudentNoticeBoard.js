@@ -1,13 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback } from "react";
 import { FaBell, FaCalendarAlt, FaSchool } from "react-icons/fa";
 import EmptyState from "@/components/EmptyState";
 import {
-  NotificationBulkActions,
   NotificationNewBadge,
-  NotificationReadToggleButton,
   NotificationTypeBadge,
 } from "@/components/notifications/NotificationUi";
 import AlertBanner from "@/components/ui/AlertBanner";
@@ -31,8 +28,6 @@ export default function StudentNoticeBoard() {
     loading,
     error,
     notifications,
-    toggleNotificationReadState,
-    updateNotificationsReadState: updateNotificationsReadStateBase,
   } =
     useNotificationInbox({
       listUrl: "/api/student/notifications",
@@ -41,15 +36,6 @@ export default function StudentNoticeBoard() {
       realtimeChannel: "student-notifications",
       markVisibleOnLoad: true,
     });
-
-  const updateNotificationsReadState = useCallback(
-    async (action) => {
-      await updateNotificationsReadStateBase(action, notifications, {
-        allVisible: true,
-      });
-    },
-    [notifications, updateNotificationsReadStateBase]
-  );
 
   if (loading) {
     return (
@@ -71,16 +57,6 @@ export default function StudentNoticeBoard() {
         eyebrow="Student Updates"
         title="Notices"
         description="Read school announcements and event updates from one simple place."
-        action={
-          notifications.length > 0 ? (
-            <NotificationBulkActions
-              onMarkAllUnread={() =>
-                void updateNotificationsReadState("unread")
-              }
-              onMarkAllRead={() => void updateNotificationsReadState("read")}
-            />
-          ) : null
-        }
       />
 
       {notifications.length === 0 ? (
@@ -141,10 +117,6 @@ export default function StudentNoticeBoard() {
                       ? "Open Event"
                       : "Back to Dashboard"}
                   </Link>
-                  <NotificationReadToggleButton
-                    notification={notification}
-                    onToggle={(item) => void toggleNotificationReadState(item)}
-                  />
                 </div>
               </div>
             </article>

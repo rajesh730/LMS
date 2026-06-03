@@ -16,13 +16,6 @@ import PaginationControls from "@/components/PaginationControls";
 import LifecycleTimeline from "@/components/ui/LifecycleTimeline";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
-const FILTERS = [
-  { id: "PENDING", label: "Pending" },
-  { id: "APPROVED", label: "Approved" },
-  { id: "DISAPPROVED", label: "Disapproved" },
-  { id: "ALL", label: "All" },
-];
-
 const STATUS_STYLES = {
   PENDING: "bg-[#fff7e6] text-[#7a4d00] border-[#f4d28a]",
   APPROVED: "bg-[#e8f8ef] text-[#17643a] border-[#9ed8b5]",
@@ -64,9 +57,16 @@ function isTeamEventLike(event) {
   return String(event?.participationFormat || "INDIVIDUAL").toUpperCase() === "TEAM";
 }
 
-export default function SchoolEventInvitations({ refreshKey = 0, onChanged }) {
+export default function SchoolEventInvitations({
+  refreshKey = 0,
+  onChanged,
+  status = "PENDING",
+  title = "Platform Event Notifications",
+  description = "Approve partner or platform events before your students can see or join them.",
+  emptyTitle,
+  emptyDescription,
+}) {
   const [invitations, setInvitations] = useState([]);
-  const [filter, setFilter] = useState("PENDING");
   const [loading, setLoading] = useState(true);
   const [actioningId, setActioningId] = useState(null);
   const [message, setMessage] = useState("");
@@ -91,7 +91,7 @@ export default function SchoolEventInvitations({ refreshKey = 0, onChanged }) {
     try {
       setLoading(true);
       const params = new URLSearchParams({
-        status: filter,
+        status,
         page: String(page),
         limit: "10",
       });
@@ -119,7 +119,7 @@ export default function SchoolEventInvitations({ refreshKey = 0, onChanged }) {
     } finally {
       setLoading(false);
     }
-  }, [filter, search]);
+  }, [search, status]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -178,36 +178,21 @@ export default function SchoolEventInvitations({ refreshKey = 0, onChanged }) {
               <FaBell />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-[#17120a]">
-                Platform Event Notifications
+              <h2 className="text-2xl font-black text-[#001233]">
+                {title}
               </h2>
               <p className="text-sm text-[#344f77]">
-                Approve partner or platform events before your students can see
-                or join them.
+                {description}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="rounded-xl border border-[#bfd7f7] bg-[#eaf2ff] px-4 py-3 text-sm font-semibold text-[#0a2f66]">
-          {counts.PENDING} waiting for school decision
-        </div>
-      </div>
-
-      <div className="mt-5 flex flex-wrap gap-2">
-        {FILTERS.map((item) => (
-          <button
-            key={item.id}
-            onClick={() => setFilter(item.id)}
-            className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-              filter === item.id
-                ? "bg-[#0a2f66] text-white"
-                : "border border-[#d7cdbb] bg-white text-[#0a2f66] hover:bg-[#eaf2ff]"
-            }`}
-          >
-            {item.label} ({counts[item.id]})
-          </button>
-        ))}
+        {status === "PENDING" && (
+          <div className="rounded-xl border border-[#d6ceff] bg-[#f4f1ff] px-4 py-3 text-sm font-black text-[#4326e8]">
+            {counts.PENDING} waiting for school decision
+          </div>
+        )}
       </div>
 
       <div className="mt-4 max-w-xl">
@@ -237,10 +222,11 @@ export default function SchoolEventInvitations({ refreshKey = 0, onChanged }) {
         ) : invitations.length === 0 ? (
           <div className="rounded-xl border border-[#d7cdbb] bg-[#f8fbff] p-6 text-center text-[#52657d]">
             <p className="font-semibold text-[#17120a]">
-              No {filter.toLowerCase()} platform invitations right now.
+              {emptyTitle || `No ${status.toLowerCase()} platform invitations right now.`}
             </p>
             <p className="mt-1 text-sm text-[#52657d]">
-              Platform events sent to your school will appear here for approval before students can join.
+              {emptyDescription ||
+                "Platform events sent to your school will appear here for approval before students can join."}
             </p>
           </div>
         ) : (
@@ -325,6 +311,8 @@ export default function SchoolEventInvitations({ refreshKey = 0, onChanged }) {
                               )}
                               <Link
                                 href={`/events/${event._id}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
                                 className="font-semibold text-[#0a2f66] underline underline-offset-2 hover:text-[#123f7d]"
                               >
                                 View all notices
@@ -394,7 +382,9 @@ export default function SchoolEventInvitations({ refreshKey = 0, onChanged }) {
                         className="inline-flex items-center gap-2 rounded-lg bg-[#0a2f66] px-4 py-2 font-semibold text-white transition hover:bg-[#123f7d] disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         <FaCheckCircle />
-                        Approve
+                        {invitation.status === "DISAPPROVED"
+                          ? "Re-approve"
+                          : "Approve"}
                       </button>
                     )}
                     {invitation.status !== "DISAPPROVED" && (

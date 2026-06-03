@@ -268,6 +268,11 @@ export default function SchoolMagazineReviewManager({
                         submission.submittedAt || submission.updatedAt
                       )}
                     </p>
+                    {Number(submission.revisionCount || 0) > 0 && (
+                      <span className="mt-2 inline-flex rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-black uppercase text-amber-700">
+                        Resubmitted #{submission.revisionCount}
+                      </span>
+                    )}
                   </div>
                   <span className="truncate font-bold text-[#17120a]">
                     {submission.authorStudent?.name || "Student"}
@@ -336,8 +341,15 @@ export default function SchoolMagazineReviewManager({
           <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-lg bg-white p-6 shadow-xl">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <div className={`inline-flex rounded-full px-3 py-1 text-[10px] font-black uppercase ${categoryTone(selectedSubmission.category)}`}>
-                  {getWritingCategoryLabel(selectedSubmission.category)}
+                <div className="flex flex-wrap gap-2">
+                  <span className={`inline-flex rounded-full px-3 py-1 text-[10px] font-black uppercase ${categoryTone(selectedSubmission.category)}`}>
+                    {getWritingCategoryLabel(selectedSubmission.category)}
+                  </span>
+                  {Number(selectedSubmission.revisionCount || 0) > 0 && (
+                    <span className="inline-flex rounded-full bg-amber-50 px-3 py-1 text-[10px] font-black uppercase text-amber-700">
+                      Resubmitted #{selectedSubmission.revisionCount}
+                    </span>
+                  )}
                 </div>
                 <h3 className="mt-3 text-2xl font-black text-[#17120a]">
                   {selectedSubmission.title}

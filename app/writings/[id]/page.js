@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import { notFound } from "next/navigation";
 import connectDB from "@/lib/db";
 import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
+import SchoolShowcaseProfile from "@/models/SchoolShowcaseProfile";
 import PublicSiteNav from "@/components/public/PublicSiteNav";
 import PublicWritingReader from "@/components/public/PublicWritingReader";
 import "@/models/Student";
@@ -9,7 +10,7 @@ import "@/models/User";
 
 export const dynamic = "force-dynamic";
 
-function serializeArticle(article) {
+function serializeArticle(article, schoolProfile = null) {
   return {
     id: String(article._id),
     title: article.title,
@@ -29,6 +30,11 @@ function serializeArticle(article) {
           id: String(article.school._id),
           schoolName: article.school.schoolName,
           schoolLocation: article.school.schoolLocation,
+          profile: schoolProfile
+            ? {
+                coverImageUrl: schoolProfile.coverImageUrl || "",
+              }
+            : null,
         }
       : null,
   };
@@ -50,6 +56,13 @@ async function getWritingData(id) {
     .lean();
 
   if (!article) return null;
+
+  const schoolId = article.school?._id || article.school;
+  const schoolProfile = schoolId
+    ? await SchoolShowcaseProfile.findOne({ school: schoolId, visibility: "PUBLIC" })
+        .select("coverImageUrl")
+        .lean()
+    : null;
 
   const [relatedArticles, moreFromSchool] = await Promise.all([
     SchoolMagazineArticle.find({
@@ -79,7 +92,7 @@ async function getWritingData(id) {
   ]);
 
   return {
-    article: serializeArticle(article),
+    article: serializeArticle(article, schoolProfile),
     relatedArticles: relatedArticles.map(serializeArticle),
     moreFromSchool: moreFromSchool.map(serializeArticle),
   };

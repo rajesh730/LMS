@@ -36,9 +36,9 @@ export default function ManagementTabs({
     ...requests.REJECTED,
     ...(requests.ENROLLED || []),
   ];
-  const selectedTab = activeTab === "manage" ? "registrations" : activeTab;
+  const isPlatformCompetition = event.eventScope === "PLATFORM";
 
-  const tabs = [
+  const availableTabs = [
     {
       id: "overview",
       label: "Overview",
@@ -51,13 +51,13 @@ export default function ManagementTabs({
       count: allRequests.length,
       icon: FaUsers,
     },
-    {
+    !isPlatformCompetition && {
       id: "rounds",
       label: "Rounds",
       count: null,
       icon: FaLayerGroup,
     },
-    {
+    !isPlatformCompetition && {
       id: "notices",
       label: "Notices",
       count: null,
@@ -69,30 +69,34 @@ export default function ManagementTabs({
       count: null,
       icon: FaCertificate,
     },
-  ];
+  ].filter(Boolean);
+  const normalizedTab = activeTab === "manage" ? "registrations" : activeTab;
+  const selectedTab = availableTabs.some((tab) => tab.id === normalizedTab)
+    ? normalizedTab
+    : "overview";
   const completedRounds = event.resultsPublished ? "1/1" : "0/1";
   const quickActions = [
-    { label: "Edit Event", icon: FaEdit, onClick: onEdit },
-    { label: "Event Notices", icon: FaBell, onClick: () => setActiveTab("notices") },
+    !isPlatformCompetition && { label: "Edit Event", icon: FaEdit, onClick: onEdit },
+    !isPlatformCompetition && { label: "Event Notices", icon: FaBell, onClick: () => setActiveTab("notices") },
     {
       label: "Manage Participants",
       icon: FaUsers,
       onClick: () => setActiveTab("registrations"),
     },
-    { label: "View Rounds", icon: FaLayerGroup, onClick: () => setActiveTab("rounds") },
+    !isPlatformCompetition && { label: "View Rounds", icon: FaLayerGroup, onClick: () => setActiveTab("rounds") },
     {
       label: "Results & Certificates",
       icon: FaCertificate,
       onClick: () => setActiveTab("results"),
     },
-    { label: "Archive Event", icon: FaArchive, onClick: onArchive, danger: true },
-  ].filter((action) => typeof action.onClick === "function");
+    !isPlatformCompetition && { label: "Archive Event", icon: FaArchive, onClick: onArchive, danger: true },
+  ].filter((action) => action && typeof action.onClick === "function");
 
   return (
     <div className="mb-8 grid gap-4 lg:grid-cols-[minmax(0,1fr)_260px]">
       <div className="overflow-hidden rounded-xl border border-[#e1e7f2] bg-white shadow-[0_14px_36px_rgba(10,47,102,0.07)]">
         <div className="flex flex-wrap border-b border-[#e1e7f2] bg-white px-2">
-          {tabs.map((tab) => {
+          {availableTabs.map((tab) => {
             const Icon = tab.icon;
             return (
               <button
@@ -135,7 +139,7 @@ export default function ManagementTabs({
                       Register Students
                     </h2>
                     <p className="mt-1 text-sm text-[#52657d]">
-                      Add or update the students and teams for this school event.
+                      Add or update the students and teams for this competition.
                     </p>
                   </div>
                   <div className="rounded-xl border border-[#dbe5f4] bg-[#f8fbff] px-4 py-2 text-sm font-black text-[#0a2f66]">
@@ -229,9 +233,9 @@ export default function ManagementTabs({
             {[
               ["Schools Participated", capacityInfo.schoolCount || 1, FaUsers],
               ["Total Participant", capacityInfo.filled || 0, FaUsers],
-              ["Rounds Completed", completedRounds, FaLayerGroup],
+              !isPlatformCompetition && ["Rounds Completed", completedRounds, FaLayerGroup],
               ["Certificates Issued", event.resultsPublished ? capacityInfo.filled || 0 : 0, FaCertificate],
-            ].map(([label, value, Icon]) => (
+            ].filter(Boolean).map(([label, value, Icon]) => (
               <div
                 key={label}
                 className="flex items-center justify-between gap-3 rounded-lg bg-[#f8fbff] px-3 py-2"

@@ -13,24 +13,20 @@ import {
 
 const SLIDE_TONES = [
   {
-    shell: "from-[#101828] via-[#263a88] to-[#0f766e]",
-    glow: "bg-[#38bdf8]/24",
+    glow: "bg-emerald-300/12",
     accent: "bg-[#22c55e]",
   },
   {
-    shell: "from-[#2e1065] via-[#5b21b6] to-[#b45309]",
-    glow: "bg-[#facc15]/24",
-    accent: "bg-[#f59e0b]",
+    glow: "bg-sky-300/12",
+    accent: "bg-[#22c55e]",
   },
   {
-    shell: "from-[#0f172a] via-[#155e75] to-[#4338ca]",
-    glow: "bg-[#a78bfa]/24",
-    accent: "bg-[#8b5cf6]",
+    glow: "bg-emerald-300/12",
+    accent: "bg-[#22c55e]",
   },
   {
-    shell: "from-[#111827] via-[#9f1239] to-[#1d4ed8]",
-    glow: "bg-[#fb7185]/22",
-    accent: "bg-[#ef4444]",
+    glow: "bg-sky-300/12",
+    accent: "bg-[#22c55e]",
   },
 ];
 
@@ -91,9 +87,8 @@ export default function HomepageHeroCarousel({ stories = [] }) {
 
   return (
     <section
-      className={`relative min-h-[360px] overflow-hidden rounded-2xl bg-gradient-to-br ${tone.shell} p-5 text-white shadow-sm md:min-h-[430px] md:p-7`}
+      className="pratyo-brand-surface relative min-h-[360px] overflow-hidden rounded-2xl p-5 text-white shadow-sm md:min-h-[430px] md:p-7"
     >
-      <div className="absolute inset-0 opacity-70 [background-image:linear-gradient(115deg,rgba(255,255,255,.16)_0,rgba(255,255,255,0)_34%),radial-gradient(circle_at_16%_18%,rgba(255,255,255,.22),transparent_28%),radial-gradient(circle_at_82%_18%,rgba(255,255,255,.16),transparent_24%)]" />
       <div className={`absolute -right-16 top-14 h-64 w-64 rounded-full ${tone.glow} blur-3xl`} />
       <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black/36 to-transparent" />
       <div className="absolute right-8 top-8 hidden h-28 w-28 rotate-6 rounded-3xl border border-white/20 bg-white/10 backdrop-blur md:block" />

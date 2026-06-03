@@ -213,6 +213,7 @@ export default function SchoolRoundPanel({ eventId }) {
                   <a
                     href={round.meetingLink}
                     target="_blank"
+                    rel="noopener noreferrer"
                     className="inline-flex items-center gap-2 text-blue-300 hover:text-blue-200"
                   >
                     Open link <FaExternalLinkAlt />
@@ -290,6 +291,7 @@ export default function SchoolRoundPanel({ eventId }) {
                           <a
                             href={participant.submission.submissionUrl}
                             target="_blank"
+                            rel="noopener noreferrer"
                             className="inline-flex items-center gap-2 text-sm text-blue-300 hover:text-blue-200"
                           >
                             View submitted link <FaExternalLinkAlt />

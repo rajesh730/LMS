@@ -94,7 +94,13 @@ export async function PATCH(request, props) {
     article.reviewNote = requestedStatus === "SUBMITTED" ? "" : article.reviewNote;
 
     if (requestedStatus === "SUBMITTED") {
-      article.submittedAt = new Date();
+      const submittedAt = new Date();
+      article.firstSubmittedAt = article.firstSubmittedAt || article.submittedAt || submittedAt;
+      article.submittedAt = submittedAt;
+      if (previousStatus === "REJECTED") {
+        article.lastResubmittedAt = submittedAt;
+        article.revisionCount = Number(article.revisionCount || 0) + 1;
+      }
       article.reviewedAt = null;
       article.reviewedBy = null;
     } else if (article.status !== "REJECTED") {

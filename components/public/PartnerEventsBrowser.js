@@ -33,7 +33,7 @@ function EventCard({ event }) {
       href={`/events/${event.id}`}
       className="grid gap-4 rounded-xl border border-[#e6eaf7] bg-white p-4 transition hover:border-purple-200 hover:bg-[#f8fbff] md:grid-cols-[150px_minmax(0,1fr)_140px]"
     >
-      <div className="relative h-28 overflow-hidden rounded-xl bg-gradient-to-br from-[#0a2f66] via-purple-700 to-amber-300">
+      <div className="pratyo-brand-panel relative h-28 overflow-hidden rounded-xl border">
         <FaTrophy className="absolute bottom-4 right-5 text-5xl text-white/80" />
         <span className="absolute left-3 top-3 rounded-full bg-white px-2.5 py-1 text-[9px] font-black uppercase text-purple-700">
           {event.eventType}

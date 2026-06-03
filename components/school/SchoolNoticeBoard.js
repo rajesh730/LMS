@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   FaBell,
   FaBookOpen,
@@ -15,10 +15,6 @@ import {
   FaSyncAlt,
 } from "react-icons/fa";
 import EmptyState from "@/components/EmptyState";
-import {
-  NotificationBulkActions,
-  NotificationReadToggleButton,
-} from "@/components/notifications/NotificationUi";
 import LoadingState from "@/components/ui/LoadingState";
 import useNotificationInbox from "@/lib/useNotificationInbox";
 
@@ -138,7 +134,7 @@ function NoticeMetric({ icon: Icon, value, label, note, tone }) {
   );
 }
 
-function NoticeRow({ notification, onToggle }) {
+function NoticeRow({ notification }) {
   const config = getTypeConfig(notification.noticeType);
   const tone = TONE_CLASSES[config.tone] || TONE_CLASSES.purple;
   const Icon = config.icon;
@@ -147,7 +143,7 @@ function NoticeRow({ notification, onToggle }) {
     <article
       className={`rounded-xl border border-[#e1e7f2] border-l-4 bg-white p-4 shadow-sm transition hover:border-purple-200 hover:bg-[#f8fbff] ${tone.row}`}
     >
-      <div className="grid gap-4 lg:grid-cols-[1fr_120px_112px] lg:items-center">
+      <div className="grid gap-4 lg:grid-cols-[1fr_120px_48px] lg:items-center">
         <Link href={notification.href || "#"} className="min-w-0">
           <div className="flex items-start gap-4">
             <span
@@ -205,12 +201,6 @@ function NoticeRow({ notification, onToggle }) {
           >
             <FaEye />
           </Link>
-          <NotificationReadToggleButton
-            notification={notification}
-            onToggle={onToggle}
-            size="xs"
-            className="hidden xl:inline-flex"
-          />
         </div>
       </div>
     </article>
@@ -226,24 +216,13 @@ export default function SchoolNoticeBoard() {
     error,
     notifications,
     loadNotifications,
-    toggleNotificationReadState,
-    updateNotificationsReadState: updateNotificationsReadStateBase,
   } = useNotificationInbox({
     listUrl: "/api/school/notifications",
     readUrl: "/api/school/notifications/read",
     limit: 100,
     realtimeChannel: "school-notifications",
-    markVisibleOnLoad: false,
+    markVisibleOnLoad: true,
   });
-
-  const updateNotificationsReadState = useCallback(
-    async (action) => {
-      await updateNotificationsReadStateBase(action, notifications, {
-        allVisible: true,
-      });
-    },
-    [notifications, updateNotificationsReadStateBase]
-  );
 
   const counts = useMemo(
     () => ({
@@ -304,14 +283,6 @@ export default function SchoolNoticeBoard() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {notifications.length > 0 && (
-              <NotificationBulkActions
-                onMarkAllUnread={() =>
-                  void updateNotificationsReadState("unread")
-                }
-                onMarkAllRead={() => void updateNotificationsReadState("read")}
-              />
-            )}
             <button
               type="button"
               onClick={() => void loadNotifications()}
@@ -438,9 +409,6 @@ export default function SchoolNoticeBoard() {
                       <NoticeRow
                         key={`${notification.noticeType}-${notification.id}`}
                         notification={notification}
-                        onToggle={(item) =>
-                          void toggleNotificationReadState(item)
-                        }
                       />
                     ))}
                   </div>
@@ -457,9 +425,6 @@ export default function SchoolNoticeBoard() {
                       <NoticeRow
                         key={`${notification.noticeType}-${notification.id}`}
                         notification={notification}
-                        onToggle={(item) =>
-                          void toggleNotificationReadState(item)
-                        }
                       />
                     ))}
                   </div>

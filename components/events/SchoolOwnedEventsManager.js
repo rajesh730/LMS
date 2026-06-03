@@ -583,7 +583,6 @@ export default function SchoolOwnedEventsManager({
                   event.resultsPublished ||
                   eventState === "COMPLETED" ||
                   eventState === "ARCHIVED";
-                const canComplete = eventState === "ACTIVE" && isApprovedEvent(event);
                 const rowStats = [
                   ["Registrations", registered, getEventUnitLabel(event)],
                   ["Schools", event.schoolCount || 1, "School"],
@@ -712,22 +711,6 @@ export default function SchoolOwnedEventsManager({
                             ))}
                           </div>
                           <div className="mt-3 flex flex-wrap gap-2">
-                            <Link
-                              href={`/school/events/${event._id}/manage?tab=registrations`}
-                              className="inline-flex min-h-9 items-center gap-2 rounded-xl bg-[#f8fbff] px-4 text-xs font-black text-[#0a2f66] transition hover:bg-[#edf4ff]"
-                            >
-                              <FaUsers />
-                              Open Registrations
-                            </Link>
-                            <button
-                              type="button"
-                              disabled={!canComplete}
-                              onClick={() => handleStatusChange(event._id, "COMPLETED")}
-                              className="inline-flex min-h-9 items-center gap-2 rounded-xl bg-white px-4 text-xs font-black text-[#0a2f66] transition hover:bg-[#f8fbff] disabled:cursor-not-allowed disabled:opacity-45"
-                            >
-                              <FaCheckCircle />
-                              Mark Complete
-                            </button>
                             {(event.lifecycleStatus || "ACTIVE") !== "ARCHIVED" ? (
                               <button
                                 type="button"

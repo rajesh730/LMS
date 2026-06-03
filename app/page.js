@@ -1,12 +1,15 @@
 import Link from "next/link";
 import connectDB from "@/lib/db";
 import Event from "@/models/Event";
+import SchoolPromotion from "@/models/SchoolPromotion";
 import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
 import { getRotatingPartnerSpotlights } from "@/lib/partnerSpotlights";
 import { getActiveSchoolPromotions } from "@/lib/schoolPromotions";
 import HomepageHeroCarousel from "@/components/public/HomepageHeroCarousel";
+import HomeScrollMemory from "@/components/public/HomeScrollMemory";
 import PublicExplorePanel from "@/components/public/PublicExplorePanel";
 import PublicSiteNav from "@/components/public/PublicSiteNav";
+import SchoolLogoMark from "@/components/public/SchoolLogoMark";
 import {
   FaArrowRight,
   FaCalendarAlt,
@@ -77,6 +80,52 @@ async function getLatestStudentWritings() {
   }));
 }
 
+async function getPremiumSpotlightStudentWritings() {
+  const premiumPromotions = await SchoolPromotion.find({
+    placement: "HOME_SPOTLIGHT",
+    status: "ACTIVE",
+    paymentStatus: "PAID",
+    priority: "PREMIUM",
+  })
+    .select("school")
+    .lean();
+
+  const premiumSchoolIds = [
+    ...new Set(
+      premiumPromotions
+        .map((promotion) => promotion.school)
+        .filter(Boolean)
+        .map((schoolId) => String(schoolId))
+    ),
+  ];
+
+  if (premiumSchoolIds.length === 0) return [];
+
+  const articles = await SchoolMagazineArticle.find({
+    status: "APPROVED",
+    isPublished: true,
+    isDeleted: { $ne: true },
+    school: { $in: premiumSchoolIds },
+  })
+    .select("title content category publishedAt updatedAt")
+    .sort({ publishedAt: -1, updatedAt: -1 })
+    .populate("authorStudent", "name grade")
+    .populate("school", "schoolName")
+    .lean();
+
+  return articles.map((article) => ({
+    id: String(article._id),
+    href: `/writings/${article._id}`,
+    title: article.title,
+    content: article.content,
+    category: article.category || "WRITING",
+    date: article.publishedAt || article.updatedAt,
+    author: article.authorStudent?.name || "Student",
+    schoolName: article.school?.schoolName || "School",
+    schoolHref: article.school?._id ? `/schools/${article.school._id}` : "",
+  }));
+}
+
 async function getUpcomingEvents() {
   const events = await Event.find({
     status: "APPROVED",
@@ -105,11 +154,13 @@ async function getHomepageData() {
   const [
     partnerSpotlights,
     homeSpotlights,
+    premiumSpotlightWritings,
     latestWritings,
     upcomingEvents,
   ] = await Promise.all([
-    getRotatingPartnerSpotlights(4),
+    getRotatingPartnerSpotlights(1),
     getActiveSchoolPromotions("HOME_SPOTLIGHT", 5, { randomize: true }),
+    getPremiumSpotlightStudentWritings(),
     getLatestStudentWritings(),
     getUpcomingEvents(),
   ]);
@@ -117,6 +168,7 @@ async function getHomepageData() {
   return {
     partnerSpotlights,
     homeSpotlights,
+    premiumSpotlightWritings,
     latestWritings,
     upcomingEvents,
   };
@@ -143,20 +195,32 @@ function EmptyPanel({ title, description, href = "", action = "" }) {
   );
 }
 
-function AuthorLine({ name, school, badge = "Published Writing" }) {
+function AuthorLine({ name, school, badge = "Published Writing", onBrand = false }) {
   return (
     <div className="flex items-center gap-3">
-      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#f0edff] text-sm font-black text-[#4326e8]">
+      <span
+        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-black ${
+          onBrand
+            ? "border border-white/25 bg-white/14 text-white"
+            : "bg-[#f0edff] text-[#4326e8]"
+        }`}
+      >
         {getInitials(name)}
       </span>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-black text-[#111827]">{name}</p>
-        <p className="truncate text-xs font-bold text-[#667085]">
-          <FaShieldAlt className="mr-1 inline text-[#2f7fdb]" />
+        <p className={`truncate text-sm font-black ${onBrand ? "text-white" : "text-[#111827]"}`}>
+          {name}
+        </p>
+        <p className={`truncate text-xs font-bold ${onBrand ? "text-white/78" : "text-[#667085]"}`}>
+          <FaShieldAlt className={`mr-1 inline ${onBrand ? "text-white/72" : "text-[#2f7fdb]"}`} />
           {school}
         </p>
       </div>
-      <span className="rounded-full bg-[#f1edff] px-3 py-1 text-[10px] font-black text-[#4326e8]">
+      <span
+        className={`rounded-full px-3 py-1 text-[10px] font-black ${
+          onBrand ? "bg-white text-[#0d3d47]" : "bg-[#f1edff] text-[#4326e8]"
+        }`}
+      >
         {badge}
       </span>
     </div>
@@ -167,7 +231,7 @@ function FeedCard({ item, badge = "Published Writing", actions = true }) {
   const voiceHref = item.href || item.schoolHref || "/student-voices";
 
   return (
-    <article className="rounded-2xl border border-[#edf0f7] bg-white p-5 shadow-sm">
+    <article className="rounded-2xl border border-[#edf0f7] bg-white p-5 text-[#111827] shadow-sm">
       <AuthorLine
         name={item.author || item.studentLabel || "Student"}
         school={item.schoolName || "School"}
@@ -227,9 +291,11 @@ function RightColumn({ schools, partner, event }) {
                 href={school.href || "/schools"}
                 className="flex items-center gap-3"
               >
-                <span className="flex h-10 w-10 items-center justify-center rounded-full border border-[#edf0f7] bg-white text-[#4326e8]">
-                  <FaSchool />
-                </span>
+                <SchoolLogoMark
+                  imageUrl={school.profile?.coverImageUrl}
+                  name={school.title || school.schoolName}
+                  className="h-10 w-10"
+                />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-black text-[#111827]">
                     {school.title || school.schoolName}
@@ -246,7 +312,7 @@ function RightColumn({ schools, partner, event }) {
       )}
 
       {event && (
-        <section className="rounded-2xl bg-[#4326e8] p-6 text-white shadow-xl shadow-[#4326e8]/18">
+        <section className="pratyo-brand-surface rounded-2xl p-6 text-white shadow-xl shadow-slate-950/12">
           <p className="text-sm font-black text-white">Upcoming Event</p>
           <div className="mt-5 flex items-start gap-4">
             <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-white/16">
@@ -358,9 +424,11 @@ function MobileSchoolScroller({ schools }) {
             href={school.href || "/schools"}
             className="relative rounded-xl border border-[#edf0f7] bg-white p-3 text-center shadow-sm"
           >
-            <span className="mx-auto mt-2 flex h-12 w-12 items-center justify-center rounded-full border border-[#edf0f7] text-[#4326e8]">
-              <FaSchool />
-            </span>
+            <SchoolLogoMark
+              imageUrl={school.profile?.coverImageUrl}
+              name={school.title}
+              className="mx-auto mt-2 h-12 w-12"
+            />
             <p className="mt-2 line-clamp-2 min-h-9 text-xs font-black leading-tight text-[#111827]">
               {school.title}
             </p>
@@ -429,6 +497,7 @@ export default async function Home() {
   const {
     partnerSpotlights,
     homeSpotlights,
+    premiumSpotlightWritings,
     latestWritings,
     upcomingEvents,
   } = await getHomepageData();
@@ -441,6 +510,7 @@ export default async function Home() {
   return (
     <main className="pratyo-home-shell min-h-screen bg-[#fbfcff] text-[#111827]">
       <PublicSiteNav active="home" />
+      <HomeScrollMemory />
 
       <div className="mx-auto grid max-w-[1480px] gap-6 px-4 pb-28 pt-5 md:px-5 md:pb-10 xl:grid-cols-[230px_minmax(0,1fr)]">
         <PublicExplorePanel active="home" variant="home" />
@@ -448,7 +518,7 @@ export default async function Home() {
         <div className="min-w-0">
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
             <div className="min-w-0 space-y-5">
-              <HomepageHeroCarousel stories={latestWritings} />
+              <HomepageHeroCarousel stories={premiumSpotlightWritings} />
 
               <div className="hidden space-y-5 md:block">
                 {feedItems.map((item) => (
@@ -474,7 +544,7 @@ export default async function Home() {
                   events={upcomingEvents}
                 />
                 {activeEvent && (
-                  <section className="rounded-2xl bg-[#4326e8] p-5 text-white shadow-xl shadow-[#4326e8]/18">
+                  <section className="pratyo-brand-surface rounded-2xl p-5 text-white shadow-xl shadow-slate-950/12">
                     <div className="flex items-center gap-4">
                       <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-white/16">
                         <FaCalendarAlt className="text-2xl text-white" />

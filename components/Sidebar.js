@@ -30,6 +30,7 @@ import useWorkIndicators from "@/lib/useWorkIndicators";
 const HREF_INDICATOR_KEYS = {
   "/admin/dashboard?tab=approvals": "admin.approvals",
   "/admin/dashboard?tab=events": "admin.events",
+  "/admin/dashboard?tab=partners": "admin.partners",
   "/admin/feedback": "admin.feedback",
   "/admin/dashboard?tab=spotlight": "admin.spotlight",
   "/school/dashboard?tab=platform-events": "school.platformEvents",

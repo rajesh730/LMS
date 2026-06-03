@@ -236,7 +236,7 @@ export default function EventCertificatesPanel({ eventId }) {
               <a
                 href={overallResultUrl}
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-500"
               >
                 Open Public Result <FaExternalLinkAlt />
@@ -330,7 +330,7 @@ export default function EventCertificatesPanel({ eventId }) {
                   <a
                     href={certificate.certificateUrl}
                     target="_blank"
-                    rel="noreferrer"
+                    rel="noopener noreferrer"
                     className="inline-flex items-center gap-2 rounded-lg bg-slate-800 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-slate-700"
                   >
                     Open <FaExternalLinkAlt />
@@ -338,7 +338,7 @@ export default function EventCertificatesPanel({ eventId }) {
                   <a
                     href={`${certificate.certificateUrl}?download=pdf`}
                     target="_blank"
-                    rel="noreferrer"
+                    rel="noopener noreferrer"
                     className="inline-flex items-center gap-2 rounded-lg bg-slate-800 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-slate-700"
                   >
                     <FaDownload /> Download

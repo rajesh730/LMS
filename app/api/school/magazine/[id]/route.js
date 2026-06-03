@@ -65,40 +65,67 @@ export async function PATCH(request, props) {
       }
     }
 
+    const updates = {};
+
     if (action === "PUBLISH" || action === "PUBLISH_HOMEPAGE") {
-      article.isPublished = true;
-      article.publishedAt = article.publishedAt || new Date();
+      updates.isPublished = true;
+      updates.publishedAt = article.publishedAt || new Date();
     }
 
     if (action === "UNPUBLISH" || action === "UNPUBLISH_HOMEPAGE") {
-      article.isPublished = false;
-      article.publishedAt = null;
+      updates.isPublished = false;
+      updates.publishedAt = null;
     }
 
     if (action === "PUBLISH_MAGAZINE") {
-      article.isMagazinePublished = true;
-      article.magazinePublishedAt = article.magazinePublishedAt || new Date();
+      updates.isMagazinePublished = true;
+      updates.magazinePublishedAt = article.magazinePublishedAt || new Date();
     }
 
     if (action === "UNPUBLISH_MAGAZINE") {
-      article.isMagazinePublished = false;
-      article.magazinePublishedAt = null;
+      updates.isMagazinePublished = false;
+      updates.magazinePublishedAt = null;
     }
 
-    await article.save();
+    const updateResult = await SchoolMagazineArticle.updateOne(
+      { _id: article._id, school: session.user.id },
+      { $set: updates }
+    );
+
+    if (!updateResult.matchedCount) {
+      return NextResponse.json(
+        { message: "Article could not be updated for this school" },
+        { status: 404 }
+      );
+    }
+
+    const after = {
+      isPublished:
+        Object.prototype.hasOwnProperty.call(updates, "isPublished")
+          ? updates.isPublished
+          : article.isPublished,
+      publishedAt:
+        Object.prototype.hasOwnProperty.call(updates, "publishedAt")
+          ? updates.publishedAt
+          : article.publishedAt,
+      isMagazinePublished:
+        Object.prototype.hasOwnProperty.call(updates, "isMagazinePublished")
+          ? updates.isMagazinePublished
+          : article.isMagazinePublished,
+      magazinePublishedAt:
+        Object.prototype.hasOwnProperty.call(updates, "magazinePublishedAt")
+          ? updates.magazinePublishedAt
+          : article.magazinePublishedAt,
+      status: article.status,
+    };
+
     await recordLifecycleAudit({
       entityType: "SchoolMagazineArticle",
       entityId: article._id,
       action,
       session,
       before,
-      after: {
-        isPublished: article.isPublished,
-        publishedAt: article.publishedAt,
-        isMagazinePublished: article.isMagazinePublished,
-        magazinePublishedAt: article.magazinePublishedAt,
-        status: article.status,
-      },
+      after,
     });
 
     const messageByAction = {
@@ -112,12 +139,19 @@ export async function PATCH(request, props) {
 
     return NextResponse.json({
       message: messageByAction[action] || "Article updated",
-      article,
+      article: {
+        id: String(article._id),
+        ...after,
+      },
     });
   } catch (error) {
     console.error("PATCH /api/school/magazine/[id] error:", error);
+    const message =
+      process.env.NODE_ENV === "development" && error?.message
+        ? `Failed to update school magazine article: ${error.message}`
+        : "Failed to update school magazine article";
     return NextResponse.json(
-      { message: "Failed to update school magazine article" },
+      { message },
       { status: 500 }
     );
   }

@@ -46,7 +46,7 @@ function SchoolSpotlightCard({ promotion, compact = false, className = "" }) {
           style={{
             backgroundImage: promotion.profile?.coverImageUrl
               ? `linear-gradient(rgba(7,24,51,0.08), rgba(7,24,51,0.52)), url(${promotion.profile.coverImageUrl})`
-              : "linear-gradient(135deg, rgba(47,127,219,.96), rgba(10,47,102,.92))",
+              : "linear-gradient(135deg, #142435, #0c3a43 52%, #102a3f)",
           }}
         />
         <div className="absolute left-3 top-3 inline-flex rounded-full bg-white/90 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-[#0a2f66] shadow-sm">

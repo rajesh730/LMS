@@ -54,6 +54,19 @@ const SchoolMagazineArticleSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    firstSubmittedAt: {
+      type: Date,
+      default: null,
+    },
+    lastResubmittedAt: {
+      type: Date,
+      default: null,
+    },
+    revisionCount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
     reviewedAt: {
       type: Date,
       default: null,

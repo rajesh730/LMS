@@ -4,11 +4,11 @@ import {
   FaArrowRight,
   FaCalendarAlt,
   FaClock,
-  FaSchool,
   FaUser,
 } from "react-icons/fa";
 import PublicExplorePanel from "@/components/public/PublicExplorePanel";
 import PublicShareButton from "@/components/public/PublicShareButton";
+import SchoolLogoMark from "@/components/public/SchoolLogoMark";
 
 function formatDate(value) {
   if (!value) return "";
@@ -45,6 +45,7 @@ export default function PublicWritingReader({
   const schoolHref = school.id ? `/schools/${school.id}` : "/schools";
   const currentHref = `/writings/${article.id}`;
   const moreItems = moreFromSchool.length > 0 ? moreFromSchool : relatedArticles;
+  const schoolName = school.schoolName || "School";
 
   return (
     <div className="mx-auto max-w-[1500px] px-4 py-5 pb-16 sm:px-6">
@@ -77,26 +78,42 @@ export default function PublicWritingReader({
                 {article.title}
               </h1>
 
-              <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-sm font-bold text-[#526071]">
-                <span className="inline-flex items-center gap-2">
-                  <FaUser className="text-[#4326e8]" />
-                  {author.name || "Student"}
-                </span>
+              <div className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-center">
                 <Link
                   href={schoolHref}
-                  className="inline-flex items-center gap-2 hover:text-[#4326e8]"
+                  className="group flex min-w-0 items-center gap-3 rounded-xl border border-[#e6eaf7] bg-[#fbfcff] p-3 pr-5 transition hover:border-[#cfc7ff] hover:bg-[#f8f7ff]"
                 >
-                  <FaSchool className="text-[#4326e8]" />
-                  {school.schoolName || "School"}
+                  <SchoolLogoMark
+                    imageUrl={school.profile?.coverImageUrl}
+                    name={schoolName}
+                    className="h-16 w-16"
+                    iconClassName="text-2xl"
+                    shapeClassName="rounded-xl"
+                  />
+                  <span className="min-w-0">
+                    <span className="block text-xs font-black uppercase text-[#6f7890]">
+                      Published by
+                    </span>
+                    <span className="block truncate text-lg font-black text-[#10142f] group-hover:text-[#4326e8]">
+                      {schoolName}
+                    </span>
+                  </span>
                 </Link>
-                <span className="inline-flex items-center gap-2">
-                  <FaCalendarAlt className="text-[#4326e8]" />
-                  {formatDate(article.publishedAt)}
-                </span>
-                <span className="inline-flex items-center gap-2">
-                  <FaClock className="text-[#4326e8]" />
-                  {getReadTime(article.content)} min read
-                </span>
+
+                <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm font-bold text-[#526071]">
+                  <span className="inline-flex items-center gap-2">
+                    <FaUser className="text-[#4326e8]" />
+                    {author.name || "Student"}
+                  </span>
+                  <span className="inline-flex items-center gap-2">
+                    <FaCalendarAlt className="text-[#4326e8]" />
+                    {formatDate(article.publishedAt)}
+                  </span>
+                  <span className="inline-flex items-center gap-2">
+                    <FaClock className="text-[#4326e8]" />
+                    {getReadTime(article.content)} min read
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -106,7 +123,7 @@ export default function PublicWritingReader({
 
             <div className="mt-10 flex flex-col gap-3 border-t border-[#edf0f7] pt-5 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm font-semibold text-[#526071]">
-                Published by {school.schoolName || "a Pratyo school"}.
+                Published by {schoolName}.
               </p>
               <div className="flex flex-wrap gap-2">
                 <Link

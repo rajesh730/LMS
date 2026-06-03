@@ -12,6 +12,7 @@ import AlertBanner from "@/components/ui/AlertBanner";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import LoadingState from "@/components/ui/LoadingState";
 import PageHeader from "@/components/ui/PageHeader";
+import AuthenticatedPublicLinkGuard from "@/components/AuthenticatedPublicLinkGuard";
 
 const StudentManager = dynamic(
   () => import("@/components/dashboard/StudentManager"),
@@ -407,6 +408,7 @@ function SchoolDashboardContent() {
 
   return (
     <div className="flex min-h-screen bg-[#f5f1e8] text-[#17120a] font-sans">
+      <AuthenticatedPublicLinkGuard />
       {isNavOpen && (
         <button
           type="button"

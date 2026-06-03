@@ -3,6 +3,7 @@ import connectDB from "@/lib/db";
 import EventProposal, { EVENT_PROPOSAL_ROLES } from "@/models/EventProposal";
 import { normalizeGradeValue } from "@/lib/schoolGrades";
 import { isBeforeToday } from "@/lib/eventDates";
+import { publishWorkIndicatorsUpdate } from "@/lib/workIndicatorRealtime";
 
 export const dynamic = "force-dynamic";
 
@@ -70,6 +71,11 @@ export async function POST(req) {
       dataAccessNeeds: body.dataAccessNeeds || "",
       safetyNotes: body.safetyNotes || "",
       status: "NEW",
+    });
+
+    publishWorkIndicatorsUpdate("partner-proposal-created", {
+      proposalId: String(proposal._id),
+      status: proposal.status,
     });
 
     return NextResponse.json(

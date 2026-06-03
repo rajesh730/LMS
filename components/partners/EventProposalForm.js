@@ -60,9 +60,16 @@ export default function EventProposalForm() {
   const [form, setForm] = useState(initialForm);
   const [status, setStatus] = useState("");
   const [message, setMessage] = useState("");
+  const [lookup, setLookup] = useState({ email: "", phone: "" });
+  const [lookupStatus, setLookupStatus] = useState("");
+  const [lookupMessage, setLookupMessage] = useState("");
 
   const update = (field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const updateLookup = (field, value) => {
+    setLookup((prev) => ({ ...prev, [field]: value }));
   };
 
   const toggleRole = (role) => {
@@ -133,8 +140,119 @@ export default function EventProposalForm() {
     }
   };
 
+  const handlePartnerLookup = async () => {
+    setLookupStatus("searching");
+    setLookupMessage("");
+
+    try {
+      const params = new URLSearchParams();
+      if (lookup.email.trim()) params.set("email", lookup.email.trim());
+      if (lookup.phone.trim()) params.set("phone", lookup.phone.trim());
+
+      if (!params.toString()) {
+        throw new Error("Enter an email or phone number to search.");
+      }
+
+      const res = await fetch(`/api/event-proposals/partner-lookup?${params}`, {
+        cache: "no-store",
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to search partner records");
+      }
+
+      if (!data.partner) {
+        setLookupStatus("empty");
+        setLookupMessage(
+          "No existing partner found. Continue with a new application."
+        );
+        return;
+      }
+
+      const partnerRoles = (data.partner.partnerRoles || []).filter((role) =>
+        ROLE_OPTIONS.some(([option]) => option === role)
+      );
+
+      setForm((prev) => ({
+        ...prev,
+        organizationName: data.partner.organizationName || prev.organizationName,
+        organizationType: data.partner.organizationType || prev.organizationType,
+        website: data.partner.website || prev.website,
+        location: data.partner.location || prev.location,
+        contactName: data.partner.contactName || prev.contactName,
+        contactEmail: data.partner.contactEmail || lookup.email || prev.contactEmail,
+        contactPhone: data.partner.contactPhone || lookup.phone || prev.contactPhone,
+        proposedRoles: partnerRoles.length ? partnerRoles : prev.proposedRoles,
+      }));
+      setLookupStatus("found");
+      setLookupMessage(
+        `${data.partner.organizationName} found. Organization details have been filled in.`
+      );
+    } catch (error) {
+      setLookupStatus("error");
+      setLookupMessage(error.message);
+    }
+  };
+
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
+      <section className="rounded-xl border border-[#e6eaf7] bg-white p-5 shadow-sm">
+        <div className="mb-5">
+          <p className="text-[11px] font-black uppercase text-[#4326e8]">
+            Returning Partner
+          </p>
+          <h2 className="mt-1 text-xl font-black text-[#17120a]">
+            Search first if you have organized before.
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-[#52657d]">
+            Use the email or phone number your organization used previously.
+          </p>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-[1fr_1fr_auto] md:items-end">
+          <Field label="Email">
+            <input
+              type="email"
+              value={lookup.email}
+              onChange={(e) => updateLookup("email", e.target.value)}
+              placeholder="name@example.com"
+              className={fieldClass}
+            />
+          </Field>
+          <Field label="Phone">
+            <input
+              value={lookup.phone}
+              onChange={(e) => updateLookup("phone", e.target.value)}
+              placeholder="Previous contact phone"
+              className={fieldClass}
+            />
+          </Field>
+          <button
+            type="button"
+            onClick={handlePartnerLookup}
+            disabled={lookupStatus === "searching"}
+            className="inline-flex min-h-11 items-center justify-center rounded-lg bg-[#4326e8] px-5 text-sm font-black text-white transition hover:bg-[#3217d3] disabled:opacity-60"
+          >
+            {lookupStatus === "searching" ? "Searching..." : "Search"}
+          </button>
+        </div>
+
+        {lookupMessage && (
+          <p
+            className={`mt-3 text-sm font-semibold ${
+              lookupStatus === "found"
+                ? "text-emerald-700"
+                : lookupStatus === "error"
+                ? "text-red-700"
+                : "text-[#52657d]"
+            }`}
+          >
+            {lookupMessage}
+          </p>
+        )}
+      </section>
+
       <section className="rounded-xl border border-[#e6eaf7] bg-white p-5 shadow-sm">
         <div className="mb-5">
           <p className="text-[11px] font-black uppercase text-[#4326e8]">

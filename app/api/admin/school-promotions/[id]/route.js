@@ -81,7 +81,7 @@ function validatePayload(body) {
   if (!PROMOTION_PLACEMENTS.includes(placement)) {
     return { error: "Invalid spotlight placement" };
   }
-  if (!PROMOTION_STATUSES.includes(status) || status === "ARCHIVED") {
+  if (!PROMOTION_STATUSES.includes(status)) {
     return { error: "Invalid campaign status" };
   }
   if (!PROMOTION_PRIORITIES.includes(priority)) {
@@ -160,7 +160,6 @@ export async function PATCH(request, props) {
     }
 
     Object.assign(promotion, validation.data);
-    if (promotion.status !== "ARCHIVED") promotion.archivedAt = null;
 
     await promotion.save();
     await promotion.populate("school", "schoolName schoolLocation email");
@@ -173,41 +172,6 @@ export async function PATCH(request, props) {
     console.error("PATCH /api/admin/school-promotions/[id] error:", error);
     return NextResponse.json(
       { message: "Failed to update school spotlight campaign" },
-      { status: 500 }
-    );
-  }
-}
-
-export async function DELETE(request, props) {
-  try {
-    const session = await requireSuperAdmin();
-    if (!session) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    }
-
-    await connectDB();
-
-    const params = await props.params;
-    const promotion = await SchoolPromotion.findById(params.id);
-
-    if (!promotion) {
-      return NextResponse.json(
-        { message: "School spotlight campaign not found" },
-        { status: 404 }
-      );
-    }
-
-    promotion.status = "ARCHIVED";
-    promotion.archivedAt = new Date();
-    await promotion.save();
-
-    return NextResponse.json({
-      message: "School spotlight campaign archived",
-    });
-  } catch (error) {
-    console.error("DELETE /api/admin/school-promotions/[id] error:", error);
-    return NextResponse.json(
-      { message: "Failed to archive school spotlight campaign" },
       { status: 500 }
     );
   }

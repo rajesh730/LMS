@@ -37,6 +37,9 @@
   --button-danger-hover: #9f1f14;
   --button-radius: 0.9rem;
   --button-shadow: 0 10px 22px rgba(67, 38, 232, 0.18);
+  --brand-surface-start: #142435;
+  --brand-surface-mid: #0c3a43;
+  --brand-surface-end: #102a3f;
 }
 
 @theme inline {
@@ -116,6 +119,72 @@ input:disabled,
 ::selection {
   background: rgba(67, 38, 232, 0.18);
   color: var(--brand-navy);
+}
+
+.pratyo-brand-surface {
+  background:
+    linear-gradient(112deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0) 34%),
+    radial-gradient(circle at 76% 18%, rgba(51, 180, 126, 0.18), transparent 30%),
+    radial-gradient(circle at 16% 18%, rgba(43, 111, 143, 0.16), transparent 34%),
+    linear-gradient(135deg, var(--brand-surface-start), var(--brand-surface-mid) 48%, var(--brand-surface-end)) !important;
+}
+
+.pratyo-brand-surface-soft {
+  background:
+    linear-gradient(135deg, rgba(20, 36, 53, 0.96), rgba(12, 58, 67, 0.94) 52%, rgba(16, 42, 63, 0.96)) !important;
+}
+
+.pratyo-brand-panel {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.08)),
+    radial-gradient(circle at 76% 18%, rgba(74, 222, 128, 0.16), transparent 34%),
+    linear-gradient(135deg, rgba(34, 67, 87, 0.95), rgba(17, 84, 91, 0.9) 52%, rgba(25, 58, 82, 0.95)) !important;
+  border-color: rgba(255, 255, 255, 0.22) !important;
+}
+
+.pratyo-writing-art {
+  background:
+    linear-gradient(112deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.04) 45%),
+    radial-gradient(circle at 78% 18%, rgba(56, 189, 248, 0.3), transparent 34%),
+    radial-gradient(circle at 18% 78%, rgba(16, 185, 129, 0.24), transparent 32%),
+    linear-gradient(135deg, #214a5d, #13706f 52%, #183c5a) !important;
+  border-color: rgba(255, 255, 255, 0.28) !important;
+}
+
+.pratyo-on-brand,
+.pratyo-on-brand :where(h1, h2, h3, h4, h5, h6, p, strong, a) {
+  color: #ffffff !important;
+}
+
+.pratyo-on-brand :where(.pratyo-muted, small) {
+  color: rgba(255, 255, 255, 0.78) !important;
+}
+
+.pratyo-on-brand :where(svg) {
+  color: currentColor;
+}
+
+.pratyo-on-brand
+  :where(
+    [class*="text-[#111827]"],
+    [class*="text-[#17120a]"],
+    [class*="text-slate-950"],
+    [class*="text-slate-900"],
+    [class*="text-black"]
+  ) {
+  color: #ffffff !important;
+}
+
+.pratyo-on-brand
+  :where(
+    [class*="text-[#4b5565]"],
+    [class*="text-[#52657d]"],
+    [class*="text-[#667085]"],
+    [class*="text-slate-700"],
+    [class*="text-slate-600"],
+    [class*="text-slate-500"]
+  ) {
+  color: rgba(255, 255, 255, 0.8) !important;
 }
 
 h1,

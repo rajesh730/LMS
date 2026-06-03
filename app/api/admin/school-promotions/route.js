@@ -81,7 +81,7 @@ function validatePayload(body) {
   if (!PROMOTION_PLACEMENTS.includes(placement)) {
     return { error: "Invalid spotlight placement" };
   }
-  if (!PROMOTION_STATUSES.includes(status) || status === "ARCHIVED") {
+  if (!PROMOTION_STATUSES.includes(status)) {
     return { error: "Invalid campaign status" };
   }
   if (!PROMOTION_PRIORITIES.includes(priority)) {
@@ -135,7 +135,7 @@ export async function GET() {
         role: "SCHOOL_ADMIN",
         status: { $in: ["APPROVED", "SUBSCRIBED"] },
       })
-        .select("schoolName schoolLocation province district email")
+        .select("schoolName schoolLocation province district email principalName status")
         .sort({ schoolName: 1 })
         .lean(),
     ]);
@@ -149,6 +149,8 @@ export async function GET() {
         province: school.province || "",
         district: school.district || "",
         email: school.email || "",
+        principalName: school.principalName || "",
+        status: school.status || "",
       })),
     });
   } catch (error) {

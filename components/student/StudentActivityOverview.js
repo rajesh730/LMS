@@ -149,6 +149,8 @@ export default function StudentActivityOverview() {
                 {achievement.certificateUrl && (
                   <Link
                     href={achievement.certificateUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-[#4326e8] px-4 text-sm font-black text-white"
                   >
                     <FaCertificate />

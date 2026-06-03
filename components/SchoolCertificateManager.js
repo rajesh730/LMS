@@ -146,6 +146,7 @@ export default function SchoolCertificateManager() {
                   <a
                     href={certificate.certificateUrl}
                     target="_blank"
+                    rel="noopener noreferrer"
                     className="inline-flex items-center gap-2 rounded-lg bg-slate-800 px-4 py-2 text-sm font-semibold text-slate-200 hover:bg-slate-700"
                   >
                     Open <FaExternalLinkAlt />

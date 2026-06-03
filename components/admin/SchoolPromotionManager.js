@@ -3,54 +3,28 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   FaBullhorn,
-  FaEdit,
-  FaEye,
   FaPause,
   FaPlay,
-  FaPlus,
-  FaSave,
-  FaTrash,
+  FaSearch,
+  FaStar,
+  FaSyncAlt,
 } from "react-icons/fa";
 import AlertBanner from "@/components/ui/AlertBanner";
-import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import EmptyState from "@/components/EmptyState";
 import LoadingState from "@/components/ui/LoadingState";
 import PageHeader from "@/components/ui/PageHeader";
 
-const emptyForm = {
-  id: "",
-  school: "",
-  title: "",
-  tagline: "",
-  placement: "HOME_SPOTLIGHT",
-  priority: "STANDARD",
-  paymentStatus: "PENDING",
-  paidAmount: "",
-  paymentReference: "",
-  status: "DRAFT",
-  startsAt: "",
-  endsAt: "",
-  destinationUrl: "",
-  notes: "",
-};
-
 const STATUS_STYLES = {
-  ACTIVE: "bg-[#eaf2ff] text-[#0a2f66] border-[#bfd7f7]",
-  DRAFT: "bg-white text-[#52657d] border-[#d7cdbb]",
-  PAUSED: "bg-[#eaf2ff] text-[#0a2f66] border-[#bfd7f7]",
-  ARCHIVED: "bg-rose-50 text-rose-800 border-rose-200",
+  ACTIVE: "bg-emerald-50 text-emerald-700",
+  DRAFT: "bg-slate-100 text-[#52657d]",
+  PAUSED: "bg-[#eaf2ff] text-[#0a2f66]",
+  OFF: "bg-slate-100 text-[#52657d]",
 };
 
-function toDateInputValue(value) {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  return date.toISOString().slice(0, 10);
-}
-
-function formatPlacement(value) {
-  return value === "HOME_SPOTLIGHT" ? "Homepage" : "Schools page";
-}
+const PLACEMENTS = [
+  ["HOME_SPOTLIGHT", "Homepage"],
+  ["SCHOOLS_SPOTLIGHT", "Schools Page"],
+];
 
 function parseSchoolLocation(location = "") {
   const parts = String(location || "")
@@ -75,31 +49,71 @@ function getSchoolDistrict(school) {
 }
 
 function getCampaignState(campaign) {
-  if (campaign.status !== "ACTIVE") return campaign.status;
-  return "ACTIVE";
+  if (!campaign) return "OFF";
+  return campaign.status;
+}
+
+function buildPromotionIndex(promotions, placement) {
+  const map = new Map();
+  promotions
+    .filter((promotion) => promotion.placement === placement)
+    .forEach((promotion) => {
+      const schoolId = promotion.school?.id;
+      if (!schoolId) return;
+      const current = map.get(schoolId);
+      if (
+        !current ||
+        new Date(promotion.updatedAt || promotion.createdAt || 0) >
+          new Date(current.updatedAt || current.createdAt || 0)
+      ) {
+        map.set(schoolId, promotion);
+      }
+    });
+  return map;
 }
 
 export default function SchoolPromotionManager() {
   const [promotions, setPromotions] = useState([]);
   const [schools, setSchools] = useState([]);
-  const [form, setForm] = useState(emptyForm);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [busyId, setBusyId] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [archiveTarget, setArchiveTarget] = useState(null);
+  const [query, setQuery] = useState("");
   const [schoolProvince, setSchoolProvince] = useState("All Provinces");
   const [schoolDistrict, setSchoolDistrict] = useState("All Districts");
+  const [placement, setPlacement] = useState("HOME_SPOTLIGHT");
 
-  const activePromotions = useMemo(
-    () => promotions.filter((promotion) => promotion.status !== "ARCHIVED"),
-    [promotions]
-  );
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError("");
 
-  const archivedPromotions = useMemo(
-    () => promotions.filter((promotion) => promotion.status === "ARCHIVED"),
-    [promotions]
+      const res = await fetch("/api/admin/school-promotions", {
+        cache: "no-store",
+      });
+      const payload = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(payload.message || "Failed to load school spotlights");
+      }
+
+      setPromotions(Array.isArray(payload.promotions) ? payload.promotions : []);
+      setSchools(Array.isArray(payload.schools) ? payload.schools : []);
+    } catch (loadError) {
+      setError(loadError.message || "Failed to load school spotlights");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const promotionBySchool = useMemo(
+    () => buildPromotionIndex(promotions, placement),
+    [placement, promotions]
   );
 
   const provinceOptions = useMemo(
@@ -121,201 +135,87 @@ export default function SchoolPromotionManager() {
     ];
   }, [schoolProvince, schools]);
 
-  const filteredSchools = useMemo(
-    () =>
-      schools.filter((school) => {
-        if (
-          schoolProvince !== "All Provinces" &&
-          getSchoolProvince(school) !== schoolProvince
-        ) {
-          return false;
-        }
-        if (
-          schoolDistrict !== "All Districts" &&
-          getSchoolDistrict(school) !== schoolDistrict
-        ) {
-          return false;
-        }
-        return true;
-      }),
-    [schoolDistrict, schoolProvince, schools]
-  );
+  const visibleSchools = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    return schools.filter((school) => {
+      const promotion = promotionBySchool.get(school.id);
+      const spotlightState = getCampaignState(promotion);
+      const searchable = [
+        school.name,
+        school.principalName,
+        school.email,
+        school.status,
+        school.location,
+        getSchoolProvince(school),
+        getSchoolDistrict(school),
+        spotlightState,
+        promotion?.priority,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
 
-  const loadData = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError("");
-
-      const res = await fetch("/api/admin/school-promotions", {
-        cache: "no-store",
-      });
-      const payload = await res.json().catch(() => ({}));
-
-      if (!res.ok) {
-        throw new Error(
-          payload.message || "Failed to load school spotlights"
-        );
+      if (needle && !searchable.includes(needle)) return false;
+      if (
+        schoolProvince !== "All Provinces" &&
+        getSchoolProvince(school) !== schoolProvince
+      ) {
+        return false;
       }
-
-      setPromotions(Array.isArray(payload.promotions) ? payload.promotions : []);
-      setSchools(Array.isArray(payload.schools) ? payload.schools : []);
-    } catch (loadError) {
-      setError(loadError.message || "Failed to load school spotlights");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
-
-  const resetForm = () => {
-    setForm(emptyForm);
-  };
-
-  const updateForm = (field, value) => {
-    setForm((current) => ({ ...current, [field]: value }));
-  };
-
-  const startEdit = (promotion) => {
-    setError("");
-    setSuccess("");
-    setForm({
-      id: promotion.id,
-      school: promotion.school?.id || "",
-      title: promotion.title || "",
-      tagline: promotion.tagline || "",
-      placement: promotion.placement || "HOME_SPOTLIGHT",
-      priority: promotion.priority || "STANDARD",
-      paymentStatus: promotion.paymentStatus || "PENDING",
-      paidAmount: promotion.paidAmount || "",
-      paymentReference: promotion.paymentReference || "",
-      status: promotion.status === "ARCHIVED" ? "PAUSED" : promotion.status,
-      startsAt: toDateInputValue(promotion.startsAt),
-      endsAt: toDateInputValue(promotion.endsAt),
-      destinationUrl: promotion.destinationUrl || "",
-      notes: promotion.notes || "",
+      if (
+        schoolDistrict !== "All Districts" &&
+        getSchoolDistrict(school) !== schoolDistrict
+      ) {
+        return false;
+      }
+      return true;
     });
-  };
+  }, [promotionBySchool, query, schoolDistrict, schoolProvince, schools]);
 
-  const savePromotion = async (nextStatus = form.status) => {
+  const saveSpotlight = async (school, promotion, updates) => {
     try {
-      setSaving(true);
+      setBusyId(`${school.id}-${updates.status || updates.priority || "save"}`);
       setError("");
       setSuccess("");
 
-      const url = form.id
-        ? `/api/admin/school-promotions/${form.id}`
+      const nextPayload = {
+        school: school.id,
+        placement,
+        priority: updates.priority || promotion?.priority || "STANDARD",
+        status: updates.status || promotion?.status || "ACTIVE",
+        destinationUrl: promotion?.destinationUrl || "",
+        notes: promotion?.notes || "",
+      };
+
+      const url = promotion?.id
+        ? `/api/admin/school-promotions/${promotion.id}`
         : "/api/admin/school-promotions";
-      const method = form.id ? "PATCH" : "POST";
+      const method = promotion?.id ? "PATCH" : "POST";
 
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, status: nextStatus }),
+        body: JSON.stringify(nextPayload),
       });
       const payload = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        throw new Error(payload.message || "Failed to save school spotlight");
+        throw new Error(payload.message || "Failed to update school spotlight");
       }
 
-      setSuccess(payload.message || "School spotlight saved");
-      resetForm();
+      setSuccess(payload.message || "School spotlight updated");
       await loadData();
     } catch (saveError) {
-      setError(saveError.message || "Failed to save school spotlight");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const archivePromotion = async (promotionId) => {
-    try {
-      setBusyId(promotionId);
-      setError("");
-      setSuccess("");
-
-      const res = await fetch(`/api/admin/school-promotions/${promotionId}`, {
-        method: "DELETE",
-      });
-      const payload = await res.json().catch(() => ({}));
-
-      if (!res.ok) {
-        throw new Error(payload.message || "Failed to archive spotlight");
-      }
-
-      setSuccess(payload.message || "School spotlight archived");
-      setArchiveTarget(null);
-      if (form.id === promotionId) resetForm();
-      await loadData();
-    } catch (archiveError) {
-      setError(archiveError.message || "Failed to archive spotlight");
-      setArchiveTarget(null);
+      setError(saveError.message || "Failed to update school spotlight");
     } finally {
       setBusyId("");
     }
   };
 
-  const quickStatus = async (promotion, nextStatus) => {
-    const startsAt = toDateInputValue(promotion.startsAt);
-    const endsAt = toDateInputValue(promotion.endsAt);
-    setForm({
-      id: promotion.id,
-      school: promotion.school?.id || "",
-      title: promotion.title || "",
-      tagline: promotion.tagline || "",
-      placement: promotion.placement || "HOME_SPOTLIGHT",
-      priority: promotion.priority || "STANDARD",
-      paymentStatus: promotion.paymentStatus || "PENDING",
-      paidAmount: promotion.paidAmount || "",
-      paymentReference: promotion.paymentReference || "",
-      status: nextStatus,
-      startsAt,
-      endsAt,
-      destinationUrl: promotion.destinationUrl || "",
-      notes: promotion.notes || "",
-    });
-
-    try {
-      setBusyId(promotion.id);
-      setError("");
-      setSuccess("");
-
-      const res = await fetch(`/api/admin/school-promotions/${promotion.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          school: promotion.school?.id,
-          title: promotion.title,
-          tagline: promotion.tagline,
-          placement: promotion.placement,
-          priority: promotion.priority,
-          paymentStatus: promotion.paymentStatus,
-          paidAmount: promotion.paidAmount,
-          paymentReference: promotion.paymentReference,
-          status: nextStatus,
-          startsAt,
-          endsAt,
-          destinationUrl: promotion.destinationUrl,
-          notes: promotion.notes,
-        }),
-      });
-      const payload = await res.json().catch(() => ({}));
-
-      if (!res.ok) {
-        throw new Error(payload.message || "Failed to update spotlight status");
-      }
-
-      setSuccess(payload.message || "School spotlight status updated");
-      resetForm();
-      await loadData();
-    } catch (statusError) {
-      setError(statusError.message || "Failed to update spotlight status");
-    } finally {
-      setBusyId("");
-    }
+  const clearFilters = () => {
+    setQuery("");
+    setSchoolProvince("All Provinces");
+    setSchoolDistrict("All Districts");
   };
 
   return (
@@ -324,7 +224,7 @@ export default function SchoolPromotionManager() {
         icon={FaBullhorn}
         eyebrow="School recognition"
         title="School Spotlight"
-        description="Choose which school profiles are highlighted on public pages. Active spotlights rotate separately from the regular school directory."
+        description="Control spotlight visibility for every school from one list."
       />
 
       {error && (
@@ -334,351 +234,213 @@ export default function SchoolPromotionManager() {
         <AlertBanner type="success" title="Spotlight updated" message={success} />
       )}
 
-      <section className="grid gap-6 xl:grid-cols-[0.85fr_1.15fr]">
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6">
-          <div className="mb-5 flex items-start justify-between gap-3">
-            <div>
-              <h3 className="text-xl font-bold text-white">
-                {form.id ? "Edit School Spotlight" : "Create School Spotlight"}
-              </h3>
-              <p className="mt-1 text-sm text-slate-400">
-                Choose the school and decide where its spotlight appears.
-              </p>
-            </div>
-            {form.id && (
-              <button
-                type="button"
-                onClick={resetForm}
-                className="inline-flex items-center gap-2 rounded-lg bg-slate-800 px-3 py-2 text-sm font-semibold text-slate-100 transition hover:bg-slate-700"
-              >
-                <FaPlus /> New
-              </button>
-            )}
-          </div>
-
-          <div className="space-y-4">
-            <div className="rounded-xl border border-slate-700 bg-slate-950/40 p-4">
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                <p className="text-xs font-black uppercase text-slate-300">
-                  Filter schools
-                </p>
-                <p className="text-xs font-semibold text-slate-400">
-                  Showing {filteredSchools.length} of {schools.length}
-                </p>
-              </div>
-              <div className="grid gap-4 md:grid-cols-2">
-                <label className="block">
-                  <span className="mb-2 block text-sm font-semibold text-slate-200">
-                    Province
-                  </span>
-                  <select
-                    value={schoolProvince}
-                    onChange={(event) => {
-                      setSchoolProvince(event.target.value);
-                      setSchoolDistrict("All Districts");
-                      updateForm("school", "");
-                    }}
-                    className="w-full rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-white outline-none transition focus:border-blue-500"
-                  >
-                    {provinceOptions.map((province) => (
-                      <option key={province}>{province}</option>
-                    ))}
-                  </select>
-                </label>
-
-                <label className="block">
-                  <span className="mb-2 block text-sm font-semibold text-slate-200">
-                    District
-                  </span>
-                  <select
-                    value={schoolDistrict}
-                    onChange={(event) => {
-                      setSchoolDistrict(event.target.value);
-                      updateForm("school", "");
-                    }}
-                    className="w-full rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-white outline-none transition focus:border-blue-500"
-                  >
-                    {districtOptions.map((district) => (
-                      <option key={district}>{district}</option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-            </div>
-
-            <label className="block">
-              <span className="mb-2 block text-sm font-semibold text-slate-200">
-                School
-              </span>
-              <select
-                value={form.school}
-                onChange={(event) => updateForm("school", event.target.value)}
-                className="w-full rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-white outline-none transition focus:border-blue-500"
-              >
-                <option value="">Select school</option>
-                {filteredSchools.map((school) => (
-                  <option key={school.id} value={school.id}>
-                    {school.name}
-                    {school.location ? ` - ${school.location}` : ""}
-                  </option>
-                ))}
-              </select>
-              {filteredSchools.length === 0 && (
-                <p className="mt-2 text-xs font-semibold text-amber-300">
-                  No schools found for this province and district.
-                </p>
-              )}
-            </label>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <label className="block">
-                <span className="mb-2 block text-sm font-semibold text-slate-200">
-                  Placement
-                </span>
-                <select
-                  value={form.placement}
-                  onChange={(event) =>
-                    updateForm("placement", event.target.value)
-                  }
-                  className="w-full rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-white outline-none transition focus:border-blue-500"
-                >
-                  <option value="HOME_SPOTLIGHT">Homepage spotlight</option>
-                  <option value="SCHOOLS_SPOTLIGHT">Schools page spotlight</option>
-                </select>
-              </label>
-
-              <label className="block">
-                <span className="mb-2 block text-sm font-semibold text-slate-200">
-                  Priority
-                </span>
-                <select
-                  value={form.priority}
-                  onChange={(event) => updateForm("priority", event.target.value)}
-                  className="w-full rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-white outline-none transition focus:border-blue-500"
-                >
-                  <option value="STANDARD">Standard rotation</option>
-                  <option value="PREMIUM">Featured rotation</option>
-                </select>
-              </label>
-            </div>
-
-            <input
-              type="text"
-              value={form.destinationUrl}
-              onChange={(event) =>
-                updateForm("destinationUrl", event.target.value)
-              }
-              placeholder="Optional destination URL. Empty opens the school profile."
-              className="w-full rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-white outline-none transition focus:border-blue-500"
-            />
-
-            <textarea
-              value={form.notes}
-              onChange={(event) => updateForm("notes", event.target.value)}
-              placeholder="Internal note"
-              className="min-h-[90px] w-full rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-white outline-none transition focus:border-blue-500"
-            />
-
-            <div className="grid gap-3 sm:grid-cols-3">
-              <button
-                type="button"
-                disabled={saving}
-                onClick={() => savePromotion("DRAFT")}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-600 disabled:opacity-60"
-              >
-                <FaSave />
-                Save draft
-              </button>
-              <button
-                type="button"
-                disabled={saving}
-                onClick={() => savePromotion("PAUSED")}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-500/15 px-5 py-3 text-sm font-semibold text-blue-100 transition hover:bg-blue-500/25 disabled:opacity-60"
-              >
-                <FaPause />
-                Save paused
-              </button>
-              <button
-                type="button"
-                disabled={saving}
-                onClick={() => savePromotion("ACTIVE")}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:opacity-60"
-              >
-                <FaPlay />
-                Activate
-              </button>
-            </div>
-          </div>
+      <section className="rounded-xl border border-[#e6eaf7] bg-white p-4 shadow-sm">
+        <div className="mb-4 flex flex-wrap gap-2">
+          {PLACEMENTS.map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setPlacement(key)}
+              className={`inline-flex min-h-10 items-center justify-center rounded-lg px-4 text-sm font-black transition ${
+                placement === key
+                  ? "bg-[#4326e8] text-white"
+                  : "border border-[#e6eaf7] text-[#24314d] hover:bg-[#f8f9fd]"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
         </div>
 
-        <div className="space-y-6">
-          <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6">
-            <div className="mb-5 flex items-center justify-between gap-3">
-              <div>
-                <h3 className="text-xl font-bold text-white">
-                  Active Spotlight Board
-                </h3>
-                <p className="mt-1 text-sm text-slate-400">
-                  Active school spotlights. Rotation is based on priority and least
-                  recently shown.
-                </p>
-              </div>
-              <span className="rounded-full bg-slate-800 px-3 py-1 text-sm font-bold text-slate-200">
-                {activePromotions.length}
-              </span>
-            </div>
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
+          <label className="block min-w-0 lg:flex-1">
+            <span className="mb-1.5 flex items-center gap-2 text-[10px] font-black uppercase text-[#52657d]">
+              <FaSearch className="text-[#4326e8]" />
+              Search school
+            </span>
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search school, principal, email, status, or location..."
+              className="min-h-11 w-full rounded-lg border border-[#d2dcf2] bg-[#f8f9fd] px-4 text-sm font-semibold text-[#24314d] outline-none transition placeholder:text-[#75869b] focus:border-[#4326e8] focus:bg-white focus:ring-4 focus:ring-[#4326e8]/10"
+            />
+          </label>
+          <label className="block min-w-0 lg:w-72">
+            <span className="mb-1.5 block text-[10px] font-black uppercase text-[#52657d]">
+              Province
+            </span>
+            <select
+              value={schoolProvince}
+              onChange={(event) => {
+                setSchoolProvince(event.target.value);
+                setSchoolDistrict("All Districts");
+              }}
+              className="min-h-11 w-full rounded-lg border border-[#d2dcf2] bg-white px-3 text-sm font-bold text-[#24314d] outline-none transition focus:border-[#4326e8] focus:ring-4 focus:ring-[#4326e8]/10"
+            >
+              {provinceOptions.map((province) => (
+                <option key={province}>{province}</option>
+              ))}
+            </select>
+          </label>
+          <label className="block min-w-0 lg:w-72">
+            <span className="mb-1.5 block text-[10px] font-black uppercase text-[#52657d]">
+              District
+            </span>
+            <select
+              value={schoolDistrict}
+              onChange={(event) => setSchoolDistrict(event.target.value)}
+              className="min-h-11 w-full rounded-lg border border-[#d2dcf2] bg-white px-3 text-sm font-bold text-[#24314d] outline-none transition focus:border-[#4326e8] focus:ring-4 focus:ring-[#4326e8]/10"
+            >
+              {districtOptions.map((district) => (
+                <option key={district}>{district}</option>
+              ))}
+            </select>
+          </label>
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-[#e6eaf7] px-4 text-sm font-black text-[#0a2f66] transition hover:bg-[#f8f9fd]"
+          >
+            <FaSyncAlt />
+            Clear
+          </button>
+        </div>
+      </section>
 
-            {loading ? (
-              <LoadingState
-                title="Loading school spotlights"
-                message="Preparing school spotlight records."
-              />
-            ) : activePromotions.length === 0 ? (
-              <EmptyState
-                icon={FaBullhorn}
-                title="No school spotlights yet"
-                description="Choose a school and activate it when it should appear in the public spotlight area."
-              />
-            ) : (
-              <div className="space-y-4">
-                {activePromotions.map((promotion) => {
-                  const currentState = getCampaignState(promotion);
+      <section className="overflow-hidden rounded-xl border border-[#e6eaf7] bg-white shadow-sm">
+        {loading ? (
+          <LoadingState
+            title="Loading schools"
+            message="Preparing school spotlight controls."
+          />
+        ) : visibleSchools.length === 0 ? (
+          <div className="p-8">
+            <EmptyState
+              icon={FaBullhorn}
+              title="No schools found"
+              description="Adjust the search or location filters to see schools."
+            />
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[1120px] text-left text-sm text-[#001233]">
+              <thead className="bg-[#f8f9fd] text-xs uppercase text-[#43516a]">
+                <tr>
+                  <th className="p-4">School Name</th>
+                  <th className="p-4">Principal</th>
+                  <th className="p-4">Email</th>
+                  <th className="p-4">Spotlight</th>
+                  <th className="p-4">Rotation</th>
+                  <th className="p-4">Views / Clicks</th>
+                  <th className="p-4 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {visibleSchools.map((school) => {
+                  const promotion = promotionBySchool.get(school.id);
+                  const state = getCampaignState(promotion);
+                  const priority = promotion?.priority || "STANDARD";
+                  const isActive = state === "ACTIVE";
+                  const isBusy = busyId.startsWith(school.id);
+
                   return (
-                    <article
-                      key={promotion.id}
-                      className="rounded-xl border border-slate-800 bg-slate-950/70 p-5"
+                    <tr
+                      key={school.id}
+                      className="border-t border-[#e6eaf7] transition hover:bg-[#fbfcff]"
                     >
-                      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                        <div>
-                          <div className="flex flex-wrap gap-2">
-                            <span
-                              className={`rounded-full border px-3 py-1 text-xs font-bold ${
-                                STATUS_STYLES[promotion.status] ||
-                                STATUS_STYLES.DRAFT
-                              }`}
-                            >
-                              {currentState}
-                            </span>
-                            <span className="rounded-full border border-slate-700 bg-slate-800 px-3 py-1 text-xs font-bold text-slate-200">
-                              {formatPlacement(promotion.placement)}
-                            </span>
-                            <span className="rounded-full border border-blue-500/20 bg-blue-500/10 px-3 py-1 text-xs font-bold text-blue-100">
-                              {promotion.priority}
-                            </span>
-                          </div>
-                          <h4 className="mt-3 text-lg font-black text-white">
-                            {promotion.title ||
-                              promotion.school?.name ||
-                              "School Spotlight"}
-                          </h4>
-                          <p className="mt-1 text-sm text-slate-400">
-                            {promotion.school?.name || "School"}{" "}
-                            {promotion.school?.location
-                              ? `- ${promotion.school.location}`
-                              : ""}
-                          </p>
-                          <div className="mt-4 grid gap-2 text-xs text-slate-500 sm:grid-cols-2">
-                            <span>
-                              Views: {promotion.impressionCount || 0} | Clicks:{" "}
-                              {promotion.clickCount || 0}
-                            </span>
-                          </div>
+                      <td className="p-4 font-black text-[#001233]">
+                        <div>{school.name}</div>
+                        <div className="mt-1 max-w-xs truncate text-xs font-semibold text-[#52657d]">
+                          {school.location || "Location not listed"}
                         </div>
-                        <div className="flex shrink-0 flex-wrap gap-2">
-                          <button
-                            type="button"
-                            onClick={() => startEdit(promotion)}
-                            className="inline-flex items-center gap-2 rounded-lg border border-[#d7cdbb] bg-white px-3 py-2 text-sm font-black text-[#0a2f66] transition hover:bg-[#eaf2ff]"
-                          >
-                            <FaEdit /> Edit
-                          </button>
-                          {promotion.status === "ACTIVE" ? (
+                      </td>
+                      <td className="p-4 font-semibold">
+                        {school.principalName || "-"}
+                      </td>
+                      <td className="p-4 font-semibold">{school.email || "-"}</td>
+                      <td className="p-4">
+                        <span
+                          className={`inline-flex rounded-full px-3 py-1 text-xs font-black ${
+                            STATUS_STYLES[state] || STATUS_STYLES.OFF
+                          }`}
+                        >
+                          {state}
+                        </span>
+                      </td>
+                      <td className="p-4">
+                        <button
+                          type="button"
+                          disabled={isBusy}
+                          onClick={() =>
+                            saveSpotlight(school, promotion, {
+                              priority:
+                                priority === "PREMIUM" ? "STANDARD" : "PREMIUM",
+                              status: promotion?.status || "ACTIVE",
+                            })
+                          }
+                          className={`inline-flex min-h-10 items-center gap-2 rounded-lg px-4 text-sm font-black transition disabled:cursor-wait disabled:opacity-60 ${
+                            priority === "PREMIUM"
+                              ? "bg-[#4326e8] text-white shadow-sm hover:bg-[#3217d3]"
+                              : "border border-[#d2dcf2] bg-[#f8f9fd] text-[#4326e8] shadow-sm hover:border-[#4326e8]/35 hover:bg-[#efe9ff]"
+                          }`}
+                        >
+                          <FaStar />
+                          {priority === "PREMIUM" ? "Premium" : "Standard"}
+                        </button>
+                      </td>
+                      <td className="p-4 text-xs font-bold text-[#52657d]">
+                        {promotion ? (
+                          <>
+                            {promotion.impressionCount || 0} views /{" "}
+                            {promotion.clickCount || 0} clicks
+                          </>
+                        ) : (
+                          "No spotlight yet"
+                        )}
+                      </td>
+                      <td className="p-4">
+                        <div className="flex flex-wrap justify-end gap-2">
+                          {isActive ? (
                             <button
                               type="button"
-                              disabled={busyId === promotion.id}
-                              onClick={() => quickStatus(promotion, "PAUSED")}
-                              className="inline-flex items-center gap-2 rounded-lg bg-[#eaf2ff] px-3 py-2 text-sm font-black text-[#0a2f66] transition hover:bg-[#dcecff] disabled:opacity-60"
+                              disabled={isBusy}
+                              onClick={() =>
+                                saveSpotlight(school, promotion, {
+                                  status: "PAUSED",
+                                  priority: "STANDARD",
+                                })
+                              }
+                              className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-[#efe9ff] px-4 text-sm font-black text-[#4326e8] transition hover:bg-[#e6ddff] disabled:cursor-wait disabled:opacity-60"
                             >
-                              <FaPause /> Pause
+                              <FaPause />
+                              Pause
                             </button>
                           ) : (
                             <button
                               type="button"
-                              disabled={busyId === promotion.id}
-                              onClick={() => quickStatus(promotion, "ACTIVE")}
-                              className="inline-flex items-center gap-2 rounded-lg bg-[#0a2f66] px-3 py-2 text-sm font-black text-white transition hover:bg-[#123f82] disabled:opacity-60"
+                              disabled={isBusy}
+                              onClick={() =>
+                                saveSpotlight(school, promotion, {
+                                  status: "ACTIVE",
+                                })
+                              }
+                              className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-[#4326e8] px-4 text-sm font-black text-white transition hover:bg-[#3217d3] disabled:cursor-wait disabled:opacity-60"
                             >
-                              <FaPlay /> Activate
+                              <FaPlay />
+                              Activate
                             </button>
                           )}
-                          <button
-                            type="button"
-                            disabled={busyId === promotion.id}
-                            onClick={() => setArchiveTarget(promotion)}
-                            className="inline-flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-black text-rose-800 transition hover:border-rose-300 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
-                          >
-                            <FaTrash /> Archive
-                          </button>
                         </div>
-                      </div>
-                    </article>
+                      </td>
+                    </tr>
                   );
                 })}
-              </div>
-            )}
-          </section>
-
-          {archivedPromotions.length > 0 && (
-            <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6">
-              <h3 className="text-lg font-bold text-white">
-                Archived Campaigns ({archivedPromotions.length})
-              </h3>
-              <div className="mt-4 space-y-3">
-                {archivedPromotions.slice(0, 5).map((promotion) => (
-                  <div
-                    key={promotion.id}
-                    className="flex flex-col gap-2 rounded-xl border border-slate-800 bg-slate-950/70 p-4 sm:flex-row sm:items-center sm:justify-between"
-                  >
-                    <div>
-                      <p className="font-bold text-slate-200">
-                        {promotion.title || promotion.school?.name || "Spotlight"}
-                      </p>
-                      <p className="text-xs text-slate-500">
-                        {formatPlacement(promotion.placement)} |{" "}
-                        {promotion.school?.name || "School"}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => startEdit(promotion)}
-                      className="inline-flex items-center gap-2 rounded-lg bg-slate-800 px-3 py-2 text-sm font-semibold text-slate-100 transition hover:bg-slate-700"
-                    >
-                      <FaEye /> Review
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-        </div>
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
 
-      <ConfirmDialog
-        open={Boolean(archiveTarget)}
-        title="Archive this spotlight campaign?"
-        message={
-          archiveTarget
-            ? `"${archiveTarget.title || archiveTarget.school?.name}" will stop appearing in public spotlight areas. Historical views and clicks stay saved.`
-            : ""
-        }
-        confirmLabel="Archive campaign"
-        tone="danger"
-        busy={Boolean(archiveTarget && busyId === archiveTarget.id)}
-        onClose={() => setArchiveTarget(null)}
-        onConfirm={() => {
-          if (archiveTarget?.id) archivePromotion(archiveTarget.id);
-        }}
-      />
     </div>
   );
 }

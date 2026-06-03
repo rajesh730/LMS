@@ -2,12 +2,15 @@ import Link from "next/link";
 import connectDB from "@/lib/db";
 import User from "@/models/User";
 import Student from "@/models/Student";
+import Teacher from "@/models/Teacher";
 import SchoolShowcaseProfile from "@/models/SchoolShowcaseProfile";
 import Event from "@/models/Event";
 import Achievement from "@/models/Achievement";
 import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
 import PublicSiteNav from "@/components/public/PublicSiteNav";
 import PublicExplorePanel from "@/components/public/PublicExplorePanel";
+import ExpandableStoryText from "@/components/public/ExpandableStoryText";
+import { normalizeImageUrl } from "@/lib/imageUrls";
 import {
   FaArrowRight,
   FaAward,
@@ -61,6 +64,43 @@ function getCategoryLabel(value) {
   return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
+function gradeSortValue(value) {
+  const match = String(value || "").match(/\d+/);
+  if (!match) return Number.MAX_SAFE_INTEGER;
+  return Number.parseInt(match[0], 10);
+}
+
+function formatGradeSummary(grades = []) {
+  const normalized = Array.from(
+    new Set(grades.map((grade) => String(grade || "").trim()).filter(Boolean))
+  ).sort((a, b) => gradeSortValue(a) - gradeSortValue(b) || a.localeCompare(b));
+
+  if (normalized.length === 0) return "";
+  if (normalized.length === 1) return normalized[0];
+
+  const first = normalized[0];
+  const last = normalized[normalized.length - 1];
+  return `${first} to ${last}`;
+}
+
+function formatConfiguredGradeRange(config = {}) {
+  const level = config.schoolLevel || config;
+  const minGrade = Number.parseInt(level.minGrade, 10);
+  const maxGrade = Number.parseInt(level.maxGrade, 10);
+
+  if (!Number.isFinite(maxGrade)) return "";
+
+  const safeMinGrade = Number.isFinite(minGrade) ? minGrade : 1;
+  if (safeMinGrade === maxGrade) return `Grade ${maxGrade}`;
+  return `Grade ${safeMinGrade} to Grade ${maxGrade}`;
+}
+
+function formatConfigLabel(value) {
+  const text = String(value || "").replaceAll("_", " ").trim();
+  if (!text) return "";
+  return text.replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
 async function getSchoolData(id) {
   await connectDB();
 
@@ -76,7 +116,7 @@ async function getSchoolData(id) {
 
   if (!school) return null;
 
-  const [profile, events, achievements, writings, studentCount] =
+  const [profile, events, achievements, writings, studentCount, teacherCount, grades] =
     await Promise.all([
       SchoolShowcaseProfile.findOne({ school: id, visibility: "PUBLIC" })
         .populate("featuredEvents", "title date eventType visibility")
@@ -118,15 +158,33 @@ async function getSchoolData(id) {
         status: "ACTIVE",
         isDeleted: { $ne: true },
       }),
+      Teacher.countDocuments({
+        school: id,
+        status: "ACTIVE",
+        isDeleted: { $ne: true },
+      }),
+      Student.distinct("grade", {
+        school: id,
+        status: "ACTIVE",
+        isDeleted: { $ne: true },
+      }),
     ]);
 
-  return { school, profile, events, achievements, writings, studentCount };
+  return {
+    school,
+    profile,
+    events,
+    achievements,
+    writings,
+    studentCount,
+    teacherCount,
+    grades,
+  };
 }
 
 function HeroFallbackArt() {
   return (
-    <div className="absolute inset-0 bg-gradient-to-br from-[#101828] via-[#164e63] to-[#4338ca]">
-      <div className="absolute inset-0 opacity-80 [background-image:linear-gradient(115deg,rgba(255,255,255,.16)_0,rgba(255,255,255,0)_34%),radial-gradient(circle_at_18%_20%,rgba(56,189,248,.34),transparent_28%),radial-gradient(circle_at_78%_18%,rgba(250,204,21,.24),transparent_24%),radial-gradient(circle_at_68%_82%,rgba(167,139,250,.28),transparent_30%)]" />
+    <div className="pratyo-brand-surface absolute inset-0">
       <div className="absolute bottom-0 left-0 right-0 h-36 bg-gradient-to-t from-black/50 to-transparent" />
       <div className="absolute bottom-10 right-12 hidden h-28 w-48 rounded-2xl border border-white/25 bg-white/12 backdrop-blur-sm md:block" />
       <div className="absolute right-28 top-12 hidden h-16 w-36 -rotate-6 rounded-2xl border border-white/20 bg-white/10 backdrop-blur-sm md:block" />
@@ -238,11 +296,12 @@ function WritingCard({ writing }) {
   return (
     <Link
       href={`/writings/${writing._id}`}
-      className="block min-w-[190px] rounded-xl border border-[#e7dcc8] bg-white p-3 shadow-sm transition hover:-translate-y-0.5 hover:border-purple-200 hover:shadow-md"
+      className="block min-w-[190px] rounded-xl border border-[#e6eaf7] bg-white p-3 text-[#17120a] shadow-sm transition hover:-translate-y-0.5 hover:border-white/70 hover:shadow-md"
     >
-      <div className="relative h-28 overflow-hidden rounded-lg bg-gradient-to-br from-rose-100 via-white to-sky-100">
-        <FaBookOpen className="absolute right-5 top-5 text-4xl text-purple-700" />
-        <FaPenNib className="absolute bottom-5 left-5 text-2xl text-pink-600" />
+      <div className="pratyo-writing-art relative h-28 overflow-hidden rounded-lg border">
+        <div className="absolute right-8 top-7 h-14 w-24 rounded-2xl border border-white/18 bg-white/10" />
+        <FaBookOpen className="absolute right-5 top-5 text-4xl !text-white drop-shadow" />
+        <FaPenNib className="absolute bottom-5 left-5 text-2xl !text-white drop-shadow" />
       </div>
       <div className="mt-3 flex flex-wrap gap-2">
         <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-black uppercase text-emerald-700">
@@ -258,7 +317,7 @@ function WritingCard({ writing }) {
       <p className="mt-2 line-clamp-2 text-xs leading-5 text-[#52657d]">
         {getPreview(writing.content)}
       </p>
-      <p className="mt-3 text-xs font-semibold text-[#75869b]">
+      <p className="mt-3 text-xs font-semibold text-[#52657d]">
         By {writing.authorStudent?.name || "Student"} -{" "}
         {getReadTime(writing.content)} min read
       </p>
@@ -266,21 +325,25 @@ function WritingCard({ writing }) {
   );
 }
 
-function AtGlance({ school, profile, studentCount }) {
-  const levelConfig = school.schoolConfig?.levels || school.schoolConfig || {};
-  const levels = Object.keys(levelConfig)
-    .filter((key) => levelConfig[key])
-    .slice(0, 2)
-    .join(", ");
+function AtGlance({ school, studentCount, teacherCount, grades }) {
+  const config = school.schoolConfig || {};
+  const gradeSummary =
+    formatConfiguredGradeRange(config) || formatGradeSummary(grades);
+  const schoolType =
+    formatConfigLabel(config.schoolType) ||
+    formatConfigLabel(config.schoolLevel?.type) ||
+    formatConfigLabel(config.levelType);
+  const medium =
+    formatConfigLabel(config.medium) ||
+    formatConfigLabel(config.instructionMedium);
 
   const items = [
-    ["Grades", "Nursery to Grade 12"],
-    ["Total Students", studentCount || "Not listed"],
-    ["Teachers", "48+"],
-    ["Streams", "Science, Management, Humanities"],
-    ["School Type", levels || "Co-educational"],
-    ["Medium", "English"],
-  ];
+    ["Grades", gradeSummary],
+    ["Total Students", studentCount ? String(studentCount) : ""],
+    ["Teachers", teacherCount ? String(teacherCount) : ""],
+    ["School Type", schoolType],
+    ["Medium", medium],
+  ].filter(([, value]) => value);
 
   return (
     <section className="rounded-2xl border border-[#e7dcc8] bg-white p-5 shadow-sm">
@@ -289,7 +352,11 @@ function AtGlance({ school, profile, studentCount }) {
         School at a Glance
       </h2>
       <div className="mt-4 space-y-3">
-        {items.map(([label, value]) => (
+        {items.length === 0 ? (
+          <p className="text-sm font-semibold text-[#52657d]">
+            Public school details are not available yet.
+          </p>
+        ) : items.map(([label, value]) => (
           <div key={label} className="flex items-center justify-between gap-4">
             <span className="text-sm font-semibold text-[#52657d]">{label}</span>
             <strong className="text-right text-sm text-[#17120a]">{value}</strong>
@@ -345,9 +412,19 @@ export default async function PublicSchoolPage({ params }) {
     );
   }
 
-  const { school, profile, events, achievements, writings, studentCount } = data;
+  const {
+    school,
+    profile,
+    events,
+    achievements,
+    writings,
+    studentCount,
+    teacherCount,
+    grades,
+  } = data;
   const metrics = profile?.highlightMetrics || {};
   const highlights = profile?.publicHighlights || [];
+  const coverImage = normalizeImageUrl(profile?.coverImageUrl);
   return (
     <main className="min-h-screen bg-[#f8f9fd] pb-24 text-[#17120a]">
       <PublicSiteNav active="schools" />
@@ -389,8 +466,17 @@ export default async function PublicSchoolPage({ params }) {
             <div className="relative z-10 grid min-h-[360px] gap-6 p-6 md:p-8 lg:grid-cols-[1fr_320px] lg:items-end">
               <div className="self-end rounded-2xl border border-white/20 bg-black/28 p-4 shadow-2xl backdrop-blur-sm md:p-5">
                 <div className="flex flex-wrap items-center gap-4">
-                  <div className="flex h-24 w-24 items-center justify-center rounded-2xl border border-white/70 bg-white text-4xl font-black text-[#3120c9] shadow-xl">
-                    {(school.schoolName || "S").charAt(0).toUpperCase()}
+                  <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-2xl border border-white/70 bg-white text-4xl font-black text-[#3120c9] shadow-xl">
+                    {coverImage ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={coverImage}
+                        alt={`${school.schoolName} logo`}
+                        className="h-full w-full object-contain p-2"
+                      />
+                    ) : (
+                      (school.schoolName || "S").charAt(0).toUpperCase()
+                    )}
                   </div>
                   <div>
                     <h1
@@ -505,12 +591,15 @@ export default async function PublicSchoolPage({ params }) {
                 School Story
               </h2>
               <div className="mt-4 grid gap-5 md:grid-cols-[1fr_220px] md:items-end">
-                <p className="whitespace-pre-wrap text-sm leading-7 text-[#52657d]">
-                  {profile?.summary ||
-                    "This school has not added a public showcase summary yet. The profile will grow as verified events, results, and achievements are published."}
-                </p>
-                <div className="relative h-32 overflow-hidden rounded-xl bg-gradient-to-br from-sky-100 via-white to-amber-100">
-                  <FaSchool className="absolute bottom-5 right-6 text-5xl text-[#0a2f66]" />
+                <ExpandableStoryText
+                  text={
+                    profile?.summary ||
+                    "This school has not added a public showcase summary yet. The profile will grow as verified events, results, and achievements are published."
+                  }
+                  limit={120}
+                />
+                <div className="pratyo-brand-panel relative h-32 overflow-hidden rounded-xl border">
+                  <FaSchool className="absolute bottom-5 right-6 text-5xl text-white/78" />
                 </div>
               </div>
             </section>
@@ -553,27 +642,25 @@ export default async function PublicSchoolPage({ params }) {
 
           <aside className="space-y-5">
             <div id="glance" className="scroll-mt-28">
-              <AtGlance
-                school={school}
-                profile={profile}
-                studentCount={studentCount}
-              />
+                  <AtGlance
+                    school={school}
+                    studentCount={studentCount}
+                    teacherCount={teacherCount}
+                    grades={grades}
+                  />
             </div>
           </aside>
         </div>
 
         <section
           id="writings"
-          className="scroll-mt-28 rounded-2xl border border-[#e7dcc8] bg-white p-5 shadow-sm"
+          className="pratyo-brand-surface scroll-mt-28 rounded-2xl border border-white/18 p-5 shadow-sm"
         >
           <div className="flex items-center justify-between gap-3">
-            <h2 className="inline-flex items-center gap-2 text-lg font-black text-[#17120a]">
-              <FaBookOpen className="text-purple-700" />
+            <h2 className="inline-flex items-center gap-2 text-lg font-black !text-white">
+              <FaBookOpen className="!text-white/90" />
               Latest Student Writings
             </h2>
-            <Link href="/student-voices" className="text-sm font-black text-purple-700">
-              View all writings
-            </Link>
           </div>
           {writings.length === 0 ? (
             <div className="mt-5">
@@ -594,7 +681,7 @@ export default async function PublicSchoolPage({ params }) {
           )}
         </section>
 
-        <section className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#0a2f66] via-[#4338ca] to-[#7c3aed] p-5 shadow-lg">
+        <section className="pratyo-brand-surface relative overflow-hidden rounded-2xl p-5 shadow-lg">
           <div className="absolute inset-0 bg-gradient-to-r from-black/18 via-transparent to-black/10" />
           <div className="relative z-10 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="flex items-start gap-4">

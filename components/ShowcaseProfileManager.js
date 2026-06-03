@@ -17,6 +17,8 @@ import {
   FaTrophy,
   FaUsers,
 } from "react-icons/fa";
+import { normalizeImageUrl } from "@/lib/imageUrls";
+import SchoolLogoMark from "@/components/public/SchoolLogoMark";
 
 const EMPTY_FORM = {
   tagline: "",
@@ -28,9 +30,6 @@ const EMPTY_FORM = {
   publicHighlights: [""],
 };
 
-const FALLBACK_COVER =
-  "https://images.unsplash.com/photo-1562774053-701939374585?auto=format&fit=crop&w=900&q=80";
-
 function eventId(event) {
   return event?._id || event?.id || "";
 }
@@ -41,6 +40,10 @@ function eventLabel(event) {
 
 function visibleHighlights(profile) {
   return (profile.publicHighlights || []).filter((item) => item.trim());
+}
+
+function wordCount(value) {
+  return String(value || "").trim().split(/\s+/).filter(Boolean).length;
 }
 
 function normalizeHighlights(highlights = []) {
@@ -226,7 +229,7 @@ export default function ShowcaseProfileManager() {
 
   const schoolName = profile.schoolName || "Orbit English School";
   const tagline = profile.tagline || "Inspiring minds. Building futures.";
-  const coverImage = profile.coverImageUrl || FALLBACK_COVER;
+  const logoImage = normalizeImageUrl(profile.coverImageUrl);
   const metrics = profile.highlightMetrics || {};
   const highlights = visibleHighlights(profile);
   const displayedEvents = showAllEvents ? eventOptions : eventOptions.slice(0, 8);
@@ -253,6 +256,8 @@ export default function ShowcaseProfileManager() {
               {publicSchoolUrl && (
                 <Link
                   href={publicSchoolUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-purple-200 bg-white px-5 text-xs font-black text-purple-700 hover:bg-purple-50"
                 >
                   View Public Page
@@ -310,7 +315,7 @@ export default function ShowcaseProfileManager() {
             <label className="mt-5 block">
               <div className="mb-2 flex items-center gap-2 text-xs font-black text-[#27364a]">
                 <FaCheckSquare className="text-[#52657d]" />
-                Summary
+                School Story
               </div>
               <div className="relative">
                 <textarea
@@ -323,9 +328,12 @@ export default function ShowcaseProfileManager() {
                   placeholder="Explain your school culture, activity strengths, and what families should know."
                 />
                 <span className="absolute bottom-3 right-3 text-[10px] font-bold text-[#52657d]">
-                  {(profile.summary || "").length}/500
+                  {wordCount(profile.summary)} words / {(profile.summary || "").length}/500
                 </span>
               </div>
+              <p className="mt-2 text-xs font-semibold text-[#52657d]">
+                Public profile shows the first 120 words, with a Read more option.
+              </p>
             </label>
           </section>
 
@@ -333,16 +341,24 @@ export default function ShowcaseProfileManager() {
             <div className="rounded-lg border border-[#e1e7f2] bg-white p-4 shadow-sm">
               <div className="mb-3 flex items-center gap-2 text-xs font-black text-[#27364a]">
                 <FaImage className="text-[#52657d]" />
-                Cover Image
+                School Logo
               </div>
-              <div className="flex gap-4">
-                <div
-                  className="h-20 w-32 rounded-lg bg-cover bg-center"
-                  style={{ backgroundImage: `url("${coverImage}")` }}
-                />
+              <div className="flex flex-col gap-4 sm:flex-row">
+                <div className="shrink-0">
+                  <p className="mb-2 text-[10px] font-black uppercase text-[#52657d]">
+                    Logo preview
+                  </p>
+                  <SchoolLogoMark
+                    imageUrl={logoImage}
+                    name={schoolName}
+                    className="h-24 w-24"
+                    iconClassName="text-3xl"
+                    shapeClassName="rounded-xl"
+                  />
+                </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-[11px] font-semibold text-[#52657d]">
-                    Recommended: 1200 x 400px
+                    Recommended: square logo, PNG/JPG or public Google Drive image link
                   </p>
                   <input
                     type="url"
@@ -495,15 +511,15 @@ export default function ShowcaseProfileManager() {
           <section className="rounded-lg border border-[#e1e7f2] bg-white p-4 shadow-sm">
             <h2 className="text-sm font-black text-[#17120a]">Profile Preview</h2>
             <div className="mt-4 overflow-hidden rounded-lg border border-[#e1e7f2] bg-white">
-              <div
-                className="h-28 w-full bg-cover bg-center"
-                style={{ backgroundImage: `url("${coverImage}")` }}
-              />
-              <div className="p-4">
+              <div className="bg-[#f8f7ff] p-4">
                 <div className="flex items-start gap-3">
-                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-purple-100 text-purple-700">
-                    <FaLock />
-                  </span>
+                  <SchoolLogoMark
+                    imageUrl={logoImage}
+                    name={schoolName}
+                    className="h-16 w-16"
+                    iconClassName="text-2xl"
+                    shapeClassName="rounded-xl"
+                  />
                   <div className="min-w-0">
                     <h3 className="truncate text-lg font-black text-[#17120a]">
                       {schoolName}
@@ -545,6 +561,8 @@ export default function ShowcaseProfileManager() {
                 {publicSchoolUrl && (
                   <Link
                     href={publicSchoolUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="mt-4 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg border border-purple-200 text-xs font-black text-purple-700 hover:bg-purple-50"
                   >
                     Visit Public Page

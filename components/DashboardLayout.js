@@ -5,6 +5,7 @@ import { signOut, useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
 import { FaBars } from 'react-icons/fa';
 import PratyoLogo from '@/components/brand/PratyoLogo';
+import AuthenticatedPublicLinkGuard from '@/components/AuthenticatedPublicLinkGuard';
 
 export default function DashboardLayout({ children }) {
     const { data: session } = useSession();
@@ -43,6 +44,7 @@ export default function DashboardLayout({ children }) {
 
     return (
         <div className="min-h-screen bg-[#fbfcff] text-[#10142f] font-sans selection:bg-[#4326e8]/18">
+            <AuthenticatedPublicLinkGuard />
             {isNavOpen && (
                 <button
                     type="button"

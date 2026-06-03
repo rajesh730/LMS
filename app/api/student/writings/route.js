@@ -65,6 +65,9 @@ export async function GET() {
           isFeatured: Boolean(article.isFeatured),
           publicationScope: article.publicationScope || "SCHOOL_ONLY",
           submittedAt: article.submittedAt,
+          firstSubmittedAt: article.firstSubmittedAt,
+          lastResubmittedAt: article.lastResubmittedAt,
+          revisionCount: Number(article.revisionCount || 0),
           reviewedAt: article.reviewedAt,
           publishedAt: article.publishedAt,
           updatedAt: article.updatedAt,
@@ -111,6 +114,9 @@ export async function POST(request) {
     const title = String(body.title || "").trim();
     const content = String(body.content || "").trim();
     const category = normalizeWritingCategory(body.category);
+    const resubmissionOf = String(
+      body.resubmissionOf || body.articleId || body.id || ""
+    ).trim();
     const requestedStatus =
       String(body.status || "").toUpperCase() === "SUBMITTED"
         ? "SUBMITTED"
@@ -123,6 +129,63 @@ export async function POST(request) {
       );
     }
 
+    if (/^[0-9a-f]{24}$/i.test(resubmissionOf)) {
+      const article = await SchoolMagazineArticle.findOne({
+        _id: resubmissionOf,
+        school: student.school,
+        authorStudent: student._id,
+        status: "REJECTED",
+        isDeleted: { $ne: true },
+      });
+
+      if (article) {
+        const submittedAt = requestedStatus === "SUBMITTED" ? new Date() : null;
+        const previousStatus = article.status;
+
+        article.title = title;
+        article.content = content;
+        article.category = category;
+        article.status = requestedStatus;
+
+        if (requestedStatus === "SUBMITTED") {
+          article.reviewNote = "";
+          article.firstSubmittedAt =
+            article.firstSubmittedAt || article.submittedAt || submittedAt;
+          article.submittedAt = submittedAt;
+          article.lastResubmittedAt = submittedAt;
+          article.revisionCount = Number(article.revisionCount || 0) + 1;
+          article.reviewedAt = null;
+          article.reviewedBy = null;
+        }
+
+        await article.save();
+
+        publishWorkIndicatorsUpdate("student-writing-updated", {
+          schoolId: String(student.school),
+          studentId: String(student._id),
+          status: article.status,
+        });
+
+        if (requestedStatus === "SUBMITTED") {
+          await notifySchoolMagazineSubmitted({
+            article,
+            student,
+            schoolId: student.school,
+            isResubmission: previousStatus === "REJECTED",
+          });
+        }
+
+        return NextResponse.json({
+          message:
+            requestedStatus === "SUBMITTED"
+              ? "Writing resubmitted for school review"
+              : "Revision draft updated",
+          article,
+        });
+      }
+    }
+
+    const submittedAt = requestedStatus === "SUBMITTED" ? new Date() : null;
     const article = await SchoolMagazineArticle.create({
       school: student.school,
       authorStudent: student._id,
@@ -131,7 +194,8 @@ export async function POST(request) {
       category,
       submissionSource: "FREE_WRITE",
       status: requestedStatus,
-      submittedAt: requestedStatus === "SUBMITTED" ? new Date() : null,
+      submittedAt,
+      firstSubmittedAt: submittedAt,
     });
 
     publishWorkIndicatorsUpdate("student-writing-created", {

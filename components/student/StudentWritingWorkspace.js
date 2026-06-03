@@ -258,14 +258,14 @@ function CategoryArt({ category, className = "" }) {
 
   return (
     <div
-      className={`relative overflow-hidden rounded-lg bg-gradient-to-br ${meta.art} ${className}`}
+      className={`pratyo-brand-panel relative overflow-hidden rounded-lg border ${className}`}
     >
       <div className="absolute left-6 top-5 h-16 w-24 rotate-[-8deg] rounded-md border border-white/80 bg-white/75 shadow-sm" />
       <div className="absolute left-16 top-9 h-16 w-24 rotate-[8deg] rounded-md border border-white/80 bg-white/75 shadow-sm" />
-      <div className="absolute bottom-7 right-8 h-1 w-28 rotate-[-18deg] rounded-full bg-current/20" />
-      <div className="absolute bottom-11 right-12 h-1 w-20 rotate-[-18deg] rounded-full bg-current/20" />
-      <Icon className={`absolute right-6 top-6 text-4xl ${meta.accent}`} />
-      <FaPenNib className={`absolute bottom-6 left-7 text-2xl ${meta.accent}`} />
+      <div className="absolute bottom-7 right-8 h-1 w-28 rotate-[-18deg] rounded-full bg-white/35" />
+      <div className="absolute bottom-11 right-12 h-1 w-20 rotate-[-18deg] rounded-full bg-white/35" />
+      <Icon className="absolute right-6 top-6 text-4xl text-white/82" />
+      <FaPenNib className="absolute bottom-6 left-7 text-2xl text-white/72" />
       <span className="absolute bottom-4 right-4 rounded-full bg-white/85 px-3 py-1 text-[11px] font-bold text-[#17120a] shadow-sm">
         {meta.label}
       </span>
@@ -333,13 +333,11 @@ function WritingStudioHero({
           </div>
         </div>
 
-        <div className="relative min-h-72 overflow-hidden rounded-2xl bg-gradient-to-br from-sky-50 via-white to-rose-50 p-6">
-          <div className="absolute bottom-8 right-8 h-28 w-28 rounded-full bg-rose-200/55 blur-2xl" />
-          <div className="absolute left-8 top-8 h-24 w-24 rounded-full bg-purple-200/45 blur-2xl" />
+        <div className="pratyo-brand-surface relative min-h-72 overflow-hidden rounded-2xl p-6">
           <div className="absolute right-12 top-16 h-32 w-52 rotate-[-6deg] rounded-lg border border-[#d7cdbb] bg-white/80 shadow-xl" />
           <div className="absolute right-24 top-24 h-32 w-52 rotate-[7deg] rounded-lg border border-[#d7cdbb] bg-white/85 shadow-xl" />
-          <FaPenNib className="absolute right-12 top-10 text-5xl text-pink-500" />
-          <FaBookOpen className="absolute bottom-11 left-10 text-6xl text-indigo-600" />
+          <FaPenNib className="absolute right-12 top-10 text-5xl text-white/78" />
+          <FaBookOpen className="absolute bottom-11 left-10 text-6xl text-white/72" />
           <div className="relative mt-44 rounded-xl border border-white/80 bg-white/80 p-4 shadow-sm backdrop-blur">
             <p className="text-sm font-bold text-[#17120a]">
               {student?.name || "Student"} writing desk
@@ -794,12 +792,12 @@ function SidebarPanels({ counts, libraryCounts, totalWords }) {
         </div>
       </section>
 
-      <section className="rounded-xl border border-purple-100 bg-gradient-to-br from-purple-50 to-white p-5 shadow-sm">
-        <FaQuoteLeft className="text-2xl text-purple-500" />
-        <p className="mt-4 text-sm font-bold leading-6 text-purple-900">
+      <section className="pratyo-brand-surface rounded-xl border border-slate-700/20 p-5 text-white shadow-sm">
+        <FaQuoteLeft className="text-2xl text-white/82" />
+        <p className="mt-4 text-sm font-bold leading-6 text-white">
           Words have power. Use yours to inspire the world.
         </p>
-        <p className="mt-3 text-xs text-purple-700">School writing studio</p>
+        <p className="mt-3 text-xs text-white/72">School writing studio</p>
       </section>
 
       <section className="rounded-xl border border-[#e7dcc8] bg-white p-4 shadow-sm">

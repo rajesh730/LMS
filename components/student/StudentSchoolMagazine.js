@@ -97,23 +97,23 @@ function MagazineArt({ category, large = false }) {
 
   return (
     <div
-      className={`relative overflow-hidden rounded-lg bg-gradient-to-br ${meta.art} ${
+      className={`pratyo-brand-panel relative overflow-hidden rounded-lg border ${
         large ? "h-52" : "h-36"
       }`}
     >
       <div className="absolute inset-0 opacity-70">
         <div className="absolute left-5 top-5 h-14 w-20 rotate-[-8deg] rounded-md border border-white/80 bg-white/75 shadow-sm" />
         <div className="absolute left-16 top-9 h-14 w-20 rotate-[8deg] rounded-md border border-white/80 bg-white/75 shadow-sm" />
-        <div className="absolute bottom-6 right-7 h-1 w-24 rotate-[-18deg] rounded-full bg-current/20" />
-        <div className="absolute bottom-10 right-10 h-1 w-16 rotate-[-18deg] rounded-full bg-current/20" />
+        <div className="absolute bottom-6 right-7 h-1 w-24 rotate-[-18deg] rounded-full bg-white/35" />
+        <div className="absolute bottom-10 right-10 h-1 w-16 rotate-[-18deg] rounded-full bg-white/35" />
       </div>
       <Icon
-        className={`absolute right-5 top-5 ${meta.accent} ${
+        className={`absolute right-5 top-5 text-white/82 ${
           large ? "text-5xl" : "text-4xl"
         } opacity-90`}
       />
       <FaPenNib
-        className={`absolute bottom-5 left-6 ${meta.accent} ${
+        className={`absolute bottom-5 left-6 text-white/72 ${
           large ? "text-3xl" : "text-2xl"
         } opacity-80`}
       />
@@ -325,7 +325,7 @@ export default function StudentSchoolMagazine() {
         <div className="grid gap-6 p-5 md:p-8 xl:grid-cols-[1fr_0.85fr]">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-3">
-              <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-purple-600 to-indigo-600 text-white shadow-lg shadow-purple-500/20">
+              <span className="pratyo-brand-surface flex h-12 w-12 items-center justify-center rounded-xl text-white shadow-lg shadow-slate-950/20">
                 <FaBookOpen />
               </span>
               <div>
@@ -378,13 +378,11 @@ export default function StudentSchoolMagazine() {
             </div>
           </div>
 
-          <div className="relative min-h-72 overflow-hidden rounded-2xl bg-gradient-to-br from-sky-50 via-white to-pink-50 p-6">
+          <div className="pratyo-brand-surface relative min-h-72 overflow-hidden rounded-2xl p-6">
             <div className="absolute right-8 top-8 h-36 w-52 rotate-[-8deg] rounded-lg border border-[#d7cdbb] bg-white/80 shadow-xl" />
             <div className="absolute right-20 top-14 h-36 w-52 rotate-[8deg] rounded-lg border border-[#d7cdbb] bg-white/80 shadow-xl" />
-            <div className="absolute bottom-9 left-8 h-24 w-28 rounded-full bg-sky-200/45 blur-2xl" />
-            <div className="absolute bottom-10 right-12 h-24 w-28 rounded-full bg-pink-200/50 blur-2xl" />
-            <FaFeatherAlt className="absolute right-10 top-10 text-5xl text-purple-500" />
-            <FaBookOpen className="absolute bottom-10 left-10 text-6xl text-indigo-600" />
+            <FaFeatherAlt className="absolute right-10 top-10 text-5xl text-white/78" />
+            <FaBookOpen className="absolute bottom-10 left-10 text-6xl text-white/72" />
             <div className="relative mt-44 rounded-xl border border-white/80 bg-white/75 p-4 shadow-sm backdrop-blur">
               <p className="text-sm font-bold text-[#17120a]">
                 {student?.name || "Student"}&apos;s reading room
@@ -446,12 +444,12 @@ export default function StudentSchoolMagazine() {
             </div>
           </section>
 
-          <section className="rounded-xl border border-[#d7cdbb] bg-gradient-to-br from-cyan-50 to-white p-5 text-center shadow-sm">
-            <FaQuoteLeft className="mx-auto text-2xl text-cyan-600" />
-            <p className="mt-4 text-sm font-semibold italic leading-6 text-[#40516b]">
+          <section className="pratyo-brand-surface rounded-xl border border-slate-700/20 p-5 text-center text-white shadow-sm">
+            <FaQuoteLeft className="mx-auto text-2xl text-white/82" />
+            <p className="mt-4 text-sm font-semibold italic leading-6 text-white">
               Writing is thinking made visible.
             </p>
-            <p className="mt-3 text-xs text-[#52657d]">School Magazine</p>
+            <p className="mt-3 text-xs text-white/72">School Magazine</p>
           </section>
         </aside>
 
@@ -491,7 +489,7 @@ export default function StudentSchoolMagazine() {
 
         <aside className="space-y-5">
           {featuredArticle && (
-            <section className="rounded-xl border border-pink-100 bg-gradient-to-br from-white to-pink-50 p-4 shadow-sm">
+            <section className="rounded-xl border border-[#d7cdbb] bg-white p-4 shadow-sm">
               <h2 className="text-sm font-bold text-[#17120a]">
                 Featured Article
               </h2>
@@ -516,11 +514,11 @@ export default function StudentSchoolMagazine() {
           )}
 
           {spotlight && (
-            <section className="rounded-xl border border-purple-100 bg-gradient-to-br from-purple-50 to-white p-5 text-center shadow-sm">
+            <section className="rounded-xl border border-[#d7cdbb] bg-white p-5 text-center shadow-sm">
               <h2 className="text-sm font-bold text-[#17120a]">
                 Student Spotlight
               </h2>
-              <div className="relative mx-auto mt-5 flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-pink-500 text-3xl font-bold text-white shadow-lg shadow-purple-500/20">
+              <div className="pratyo-brand-surface relative mx-auto mt-5 flex h-24 w-24 items-center justify-center rounded-full text-3xl font-bold text-white shadow-lg shadow-slate-950/20">
                 {spotlight.name.charAt(0).toUpperCase()}
                 <span className="absolute -right-1 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-amber-400 text-white shadow">
                   <FaCrown className="text-sm" />
@@ -549,7 +547,7 @@ export default function StudentSchoolMagazine() {
                       key={category}
                       type="button"
                       onClick={() => setActiveCategory(category)}
-                      className={`rounded-lg border border-[#d7cdbb] bg-gradient-to-br ${meta.art} p-4 text-left transition hover:-translate-y-0.5 hover:shadow-md`}
+                      className="rounded-lg border border-[#d7cdbb] bg-white p-4 text-left transition hover:-translate-y-0.5 hover:shadow-md"
                     >
                       <Icon className={`text-2xl ${meta.accent}`} />
                       <p className="mt-3 font-bold text-[#17120a]">

@@ -776,7 +776,7 @@ function AdminDashboardContent() {
             />
           ) : (
             <>
-              <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-2">
+              <div className="rounded-2xl border border-[#e1e7f2] bg-white p-2 shadow-sm">
                 <div className="flex flex-wrap gap-2">
                   {[
                     { id: "manage", label: "Manage Events" },
@@ -790,8 +790,8 @@ function AdminDashboardContent() {
                       onClick={() => setEventWorkspaceTab(tab.id)}
                       className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
                         eventWorkspaceTab === tab.id
-                          ? "bg-blue-600 text-white"
-                          : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                          ? "bg-purple-700 text-white"
+                          : "text-[#24314d] hover:bg-[#f8fbff] hover:text-purple-700"
                       }`}
                     >
                       {tab.label}
@@ -813,7 +813,7 @@ function AdminDashboardContent() {
               )}
 
               {eventWorkspaceTab === "manage" && (
-                <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800">
+                <div className="rounded-2xl border border-[#e1e7f2] bg-white p-6 shadow-[0_14px_34px_rgba(10,47,102,0.08)]">
                 {lastError && (
                   <div className="mb-4">
                     <AlertBanner type="error" title="Event action failed" message={lastError} />
@@ -822,10 +822,10 @@ function AdminDashboardContent() {
 
                 <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
                   <div>
-                    <p className="text-xs font-bold uppercase tracking-normal text-slate-500">
+                    <p className="text-xs font-bold uppercase tracking-normal text-[#75869b]">
                       Active competitions
                     </p>
-                    <h2 className="mt-2 text-2xl font-bold text-white">
+                    <h2 className="mt-2 text-2xl font-black text-[#17120a]">
                       Platform Events
                     </h2>
                   </div>
@@ -859,12 +859,12 @@ function AdminDashboardContent() {
               )}
 
               {eventWorkspaceTab === "completed" && (
-                <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800">
+                <div className="rounded-2xl border border-[#e1e7f2] bg-white p-6 shadow-[0_14px_34px_rgba(10,47,102,0.08)]">
                   <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-                    <h2 className="text-xl font-semibold text-white">
+                    <h2 className="text-xl font-black text-[#17120a]">
                       Completed Platform Events
                     </h2>
-                    <div className="rounded-lg bg-emerald-500/10 px-4 py-2 text-sm text-emerald-300 border border-emerald-500/20">
+                    <div className="rounded-lg border border-emerald-100 bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-700">
                       Closed competitions with published or finalized results
                     </div>
                   </div>
@@ -894,12 +894,12 @@ function AdminDashboardContent() {
               )}
 
               {eventWorkspaceTab === "archived" && (
-                <div className="bg-slate-900/50 p-6 rounded-2xl border border-slate-800">
+                <div className="rounded-2xl border border-[#e1e7f2] bg-white p-6 shadow-[0_14px_34px_rgba(10,47,102,0.08)]">
                   <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-                    <h2 className="text-xl font-semibold text-white">
+                    <h2 className="text-xl font-black text-[#17120a]">
                       Archived Platform Events
                     </h2>
-                    <div className="rounded-lg bg-blue-500/10 px-4 py-2 text-sm text-blue-200 border border-blue-500/20">
+                    <div className="rounded-lg border border-blue-100 bg-blue-50 px-4 py-2 text-sm font-bold text-[#0a2f66]">
                       Archived events stay available for review and can be restored.
                     </div>
                   </div>

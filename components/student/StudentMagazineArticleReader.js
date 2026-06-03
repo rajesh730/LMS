@@ -90,14 +90,14 @@ function MagazineArt({ category }) {
 
   return (
     <div
-      className={`relative min-h-72 overflow-hidden rounded-2xl bg-gradient-to-br ${meta.art} p-8`}
+      className="pratyo-brand-panel relative min-h-72 overflow-hidden rounded-2xl border p-8"
     >
       <div className="absolute left-10 top-10 h-32 w-44 rotate-[-8deg] rounded-lg border border-white/80 bg-white/75 shadow-xl" />
       <div className="absolute left-32 top-16 h-32 w-44 rotate-[8deg] rounded-lg border border-white/80 bg-white/75 shadow-xl" />
-      <div className="absolute bottom-12 right-16 h-1.5 w-48 rotate-[-18deg] rounded-full bg-current/20" />
-      <div className="absolute bottom-20 right-24 h-1.5 w-32 rotate-[-18deg] rounded-full bg-current/20" />
-      <Icon className={`absolute right-10 top-10 text-7xl ${meta.accent}`} />
-      <FaPenNib className={`absolute bottom-12 left-12 text-5xl ${meta.accent}`} />
+      <div className="absolute bottom-12 right-16 h-1.5 w-48 rotate-[-18deg] rounded-full bg-white/35" />
+      <div className="absolute bottom-20 right-24 h-1.5 w-32 rotate-[-18deg] rounded-full bg-white/35" />
+      <Icon className="absolute right-10 top-10 text-7xl text-white/82" />
+      <FaPenNib className="absolute bottom-12 left-12 text-5xl text-white/72" />
       <span className="absolute bottom-8 right-8 rounded-full bg-white/85 px-4 py-2 text-sm font-bold text-[#17120a] shadow-sm">
         {meta.label}
       </span>

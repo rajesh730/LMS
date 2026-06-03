@@ -30,7 +30,7 @@ const SchoolPromotionSchema = new Schema(
     },
     status: {
       type: String,
-      enum: ["DRAFT", "ACTIVE", "PAUSED", "ARCHIVED"],
+      enum: ["DRAFT", "ACTIVE", "PAUSED"],
       default: "DRAFT",
       index: true,
     },
@@ -98,10 +98,6 @@ const SchoolPromotionSchema = new Schema(
     createdBy: {
       type: Schema.Types.ObjectId,
       ref: "User",
-    },
-    archivedAt: {
-      type: Date,
-      default: null,
     },
   },
   { timestamps: true }

@@ -13,6 +13,7 @@ import {
   FaTrophy,
   FaUsers,
 } from "react-icons/fa";
+import { normalizeImageUrl } from "@/lib/imageUrls";
 
 function numberLabel(value) {
   const count = Number(value || 0);
@@ -42,16 +43,23 @@ function scoreSchool(school) {
 }
 
 function SchoolMark({ school, size = "h-12 w-12" }) {
-  const image = school.profile?.coverImageUrl;
+  const [imageFailed, setImageFailed] = useState(false);
+  const image = normalizeImageUrl(school.profile?.coverImageUrl);
+  const initial = (school.name || "S").charAt(0).toUpperCase();
   return (
     <span
       className={`flex shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#f4f1ff] text-lg font-black text-[#4326e8] ${size}`.trim()}
     >
-      {image ? (
+      {image && !imageFailed ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={image} alt="" className="h-full w-full object-cover" />
+        <img
+          src={image}
+          alt=""
+          className="h-full w-full object-contain p-1"
+          onError={() => setImageFailed(true)}
+        />
       ) : (
-        (school.name || "S").charAt(0).toUpperCase()
+        initial
       )}
     </span>
   );

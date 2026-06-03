@@ -4,10 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FaBell } from "react-icons/fa";
 import {
-  NotificationBulkActions,
   NotificationMeta,
   NotificationNewBadge,
-  NotificationReadToggleButton,
   NotificationTypeBadge,
 } from "@/components/notifications/NotificationUi";
 import useNotificationInbox from "@/lib/useNotificationInbox";
@@ -33,8 +31,6 @@ export default function StudentNotificationCenter() {
     unreadCount,
     loadNotifications,
     markNotificationsRead,
-    toggleNotificationReadState,
-    updateNotificationsReadState,
   } = useNotificationInbox({
     listUrl: "/api/student/notifications",
     readUrl: "/api/student/notifications/read",
@@ -111,21 +107,6 @@ export default function StudentNotificationCenter() {
                   School updates and event notices for your student dashboard
                 </p>
               </div>
-              {notifications.length > 0 && (
-                <NotificationBulkActions
-                  compact
-                  onMarkAllUnread={() =>
-                    void updateNotificationsReadState("unread", notifications, {
-                      allVisible: true,
-                    })
-                  }
-                  onMarkAllRead={() =>
-                    void updateNotificationsReadState("read", notifications, {
-                      allVisible: true,
-                    })
-                  }
-                />
-              )}
             </div>
           </div>
 
@@ -183,13 +164,6 @@ export default function StudentNotificationCenter() {
                       <NotificationNewBadge isRead={notification.isRead} />
                     </div>
                   </button>
-                  <div className="mt-3 flex justify-end">
-                    <NotificationReadToggleButton
-                      notification={notification}
-                      onToggle={(item) => void toggleNotificationReadState(item)}
-                      size="xs"
-                    />
-                  </div>
                 </div>
               ))}
 

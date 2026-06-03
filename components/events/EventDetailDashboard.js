@@ -12,6 +12,7 @@ import LoadingState from "@/components/ui/LoadingState";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import AlertBanner from "@/components/ui/AlertBanner";
 import useRealtimeChannel from "@/lib/useRealtimeChannel";
+import AuthenticatedPublicLinkGuard from "@/components/AuthenticatedPublicLinkGuard";
 
 export default function EventDetailDashboard() {
   const params = useParams();
@@ -95,7 +96,7 @@ export default function EventDetailDashboard() {
       <div className="flex min-h-screen items-center justify-center bg-[#f5f7fb] p-8">
         <LoadingState
           title="Loading event details"
-          message="Preparing overview, participants, notices, rounds, and certificates."
+          message="Preparing overview, participants, results, and certificates."
         />
       </div>
     );
@@ -151,6 +152,8 @@ export default function EventDetailDashboard() {
   const backHref =
     session?.user?.role === "SUPER_ADMIN"
       ? "/admin/dashboard?tab=events"
+      : event.eventScope === "PLATFORM"
+      ? "/school/dashboard?tab=platform-events"
       : "/school/dashboard?tab=school-events";
   const backLabel =
     session?.user?.role === "SUPER_ADMIN"
@@ -159,6 +162,7 @@ export default function EventDetailDashboard() {
 
   return (
     <div className="event-manage-shell min-h-screen bg-[#f5f7fb]">
+      <AuthenticatedPublicLinkGuard />
       {/* Header */}
       <EventInfoHeader event={event} capacityInfo={capacityInfo} />
 

@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import dbConnect from "@/lib/db";
 import Event from "@/models/Event";
+import EventSchoolInvitation from "@/models/EventSchoolInvitation";
 import ParticipationRequest from "@/models/ParticipationRequest";
 import Student from "@/models/Student";
 import { buildParticipationLifecycle } from "@/lib/lifecycle";
@@ -81,13 +82,35 @@ export async function GET(req, context) {
       return NextResponse.json({ message: "Event not found" }, { status: 404 });
     }
 
-    if (!canManageEvent(session, event)) {
+    const schoolScopeId =
+      session.user.role === "SCHOOL_ADMIN" && event.eventScope === "PLATFORM"
+        ? session.user.schoolId || session.user.id
+        : null;
+
+    if (schoolScopeId) {
+      const [approvedInvitation, existingParticipation] = await Promise.all([
+        EventSchoolInvitation.exists({
+          event: eventId,
+          school: schoolScopeId,
+          status: "APPROVED",
+        }),
+        ParticipationRequest.exists({
+          event: eventId,
+          school: schoolScopeId,
+        }),
+      ]);
+
+      if (!approvedInvitation && !existingParticipation) {
+        return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+      }
+    } else if (!canManageEvent(session, event)) {
       return NextResponse.json({ message: "Forbidden" }, { status: 403 });
     }
 
     // Get all participation requests
     const requests = await ParticipationRequest.find({
       event: eventId,
+      ...(schoolScopeId ? { school: schoolScopeId } : {}),
     })
       .populate("student", "name email grade")
       .populate("captainStudent", "name grade")
@@ -118,12 +141,17 @@ export async function GET(req, context) {
     };
 
     const activeRequests = [...organized.APPROVED, ...organized.ENROLLED];
+    const schoolScoped = Boolean(schoolScopeId);
 
     // Calculate capacity info
     const capacityInfo = {
-      total: event.maxParticipants || null,
+      total: schoolScoped
+        ? event.maxParticipantsPerSchool || event.maxParticipants || null
+        : event.maxParticipants || null,
       filled: teamEvent
         ? countUnits(activeRequests)
+        : schoolScoped
+        ? activeRequests.length
         : event.participants.reduce(
             (sum, p) => sum + (p.students ? p.students.length : 0),
             0
@@ -144,7 +172,18 @@ export async function GET(req, context) {
     }
 
     // Get per-school breakdown
-    const perSchoolBreakdown = teamEvent
+    const perSchoolBreakdown = schoolScoped
+      ? [
+          {
+            school: session.user.name || session.user.email || "Your school",
+            count: capacityInfo.filled,
+            limit: event.maxParticipantsPerSchool || null,
+            percentage: event.maxParticipantsPerSchool
+              ? Math.round((capacityInfo.filled / event.maxParticipantsPerSchool) * 100)
+              : null,
+          },
+        ]
+      : teamEvent
       ? Array.from(
           activeRequests.reduce((map, request) => {
             const schoolId = String(request.school?._id || request.school || "");

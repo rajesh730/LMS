@@ -571,7 +571,7 @@ const EventParticipationForm = memo(function EventParticipationForm({
           />
         )}
 
-        <section className="rounded-xl border border-[#e1e7f2] bg-gradient-to-r from-purple-50 to-white p-4">
+        <section className="rounded-xl border border-[#e1e7f2] bg-white p-4">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
               <p className="text-[11px] font-black uppercase text-purple-700">
