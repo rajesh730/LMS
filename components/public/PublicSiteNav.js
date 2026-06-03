@@ -33,15 +33,7 @@ export default function PublicSiteNav({ active = "home", searchPlaceholder = "Se
           onClick={() => setIsOpen(false)}
           className="flex min-w-0 shrink-0 items-center gap-3"
         >
-          <PratyoLogo variant="icon" compact imageClassName="h-10 w-10" />
-          <span className="hidden sm:block">
-            <span className="block text-lg font-black uppercase leading-5 text-[#10142f]">
-              Pratyo
-            </span>
-            <span className="block text-[11px] font-bold text-[#526071]">
-              Student Talent Platform
-            </span>
-          </span>
+          <PratyoLogo variant="logo" imageClassName="h-12 w-auto" />
         </Link>
 
         <form
