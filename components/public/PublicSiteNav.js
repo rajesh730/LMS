@@ -33,7 +33,7 @@ export default function PublicSiteNav({ active = "home", searchPlaceholder = "Se
           onClick={() => setIsOpen(false)}
           className="flex min-w-0 shrink-0 items-center gap-3"
         >
-          <PratyoLogo variant="logo" imageClassName="h-12 w-auto" />
+          <PratyoLogo variant="icon" compact imageClassName="h-10 w-10" />
         </Link>
 
         <form
