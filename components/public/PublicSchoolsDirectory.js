@@ -6,12 +6,9 @@ import {
   FaArrowRight,
   FaBuilding,
   FaCheckCircle,
-  FaFilter,
   FaLayerGroup,
   FaMapMarkerAlt,
-  FaSchool,
   FaSearch,
-  FaSlidersH,
   FaSyncAlt,
   FaTrophy,
   FaUsers,
@@ -33,16 +30,6 @@ function getProvince(school) {
 
 function getDistrict(school) {
   return school.district || "District not listed";
-}
-
-function getCategory(school) {
-  const hosted = metricValue(school, "eventsHosted");
-  const joined = metricValue(school, "eventsParticipated");
-  const awards = metricValue(school, "awardsCount");
-  if (awards >= hosted && awards >= joined && awards > 0) return "Awarded Schools";
-  if (hosted >= joined && hosted > 0) return "Event Hosts";
-  if (joined > 0) return "Active Participants";
-  return "Public Profiles";
 }
 
 function scoreSchool(school) {
@@ -70,11 +57,10 @@ function SchoolMark({ school, size = "h-12 w-12" }) {
   );
 }
 
-function SelectField({ label, value, onChange, options }) {
+function SelectField({ label, value, onChange, options, className = "" }) {
   return (
-    <label className="block min-w-0">
+    <label className={`block min-w-0 ${className}`.trim()}>
       <span className="mb-1.5 flex items-center gap-2 text-[10px] font-black uppercase text-[#52657d]">
-        <FaFilter className="text-[#4326e8]" />
         {label}
       </span>
       <select
@@ -90,77 +76,7 @@ function SelectField({ label, value, onChange, options }) {
   );
 }
 
-function StatStrip({ totals }) {
-  const stats = [
-    [totals.schoolCount, "Schools", FaSchool],
-    [totals.eventCount, "Events", FaLayerGroup],
-    [totals.awardCount, "Awards", FaTrophy],
-    [totals.studentCount, "Students", FaUsers],
-  ];
-
-  return (
-    <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-      {stats.map(([value, label, Icon]) => (
-        <div
-          key={label}
-          className="flex items-center gap-3 rounded-xl border border-[#e6eaf7] bg-white p-4 shadow-sm"
-        >
-          <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#f4f1ff] text-[#4326e8]">
-            <Icon />
-          </span>
-          <span>
-            <strong className="block text-xl font-black text-[#17120a]">
-              {numberLabel(value)}
-            </strong>
-            <span className="text-xs font-bold text-[#52657d]">{label}</span>
-          </span>
-        </div>
-      ))}
-    </section>
-  );
-}
-
-function FeaturedSchools({ schools }) {
-  if (!schools.length) return null;
-
-  return (
-    <section className="rounded-xl border border-[#e6eaf7] bg-white p-4 shadow-sm">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="text-sm font-black text-[#17120a]">
-          Top Schools This Week
-        </h2>
-            <Link href="#schools" className="text-xs font-black text-[#4326e8]">
-              View all
-            </Link>
-      </div>
-      <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {schools.slice(0, 4).map((school, index) => (
-          <Link
-            key={`${school.id}-${index}`}
-            href={`/schools/${school.id}`}
-            className="flex min-w-0 items-center gap-3 rounded-lg border border-[#e6eaf7] bg-[#f8f9fd] p-3 transition hover:border-[#cfc4ff] hover:bg-white"
-          >
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-50 text-xs font-black text-amber-700">
-              {index + 1}
-            </span>
-            <SchoolMark school={school} size="h-11 w-11" />
-            <span className="min-w-0">
-              <strong className="block truncate text-sm text-[#17120a]">
-                {school.name}
-              </strong>
-              <span className="text-xs font-black text-[#4326e8]">
-                {numberLabel(scoreSchool(school))} pts
-              </span>
-            </span>
-          </Link>
-        ))}
-      </div>
-    </section>
-  );
-}
-
 function SchoolRow({ school }) {
-  const category = getCategory(school);
   const metrics = [
     [metricValue(school, "eventsHosted"), "Hosted", FaBuilding],
     [metricValue(school, "eventsParticipated"), "Joined", FaLayerGroup],
@@ -179,9 +95,6 @@ function SchoolRow({ school }) {
           <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-black uppercase text-emerald-800">
             <FaCheckCircle />
             Verified
-          </span>
-          <span className="rounded-full bg-[#f4f1ff] px-2.5 py-1 text-[10px] font-black uppercase text-[#4326e8]">
-            {category}
           </span>
         </div>
         <h3 className="mt-2 break-words text-base font-black text-[#17120a] group-hover:text-[#4326e8]">
@@ -216,26 +129,10 @@ function SchoolRow({ school }) {
   );
 }
 
-export default function PublicSchoolsDirectory({ schools = [], spotlights = [], totals }) {
+export default function PublicSchoolsDirectory({ schools = [] }) {
   const [query, setQuery] = useState("");
   const [province, setProvince] = useState("All Provinces");
   const [district, setDistrict] = useState("All Districts");
-  const [category, setCategory] = useState("All Categories");
-  const [sort, setSort] = useState("Most Active");
-  const [quickView, setQuickView] = useState("All Schools");
-
-  const featuredSchools = useMemo(() => {
-    if (spotlights.length > 0) {
-      return spotlights.map((promotion) => ({
-        id: promotion.schoolId,
-        name: promotion.title,
-        location: promotion.location,
-        studentCount: promotion.studentCount || 0,
-        profile: promotion.profile || {},
-      }));
-    }
-    return [...schools].sort((a, b) => scoreSchool(b) - scoreSchool(a)).slice(0, 6);
-  }, [schools, spotlights]);
 
   const provinces = useMemo(
     () => ["All Provinces", ...new Set(schools.map(getProvince))],
@@ -250,11 +147,6 @@ export default function PublicSchoolsDirectory({ schools = [], spotlights = [], 
     return ["All Districts", ...new Set(scopedSchools.map(getDistrict))];
   }, [province, schools]);
 
-  const categories = useMemo(
-    () => ["All Categories", ...new Set(schools.map(getCategory))],
-    [schools]
-  );
-
   const filteredSchools = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     return schools
@@ -263,29 +155,15 @@ export default function PublicSchoolsDirectory({ schools = [], spotlights = [], 
         if (normalizedQuery && !searchable.includes(normalizedQuery)) return false;
         if (province !== "All Provinces" && getProvince(school) !== province) return false;
         if (district !== "All Districts" && getDistrict(school) !== district) return false;
-        if (category !== "All Categories" && getCategory(school) !== category) return false;
-        if (quickView === "Most Awarded" && metricValue(school, "awardsCount") === 0) return false;
-        if (quickView === "Event Hosts" && metricValue(school, "eventsHosted") === 0) return false;
         return true;
       })
-      .sort((a, b) => {
-        if (quickView === "Recently Joined" || sort === "Recently Joined") {
-          return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
-        }
-        if (sort === "Most Awarded") {
-          return metricValue(b, "awardsCount") - metricValue(a, "awardsCount");
-        }
-        return scoreSchool(b) - scoreSchool(a);
-      });
-  }, [category, district, province, query, quickView, schools, sort]);
+      .sort((a, b) => scoreSchool(b) - scoreSchool(a));
+  }, [district, province, query, schools]);
 
   const clearFilters = () => {
     setQuery("");
     setProvince("All Provinces");
     setDistrict("All Districts");
-    setCategory("All Categories");
-    setSort("Most Active");
-    setQuickView("All Schools");
   };
 
   return (
@@ -315,12 +193,9 @@ export default function PublicSchoolsDirectory({ schools = [], spotlights = [], 
           </div>
         </section>
 
-        <StatStrip totals={totals} />
-        <FeaturedSchools schools={featuredSchools} />
-
         <section className="rounded-xl border border-[#e6eaf7] bg-white p-4 shadow-sm">
-          <div className="grid gap-3 lg:grid-cols-[1.4fr_1fr_1fr_1fr_1fr_auto] lg:items-end">
-            <label className="block min-w-0">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
+            <label className="block min-w-0 lg:flex-1">
               <span className="mb-1.5 flex items-center gap-2 text-[10px] font-black uppercase text-[#52657d]">
                 <FaSearch className="text-[#4326e8]" />
                 Search
@@ -340,24 +215,14 @@ export default function PublicSchoolsDirectory({ schools = [], spotlights = [], 
                 setDistrict("All Districts");
               }}
               options={provinces}
+              className="lg:w-56"
             />
             <SelectField
               label="District"
               value={district}
               onChange={setDistrict}
               options={districts}
-            />
-            <SelectField
-              label="Category"
-              value={category}
-              onChange={setCategory}
-              options={categories}
-            />
-            <SelectField
-              label="Sort By"
-              value={sort}
-              onChange={setSort}
-              options={["Most Active", "Most Awarded", "Recently Joined"]}
+              className="lg:w-56"
             />
             <button
               type="button"
@@ -367,23 +232,6 @@ export default function PublicSchoolsDirectory({ schools = [], spotlights = [], 
               <FaSyncAlt />
               Clear
             </button>
-          </div>
-
-          <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
-            {["All Schools", "Most Active", "Most Awarded", "Event Hosts", "Recently Joined"].map((item) => (
-              <button
-                key={item}
-                type="button"
-                onClick={() => setQuickView(item)}
-                className={`min-h-10 shrink-0 rounded-full px-4 text-xs font-black transition ${
-                  quickView === item
-                    ? "bg-[#4326e8] text-white"
-                    : "border border-[#e6eaf7] bg-white text-[#24314d] hover:bg-[#f4f1ff] hover:text-[#4326e8]"
-                }`}
-              >
-                {item}
-              </button>
-            ))}
           </div>
         </section>
 
@@ -395,10 +243,6 @@ export default function PublicSchoolsDirectory({ schools = [], spotlights = [], 
                 Showing {filteredSchools.length} of {schools.length} schools
               </p>
             </div>
-            <span className="inline-flex items-center gap-2 text-xs font-black text-[#52657d]">
-              <FaSlidersH className="text-[#4326e8]" />
-              Filters update instantly
-            </span>
           </div>
 
           {filteredSchools.length === 0 ? (

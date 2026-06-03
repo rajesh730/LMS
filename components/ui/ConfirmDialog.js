@@ -7,14 +7,17 @@ const TONE = {
   danger: {
     icon: "text-rose-300 bg-rose-500/15",
     confirm: "bg-rose-600 hover:bg-rose-500 text-white",
+    confirmText: "#ffffff",
   },
   warning: {
     icon: "text-amber-200 bg-amber-500/15",
     confirm: "bg-amber-500 hover:bg-amber-400 text-slate-950",
+    confirmText: "#10142f",
   },
   info: {
     icon: "text-sky-200 bg-sky-500/15",
     confirm: "bg-blue-600 hover:bg-blue-500 text-white",
+    confirmText: "#ffffff",
   },
 };
 
@@ -83,8 +86,11 @@ export default function ConfirmDialog({
             disabled={busy}
             onClick={onConfirm}
             className={`rounded-xl px-4 py-3 text-sm font-bold transition disabled:cursor-not-allowed disabled:opacity-60 ${styles.confirm}`}
+            style={{ color: styles.confirmText }}
           >
-            {busy ? "Working..." : confirmLabel}
+            <span style={{ color: styles.confirmText }}>
+              {busy ? "Working..." : confirmLabel}
+            </span>
           </button>
         </div>
       </div>

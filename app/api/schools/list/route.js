@@ -14,7 +14,7 @@ export async function GET(req) {
         await connectDB();
         const schools = await User.find({ role: 'SCHOOL_ADMIN' })
             .select(
-                "schoolName principalName email status schoolPhone schoolLocation website establishedYear createdAt updatedAt educationLevels"
+                "schoolName principalName email status schoolPhone schoolLocation province district website establishedYear createdAt updatedAt educationLevels"
             )
             .sort({ createdAt: -1 })
             .lean();

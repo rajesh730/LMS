@@ -35,7 +35,7 @@ const defaultConfig = {
   },
   defaults: {
     pendingSchoolRestrictions: true,
-    allowSupportTickets: true,
+    allowFeedbackForm: true,
   },
 };
 
@@ -88,6 +88,18 @@ function getRiskWarnings(nextConfig, currentConfig) {
   }
 
   return warnings;
+}
+
+function normalizeDefaults(defaults = {}) {
+  const nextDefaults = { ...defaultConfig.defaults, ...defaults };
+  if (
+    typeof nextDefaults.allowFeedbackForm !== "boolean" &&
+    typeof defaults.allowSupportTickets === "boolean"
+  ) {
+    nextDefaults.allowFeedbackForm = defaults.allowSupportTickets;
+  }
+  delete nextDefaults.allowSupportTickets;
+  return nextDefaults;
 }
 
 function isValidEmail(value) {
@@ -174,13 +186,14 @@ export default function SuperAdminSettingsManager() {
         }
 
         const payload = data.data || {};
+        const normalizedDefaults = normalizeDefaults(payload.defaults);
         setConfig({
           general: { ...defaultConfig.general, ...(payload.general || {}) },
           governance: {
             ...defaultConfig.governance,
             ...(payload.governance || {}),
           },
-          defaults: { ...defaultConfig.defaults, ...(payload.defaults || {}) },
+          defaults: normalizedDefaults,
         });
         setSavedConfig({
           general: { ...defaultConfig.general, ...(payload.general || {}) },
@@ -188,7 +201,7 @@ export default function SuperAdminSettingsManager() {
             ...defaultConfig.governance,
             ...(payload.governance || {}),
           },
-          defaults: { ...defaultConfig.defaults, ...(payload.defaults || {}) },
+          defaults: normalizedDefaults,
         });
         setIsDirty(false);
       } catch (error) {
@@ -225,13 +238,14 @@ export default function SuperAdminSettingsManager() {
       }
 
       const payload = data.data || {};
+      const normalizedDefaults = normalizeDefaults(payload.defaults);
       setConfig({
         general: { ...defaultConfig.general, ...(payload.general || {}) },
         governance: {
           ...defaultConfig.governance,
           ...(payload.governance || {}),
         },
-        defaults: { ...defaultConfig.defaults, ...(payload.defaults || {}) },
+        defaults: normalizedDefaults,
       });
       setSavedConfig({
         general: { ...defaultConfig.general, ...(payload.general || {}) },
@@ -239,7 +253,7 @@ export default function SuperAdminSettingsManager() {
           ...defaultConfig.governance,
           ...(payload.governance || {}),
         },
-        defaults: { ...defaultConfig.defaults, ...(payload.defaults || {}) },
+        defaults: normalizedDefaults,
       });
       setIsDirty(false);
     } catch (error) {
@@ -288,7 +302,7 @@ export default function SuperAdminSettingsManager() {
       if (supportEmail && !isValidEmail(supportEmail)) {
         setMessage({
           type: "error",
-          text: "Support email must be a valid email address.",
+          text: "Contact email must be a valid email address.",
         });
         setSaving(false);
         return;
@@ -348,7 +362,7 @@ export default function SuperAdminSettingsManager() {
         JSON.stringify(savedConfig.defaults) !==
         JSON.stringify(sanitizedConfig.defaults)
       ) {
-        changedSections.push("Support");
+        changedSections.push("Contact");
       }
 
       setMessage({
@@ -829,7 +843,7 @@ export default function SuperAdminSettingsManager() {
               </div>
               <div>
                 <label className="mb-2 block text-sm font-medium text-slate-300">
-                  Support email
+                  Contact email
                 </label>
                 <input
                   type="email"
@@ -842,7 +856,7 @@ export default function SuperAdminSettingsManager() {
               </div>
               <div>
                 <label className="mb-2 block text-sm font-medium text-slate-300">
-                  Support phone
+                  Contact phone
                 </label>
                 <input
                   value={config.general.supportPhone}
@@ -1033,7 +1047,7 @@ export default function SuperAdminSettingsManager() {
           <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6">
             <h2 className="mb-5 flex items-center gap-2 text-xl font-semibold text-white">
               <FiLayers className="text-emerald-300" />
-              Support
+              Access and feedback
             </h2>
             <div className="space-y-4">
               <ToggleField
@@ -1048,16 +1062,16 @@ export default function SuperAdminSettingsManager() {
                 Scope: affects school accounts that are still pending approval.
               </p>
               <ToggleField
-                checked={config.defaults.allowSupportTickets}
+                checked={config.defaults.allowFeedbackForm}
                 onChange={(value) =>
-                  updateSection("defaults", "allowSupportTickets", value)
+                  updateSection("defaults", "allowFeedbackForm", value)
                 }
-                label="Enable support tickets"
-                description="Allows schools to submit support tickets through the built-in support workflow."
+                label="Enable feedback form"
+                description="Allows students and schools to send feedback to the super admin inbox."
               />
               <p className="text-xs text-blue-300">
-                Scope: affects support ticket submission availability across
-                school workspaces.
+                Scope: affects feedback submission availability for school and
+                student workspaces.
               </p>
             </div>
           </div>

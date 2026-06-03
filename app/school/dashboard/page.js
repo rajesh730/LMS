@@ -37,11 +37,11 @@ const DashboardOverview = dynamic(
     ),
   }
 );
-const SupportTicketManager = dynamic(
-  () => import("@/components/support/SupportTicketManager"),
+const FeedbackForm = dynamic(
+  () => import("@/components/feedback/FeedbackForm"),
   {
     loading: () => (
-      <LoadingState title="Loading support" message="Preparing support tickets." />
+      <LoadingState title="Loading feedback" message="Preparing feedback form." />
     ),
   }
 );
@@ -504,7 +504,7 @@ function SchoolDashboardContent() {
 
             {activeTab === "teachers" && <TeacherManager />}
             {activeTab === "showcase" && <ShowcaseProfileManager />}
-            {activeTab === "support" && <SupportTicketManager />}
+            {activeTab === "feedback" && <FeedbackForm audience="school" />}
             {activeTab === "register-student" && (
               <EnhancedStudentRegistration
                 schoolId={session?.user?.id}

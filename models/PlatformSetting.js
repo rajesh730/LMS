@@ -74,7 +74,7 @@ const PlatformSettingSchema = new mongoose.Schema(
         type: Boolean,
         default: true,
       },
-      allowSupportTickets: {
+      allowFeedbackForm: {
         type: Boolean,
         default: true,
       },

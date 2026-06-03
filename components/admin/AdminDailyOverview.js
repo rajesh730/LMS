@@ -6,7 +6,7 @@ import {
   FaBell,
   FaCalendarAlt,
   FaBullseye,
-  FaHeadset,
+  FaCommentDots,
   FaHandshake,
   FaSchool,
 } from "react-icons/fa";
@@ -183,13 +183,13 @@ export default function AdminDailyOverview({
           />
 
           <DashboardFocusCard
-            href="/admin/support"
-            icon={FaHeadset}
-            badge={`${getIndicator("admin.support").count} pending`}
-            title="Support queue"
-            description="Review school support tickets that still need platform action."
-            actionLabel="Open support"
-            indicator={getIndicator("admin.support")}
+            href="/admin/feedback"
+            icon={FaCommentDots}
+            badge={`${getIndicator("admin.feedback").count} new`}
+            title="Feedback inbox"
+            description="Review feedback submitted by students and schools."
+            actionLabel="Open feedback"
+            indicator={getIndicator("admin.feedback")}
             tone="amber"
           />
 

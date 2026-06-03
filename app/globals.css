@@ -89,6 +89,30 @@ textarea {
   font: inherit;
 }
 
+a[href],
+button:not(:disabled),
+select:not(:disabled),
+summary,
+label[for],
+[role="button"],
+[role="link"],
+input[type="button"]:not(:disabled),
+input[type="submit"]:not(:disabled),
+input[type="reset"]:not(:disabled),
+input[type="checkbox"]:not(:disabled),
+input[type="radio"]:not(:disabled),
+input[type="file"]:not(:disabled),
+.cursor-pointer {
+  cursor: pointer;
+}
+
+button:disabled,
+select:disabled,
+input:disabled,
+[aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
 ::selection {
   background: rgba(67, 38, 232, 0.18);
   color: var(--brand-navy);

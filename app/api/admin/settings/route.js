@@ -24,6 +24,18 @@ function normalizeStringList(value) {
     .filter(Boolean);
 }
 
+function normalizeDefaults(defaults = {}) {
+  const normalized = { ...defaults };
+  if (
+    typeof normalized.allowFeedbackForm !== "boolean" &&
+    typeof normalized.allowSupportTickets === "boolean"
+  ) {
+    normalized.allowFeedbackForm = normalized.allowSupportTickets;
+  }
+  delete normalized.allowSupportTickets;
+  return normalized;
+}
+
 async function getOrCreateSettings() {
   let settings = await PlatformSetting.findOne({ singletonKey: "platform" });
   if (!settings) {
@@ -91,7 +103,7 @@ export async function PUT(req) {
     };
     settings.defaults = {
       ...settings.defaults?.toObject?.(),
-      ...body.defaults,
+      ...normalizeDefaults(body.defaults),
       ...(hasTeacherRolesField
         ? { defaultTeacherRoles: teacherRoles }
         : {}),

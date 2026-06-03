@@ -17,7 +17,7 @@ import {
   FaSignOutAlt,
   FaSchool,
   FaChalkboardTeacher,
-  FaHeadset,
+  FaCommentDots,
   FaBullseye,
   FaUsers,
   FaTimes,
@@ -30,14 +30,13 @@ import useWorkIndicators from "@/lib/useWorkIndicators";
 const HREF_INDICATOR_KEYS = {
   "/admin/dashboard?tab=approvals": "admin.approvals",
   "/admin/dashboard?tab=events": "admin.events",
-  "/admin/support": "admin.support",
+  "/admin/feedback": "admin.feedback",
   "/admin/dashboard?tab=spotlight": "admin.spotlight",
   "/school/dashboard?tab=platform-events": "school.platformEvents",
   "/school/dashboard?tab=school-events": "school.schoolEvents",
   "/school/dashboard?tab=student-notices": "school.studentNotices",
   "/school/dashboard?tab=notices": "school.receivedNotices",
   "/school/dashboard?tab=magazine": "school.magazine",
-  "/school/support": "school.support",
   "/student/events": "student.events",
   "/student/notices": "student.notices",
   "/student/writing": "student.writing",
@@ -63,7 +62,7 @@ const SCHOOL_NAV_GROUPS = [
   },
   {
     title: "Platform",
-    names: ["Settings"],
+    names: ["Feedback", "Settings"],
   },
 ];
 
@@ -96,7 +95,7 @@ export default function Sidebar({
     { name: "Notices", href: "/admin/dashboard?tab=notices", icon: FaBullhorn },
     { name: "School Spotlight", href: "/admin/dashboard?tab=spotlight", icon: FaBullseye },
     { name: "Diagnostics", href: "/admin/diagnostics", icon: FaHeartbeat },
-    { name: "Support Tickets", href: "/admin/support", icon: FaHeadset },
+    { name: "Feedback", href: "/admin/feedback", icon: FaCommentDots },
     { name: "Settings", href: "/admin/settings", icon: FaCog },
   ];
 
@@ -134,6 +133,7 @@ export default function Sidebar({
       href: "/school/dashboard?tab=showcase",
       icon: FaSchool,
     },
+    { name: "Feedback", href: "/school/dashboard?tab=feedback", icon: FaCommentDots },
     { name: "Settings", href: "/school/dashboard?tab=settings", icon: FaCog },
   ];
 
@@ -151,6 +151,7 @@ export default function Sidebar({
     { name: "Notices", href: "/student/notices", icon: FaBell },
     { name: "My Writing", href: "/student/writing", icon: FaFeatherAlt },
     { name: "School Magazine", href: "/student/magazine", icon: FaBookOpen },
+    { name: "Feedback", href: "/student/feedback", icon: FaCommentDots },
   ];
 
   let links = [];

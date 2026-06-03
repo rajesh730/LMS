@@ -39,9 +39,32 @@ import {
   FaInfoCircle,
   FaKey,
   FaLayerGroup,
+  FaSearch,
 } from "react-icons/fa";
 
 const FETCH_TIMEOUT_MS = 10000;
+
+function parseSchoolLocation(location = "") {
+  const parts = String(location || "")
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  const postalIndex = parts.findIndex((part) => /^postal code/i.test(part));
+  const cleanParts = postalIndex >= 0 ? parts.slice(0, postalIndex) : parts;
+
+  return {
+    province: cleanParts.at(-1) || "",
+    district: cleanParts.at(-2) || "",
+  };
+}
+
+function getSchoolProvince(school) {
+  return school.province || parseSchoolLocation(school.schoolLocation).province;
+}
+
+function getSchoolDistrict(school) {
+  return school.district || parseSchoolLocation(school.schoolLocation).district;
+}
 
 async function fetchJsonWithTimeout(url) {
   const controller = new AbortController();
@@ -88,6 +111,9 @@ function AdminDashboardContent() {
   const [events, setEvents] = useState([]);
   const [partners, setPartners] = useState([]);
   const [proposals, setProposals] = useState([]);
+  const [schoolSearch, setSchoolSearch] = useState("");
+  const [schoolProvince, setSchoolProvince] = useState("All Provinces");
+  const [schoolDistrict, setSchoolDistrict] = useState("All Districts");
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [viewingEvent, setViewingEvent] = useState(null);
@@ -382,6 +408,58 @@ function AdminDashboardContent() {
   };
 
   const pendingSchools = schools.filter((s) => s.status === "PENDING");
+  const registeredSchools = schools.filter((s) => s.status !== "PENDING");
+  const schoolProvinceOptions = [
+    "All Provinces",
+    ...new Set(
+      registeredSchools
+        .map(getSchoolProvince)
+        .filter(Boolean)
+    ),
+  ];
+  const districtSource =
+    schoolProvince === "All Provinces"
+      ? registeredSchools
+      : registeredSchools.filter(
+          (school) => getSchoolProvince(school) === schoolProvince
+        );
+  const schoolDistrictOptions = [
+    "All Districts",
+    ...new Set(
+      districtSource
+        .map(getSchoolDistrict)
+        .filter(Boolean)
+    ),
+  ];
+  const filteredRegisteredSchools = registeredSchools.filter((school) => {
+    const query = schoolSearch.trim().toLowerCase();
+    if (
+      schoolProvince !== "All Provinces" &&
+      getSchoolProvince(school) !== schoolProvince
+    ) {
+      return false;
+    }
+    if (
+      schoolDistrict !== "All Districts" &&
+      getSchoolDistrict(school) !== schoolDistrict
+    ) {
+      return false;
+    }
+    if (!query) return true;
+    const searchable = [
+      school.schoolName,
+      school.principalName,
+      school.email,
+      school.schoolLocation,
+      getSchoolProvince(school),
+      getSchoolDistrict(school),
+      school.status,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+    return searchable.includes(query);
+  });
   const platformEvents = events.filter(
     (event) => (event.eventScope || "PLATFORM") === "PLATFORM"
   );
@@ -526,6 +604,66 @@ function AdminDashboardContent() {
               Manage access and reset credentials for approved schools.
             </p>
           </div>
+          <div className="mb-4 flex flex-col gap-3 rounded-xl border border-[#e6eaf7] bg-white p-4 md:flex-row md:items-end">
+            <label className="block min-w-0 flex-1">
+              <span className="mb-1.5 flex items-center gap-2 text-[10px] font-black uppercase text-[#52657d]">
+                <FaSearch className="text-[#4326e8]" />
+                Search school
+              </span>
+              <input
+                value={schoolSearch}
+                onChange={(event) => setSchoolSearch(event.target.value)}
+                placeholder="Search school, principal, email, status, or location..."
+                className="min-h-11 w-full rounded-lg border border-[#e6eaf7] bg-[#f8f9fd] px-4 text-sm font-semibold text-[#24314d] outline-none transition placeholder:text-[#8a9ab1] focus:border-[#4326e8] focus:bg-white focus:ring-4 focus:ring-[#4326e8]/10"
+              />
+            </label>
+            <label className="block min-w-0 md:w-56">
+              <span className="mb-1.5 block text-[10px] font-black uppercase text-[#52657d]">
+                Province
+              </span>
+              <select
+                value={schoolProvince}
+                onChange={(event) => {
+                  setSchoolProvince(event.target.value);
+                  setSchoolDistrict("All Districts");
+                }}
+                className="min-h-11 w-full rounded-lg border border-[#e6eaf7] bg-white px-3 text-sm font-bold text-[#24314d] outline-none transition focus:border-[#4326e8] focus:ring-4 focus:ring-[#4326e8]/10"
+              >
+                {schoolProvinceOptions.map((province) => (
+                  <option key={province}>{province}</option>
+                ))}
+              </select>
+            </label>
+            <label className="block min-w-0 md:w-56">
+              <span className="mb-1.5 block text-[10px] font-black uppercase text-[#52657d]">
+                District
+              </span>
+              <select
+                value={schoolDistrict}
+                onChange={(event) => setSchoolDistrict(event.target.value)}
+                className="min-h-11 w-full rounded-lg border border-[#e6eaf7] bg-white px-3 text-sm font-bold text-[#24314d] outline-none transition focus:border-[#4326e8] focus:ring-4 focus:ring-[#4326e8]/10"
+              >
+                {schoolDistrictOptions.map((district) => (
+                  <option key={district}>{district}</option>
+                ))}
+              </select>
+            </label>
+            {(schoolSearch ||
+              schoolProvince !== "All Provinces" ||
+              schoolDistrict !== "All Districts") && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSchoolSearch("");
+                  setSchoolProvince("All Provinces");
+                  setSchoolDistrict("All Districts");
+                }}
+                className="inline-flex min-h-11 items-center justify-center rounded-lg border border-[#e6eaf7] px-4 text-sm font-black text-[#0a2f66] transition hover:bg-[#f8f9fd]"
+              >
+                Clear
+              </button>
+            )}
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm text-slate-300">
               <thead className="text-xs uppercase bg-slate-800 text-slate-400">
@@ -539,8 +677,7 @@ function AdminDashboardContent() {
                 </tr>
               </thead>
               <tbody>
-                {schools
-                  .filter((s) => s.status !== "PENDING")
+                {filteredRegisteredSchools
                   .map((school) => {
                     const status = school.status || "SUBSCRIBED";
                     const isActive = ["SUBSCRIBED", "APPROVED"].includes(
@@ -584,14 +721,21 @@ function AdminDashboardContent() {
                                 isActive ? "UNSUBSCRIBED" : "APPROVED"
                               )
                             }
-                            className={`flex items-center gap-2 px-3 py-1 rounded transition ${
+                            className={`flex min-h-9 items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-black shadow-sm transition ${
                               isActive
-                                ? "bg-red-500/20 text-red-400 hover:bg-red-500/30"
-                                : "bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30"
+                                ? "bg-rose-600 text-white hover:bg-rose-700"
+                                : "bg-emerald-600 text-white hover:bg-emerald-700"
                             }`}
+                            style={{ color: "#ffffff" }}
                           >
-                            {isActive ? <FaToggleOn /> : <FaToggleOff />}
-                            {isActive ? "Deactivate" : "Activate"}
+                            {isActive ? (
+                              <FaToggleOn style={{ color: "#ffffff" }} />
+                            ) : (
+                              <FaToggleOff style={{ color: "#ffffff" }} />
+                            )}
+                            <span style={{ color: "#ffffff" }}>
+                              {isActive ? "Deactivate" : "Activate"}
+                            </span>
                           </button>
                         </td>
                       </tr>
@@ -599,6 +743,11 @@ function AdminDashboardContent() {
                   })}
               </tbody>
             </table>
+            {filteredRegisteredSchools.length === 0 && (
+              <div className="rounded-b-xl border-x border-b border-[#e6eaf7] bg-white p-8 text-center text-sm font-semibold text-[#52657d]">
+                No schools match your search.
+              </div>
+            )}
           </div>
         </div>
       )}

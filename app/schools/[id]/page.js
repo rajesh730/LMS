@@ -125,12 +125,13 @@ async function getSchoolData(id) {
 
 function HeroFallbackArt() {
   return (
-    <div className="absolute inset-0 bg-gradient-to-br from-[#0a2f66] via-[#245c96] to-[#dbeafe]">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_22%_28%,rgba(255,255,255,0.22),transparent_26%),radial-gradient(circle_at_72%_18%,rgba(251,191,36,0.28),transparent_22%)]" />
-      <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-black/45 to-transparent" />
-      <div className="absolute bottom-10 right-12 h-28 w-48 rounded-lg border border-white/35 bg-white/18 backdrop-blur-sm" />
-      <FaSchool className="absolute bottom-14 right-24 text-6xl text-white/70" />
-      <FaGraduationCap className="absolute bottom-16 left-16 text-6xl text-white/65" />
+    <div className="absolute inset-0 bg-gradient-to-br from-[#101828] via-[#164e63] to-[#4338ca]">
+      <div className="absolute inset-0 opacity-80 [background-image:linear-gradient(115deg,rgba(255,255,255,.16)_0,rgba(255,255,255,0)_34%),radial-gradient(circle_at_18%_20%,rgba(56,189,248,.34),transparent_28%),radial-gradient(circle_at_78%_18%,rgba(250,204,21,.24),transparent_24%),radial-gradient(circle_at_68%_82%,rgba(167,139,250,.28),transparent_30%)]" />
+      <div className="absolute bottom-0 left-0 right-0 h-36 bg-gradient-to-t from-black/50 to-transparent" />
+      <div className="absolute bottom-10 right-12 hidden h-28 w-48 rounded-2xl border border-white/25 bg-white/12 backdrop-blur-sm md:block" />
+      <div className="absolute right-28 top-12 hidden h-16 w-36 -rotate-6 rounded-2xl border border-white/20 bg-white/10 backdrop-blur-sm md:block" />
+      <FaSchool className="absolute bottom-14 right-24 hidden text-6xl text-white/60 md:block" />
+      <FaGraduationCap className="absolute bottom-16 left-16 hidden text-6xl text-white/55 md:block" />
     </div>
   );
 }
@@ -347,8 +348,6 @@ export default async function PublicSchoolPage({ params }) {
   const { school, profile, events, achievements, writings, studentCount } = data;
   const metrics = profile?.highlightMetrics || {};
   const highlights = profile?.publicHighlights || [];
-  const coverImage = profile?.coverImageUrl;
-
   return (
     <main className="min-h-screen bg-[#f8f9fd] pb-24 text-[#17120a]">
       <PublicSiteNav active="schools" />
@@ -385,35 +384,35 @@ export default async function PublicSchoolPage({ params }) {
           className="scroll-mt-28 relative overflow-hidden rounded-2xl border border-[#d7cdbb] bg-white shadow-[0_18px_50px_rgba(10,47,102,0.08)]"
         >
           <div className="relative min-h-[360px]">
-            {coverImage ? (
-              <div
-                className="absolute inset-0 bg-cover bg-center"
-                style={{
-                  backgroundImage: `linear-gradient(90deg, rgba(7,24,51,0.92), rgba(7,24,51,0.38), rgba(7,24,51,0.12)), url(${coverImage})`,
-                }}
-              />
-            ) : (
-              <HeroFallbackArt />
-            )}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
+            <HeroFallbackArt />
+            <div className="absolute inset-0 bg-gradient-to-r from-black/38 via-black/10 to-black/26" />
             <div className="relative z-10 grid min-h-[360px] gap-6 p-6 md:p-8 lg:grid-cols-[1fr_320px] lg:items-end">
-              <div className="self-end">
+              <div className="self-end rounded-2xl border border-white/20 bg-black/28 p-4 shadow-2xl backdrop-blur-sm md:p-5">
                 <div className="flex flex-wrap items-center gap-4">
-                  <div className="flex h-24 w-24 items-center justify-center rounded-2xl border border-white/60 bg-white/92 text-4xl font-black text-[#0a2f66] shadow-xl">
+                  <div className="flex h-24 w-24 items-center justify-center rounded-2xl border border-white/70 bg-white text-4xl font-black text-[#3120c9] shadow-xl">
                     {(school.schoolName || "S").charAt(0).toUpperCase()}
                   </div>
                   <div>
-                    <h1 className="text-4xl font-black leading-tight text-white md:text-5xl">
+                    <h1
+                      className="text-4xl font-black leading-tight drop-shadow-[0_3px_18px_rgba(0,0,0,0.55)] md:text-5xl"
+                      style={{ color: "#ffffff" }}
+                    >
                       {school.schoolName}
-                      <FaCheckCircle className="ml-3 inline text-2xl text-blue-300" />
+                      <FaCheckCircle className="ml-3 inline text-2xl text-emerald-300" />
                     </h1>
-                    <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-[#eaf2ff] md:text-base">
+                    <p
+                      className="mt-2 max-w-2xl text-sm font-bold leading-6 drop-shadow md:text-base"
+                      style={{ color: "rgba(255,255,255,0.96)" }}
+                    >
                       {profile?.tagline ||
                         "A school building identity through talent, activities, and showcases."}
                     </p>
                   </div>
                 </div>
-                <div className="mt-5 flex flex-wrap gap-4 text-sm font-semibold text-[#eaf2ff]">
+                <div
+                  className="mt-5 flex flex-wrap gap-4 text-sm font-black drop-shadow"
+                  style={{ color: "rgba(255,255,255,0.94)" }}
+                >
                   {school.schoolLocation && (
                     <span className="inline-flex items-center gap-2">
                       <FaMapMarkerAlt /> {school.schoolLocation}
@@ -435,7 +434,7 @@ export default async function PublicSchoolPage({ params }) {
                 </div>
               </div>
 
-              <aside className="self-end rounded-xl border border-white/50 bg-white/95 p-5 shadow-xl backdrop-blur">
+              <aside className="self-end rounded-xl border border-white/70 bg-white p-5 shadow-xl">
                 <h2 className="inline-flex items-center gap-2 text-lg font-black text-[#17120a]">
                   <FaAward className="text-purple-700" />
                   Public Highlights
@@ -444,7 +443,7 @@ export default async function PublicSchoolPage({ params }) {
                   {highlights.length}
                 </p>
                 <p className="mt-1 text-sm font-semibold text-[#52657d]">
-                  Highlights added yet
+                  Highlights published
                 </p>
                 {highlights.length > 0 ? (
                   <div className="mt-4 space-y-2">
@@ -473,7 +472,6 @@ export default async function PublicSchoolPage({ params }) {
             icon={FaCalendarAlt}
             label="Events Hosted"
             value={metrics.eventsHosted || events.length || 0}
-            href="#events"
           />
           <MetricCard
             icon={FaUsers}
@@ -554,58 +552,6 @@ export default async function PublicSchoolPage({ params }) {
           </main>
 
           <aside className="space-y-5">
-            <section
-              id="events"
-              className="scroll-mt-28 rounded-2xl border border-[#e7dcc8] bg-white p-5 shadow-sm"
-            >
-              <div className="flex items-center justify-between gap-3">
-                <h2 className="inline-flex items-center gap-2 text-lg font-black text-[#17120a]">
-                  <FaCalendarAlt className="text-purple-700" />
-                  Recent Talent Events
-                </h2>
-                <Link href="/events" className="text-sm font-black text-purple-700">
-                  View all
-                </Link>
-              </div>
-              {events.length === 0 ? (
-                <div className="mt-5">
-                  <EmptyPanel
-                    icon={FaTrophy}
-                    title="No public events yet"
-                    description="Shared upcoming and past events will appear here."
-                    actionHref="/events"
-                    actionLabel="Explore events"
-                  />
-                </div>
-              ) : (
-                <div className="mt-5 space-y-3">
-                  {events.map((event) => (
-                    <Link
-                      key={event._id}
-                      href={`/events/${event._id}`}
-                      className="block rounded-xl border border-[#e7dcc8] bg-[#f8fbff] p-4 transition hover:bg-white hover:shadow-sm"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <h3 className="line-clamp-2 text-sm font-black text-[#17120a]">
-                          {event.title}
-                        </h3>
-                        <span className="rounded-full bg-purple-50 px-2.5 py-1 text-[10px] font-black uppercase text-purple-700">
-                          {event.eventType}
-                        </span>
-                      </div>
-                      <p className="mt-2 line-clamp-2 text-xs leading-5 text-[#52657d]">
-                        {event.description}
-                      </p>
-                      <p className="mt-3 inline-flex items-center gap-2 text-xs font-bold text-[#75869b]">
-                        <FaCalendarAlt />
-                        {formatDate(event.date)}
-                      </p>
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </section>
-
             <div id="glance" className="scroll-mt-28">
               <AtGlance
                 school={school}
@@ -648,17 +594,27 @@ export default async function PublicSchoolPage({ params }) {
           )}
         </section>
 
-        <section className="rounded-2xl bg-gradient-to-r from-[#0a2f66] to-purple-700 p-5 text-white shadow-lg">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <section className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#0a2f66] via-[#4338ca] to-[#7c3aed] p-5 shadow-lg">
+          <div className="absolute inset-0 bg-gradient-to-r from-black/18 via-transparent to-black/10" />
+          <div className="relative z-10 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="flex items-start gap-4">
-              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/12">
+              <span
+                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/16 text-xl shadow-sm"
+                style={{ color: "#ffffff" }}
+              >
                 <FaStar />
               </span>
               <div>
-                <h2 className="text-lg font-black">
+                <h2
+                  className="text-lg font-black drop-shadow"
+                  style={{ color: "#ffffff" }}
+                >
                   Showcase your school to a wider community
                 </h2>
-                <p className="mt-1 text-sm leading-6 text-[#eaf2ff]">
+                <p
+                  className="mt-1 text-sm font-semibold leading-6"
+                  style={{ color: "rgba(255,255,255,0.9)" }}
+                >
                   Public highlights, achievements, and events help more students
                   discover your school story.
                 </p>
@@ -666,7 +622,8 @@ export default async function PublicSchoolPage({ params }) {
             </div>
             <Link
               href="/register"
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-white px-4 py-3 text-sm font-black text-purple-700 transition hover:bg-[#f8fbff]"
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-white px-4 py-3 text-sm font-black shadow-sm transition hover:bg-[#f8fbff]"
+              style={{ color: "#3120c9" }}
             >
               Register school
               <FaArrowRight />

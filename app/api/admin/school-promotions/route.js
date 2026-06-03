@@ -135,7 +135,7 @@ export async function GET() {
         role: "SCHOOL_ADMIN",
         status: { $in: ["APPROVED", "SUBSCRIBED"] },
       })
-        .select("schoolName schoolLocation email")
+        .select("schoolName schoolLocation province district email")
         .sort({ schoolName: 1 })
         .lean(),
     ]);
@@ -146,6 +146,8 @@ export async function GET() {
         id: String(school._id),
         name: school.schoolName || school.email,
         location: school.schoolLocation || "",
+        province: school.province || "",
+        district: school.district || "",
         email: school.email || "",
       })),
     });

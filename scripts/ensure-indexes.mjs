@@ -20,9 +20,9 @@ import SchoolMagazineArticle from "../models/SchoolMagazineArticle.js";
 import SchoolPromotion from "../models/SchoolPromotion.js";
 import SchoolShowcaseProfile from "../models/SchoolShowcaseProfile.js";
 import Student from "../models/Student.js";
-import SupportTicket from "../models/SupportTicket.js";
 import Teacher from "../models/Teacher.js";
 import User from "../models/User.js";
+import Feedback from "../models/Feedback.js";
 
 dotenv.config({ path: ".env.local" });
 dotenv.config();
@@ -47,9 +47,9 @@ const models = [
   SchoolPromotion,
   SchoolShowcaseProfile,
   Student,
-  SupportTicket,
   Teacher,
   User,
+  Feedback,
 ];
 
 async function main() {

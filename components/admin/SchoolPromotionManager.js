@@ -52,6 +52,28 @@ function formatPlacement(value) {
   return value === "HOME_SPOTLIGHT" ? "Homepage" : "Schools page";
 }
 
+function parseSchoolLocation(location = "") {
+  const parts = String(location || "")
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  const postalIndex = parts.findIndex((part) => /^postal code/i.test(part));
+  const cleanParts = postalIndex >= 0 ? parts.slice(0, postalIndex) : parts;
+
+  return {
+    province: cleanParts.at(-1) || "",
+    district: cleanParts.at(-2) || "",
+  };
+}
+
+function getSchoolProvince(school) {
+  return school.province || parseSchoolLocation(school.location).province;
+}
+
+function getSchoolDistrict(school) {
+  return school.district || parseSchoolLocation(school.location).district;
+}
+
 function getCampaignState(campaign) {
   if (campaign.status !== "ACTIVE") return campaign.status;
   return "ACTIVE";
@@ -67,6 +89,8 @@ export default function SchoolPromotionManager() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [archiveTarget, setArchiveTarget] = useState(null);
+  const [schoolProvince, setSchoolProvince] = useState("All Provinces");
+  const [schoolDistrict, setSchoolDistrict] = useState("All Districts");
 
   const activePromotions = useMemo(
     () => promotions.filter((promotion) => promotion.status !== "ARCHIVED"),
@@ -76,6 +100,45 @@ export default function SchoolPromotionManager() {
   const archivedPromotions = useMemo(
     () => promotions.filter((promotion) => promotion.status === "ARCHIVED"),
     [promotions]
+  );
+
+  const provinceOptions = useMemo(
+    () => [
+      "All Provinces",
+      ...new Set(schools.map(getSchoolProvince).filter(Boolean)),
+    ],
+    [schools]
+  );
+
+  const districtOptions = useMemo(() => {
+    const scopedSchools =
+      schoolProvince === "All Provinces"
+        ? schools
+        : schools.filter((school) => getSchoolProvince(school) === schoolProvince);
+    return [
+      "All Districts",
+      ...new Set(scopedSchools.map(getSchoolDistrict).filter(Boolean)),
+    ];
+  }, [schoolProvince, schools]);
+
+  const filteredSchools = useMemo(
+    () =>
+      schools.filter((school) => {
+        if (
+          schoolProvince !== "All Provinces" &&
+          getSchoolProvince(school) !== schoolProvince
+        ) {
+          return false;
+        }
+        if (
+          schoolDistrict !== "All Districts" &&
+          getSchoolDistrict(school) !== schoolDistrict
+        ) {
+          return false;
+        }
+        return true;
+      }),
+    [schoolDistrict, schoolProvince, schools]
   );
 
   const loadData = useCallback(async () => {
@@ -294,6 +357,55 @@ export default function SchoolPromotionManager() {
           </div>
 
           <div className="space-y-4">
+            <div className="rounded-xl border border-slate-700 bg-slate-950/40 p-4">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs font-black uppercase text-slate-300">
+                  Filter schools
+                </p>
+                <p className="text-xs font-semibold text-slate-400">
+                  Showing {filteredSchools.length} of {schools.length}
+                </p>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <label className="block">
+                  <span className="mb-2 block text-sm font-semibold text-slate-200">
+                    Province
+                  </span>
+                  <select
+                    value={schoolProvince}
+                    onChange={(event) => {
+                      setSchoolProvince(event.target.value);
+                      setSchoolDistrict("All Districts");
+                      updateForm("school", "");
+                    }}
+                    className="w-full rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-white outline-none transition focus:border-blue-500"
+                  >
+                    {provinceOptions.map((province) => (
+                      <option key={province}>{province}</option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="block">
+                  <span className="mb-2 block text-sm font-semibold text-slate-200">
+                    District
+                  </span>
+                  <select
+                    value={schoolDistrict}
+                    onChange={(event) => {
+                      setSchoolDistrict(event.target.value);
+                      updateForm("school", "");
+                    }}
+                    className="w-full rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-white outline-none transition focus:border-blue-500"
+                  >
+                    {districtOptions.map((district) => (
+                      <option key={district}>{district}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            </div>
+
             <label className="block">
               <span className="mb-2 block text-sm font-semibold text-slate-200">
                 School
@@ -304,13 +416,18 @@ export default function SchoolPromotionManager() {
                 className="w-full rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-white outline-none transition focus:border-blue-500"
               >
                 <option value="">Select school</option>
-                {schools.map((school) => (
+                {filteredSchools.map((school) => (
                   <option key={school.id} value={school.id}>
                     {school.name}
                     {school.location ? ` - ${school.location}` : ""}
                   </option>
                 ))}
               </select>
+              {filteredSchools.length === 0 && (
+                <p className="mt-2 text-xs font-semibold text-amber-300">
+                  No schools found for this province and district.
+                </p>
+              )}
             </label>
 
             <div className="grid gap-4 md:grid-cols-2">

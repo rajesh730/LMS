@@ -15,10 +15,6 @@ const faqSchema = new mongoose.Schema(
       type: String,
       default: "General",
     },
-    relatedTicket: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "SupportTicket",
-    },
     views: {
       type: Number,
       default: 0,
