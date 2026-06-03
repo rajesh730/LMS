@@ -10,8 +10,13 @@ export default function manifest() {
     theme_color: "#071833",
     icons: [
       {
-        src: "/pratyo-logo.png",
+        src: "/pratyo-icon.png",
         sizes: "512x512",
+        type: "image/png",
+      },
+      {
+        src: "/apple-icon.png",
+        sizes: "180x180",
         type: "image/png",
       },
       {

@@ -2,7 +2,10 @@ import './globals.css';
 import { Providers } from './providers';
 
 const siteUrl =
-  process.env.NEXT_PUBLIC_SITE_URL || "https://pratyo.com";
+  process.env.NEXT_PUBLIC_SITE_URL || "https://pratyo.infobytesnepal.com";
+
+const siteDescription =
+  "School events, results, magazines, certificates, notices, and student writing in one connected platform.";
 
 export const metadata = {
   metadataBase: new URL(siteUrl),
@@ -10,8 +13,7 @@ export const metadata = {
     default: "Pratyo",
     template: "%s | Pratyo",
   },
-  description:
-    "School events, results, magazines, certificates, notices, and student writing in one connected platform.",
+  description: siteDescription,
   applicationName: "Pratyo",
   keywords: [
     "school events",
@@ -34,26 +36,32 @@ export const metadata = {
   },
   openGraph: {
     title: "Pratyo",
-    description:
-      "School events, results, magazines, certificates, notices, and student writing in one connected platform.",
+    description: siteDescription,
     url: siteUrl,
     siteName: "Pratyo",
     type: "website",
+    locale: "en_US",
     images: [
       {
-        url: "/pratyo-logo.png",
+        url: "/pratyo-og.png",
         width: 1200,
         height: 630,
-        alt: "Pratyo platform",
+        alt: "Pratyo",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
     title: "Pratyo",
-    description:
-      "School events, results, magazines, certificates, notices, and student writing in one connected platform.",
-    images: ["/pratyo-logo.png"],
+    description: siteDescription,
+    images: ["/pratyo-og.png"],
+  },
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/pratyo-icon.png", type: "image/png", sizes: "512x512" },
+    ],
+    apple: [{ url: "/apple-icon.png", type: "image/png", sizes: "180x180" }],
   },
   manifest: "/manifest.webmanifest",
 };

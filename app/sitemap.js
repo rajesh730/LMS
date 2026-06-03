@@ -3,7 +3,8 @@ import Event from "@/models/Event";
 import SchoolShowcaseProfile from "@/models/SchoolShowcaseProfile";
 import "@/models/User";
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://pratyo.com";
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL || "https://pratyo.infobytesnepal.com";
 export const dynamic = "force-dynamic";
 
 export default async function sitemap() {

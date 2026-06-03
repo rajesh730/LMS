@@ -1,4 +1,5 @@
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://pratyo.com";
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL || "https://pratyo.infobytesnepal.com";
 
 export default function robots() {
   return {
