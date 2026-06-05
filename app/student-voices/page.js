@@ -3,6 +3,7 @@ import connectDB from "@/lib/db";
 import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
 import PublicExplorePanel from "@/components/public/PublicExplorePanel";
 import PublicSiteNav from "@/components/public/PublicSiteNav";
+import { diversifyBySchool } from "@/lib/schoolDiversifiedFeed";
 import {
   FaArrowRight,
   FaCalendarAlt,
@@ -64,10 +65,10 @@ async function getStudentVoices() {
     .populate("authorStudent", "name grade")
     .populate("school", "schoolName schoolLocation")
     .sort({ publishedAt: -1, updatedAt: -1 })
-    .limit(30)
+    .limit(120)
     .lean();
 
-  return articles.map((article) => ({
+  const serializedArticles = articles.map((article) => ({
     id: String(article._id),
     title: article.title,
     content: article.content,
@@ -77,8 +78,15 @@ async function getStudentVoices() {
     grade: article.authorStudent?.grade || "",
     schoolName: article.school?.schoolName || "School",
     schoolHref: article.school?._id ? `/schools/${article.school._id}` : "/schools",
+    schoolId: article.school?._id ? String(article.school._id) : "",
     href: `/writings/${article._id}`,
   }));
+
+  return diversifyBySchool(serializedArticles, {
+    limit: 30,
+    getSchoolKey: (article) => article.schoolId || article.schoolName,
+    getTime: (article) => article.date,
+  });
 }
 
 function VoiceCard({ article, featured = false }) {

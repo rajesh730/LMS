@@ -13,6 +13,7 @@ import {
   FaLayerGroup,
   FaPenNib,
   FaQuoteLeft,
+  FaShieldAlt,
   FaSearch,
   FaStar,
   FaTags,
@@ -80,6 +81,22 @@ function formatDate(value) {
   });
 }
 
+function formatMonth(value) {
+  if (!value) return "";
+  return new Date(value).toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+  });
+}
+
+function formatMonthMagazineTitle(issue, issueNumber) {
+  const issueDate = issue.publishedAt || issue.weekStart || new Date();
+  const monthName = new Date(issueDate).toLocaleDateString("en-US", {
+    month: "long",
+  });
+  return `${monthName} Magazine ${issueNumber}`;
+}
+
 function getPreview(content = "", maxLength = 120) {
   const text = String(content || "").replace(/\s+/g, " ").trim();
   if (text.length <= maxLength) return text;
@@ -89,6 +106,11 @@ function getPreview(content = "", maxLength = 120) {
 function getReadTime(content = "") {
   const words = String(content || "").trim().split(/\s+/).filter(Boolean).length;
   return Math.max(1, Math.ceil(words / 180));
+}
+
+function getInitials(name = "") {
+  const parts = String(name || "Student").trim().split(/\s+/).filter(Boolean);
+  return (parts[0]?.[0] || "S") + (parts[1]?.[0] || "");
 }
 
 function MagazineArt({ category, large = false }) {
@@ -139,18 +161,22 @@ function ArticleMeta({ article }) {
         <FaClock className="text-[#75869b]" />
         {getReadTime(article.content)} min read
       </span>
+      {article.magazineIssue?.title && (
+        <span className="inline-flex items-center gap-1.5">
+          <FaBookOpen className="text-[#75869b]" />
+          {article.magazineIssue.title}
+        </span>
+      )}
     </div>
   );
 }
 
-function ArticleCard({ article }) {
+function ArticleCard({ article, disableLink = false }) {
   const meta = getCategoryMeta(article.category);
-
-  return (
-    <Link
-      href={`/student/magazine/${article.id}`}
-      className="group block min-w-0 rounded-lg border border-[#d7cdbb] bg-white p-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-purple-200 hover:shadow-md"
-    >
+  const className =
+    "group block min-w-0 rounded-lg border border-[#d7cdbb] bg-white p-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-purple-200 hover:shadow-md";
+  const content = (
+    <>
       <MagazineArt category={article.category} />
       <div className="mt-3">
         <span
@@ -165,6 +191,126 @@ function ArticleCard({ article }) {
           {getPreview(article.content, 90)}
         </p>
         <ArticleMeta article={article} />
+      </div>
+    </>
+  );
+
+  if (disableLink) {
+    return <article className={className}>{content}</article>;
+  }
+
+  return (
+    <Link
+      href={`/student/magazine/${article.id}`}
+      className={className}
+    >
+      {content}
+    </Link>
+  );
+}
+
+function SchoolWallCard({ article, disableLinks = false }) {
+  const meta = getCategoryMeta(article.category);
+  const author = article.authorStudent?.name || "Student";
+
+  return (
+    <article className="rounded-2xl border border-[#edf0f7] bg-white p-5 text-[#111827] shadow-sm">
+      <div className="flex items-center gap-3">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#f0edff] text-sm font-black text-[#4326e8]">
+          {getInitials(author)}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-black text-[#111827]">
+            {author}
+          </p>
+          <p className="truncate text-xs font-bold text-[#667085]">
+            <FaShieldAlt className="mr-1 inline text-[#2f7fdb]" />
+            {article.authorStudent?.grade || "Grade"} - Roll{" "}
+            {article.authorStudent?.rollNumber || "-"}
+          </p>
+        </div>
+        <span className={`rounded-full px-3 py-1 text-[10px] font-black ${meta.chip}`}>
+          {meta.label}
+        </span>
+      </div>
+
+      <div className="mt-4">
+        <h3 className="text-xl font-black leading-tight text-[#111827]">
+          {article.title || "Student writing"}
+        </h3>
+        <p className="mt-2 line-clamp-3 text-sm leading-6 text-[#4b5565]">
+          {getPreview(article.content, 190)}
+        </p>
+        {disableLinks ? (
+          <span className="mt-3 inline-flex text-sm font-black text-[#4326e8]">
+            Global Wall
+          </span>
+        ) : (
+          <Link
+            href={`/student/magazine/${article.id}`}
+            className="mt-3 inline-flex text-sm font-black text-[#4326e8]"
+          >
+            Read More
+            <FaChevronRight className="ml-2 mt-0.5" />
+          </Link>
+        )}
+      </div>
+
+      <div className="mt-5 flex items-center justify-between border-t border-[#f0f2f7] pt-4 text-xs font-bold text-[#4b5565]">
+        <span>{formatDate(article.publishedAt)}</span>
+        {disableLinks ? (
+          <span className="inline-flex items-center gap-2 text-[#3120c9]">
+            Public Selection
+          </span>
+        ) : (
+          <Link
+            href={`/student/magazine/${article.id}`}
+            className="inline-flex items-center gap-2 text-[#3120c9]"
+          >
+            Open
+            <FaChevronRight />
+          </Link>
+        )}
+      </div>
+    </article>
+  );
+}
+
+function MagazineIssueCard({ issue }) {
+  const coverArticle = issue.articles[0];
+
+  return (
+    <Link
+      href={`/student/magazine/issues/${issue.id}`}
+      className="group min-h-[280px] rounded-xl border border-[#d7cdbb] bg-white p-4 text-left shadow-sm transition hover:-translate-y-1 hover:border-purple-300 hover:shadow-xl"
+    >
+      <div className="pratyo-brand-panel relative h-40 overflow-hidden rounded-lg border">
+        <div className="absolute inset-x-0 top-0 h-12 bg-white/12" />
+        <div className="absolute left-5 top-6 h-20 w-14 rounded-sm bg-white/80 shadow-md" />
+        <div className="absolute left-20 top-10 h-20 w-14 rounded-sm bg-white/65 shadow-md" />
+        <FaBookOpen className="absolute right-6 top-8 text-5xl text-white/85" />
+        <FaFeatherAlt className="absolute bottom-6 left-7 text-3xl text-white/75" />
+        <span className="absolute bottom-4 right-4 rounded-full bg-white px-3 py-1 text-[11px] font-black text-[#17120a]">
+          {issue.articles.length}{" "}
+          {issue.articles.length === 1 ? "writing" : "writings"}
+        </span>
+      </div>
+      <div className="mt-4">
+        <p className="text-xs font-black uppercase text-purple-700">
+          School Magazine
+        </p>
+        <h3 className="mt-1 text-2xl font-black text-[#17120a] transition group-hover:text-purple-700">
+          {issue.title}
+        </h3>
+        <p className="mt-2 line-clamp-2 text-sm font-semibold leading-6 text-[#52657d]">
+          {coverArticle
+            ? `Featuring ${coverArticle.authorStudent?.name || "student"} and more student voices.`
+            : "Open this magazine to read selected student writing."}
+        </p>
+        <span className="mt-4 inline-flex items-center gap-2 rounded-full bg-purple-50 px-3 py-2 text-xs font-black text-purple-700">
+          Open Magazine
+          <FaChevronRight />
+        </span>
       </div>
     </Link>
   );
@@ -197,13 +343,73 @@ function StatCard({ icon: Icon, value, label, tone = "purple" }) {
   );
 }
 
-export default function StudentSchoolMagazine() {
+function buildMagazineMonths(articles = []) {
+  const issueMap = new Map();
+
+  articles.forEach((article) => {
+    const issue = article.magazineIssue;
+    if (!issue?.id) return;
+
+    const existing = issueMap.get(issue.id) || {
+      ...issue,
+      articles: [],
+    };
+    existing.articles.push(article);
+    issueMap.set(issue.id, existing);
+  });
+
+  const monthMap = new Map();
+  Array.from(issueMap.values())
+    .sort((a, b) => new Date(b.weekStart || 0) - new Date(a.weekStart || 0))
+    .forEach((issue) => {
+      const weekDate = issue.weekStart || issue.publishedAt || new Date();
+      const date = new Date(weekDate);
+      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+      const existing = monthMap.get(key) || {
+        key,
+        label: formatMonth(weekDate),
+        issues: [],
+      };
+      existing.issues.push(issue);
+      monthMap.set(key, existing);
+    });
+
+  return Array.from(monthMap.values()).map((month) => {
+    const oldestFirst = [...month.issues].sort(
+      (a, b) =>
+        new Date(a.publishedAt || a.weekStart || 0) -
+        new Date(b.publishedAt || b.weekStart || 0)
+    );
+    const issueNumberMap = new Map(
+      oldestFirst.map((issue, index) => [issue.id, index + 1])
+    );
+
+    return {
+      ...month,
+      issues: month.issues.map((issue) => ({
+        ...issue,
+        title: formatMonthMagazineTitle(issue, issueNumberMap.get(issue.id) || 1),
+      })),
+    };
+  });
+}
+
+export default function StudentSchoolMagazine({
+  initialView = "school-wall",
+  lockedView = false,
+}) {
   const { markSurfaceSeen } = useWorkIndicators();
   const [student, setStudent] = useState(null);
   const [articles, setArticles] = useState([]);
+  const [wallArticles, setWallArticles] = useState([]);
+  const [globalArticles, setGlobalArticles] = useState([]);
+  const [globalWallEnabled, setGlobalWallEnabled] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [activeCategory, setActiveCategory] = useState("ALL");
+  const [activeView, setActiveView] = useState(initialView);
+  const [activeMagazineMonth, setActiveMagazineMonth] = useState("");
+  const [activeMagazineIssueId, setActiveMagazineIssueId] = useState("");
 
   const load = useCallback(
     async ({ silent = false } = {}) => {
@@ -220,8 +426,27 @@ export default function StudentSchoolMagazine() {
         const nextArticles = Array.isArray(payload.articles)
           ? payload.articles
           : [];
+        const nextWallArticles = Array.isArray(payload.wallArticles)
+          ? payload.wallArticles
+          : [];
         setStudent(payload.student || null);
         setArticles(nextArticles);
+        setWallArticles(nextWallArticles);
+        setGlobalWallEnabled(Boolean(payload.globalWallEnabled));
+
+        if (payload.globalWallEnabled) {
+          const globalRes = await fetch("/api/student/global-wall", {
+            cache: "no-store",
+          });
+          const globalPayload = await globalRes.json().catch(() => ({}));
+          setGlobalArticles(
+            globalRes.ok && Array.isArray(globalPayload.articles)
+              ? globalPayload.articles
+              : []
+          );
+        } else {
+          setGlobalArticles([]);
+        }
       } catch (loadError) {
         setError(loadError.message || "Failed to load school magazine");
       } finally {
@@ -246,29 +471,87 @@ export default function StudentSchoolMagazine() {
     }, [load])
   );
 
+  const magazineMonths = useMemo(() => buildMagazineMonths(articles), [articles]);
+
+  useEffect(() => {
+    if (activeView !== "magazine" || magazineMonths.length === 0) return;
+
+    const monthExists = magazineMonths.some(
+      (month) => month.key === activeMagazineMonth
+    );
+    const month = monthExists
+      ? magazineMonths.find((item) => item.key === activeMagazineMonth)
+      : magazineMonths[0];
+    const issueExists = month?.issues.some(
+      (issue) => issue.id === activeMagazineIssueId
+    );
+
+    if (!monthExists) {
+      setActiveMagazineMonth(month.key);
+    }
+    if (!issueExists) {
+      setActiveMagazineIssueId(month.issues[0]?.id || "");
+    }
+  }, [
+    activeMagazineIssueId,
+    activeMagazineMonth,
+    activeView,
+    magazineMonths,
+  ]);
+
+  const selectedMagazineMonth =
+    magazineMonths.find((month) => month.key === activeMagazineMonth) ||
+    magazineMonths[0] ||
+    null;
+  const selectedMagazineIssue =
+    selectedMagazineMonth?.issues.find(
+      (issue) => issue.id === activeMagazineIssueId
+    ) ||
+    selectedMagazineMonth?.issues[0] ||
+    null;
+
+  const handleMagazineMonthChange = (event) => {
+    const nextMonth = magazineMonths.find(
+      (month) => month.key === event.target.value
+    );
+    setActiveMagazineMonth(nextMonth?.key || "");
+    setActiveMagazineIssueId(nextMonth?.issues[0]?.id || "");
+    setActiveCategory("ALL");
+  };
+
+  const activeArticles = useMemo(() => {
+    if (activeView === "magazine") {
+      return selectedMagazineIssue?.articles || [];
+    }
+    if (activeView === "global") {
+      return globalArticles;
+    }
+    return wallArticles;
+  }, [activeView, globalArticles, selectedMagazineIssue, wallArticles]);
+
   const categoryCounts = useMemo(() => {
-    const counts = { ALL: articles.length };
-    articles.forEach((article) => {
+    const counts = { ALL: activeArticles.length };
+    activeArticles.forEach((article) => {
       const category = normalizeCategory(article.category);
       counts[category] = (counts[category] || 0) + 1;
     });
     return counts;
-  }, [articles]);
+  }, [activeArticles]);
 
   const filteredArticles = useMemo(
     () =>
       activeCategory === "ALL"
-        ? articles
-        : articles.filter(
+        ? activeArticles
+        : activeArticles.filter(
             (article) => normalizeCategory(article.category) === activeCategory
           ),
-    [activeCategory, articles]
+    [activeArticles, activeCategory]
   );
 
-  const featuredArticle = articles[0] || null;
+  const featuredArticle = activeArticles[0] || null;
   const writerStats = useMemo(() => {
     const map = new Map();
-    articles.forEach((article) => {
+    activeArticles.forEach((article) => {
       const name = article.authorStudent?.name || "Student";
       const current = map.get(name) || {
         name,
@@ -280,12 +563,12 @@ export default function StudentSchoolMagazine() {
       map.set(name, current);
     });
     return Array.from(map.values()).sort((a, b) => b.count - a.count);
-  }, [articles]);
+  }, [activeArticles]);
   const spotlight = writerStats[0] || null;
   const categoryTotal = Object.keys(categoryCounts).filter(
     (category) => category !== "ALL" && categoryCounts[category] > 0
   ).length;
-  const readTotal = articles.reduce(
+  const readTotal = activeArticles.reduce(
     (sum, article) => sum + getReadTime(article.content),
     0
   );
@@ -309,12 +592,22 @@ export default function StudentSchoolMagazine() {
     );
   }
 
-  if (articles.length === 0) {
+  if (activeView === "global" && !globalWallEnabled) {
+    return (
+      <EmptyState
+        icon={FaBookOpen}
+        title="Global Wall is not enabled"
+        description="Your school controls whether students can view the global writing wall."
+      />
+    );
+  }
+
+  if (articles.length === 0 && wallArticles.length === 0 && globalArticles.length === 0) {
     return (
       <EmptyState
         icon={FaFeatherAlt}
-        title="No school magazine articles yet"
-        description="Published student writing will appear here after your school makes it live."
+        title="No student writing yet"
+        description="School wall posts and magazine articles will appear here after students start posting."
       />
     );
   }
@@ -354,8 +647,8 @@ export default function StudentSchoolMagazine() {
             <div className="mt-7 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <StatCard
                 icon={FaBookOpen}
-                value={articles.length}
-                label={articles.length === 1 ? "Article" : "Articles"}
+                value={activeArticles.length}
+                label={activeArticles.length === 1 ? "Article" : "Articles"}
               />
               <StatCard
                 icon={FaPenNib}
@@ -399,94 +692,138 @@ export default function StudentSchoolMagazine() {
         </div>
       </section>
 
-      <div className="grid gap-5 xl:grid-cols-[220px_1fr_280px]">
-        <aside className="space-y-5">
-          <section className="rounded-xl border border-[#d7cdbb] bg-white p-4 shadow-sm">
-            <h2 className="text-sm font-bold text-[#17120a]">Categories</h2>
-            <div className="mt-4 space-y-2">
-              <button
-                type="button"
-                onClick={() => setActiveCategory("ALL")}
-                className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm font-semibold transition ${
-                  activeCategory === "ALL"
-                    ? "bg-purple-50 text-purple-700"
-                    : "text-[#40516b] hover:bg-[#f8fbff]"
-                }`}
-              >
-                <span className="inline-flex items-center gap-2">
-                  <FaTags />
-                  All Articles
-                </span>
-                <span>{categoryCounts.ALL || 0}</span>
-              </button>
-              {Object.entries(CATEGORY_META).map(([category, meta]) => {
-                const Icon = meta.icon;
-                const count = categoryCounts[category] || 0;
-                return (
-                  <button
-                    key={category}
-                    type="button"
-                    onClick={() => setActiveCategory(category)}
-                    className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm font-semibold transition ${
-                      activeCategory === category
-                        ? "bg-purple-50 text-purple-700"
-                        : "text-[#40516b] hover:bg-[#f8fbff]"
-                    }`}
-                  >
-                    <span className="inline-flex items-center gap-2">
-                      <Icon className={meta.accent} />
-                      {meta.label}
-                    </span>
-                    <span>{count}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-
-          <section className="pratyo-brand-surface rounded-xl border border-slate-700/20 p-5 text-center text-white shadow-sm">
-            <FaQuoteLeft className="mx-auto text-2xl text-white/82" />
-            <p className="mt-4 text-sm font-semibold italic leading-6 text-white">
-              Writing is thinking made visible.
-            </p>
-            <p className="mt-3 text-xs text-white/72">School Magazine</p>
-          </section>
-        </aside>
-
+      <div className={lockedView ? "grid gap-5" : "grid gap-5 xl:grid-cols-[1fr_280px]"}>
         <main className="min-w-0 space-y-5">
           <section className="rounded-xl border border-[#d7cdbb] bg-white p-4 shadow-sm">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h2 className="text-lg font-bold text-[#17120a]">
-                  Latest Articles
+                  {activeView === "magazine"
+                    ? "School Magazine"
+                    : activeView === "global"
+                    ? "Global Wall"
+                    : "School Wall"}
                 </h2>
                 <div className="mt-1 h-1 w-16 rounded-full bg-purple-500" />
               </div>
               <div className="flex items-center gap-2 rounded-full border border-[#d7cdbb] bg-[#f8fbff] px-3 py-2 text-sm text-[#52657d]">
                 <FaSearch />
-                {filteredArticles.length} showing
+                {activeView === "magazine"
+                  ? `${selectedMagazineMonth?.issues.length || 0} magazines`
+                  : `${filteredArticles.length} showing`}
               </div>
             </div>
-
-            {filteredArticles.length === 0 ? (
-              <EmptyState
-                icon={FaBookOpen}
-                title="No articles in this category"
-                description="Choose another category to continue reading."
-              />
-            ) : (
-              <div className="mt-5 grid gap-4 md:grid-cols-2">
-                {filteredArticles.map((article) => (
-                  <ArticleCard
-                    key={article.id}
-                    article={article}
-                  />
+            {!lockedView && (
+              <div className="mt-4 flex flex-wrap gap-2">
+                {[
+                  ["school-wall", "School Wall", wallArticles.length],
+                  ["magazine", "School Magazine", articles.length],
+                  ...(globalWallEnabled
+                    ? [["global", "Global Wall", globalArticles.length]]
+                    : []),
+                ].map(([view, label, count]) => (
+                  <button
+                    key={view}
+                    type="button"
+                    onClick={() => {
+                      setActiveView(view);
+                      setActiveCategory("ALL");
+                    }}
+                    className={`rounded-full px-4 py-2 text-xs font-black transition ${
+                      activeView === view
+                        ? "bg-purple-700 text-white"
+                        : "bg-purple-50 text-purple-700 hover:bg-purple-100"
+                    }`}
+                  >
+                    {label} {count}
+                  </button>
                 ))}
               </div>
+            )}
+
+            {activeView === "magazine" && (
+              <div className="mt-5 rounded-lg border border-[#d7cdbb] bg-[#fffdf8] p-4">
+                {magazineMonths.length === 0 ? (
+                  <p className="text-sm font-semibold text-[#52657d]">
+                    No magazines yet.
+                  </p>
+                ) : (
+                  <>
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                      <label className="block min-w-0 sm:w-72">
+                        <span className="text-xs font-black uppercase text-[#52657d]">
+                          Filter by month
+                        </span>
+                        <select
+                          value={selectedMagazineMonth?.key || ""}
+                          onChange={handleMagazineMonthChange}
+                          className="mt-2 w-full rounded-lg border border-[#cfd8ea] bg-white px-3 py-2 text-sm font-black text-[#0a2f66] outline-none transition focus:border-purple-400 focus:ring-4 focus:ring-purple-100"
+                        >
+                          {magazineMonths.map((month) => (
+                            <option key={month.key} value={month.key}>
+                              {month.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+
+                      <div className="rounded-full border border-[#d7cdbb] bg-white px-3 py-2 text-xs font-black text-[#52657d]">
+                        {selectedMagazineMonth?.issues.length || 0}{" "}
+                        {selectedMagazineMonth?.issues.length === 1
+                          ? "magazine"
+                          : "magazines"}{" "}
+                        in {selectedMagazineMonth?.label}
+                      </div>
+                    </div>
+
+                    <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                      {selectedMagazineMonth?.issues.map((issue) => (
+                        <MagazineIssueCard
+                          key={issue.id}
+                          issue={issue}
+                        />
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {activeView === "magazine" ? null : filteredArticles.length === 0 ? (
+              <EmptyState
+                icon={FaBookOpen}
+                title="No writing in this view"
+                description="Choose another category or reading space to continue."
+              />
+            ) : (
+              <>
+                {activeView === "school-wall" || activeView === "global" ? (
+                  <div className="mt-5 space-y-4">
+                    {filteredArticles.map((article) => (
+                      <SchoolWallCard
+                        key={article.id}
+                        article={article}
+                        disableLinks={activeView === "global"}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="mt-5 grid gap-4 md:grid-cols-2">
+                    {filteredArticles.map((article) => (
+                      <ArticleCard
+                        key={article.id}
+                        article={article}
+                        disableLink={activeView === "global"}
+                      />
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </section>
         </main>
 
+        {!lockedView && (
         <aside className="space-y-5">
           {featuredArticle && (
             <section className="rounded-xl border border-[#d7cdbb] bg-white p-4 shadow-sm">
@@ -565,6 +902,7 @@ export default function StudentSchoolMagazine() {
             </div>
           </section>
         </aside>
+        )}
       </div>
     </div>
   );

@@ -4,7 +4,9 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
 import Student from "@/models/Student";
+import "@/models/MagazineIssue";
 import { buildMagazineLifecycle } from "@/lib/lifecycle";
+import { serializeMagazineIssue } from "@/lib/magazineIssues";
 import { buildPagination, escapeRegex, parsePagination } from "@/lib/pagination";
 import { getEquivalentGradeValues } from "@/lib/schoolGrades";
 
@@ -28,7 +30,9 @@ export async function GET(request) {
     });
 
     const query = { school: session.user.id, isDeleted: { $ne: true } };
-    if (status !== "ALL") {
+    if (status === "POSTED") {
+      query.status = { $in: ["SUBMITTED", "APPROVED"] };
+    } else if (status !== "ALL") {
       query.status = status;
     }
     if (search) {
@@ -52,7 +56,7 @@ export async function GET(request) {
       SchoolMagazineArticle.countDocuments(query),
       SchoolMagazineArticle.find(query)
         .populate("authorStudent", "name grade rollNumber")
-        .populate("reviewedBy", "name schoolName")
+        .populate("magazineIssue")
         .sort({
           status: status === "SUBMITTED" ? 1 : -1,
           submittedAt: -1,
@@ -76,11 +80,16 @@ export async function GET(request) {
         category: article.category,
         submissionSource: article.submissionSource || "FREE_WRITE",
         status: article.status,
-        reviewNote: article.reviewNote || "",
+        showOnSchoolWall:
+          article.status !== "DRAFT" && article.showOnSchoolWall !== false,
+        isPublished: Boolean(article.isPublished),
+        isMagazinePublished: Boolean(article.isMagazinePublished),
+        isGlobalWallPublished: Boolean(article.isGlobalWallPublished),
+        magazineIssue: serializeMagazineIssue(article.magazineIssue),
+        magazineIssueAssignedAt: article.magazineIssueAssignedAt,
         submittedAt: article.submittedAt,
         firstSubmittedAt: article.firstSubmittedAt,
         lastResubmittedAt: article.lastResubmittedAt,
-        revisionCount: Number(article.revisionCount || 0),
         reviewedAt: article.reviewedAt,
         updatedAt: article.updatedAt,
         lifecycle: buildMagazineLifecycle(article),
@@ -101,7 +110,7 @@ export async function GET(request) {
   } catch (error) {
     console.error("GET /api/school/magazine-submissions error:", error);
     return NextResponse.json(
-      { message: "Failed to load magazine submissions" },
+      { message: "Failed to load school wall posts" },
       { status: 500 }
     );
   }

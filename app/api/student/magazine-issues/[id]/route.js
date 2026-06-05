@@ -4,8 +4,8 @@ import mongoose from "mongoose";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import Student from "@/models/Student";
+import MagazineIssue from "@/models/MagazineIssue";
 import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
-import "@/models/MagazineIssue";
 import { serializeMagazineIssue } from "@/lib/magazineIssues";
 
 function buildStudentLookup(session) {
@@ -27,8 +27,7 @@ function serializeArticle(article) {
     title: article.title,
     content: article.content,
     category: article.category,
-    publishedAt: article.publishedAt,
-    magazineIssue: serializeMagazineIssue(article.magazineIssue),
+    publishedAt: article.publishedAt || article.updatedAt,
     authorStudent: article.authorStudent
       ? {
           id: String(article.authorStudent._id),
@@ -40,12 +39,37 @@ function serializeArticle(article) {
   };
 }
 
+function issueDate(issue) {
+  return new Date(issue.publishedAt || issue.weekStart || issue.createdAt || 0);
+}
+
+function getMonthIssueTitle(issue, issuesInMonth) {
+  const orderedIssues = [...issuesInMonth].sort(
+    (a, b) => issueDate(a) - issueDate(b)
+  );
+  const issueNumber =
+    orderedIssues.findIndex((item) => String(item._id) === String(issue._id)) +
+    1;
+  const monthName = issueDate(issue).toLocaleDateString("en-US", {
+    month: "long",
+  });
+  return `${monthName} Magazine ${Math.max(1, issueNumber)}`;
+}
+
 export async function GET(_request, props) {
   try {
     const session = await getServerSession(authOptions);
 
     if (!session || session.user.role !== "STUDENT") {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
+    const params = await props.params;
+    if (!mongoose.Types.ObjectId.isValid(params.id)) {
+      return NextResponse.json(
+        { message: "Magazine not found" },
+        { status: 404 }
+      );
     }
 
     await connectDB();
@@ -61,59 +85,48 @@ export async function GET(_request, props) {
       );
     }
 
-    const params = await props.params;
-    if (!mongoose.Types.ObjectId.isValid(params.id)) {
-      return NextResponse.json(
-        { message: "Magazine article not found" },
-        { status: 404 }
-      );
-    }
-
-    const article = await SchoolMagazineArticle.findOne({
+    const issue = await MagazineIssue.findOne({
       _id: params.id,
       school: student.school,
-      $or: [
-        { isMagazinePublished: true },
-        {
-          status: { $in: ["SUBMITTED", "APPROVED"] },
-          showOnSchoolWall: { $ne: false },
-        },
-      ],
-      isDeleted: { $ne: true },
-    })
-      .populate("authorStudent", "name grade rollNumber")
-      .populate("magazineIssue")
-      .lean();
+    }).lean();
 
-    if (!article) {
+    if (!issue) {
       return NextResponse.json(
-        { message: "Magazine article not found" },
+        { message: "Magazine not found" },
         { status: 404 }
       );
     }
 
-    const relatedArticles = await SchoolMagazineArticle.find({
-      _id: { $ne: article._id },
-      school: student.school,
-      category: article.category,
-      $or: [
-        { isMagazinePublished: true },
-        {
-          status: { $in: ["SUBMITTED", "APPROVED"] },
-          showOnSchoolWall: { $ne: false },
-        },
-      ],
-      isDeleted: { $ne: true },
-    })
-      .populate("authorStudent", "name grade rollNumber")
-      .populate("magazineIssue")
-      .sort({ publishedAt: -1, updatedAt: -1 })
-      .limit(3)
-      .lean();
+    const [articles, issuesInMonth] = await Promise.all([
+      SchoolMagazineArticle.find({
+        school: student.school,
+        magazineIssue: issue._id,
+        isMagazinePublished: true,
+        isDeleted: { $ne: true },
+      })
+        .populate("authorStudent", "name grade rollNumber")
+        .sort({ magazinePublishedAt: 1, publishedAt: 1, updatedAt: 1 })
+        .lean(),
+      MagazineIssue.find({
+        school: student.school,
+        month: issue.month,
+        year: issue.year,
+      }).lean(),
+    ]);
+
+    if (articles.length === 0) {
+      return NextResponse.json(
+        { message: "This magazine has no published writing yet" },
+        { status: 404 }
+      );
+    }
 
     return NextResponse.json({
-      article: serializeArticle(article),
-      relatedArticles: relatedArticles.map(serializeArticle),
+      issue: {
+        ...serializeMagazineIssue(issue),
+        title: getMonthIssueTitle(issue, issuesInMonth),
+      },
+      articles: articles.map(serializeArticle),
       student: {
         id: String(student._id),
         name: student.name,
@@ -122,9 +135,9 @@ export async function GET(_request, props) {
       },
     });
   } catch (error) {
-    console.error("GET /api/student/magazine/[id] error:", error);
+    console.error("GET /api/student/magazine-issues/[id] error:", error);
     return NextResponse.json(
-      { message: "Failed to load magazine article" },
+      { message: "Failed to load magazine" },
       { status: 500 }
     );
   }

@@ -197,7 +197,7 @@ export default function StudentDailyOverview() {
             icon={FaPenNib}
             badge="Writing"
             title="My Writing"
-            description="Write blog articles, opinions, research, creative writing, and poems for school review."
+            description="Write blog articles, opinions, research, creative writing, and poems for your school wall."
             meta="Draft and submit"
             indicator={getIndicator("student.writing")}
             tone="blue"
@@ -210,7 +210,7 @@ export default function StudentDailyOverview() {
             title={latestArticle?.title || "No magazine articles yet"}
             description={
               latestArticle?.content ||
-              "Published school magazine articles will appear after approval."
+              "Weekly magazine articles will appear after your school selects student writing."
             }
             meta={
               latestArticle

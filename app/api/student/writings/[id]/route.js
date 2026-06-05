@@ -57,13 +57,10 @@ export async function PATCH(request, props) {
       );
     }
 
-    if (!["DRAFT", "REJECTED"].includes(article.status)) {
+    if (article.isMagazinePublished || article.isPublished) {
       return NextResponse.json(
         {
-          message:
-            article.status === "SUBMITTED"
-              ? "This writing is already with your school for review"
-              : "This writing can no longer be changed",
+          message: "Published writing can no longer be changed here",
         },
         { status: 400 }
       );
@@ -91,6 +88,11 @@ export async function PATCH(request, props) {
     article.content = nextContent;
     article.category = nextCategory;
     article.status = requestedStatus;
+    article.showOnSchoolWall = requestedStatus === "SUBMITTED";
+    article.isMagazinePublished = false;
+    article.isPublished = false;
+    article.magazinePublishedAt = null;
+    article.publishedAt = null;
     article.reviewNote = requestedStatus === "SUBMITTED" ? "" : article.reviewNote;
 
     if (requestedStatus === "SUBMITTED") {
@@ -127,8 +129,8 @@ export async function PATCH(request, props) {
     return NextResponse.json({
       message:
         requestedStatus === "SUBMITTED"
-          ? "Writing submitted for school review"
-          : "Draft updated",
+          ? "Posted to school wall"
+          : "Private writing updated",
       article,
     });
   } catch (error) {
@@ -178,7 +180,7 @@ export async function DELETE(request, props) {
 
     if (!["DRAFT", "REJECTED"].includes(article.status)) {
       return NextResponse.json(
-        { message: "Only draft or rejected writings can be deleted" },
+        { message: "Only private writings can be deleted" },
         { status: 400 }
       );
     }
@@ -205,7 +207,7 @@ export async function DELETE(request, props) {
   }
 }
 
-export async function POST(request, props) {
+export async function POST() {
   try {
     const session = await getServerSession(authOptions);
 
@@ -213,68 +215,17 @@ export async function POST(request, props) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    await connectDB();
-
-    const student = await Student.findOne(buildStudentLookup(session))
-      .select("_id school")
-      .lean();
-
-    if (!student) {
-      return NextResponse.json(
-        { message: "Student profile not found" },
-        { status: 404 }
-      );
-    }
-
-    const params = await props.params;
-    const article = await SchoolMagazineArticle.findOne({
-      _id: params.id,
-      authorStudent: student._id,
-      school: student.school,
-      isDeleted: { $ne: true },
-    }).lean();
-
-    if (!article) {
-      return NextResponse.json(
-        { message: "Writing not found" },
-        { status: 404 }
-      );
-    }
-
-    if (!["APPROVED"].includes(article.status)) {
-      return NextResponse.json(
-        { message: "Only approved writing can be revised as a new draft" },
-        { status: 400 }
-      );
-    }
-
-    const revision = await SchoolMagazineArticle.create({
-      school: student.school,
-      authorStudent: student._id,
-      title: `${article.title} (Revision)`,
-      content: article.content,
-      category: normalizeWritingCategory(article.category),
-      submissionSource: "FREE_WRITE",
-      status: "DRAFT",
-    });
-
-    publishWorkIndicatorsUpdate("student-writing-revision-created", {
-      schoolId: String(student.school),
-      studentId: String(student._id),
-      status: revision.status,
-    });
-
     return NextResponse.json(
       {
-        message: "Revision draft created",
-        article: revision,
+        message:
+          "This action was removed. Students can edit private or school wall writing directly.",
       },
-      { status: 201 }
+      { status: 410 }
     );
   } catch (error) {
     console.error("POST /api/student/writings/[id] error:", error);
     return NextResponse.json(
-      { message: "Failed to create revision draft" },
+      { message: "Failed to update writing" },
       { status: 500 }
     );
   }

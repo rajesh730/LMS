@@ -2,14 +2,14 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import DashboardLayout from "@/components/DashboardLayout";
-import StudentWritingWorkspace from "@/components/student/StudentWritingWorkspace";
+import StudentMagazineIssueReader from "@/components/student/StudentMagazineIssueReader";
 
 export const metadata = {
-  title: "My Writing",
-  description: "Save private writing or post it to your school wall",
+  title: "Read Magazine",
+  description: "Read a full school magazine issue",
 };
 
-export default async function StudentWritingPage() {
+export default async function StudentMagazineIssuePage({ params }) {
   const session = await getServerSession(authOptions);
 
   if (!session) {
@@ -20,10 +20,12 @@ export default async function StudentWritingPage() {
     redirect("/");
   }
 
+  const resolvedParams = await params;
+
   return (
     <DashboardLayout>
-      <div className="max-w-7xl mx-auto">
-        <StudentWritingWorkspace />
+      <div className="mx-auto max-w-7xl">
+        <StudentMagazineIssueReader issueId={resolvedParams.id} />
       </div>
     </DashboardLayout>
   );

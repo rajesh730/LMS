@@ -94,19 +94,19 @@ const STATUS_META = {
     icon: FaRegFileAlt,
   },
   SUBMITTED: {
-    label: "Under Review",
+    label: "Posted to School",
     chip: "border-amber-200 bg-amber-50 text-amber-800",
     dot: "bg-amber-500",
     icon: FaPaperPlane,
   },
   APPROVED: {
-    label: "Published",
+    label: "Selected",
     chip: "border-emerald-200 bg-emerald-50 text-emerald-800",
     dot: "bg-emerald-500",
     icon: FaCheckCircle,
   },
   REJECTED: {
-    label: "Needs Revision",
+    label: "Private",
     chip: "border-red-200 bg-red-50 text-red-700",
     dot: "bg-red-500",
     icon: FaEdit,
@@ -176,19 +176,19 @@ function getWorkflowMessage(writing) {
   }
 
   if (status === "DRAFT") {
-    return "Private draft. Keep editing, then send it to school review when it is ready.";
+    return "Private writing. Keep editing, then post it to your school when it is ready.";
   }
 
   if (status === "SUBMITTED") {
-    return "Sent to school review. Your school will approve it for publishing or send it back with notes.";
+    return "Posted to your school. Your school can keep it on the school wall or select it for the magazine/homepage.";
   }
 
   if (status === "APPROVED") {
-    return "Approved by your school. It is waiting for the school to publish it in the magazine.";
+    return "Selected by your school for the magazine or homepage.";
   }
 
   if (status === "REJECTED") {
-    return "Returned with review notes. Revise it, then send it back to school review.";
+    return "Private writing. Keep editing, then post it to school when it is ready.";
   }
 
   return "Writing is saved in your library.";
@@ -371,7 +371,7 @@ function WritingWorkflowPanel({ libraryCounts, onSelectLibrary, onSelectStatus }
       count: libraryCounts.ALL,
       icon: FaFileAlt,
       tone: "border-purple-100 bg-purple-50 text-purple-800",
-      next: "See every draft, review item, magazine article, and platform publication together.",
+      next: "See private drafts, school wall posts, magazine pieces, and homepage selections together.",
       action: () => {
         onSelectLibrary("ALL");
         onSelectStatus("ALL");
@@ -383,7 +383,7 @@ function WritingWorkflowPanel({ libraryCounts, onSelectLibrary, onSelectStatus }
       count: libraryCounts.FREE,
       icon: FaPenNib,
       tone: "border-rose-100 bg-rose-50 text-rose-800",
-      next: "Private drafts stay here until the student sends them to school review.",
+      next: "Private writing stays here until the student posts it to school.",
       action: () => {
         onSelectLibrary("FREE");
         onSelectStatus("DRAFT");
@@ -391,11 +391,11 @@ function WritingWorkflowPanel({ libraryCounts, onSelectLibrary, onSelectStatus }
     },
     {
       id: "SCHOOL",
-      title: "School Review",
+      title: "School Wall",
       count: libraryCounts.SCHOOL,
       icon: FaSchool,
       tone: "border-indigo-100 bg-indigo-50 text-indigo-800",
-      next: "School reviews submitted work, approves strong pieces, or returns notes for revision.",
+      next: "Posted writing appears for school sharing unless the school hides it.",
       action: () => {
         onSelectLibrary("SCHOOL");
         onSelectStatus("ALL");
@@ -407,7 +407,7 @@ function WritingWorkflowPanel({ libraryCounts, onSelectLibrary, onSelectStatus }
       count: libraryCounts.MAGAZINE,
       icon: FaBookOpen,
       tone: "border-emerald-100 bg-emerald-50 text-emerald-800",
-      next: "Approved and published articles become visible in the school magazine.",
+      next: "School-selected writing becomes part of the weekly magazine.",
       action: () => {
         onSelectLibrary("MAGAZINE");
         onSelectStatus("APPROVED");
@@ -421,8 +421,8 @@ function WritingWorkflowPanel({ libraryCounts, onSelectLibrary, onSelectStatus }
         <div>
           <h2 className="text-lg font-black text-[#17120a]">Writing Workflow</h2>
           <p className="mt-1 text-sm leading-6 text-[#52657d]">
-            Draft freely, send polished work to school review, publish approved
-            pieces in the magazine, and track platform-selected responses.
+            Draft freely, post writing to your school, and see selected pieces
+            in the school magazine or homepage.
           </p>
         </div>
         <span className="text-xs font-black uppercase text-purple-700">
@@ -614,7 +614,7 @@ function WritingEditor({
             className="inline-flex items-center gap-2 rounded-lg border border-purple-200 bg-white px-4 py-2 text-sm font-bold text-purple-700 transition hover:bg-purple-50 disabled:opacity-60"
           >
             <FaEdit />
-            {saving ? "Saving..." : form.id ? "Update Draft" : "Save Draft"}
+            {saving ? "Saving..." : form.id ? "Update Private" : "Save Private"}
           </button>
           <button
             type="button"
@@ -624,10 +624,8 @@ function WritingEditor({
           >
             <FaPaperPlane />
             {saving
-              ? "Submitting..."
-              : form.status === "REJECTED"
-              ? "Edit & Resubmit"
-              : "Send to School Review"}
+              ? "Posting..."
+              : "Post to School"}
           </button>
           {(form.id || form.title || form.content) && (
             <button
@@ -650,23 +648,26 @@ function WritingListItem({
   onRead,
   onEdit,
   onDelete,
-  onCreateRevision,
 }) {
   const categoryMeta = getCategoryMeta(writing.category);
   const statusMeta = getStatusMeta(writing.status);
   const libraryMeta = getLibraryMeta(writing);
   const LibraryIcon = libraryMeta.icon;
-  const canEdit = ["DRAFT", "REJECTED"].includes(writing.status);
+  const canEdit =
+    ["DRAFT", "REJECTED", "SUBMITTED"].includes(writing.status) &&
+    !writing.isMagazinePublished &&
+    !writing.isPublished;
   const canDelete =
     ["DRAFT", "REJECTED"].includes(writing.status);
-  const canRevise = writing.status === "APPROVED";
   const actionLabel =
     writing.status === "APPROVED"
       ? "Read"
     : writing.status === "DRAFT"
       ? "Edit"
     : writing.status === "REJECTED"
-      ? "Revise"
+      ? "Edit"
+    : writing.status === "SUBMITTED"
+      ? "Edit"
       : "Read";
 
   return (
@@ -694,11 +695,6 @@ function WritingListItem({
         <p className="mt-1 line-clamp-2 text-sm leading-6 text-[#52657d]">
           {getPreview(writing.content, 160)}
         </p>
-        {writing.reviewNote && (
-          <p className="mt-2 line-clamp-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold leading-5 text-red-700">
-            School note: {writing.reviewNote}
-          </p>
-        )}
         <p className="mt-2 line-clamp-2 text-xs font-semibold leading-5 text-[#52657d]">
           {getWorkflowMessage(writing)}
         </p>
@@ -726,13 +722,11 @@ function WritingListItem({
         ) : (
           <button
             type="button"
-            onClick={() =>
-              canRevise ? onCreateRevision(writing.id) : onRead(writing)
-            }
+            onClick={() => onRead(writing)}
             className="inline-flex items-center gap-2 rounded-lg border border-purple-200 bg-white px-3 py-2 text-sm font-bold text-purple-700 transition hover:bg-purple-50"
           >
-            {canRevise ? <FaEdit /> : <FaBookOpen />}
-            {canRevise ? "Revise" : actionLabel}
+            <FaBookOpen />
+            {actionLabel}
           </button>
         )}
         <button
@@ -769,7 +763,7 @@ function WritingListItem({
 function SidebarPanels({ counts, libraryCounts, totalWords }) {
   const tips = [
     ["Write from the heart", "Your authentic voice connects with readers.", FaHeart],
-    ["Edit and reflect", "Good writing becomes clearer after revision.", FaEdit],
+    ["Edit and polish", "Good writing becomes clearer when you revisit it.", FaEdit],
     ["Be original", "Share your unique perspective.", FaLightbulb],
   ];
 
@@ -809,7 +803,7 @@ function SidebarPanels({ counts, libraryCounts, totalWords }) {
         </div>
         <div className="mt-4 space-y-3 text-sm">
           <div className="flex items-center justify-between">
-            <span className="text-[#52657d]">Articles Published</span>
+            <span className="text-[#52657d]">Selected Pieces</span>
             <strong className="text-[#17120a]">{counts.APPROVED}</strong>
           </div>
           <div className="flex items-center justify-between">
@@ -817,7 +811,7 @@ function SidebarPanels({ counts, libraryCounts, totalWords }) {
             <strong className="text-[#17120a]">{totalWords}</strong>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-[#52657d]">In Review</span>
+            <span className="text-[#52657d]">School Wall Posts</span>
             <strong className="text-[#17120a]">{counts.SUBMITTED}</strong>
           </div>
         </div>
@@ -977,28 +971,6 @@ export default function StudentWritingWorkspace() {
     }
   };
 
-  const handleCreateRevision = async (writingId) => {
-    try {
-      setError("");
-      setSuccess("");
-      const res = await fetch(`/api/student/writings/${writingId}`, {
-        method: "POST",
-      });
-      const payload = await res.json().catch(() => ({}));
-
-      if (!res.ok) {
-        throw new Error(payload.message || "Failed to create revision draft");
-      }
-
-      setSuccess(payload.message || "Revision draft created");
-      setReadingWriting(null);
-      resetForm();
-      await loadWritings();
-    } catch (revisionError) {
-      setError(revisionError.message || "Failed to create revision draft");
-    }
-  };
-
   const counts = useMemo(() => {
     const nextCounts = {
       ALL: writings.length,
@@ -1048,8 +1020,8 @@ export default function StudentWritingWorkspace() {
 
   const activeEditingLabel = useMemo(() => {
     if (!form.id) return "New Draft";
-    return form.status === "REJECTED" ? "Revision Draft" : "Editing Draft";
-  }, [form.id, form.status]);
+    return "Editing Draft";
+  }, [form.id]);
 
   return (
     <div className="space-y-5 text-[#27344a]">
@@ -1089,7 +1061,7 @@ export default function StudentWritingWorkspace() {
                   Writing Library
                 </h2>
                 <p className="mt-1 text-sm text-[#52657d]">
-                  Free writing, school review work, and school magazine pieces
+                  Free writing, school wall posts, and school magazine pieces
                   in one manageable view.
                 </p>
               </div>
@@ -1100,9 +1072,9 @@ export default function StudentWritingWorkspace() {
               >
                 <option value="ALL">All statuses</option>
                 <option value="DRAFT">Drafts</option>
-                <option value="SUBMITTED">Under Review</option>
-                <option value="APPROVED">Published</option>
-                <option value="REJECTED">Needs Revision</option>
+                <option value="SUBMITTED">Posted to School</option>
+                <option value="APPROVED">Selected</option>
+                <option value="REJECTED">Private</option>
               </select>
             </div>
 
@@ -1154,9 +1126,9 @@ export default function StudentWritingWorkspace() {
               {[
                 ["ALL", "All"],
                 ["DRAFT", "Drafts"],
-                ["SUBMITTED", "Under Review"],
-                ["APPROVED", "Published"],
-                ["REJECTED", "Needs Revision"],
+                ["SUBMITTED", "Posted"],
+                ["APPROVED", "Selected"],
+                ["REJECTED", "Private"],
               ].map(([status, label]) => (
                 <button
                   key={status}
@@ -1176,7 +1148,7 @@ export default function StudentWritingWorkspace() {
             {loading ? (
               <LoadingState
                 title="Loading your writings"
-                message="Preparing your drafts, submissions, and approved writing."
+                message="Preparing your private drafts, school wall posts, and selected writing."
                 className="mt-6"
               />
             ) : writings.length === 0 ? (
@@ -1204,7 +1176,6 @@ export default function StudentWritingWorkspace() {
                     onRead={setReadingWriting}
                     onEdit={startEdit}
                     onDelete={setDeleteTarget}
-                    onCreateRevision={handleCreateRevision}
                   />
                 ))}
               </div>
@@ -1272,13 +1243,6 @@ export default function StudentWritingWorkspace() {
               </div>
             </div>
 
-            {readingWriting.reviewNote && (
-              <div className="mx-5 rounded-lg border border-red-200 bg-red-50 p-4 text-sm leading-6 text-red-700 md:mx-8">
-                <span className="font-bold">School note:</span>{" "}
-                {readingWriting.reviewNote}
-              </div>
-            )}
-
             <article className="mx-5 mb-8 mt-5 whitespace-pre-wrap rounded-xl border border-[#d7cdbb] bg-[#fffdf8] p-5 text-base leading-8 text-[#27344a] md:mx-8 md:p-7 md:text-lg">
               {readingWriting.content}
             </article>
@@ -1294,16 +1258,6 @@ export default function StudentWritingWorkspace() {
                 >
                   <FaEdit />
                   Edit
-                </button>
-              )}
-              {readingWriting.status === "APPROVED" && (
-                <button
-                  type="button"
-                  onClick={() => handleCreateRevision(readingWriting.id)}
-                  className="inline-flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-800 transition hover:bg-emerald-100"
-                >
-                  <FaEdit />
-                  Revise as Draft
                 </button>
               )}
             </div>

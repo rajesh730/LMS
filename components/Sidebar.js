@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   FaChartPie,
   FaBullhorn,
@@ -41,7 +41,9 @@ const HREF_INDICATOR_KEYS = {
   "/student/events": "student.events",
   "/student/notices": "student.notices",
   "/student/writing": "student.writing",
+  "/student/school-wall": "student.magazine",
   "/student/magazine": "student.magazine",
+  "/student/global-wall": "student.magazine",
 };
 
 const SCHOOL_NAV_GROUPS = [
@@ -78,6 +80,7 @@ export default function Sidebar({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const currentTab = searchParams?.get("tab");
+  const [studentGlobalWallEnabled, setStudentGlobalWallEnabled] = useState(false);
   const { getIndicator } = useWorkIndicators({
     enabled: Boolean(role && !isPending),
   });
@@ -87,6 +90,30 @@ export default function Sidebar({
       signOut({ callbackUrl: "/login" });
     }
   }, [session]);
+
+  useEffect(() => {
+    if (role !== "STUDENT" || isPending) {
+      return;
+    }
+
+    let cancelled = false;
+    async function loadStudentMagazineSettings() {
+      try {
+        const res = await fetch("/api/student/magazine", { cache: "no-store" });
+        const payload = await res.json().catch(() => ({}));
+        if (!cancelled) {
+          setStudentGlobalWallEnabled(Boolean(res.ok && payload.globalWallEnabled));
+        }
+      } catch {
+        if (!cancelled) setStudentGlobalWallEnabled(false);
+      }
+    }
+
+    void loadStudentMagazineSettings();
+    return () => {
+      cancelled = true;
+    };
+  }, [isPending, role]);
 
   const adminLinks = [
     { name: "Approvals", href: "/admin/dashboard?tab=approvals", icon: FaCheckCircle },
@@ -151,9 +178,15 @@ export default function Sidebar({
     { name: "Events", href: "/student/events", icon: FaCalendarAlt },
     { name: "Notices", href: "/student/notices", icon: FaBell },
     { name: "My Writing", href: "/student/writing", icon: FaFeatherAlt },
+    { name: "School Wall", href: "/student/school-wall", icon: FaSchool },
     { name: "School Magazine", href: "/student/magazine", icon: FaBookOpen },
+    studentGlobalWallEnabled && {
+      name: "Global Wall",
+      href: "/student/global-wall",
+      icon: FaBookOpen,
+    },
     { name: "Feedback", href: "/student/feedback", icon: FaCommentDots },
-  ];
+  ].filter(Boolean);
 
   let links = [];
   if (role === "SUPER_ADMIN") links = adminLinks;

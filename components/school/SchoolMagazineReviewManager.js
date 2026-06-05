@@ -1,14 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import {
-  FaBookOpen,
-  FaCheck,
-  FaEye,
-  FaFilter,
-  FaSearch,
-  FaTimes,
-} from "react-icons/fa";
+import { FaBookOpen, FaEye, FaFilter, FaSearch } from "react-icons/fa";
 import AlertBanner from "@/components/ui/AlertBanner";
 import LoadingState from "@/components/ui/LoadingState";
 import EmptyState from "@/components/EmptyState";
@@ -55,7 +48,6 @@ export default function SchoolMagazineReviewManager({
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [selectedSubmission, setSelectedSubmission] = useState(null);
-  const [reviewNote, setReviewNote] = useState("");
   const [search, setSearch] = useState("");
   const [pagination, setPagination] = useState({
     page: 1,
@@ -73,7 +65,7 @@ export default function SchoolMagazineReviewManager({
         setLoading(true);
         setError("");
         const params = new URLSearchParams({
-          status: "SUBMITTED",
+          status: "POSTED",
           page: String(page),
           limit: "12",
         });
@@ -93,7 +85,7 @@ export default function SchoolMagazineReviewManager({
           setPagination(payload.pagination);
           onStatsChange?.({
             reviewTotal: payload.pagination.totalItems || payload.pagination.totalSubmissions || 0,
-            activeReviewFilter: "SUBMITTED",
+            activeReviewFilter: "POSTED",
           });
         }
       } catch (loadError) {
@@ -141,12 +133,11 @@ export default function SchoolMagazineReviewManager({
 
   const openSubmission = (submission) => {
     setSelectedSubmission(submission);
-    setReviewNote(submission.reviewNote || "");
     setSuccess("");
     setError("");
   };
 
-  const handleReview = async (submission, action, note = "") => {
+  const handleWallAction = async (submission, action) => {
     if (!submission) return;
 
     try {
@@ -154,27 +145,23 @@ export default function SchoolMagazineReviewManager({
       setError("");
       setSuccess("");
 
-      const res = await fetch(`/api/school/magazine-submissions/${submission.id}`, {
+      const res = await fetch(`/api/school/magazine/${submission.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action,
-          reviewNote: note,
-        }),
+        body: JSON.stringify({ action }),
       });
 
       const payload = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(payload.message || "Failed to review submission");
+        throw new Error(payload.message || "Failed to update writing");
       }
 
-      setSuccess(payload.message || "Review updated");
+      setSuccess(payload.message || "Writing updated");
       setSelectedSubmission(null);
-      setReviewNote("");
       await loadSubmissions(pagination.page || 1);
       onStatsChange?.({ refresh: true });
     } catch (reviewError) {
-      setError(reviewError.message || "Failed to review submission");
+      setError(reviewError.message || "Failed to update writing");
     } finally {
       setBusyId("");
     }
@@ -183,17 +170,17 @@ export default function SchoolMagazineReviewManager({
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-lg font-black text-[#17120a]">Review Queue</h2>
+        <h2 className="text-lg font-black text-[#17120a]">School Wall</h2>
         <div className="mt-1 h-0.5 w-24 rounded-full bg-purple-700" />
       </div>
 
-      {error && <AlertBanner type="error" title="Review queue failed" message={error} />}
-      {success && <AlertBanner type="success" title="Review saved" message={success} />}
+      {error && <AlertBanner type="error" title="School wall failed" message={error} />}
+      {success && <AlertBanner type="success" title="School wall updated" message={success} />}
 
       <div className="rounded-lg border border-[#e1e7f2] bg-white p-3 shadow-sm">
         <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
         <div className="inline-flex min-h-11 w-full max-w-xs items-center justify-center rounded-lg border border-purple-200 bg-purple-50 px-4 text-xs font-black uppercase text-purple-700">
-          Pending Review
+          Posted by Students
         </div>
 
         <div className="flex flex-col gap-2 lg:flex-row lg:flex-wrap lg:justify-end">
@@ -233,14 +220,14 @@ export default function SchoolMagazineReviewManager({
 
       {loading ? (
         <LoadingState
-          title="Loading submissions"
-          message="Preparing student writing for review."
+          title="Loading school wall"
+          message="Preparing student posts for the school wall."
         />
       ) : submissions.length === 0 ? (
         <EmptyState
           icon={FaBookOpen}
-          title="No submissions in this view"
-          description="Student writing will appear here after students submit it for school review."
+          title="No posted writing in this view"
+          description="Student writing will appear here after students post it to school."
         />
       ) : (
         <div className="space-y-3">
@@ -250,7 +237,7 @@ export default function SchoolMagazineReviewManager({
               <span>Student</span>
               <span>Grade</span>
               <span>Type</span>
-              <span>Status</span>
+              <span>Wall</span>
               <span className="text-right">Action</span>
             </div>
             <div className="max-w-full overflow-x-auto">
@@ -264,15 +251,10 @@ export default function SchoolMagazineReviewManager({
                       {submission.title}
                     </p>
                     <p className="mt-1 text-[11px] font-semibold text-[#52657d]">
-                      Submitted {formatDate(
+                      Posted {formatDate(
                         submission.submittedAt || submission.updatedAt
                       )}
                     </p>
-                    {Number(submission.revisionCount || 0) > 0 && (
-                      <span className="mt-2 inline-flex rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-black uppercase text-amber-700">
-                        Resubmitted #{submission.revisionCount}
-                      </span>
-                    )}
                   </div>
                   <span className="truncate font-bold text-[#17120a]">
                     {submission.authorStudent?.name || "Student"}
@@ -288,7 +270,7 @@ export default function SchoolMagazineReviewManager({
                     {getWritingCategoryLabel(submission.category)}
                   </span>
                   <span className="font-bold text-[#52657d]">
-                    Pending Review
+                    {submission.showOnSchoolWall ? "Visible" : "Hidden"}
                   </span>
                   <div className="flex justify-end gap-2">
                     <button
@@ -299,26 +281,21 @@ export default function SchoolMagazineReviewManager({
                       <FaEye />
                       Read
                     </button>
-                    {submission.status === "SUBMITTED" && (
-                      <>
-                        <button
-                          type="button"
-                          disabled={busyId === submission.id}
-                          onClick={() => handleReview(submission, "APPROVE")}
-                          className="inline-flex h-9 items-center justify-center rounded-lg bg-emerald-50 px-3 text-xs font-black text-emerald-700 hover:bg-emerald-100 disabled:opacity-60"
-                        >
-                          Accept
-                        </button>
-                        <button
-                          type="button"
-                          disabled={busyId === submission.id}
-                          onClick={() => openSubmission(submission)}
-                          className="inline-flex h-9 items-center justify-center rounded-lg bg-rose-50 px-3 text-xs font-black text-rose-700 hover:bg-rose-100 disabled:opacity-60"
-                        >
-                          Return
-                        </button>
-                      </>
-                    )}
+                    <button
+                      type="button"
+                      disabled={busyId === submission.id}
+                      onClick={() =>
+                        handleWallAction(
+                          submission,
+                          submission.showOnSchoolWall
+                            ? "HIDE_SCHOOL_WALL"
+                            : "SHOW_SCHOOL_WALL"
+                        )
+                      }
+                      className="inline-flex h-9 items-center justify-center rounded-lg bg-purple-50 px-3 text-xs font-black text-purple-700 hover:bg-purple-100 disabled:opacity-60"
+                    >
+                      {submission.showOnSchoolWall ? "Hide" : "Show"}
+                    </button>
                   </div>
                 </div>
               ))}
@@ -345,11 +322,6 @@ export default function SchoolMagazineReviewManager({
                   <span className={`inline-flex rounded-full px-3 py-1 text-[10px] font-black uppercase ${categoryTone(selectedSubmission.category)}`}>
                     {getWritingCategoryLabel(selectedSubmission.category)}
                   </span>
-                  {Number(selectedSubmission.revisionCount || 0) > 0 && (
-                    <span className="inline-flex rounded-full bg-amber-50 px-3 py-1 text-[10px] font-black uppercase text-amber-700">
-                      Resubmitted #{selectedSubmission.revisionCount}
-                    </span>
-                  )}
                 </div>
                 <h3 className="mt-3 text-2xl font-black text-[#17120a]">
                   {selectedSubmission.title}
@@ -373,46 +345,25 @@ export default function SchoolMagazineReviewManager({
               {selectedSubmission.content}
             </article>
 
-            {selectedSubmission.status === "SUBMITTED" ? (
-              <div className="mt-5 space-y-4">
-                <label>
-                  <div className="mb-2 text-sm font-black text-[#52657d]">
-                    School Review Note
-                  </div>
-                  <textarea
-                    value={reviewNote}
-                    onChange={(event) => setReviewNote(event.target.value)}
-                    placeholder="Add guidance for the student or an internal editorial note"
-                    className="min-h-28 w-full rounded-lg border border-[#dbe5f4] px-4 py-3 text-sm font-semibold text-[#17120a] outline-none focus:border-purple-500"
-                  />
-                </label>
-                <div className="flex flex-wrap justify-end gap-3">
-                  <button
-                    type="button"
-                    disabled={busyId === selectedSubmission.id}
-                    onClick={() => handleReview(selectedSubmission, "REJECT", reviewNote)}
-                    className="inline-flex h-10 items-center gap-2 rounded-lg bg-rose-50 px-4 text-sm font-black text-rose-700 hover:bg-rose-100 disabled:opacity-60"
-                  >
-                    <FaTimes />
-                    Return for Revision
-                  </button>
-                  <button
-                    type="button"
-                    disabled={busyId === selectedSubmission.id}
-                    onClick={() => handleReview(selectedSubmission, "APPROVE", reviewNote)}
-                    className="inline-flex h-10 items-center gap-2 rounded-lg bg-emerald-600 px-4 text-sm font-black text-white hover:bg-emerald-700 disabled:opacity-60"
-                  >
-                    <FaCheck />
-                    Approve
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="mt-5 rounded-lg border border-[#e1e7f2] bg-[#f8fbff] p-4 text-sm font-semibold text-[#52657d]">
-                <FaEye className="mb-2 text-[#0a2f66]" />
-                This submission has already been reviewed.
-              </div>
-            )}
+            <div className="mt-5 flex flex-wrap justify-end gap-3">
+              <button
+                type="button"
+                disabled={busyId === selectedSubmission.id}
+                onClick={() =>
+                  handleWallAction(
+                    selectedSubmission,
+                    selectedSubmission.showOnSchoolWall
+                      ? "HIDE_SCHOOL_WALL"
+                      : "SHOW_SCHOOL_WALL"
+                  )
+                }
+                className="inline-flex h-10 items-center rounded-lg bg-purple-700 px-4 text-sm font-black text-white hover:bg-purple-800 disabled:opacity-60"
+              >
+                {selectedSubmission.showOnSchoolWall
+                  ? "Hide from School Wall"
+                  : "Show on School Wall"}
+              </button>
+            </div>
           </div>
         </div>
       )}

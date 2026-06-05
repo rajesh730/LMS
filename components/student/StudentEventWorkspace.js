@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { FaCalendarAlt, FaCheckCircle, FaSchool } from "react-icons/fa";
 import EventHub from "@/components/events/EventHub";
 import StudentNotificationCenter from "@/components/student/StudentNotificationCenter";
 import useWorkIndicators from "@/lib/useWorkIndicators";
+import useRealtimeChannel from "@/lib/useRealtimeChannel";
 
 const REGISTERED_FILTERS = [
   { id: "participated", label: "All Registered" },
@@ -20,12 +21,55 @@ const DISCOVERY_FILTERS = [
 ];
 
 export default function StudentEventWorkspace() {
-  const { markSurfaceSeen } = useWorkIndicators();
+  const { loadIndicators } = useWorkIndicators();
   const [activeTab, setActiveTab] = useState("registered");
 
+  const markEventNotificationsRead = useCallback(async () => {
+    try {
+      const res = await fetch("/api/student/notifications?limit=100", {
+        cache: "no-store",
+      });
+      const payload = await res.json().catch(() => ({}));
+
+      if (!res.ok || !Array.isArray(payload.notifications)) return;
+
+      const unreadEventNotifications = payload.notifications.filter(
+        (notification) =>
+          notification.noticeType === "EVENT" && !notification.isRead
+      );
+
+      if (unreadEventNotifications.length === 0) {
+        await loadIndicators({ silent: true });
+        return;
+      }
+
+      await fetch("/api/student/notifications/read", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          notifications: unreadEventNotifications.map((notification) => ({
+            id: notification.id,
+            noticeType: notification.noticeType,
+            storageType: notification.storageType,
+          })),
+        }),
+      }).catch(() => {});
+      await loadIndicators({ silent: true });
+    } catch (_error) {
+      await loadIndicators({ silent: true });
+    }
+  }, [loadIndicators]);
+
   useEffect(() => {
-    void markSurfaceSeen("student.events");
-  }, [markSurfaceSeen]);
+    void markEventNotificationsRead();
+  }, [markEventNotificationsRead]);
+
+  useRealtimeChannel(
+    "student-notifications",
+    useCallback(() => {
+      void markEventNotificationsRead();
+    }, [markEventNotificationsRead])
+  );
 
   const tabs = [
     {

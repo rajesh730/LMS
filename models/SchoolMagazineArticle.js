@@ -86,6 +86,16 @@ const SchoolMagazineArticleSchema = new mongoose.Schema(
       default: false,
       index: true,
     },
+    magazineIssue: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "MagazineIssue",
+      default: null,
+      index: true,
+    },
+    magazineIssueAssignedAt: {
+      type: Date,
+      default: null,
+    },
     magazinePublishedAt: {
       type: Date,
       default: null,
@@ -97,6 +107,16 @@ const SchoolMagazineArticleSchema = new mongoose.Schema(
     isFeatured: {
       type: Boolean,
       default: false,
+    },
+    showOnSchoolWall: {
+      type: Boolean,
+      default: true,
+      index: true,
+    },
+    isGlobalWallPublished: {
+      type: Boolean,
+      default: false,
+      index: true,
     },
     publishedAt: {
       type: Date,
@@ -135,6 +155,17 @@ SchoolMagazineArticleSchema.index({
   isDeleted: 1,
   status: 1,
   submittedAt: -1,
+  updatedAt: -1,
+});
+SchoolMagazineArticleSchema.index({
+  school: 1,
+  isDeleted: 1,
+  showOnSchoolWall: 1,
+  updatedAt: -1,
+});
+SchoolMagazineArticleSchema.index({
+  isDeleted: 1,
+  isGlobalWallPublished: 1,
   updatedAt: -1,
 });
 SchoolMagazineArticleSchema.index({

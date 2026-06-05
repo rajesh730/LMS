@@ -49,7 +49,7 @@ export default function SchoolDailyOverview() {
           notificationsRes,
           eventsRes,
         ] = await Promise.all([
-          fetch("/api/school/magazine-submissions?status=SUBMITTED&limit=5", {
+          fetch("/api/school/magazine-submissions?status=POSTED&limit=5", {
             cache: "no-store",
           }),
           fetch("/api/school/event-invitations?status=PENDING&limit=5", {
@@ -107,7 +107,7 @@ export default function SchoolDailyOverview() {
         });
 
         const failedSources = [
-          !submissionsRes.ok && "magazine submissions",
+          !submissionsRes.ok && "school wall posts",
           !invitationsRes.ok && "event invitations",
           !notificationsRes.ok && "notifications",
           !eventsRes.ok && "events",
@@ -197,16 +197,16 @@ export default function SchoolDailyOverview() {
           <DashboardFocusCard
             href="/school/dashboard?tab=magazine"
             icon={FaFeatherAlt}
-            badge={`${totals.submissions} pending`}
+            badge={`${totals.submissions} posts`}
             title={
-              submissions[0]?.title || "No magazine submissions waiting"
+              submissions[0]?.title || "No school wall posts yet"
             }
             description={
               submissions[0]?.authorStudent?.name
-                ? `Review writing from ${submissions[0].authorStudent.name}.`
-                : "Student writing that needs approval will appear here."
+                ? `Read writing from ${submissions[0].authorStudent.name}.`
+                : "Student writing appears here after students post it to school."
             }
-            actionLabel="Review magazine"
+            actionLabel="Open wall"
             tone="violet"
           />
 

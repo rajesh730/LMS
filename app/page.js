@@ -5,6 +5,7 @@ import SchoolPromotion from "@/models/SchoolPromotion";
 import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
 import { getRotatingPartnerSpotlights } from "@/lib/partnerSpotlights";
 import { getActiveSchoolPromotions } from "@/lib/schoolPromotions";
+import { diversifyBySchool } from "@/lib/schoolDiversifiedFeed";
 import HomepageHeroCarousel from "@/components/public/HomepageHeroCarousel";
 import HomeScrollMemory from "@/components/public/HomeScrollMemory";
 import PublicExplorePanel from "@/components/public/PublicExplorePanel";
@@ -62,12 +63,12 @@ async function getLatestStudentWritings() {
   })
     .select("title content category publishedAt updatedAt")
     .sort({ publishedAt: -1, updatedAt: -1 })
-    .limit(5)
+    .limit(50)
     .populate("authorStudent", "name grade")
     .populate("school", "schoolName")
     .lean();
 
-  return articles.map((article) => ({
+  const serializedArticles = articles.map((article) => ({
     id: String(article._id),
     href: `/writings/${article._id}`,
     title: article.title,
@@ -77,7 +78,14 @@ async function getLatestStudentWritings() {
     author: article.authorStudent?.name || "Student",
     schoolName: article.school?.schoolName || "School",
     schoolHref: article.school?._id ? `/schools/${article.school._id}` : "",
+    schoolId: article.school?._id ? String(article.school._id) : "",
   }));
+
+  return diversifyBySchool(serializedArticles, {
+    limit: 5,
+    getSchoolKey: (article) => article.schoolId || article.schoolName,
+    getTime: (article) => article.date,
+  });
 }
 
 async function getPremiumSpotlightStudentWritings() {

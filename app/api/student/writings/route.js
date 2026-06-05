@@ -63,6 +63,9 @@ export async function GET() {
           isPublished: Boolean(article.isPublished),
           isMagazinePublished: Boolean(article.isMagazinePublished),
           isFeatured: Boolean(article.isFeatured),
+          showOnSchoolWall:
+            article.status !== "DRAFT" && article.showOnSchoolWall !== false,
+          isGlobalWallPublished: Boolean(article.isGlobalWallPublished),
           publicationScope: article.publicationScope || "SCHOOL_ONLY",
           submittedAt: article.submittedAt,
           firstSubmittedAt: article.firstSubmittedAt,
@@ -146,6 +149,11 @@ export async function POST(request) {
         article.content = content;
         article.category = category;
         article.status = requestedStatus;
+        article.showOnSchoolWall = requestedStatus === "SUBMITTED";
+        article.isMagazinePublished = false;
+        article.isPublished = false;
+        article.magazinePublishedAt = null;
+        article.publishedAt = null;
 
         if (requestedStatus === "SUBMITTED") {
           article.reviewNote = "";
@@ -178,8 +186,8 @@ export async function POST(request) {
         return NextResponse.json({
           message:
             requestedStatus === "SUBMITTED"
-              ? "Writing resubmitted for school review"
-              : "Revision draft updated",
+              ? "Posted to school wall"
+              : "Private writing updated",
           article,
         });
       }
@@ -194,6 +202,9 @@ export async function POST(request) {
       category,
       submissionSource: "FREE_WRITE",
       status: requestedStatus,
+      showOnSchoolWall: requestedStatus === "SUBMITTED",
+      isMagazinePublished: false,
+      isPublished: false,
       submittedAt,
       firstSubmittedAt: submittedAt,
     });
@@ -216,8 +227,8 @@ export async function POST(request) {
       {
         message:
           requestedStatus === "SUBMITTED"
-            ? "Writing submitted for school review"
-            : "Draft saved",
+            ? "Posted to school wall"
+            : "Private writing saved",
         article,
       },
       { status: 201 }

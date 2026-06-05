@@ -120,6 +120,12 @@ function ArticleMeta({ article }) {
         <FaClock className="text-[#75869b]" />
         {getReadTime(article.content)} min read
       </span>
+      {article.magazineIssue?.title && (
+        <span className="inline-flex items-center gap-2">
+          <FaBookOpen className="text-[#75869b]" />
+          {article.magazineIssue.title}
+        </span>
+      )}
     </div>
   );
 }

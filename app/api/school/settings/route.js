@@ -74,6 +74,7 @@ export async function GET() {
         pincode: config.pincode || "",
         teacherRoles: normalizeTeacherRoles(config.teacherRoles || []),
         grades: (config.grades || []).length > 0 ? config.grades : derivedGrades,
+        allowStudentGlobalWall: Boolean(config.allowStudentGlobalWall),
       },
       stats: {
         totalStudents,
@@ -144,6 +145,11 @@ export async function PUT(req) {
       configUpdate.teacherRoles = normalizeTeacherRoles(configBody.teacherRoles);
       configUpdate.teacherRolesCustomized = true;
     }
+    if (configBody.allowStudentGlobalWall !== undefined) {
+      configUpdate.allowStudentGlobalWall = Boolean(
+        configBody.allowStudentGlobalWall
+      );
+    }
 
     const config = await SchoolConfig.findOneAndUpdate(
       { school: session.user.id },
@@ -174,6 +180,7 @@ export async function PUT(req) {
           state: existingConfig?.state || "",
           pincode: existingConfig?.pincode || "",
           teacherRoles: existingConfig?.teacherRoles || [],
+          allowStudentGlobalWall: Boolean(existingConfig?.allowStudentGlobalWall),
         },
       },
       after: {
@@ -193,6 +200,7 @@ export async function PUT(req) {
           state: config?.state || "",
           pincode: config?.pincode || "",
           teacherRoles: config?.teacherRoles || [],
+          allowStudentGlobalWall: Boolean(config?.allowStudentGlobalWall),
         },
       },
     });

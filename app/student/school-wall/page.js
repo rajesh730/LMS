@@ -2,14 +2,14 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import DashboardLayout from "@/components/DashboardLayout";
-import StudentWritingWorkspace from "@/components/student/StudentWritingWorkspace";
+import StudentSchoolMagazine from "@/components/student/StudentSchoolMagazine";
 
 export const metadata = {
-  title: "My Writing",
-  description: "Save private writing or post it to your school wall",
+  title: "School Wall",
+  description: "Read writing posted by students from your school",
 };
 
-export default async function StudentWritingPage() {
+export default async function StudentSchoolWallPage() {
   const session = await getServerSession(authOptions);
 
   if (!session) {
@@ -23,7 +23,7 @@ export default async function StudentWritingPage() {
   return (
     <DashboardLayout>
       <div className="max-w-7xl mx-auto">
-        <StudentWritingWorkspace />
+        <StudentSchoolMagazine initialView="school-wall" lockedView />
       </div>
     </DashboardLayout>
   );

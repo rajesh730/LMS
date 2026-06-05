@@ -4,6 +4,9 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import Student from "@/models/Student";
 import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
+import SchoolConfig from "@/models/SchoolConfig";
+import "@/models/MagazineIssue";
+import { serializeMagazineIssue } from "@/lib/magazineIssues";
 
 function buildStudentLookup(session) {
   return {
@@ -39,31 +42,53 @@ export async function GET() {
       );
     }
 
-    const articles = await SchoolMagazineArticle.find({
-      school: student.school,
-      isMagazinePublished: true,
-      isDeleted: { $ne: true },
-    })
-      .populate("authorStudent", "name grade rollNumber")
-      .sort({ publishedAt: -1, updatedAt: -1 })
-      .lean();
+    const [articles, wallArticles, schoolConfig] = await Promise.all([
+      SchoolMagazineArticle.find({
+        school: student.school,
+        isMagazinePublished: true,
+        isDeleted: { $ne: true },
+      })
+        .populate("authorStudent", "name grade rollNumber")
+        .populate("magazineIssue")
+        .sort({ publishedAt: -1, updatedAt: -1 })
+        .lean(),
+      SchoolMagazineArticle.find({
+        school: student.school,
+        status: { $in: ["SUBMITTED", "APPROVED"] },
+        showOnSchoolWall: { $ne: false },
+        isDeleted: { $ne: true },
+      })
+        .populate("authorStudent", "name grade rollNumber")
+        .populate("magazineIssue")
+        .sort({ submittedAt: -1, updatedAt: -1 })
+        .limit(100)
+        .lean(),
+      SchoolConfig.findOne({ school: student.school })
+        .select("allowStudentGlobalWall")
+        .lean(),
+    ]);
+
+    const serializeArticle = (article) => ({
+      id: String(article._id),
+      title: article.title,
+      content: article.content,
+      category: article.category,
+      publishedAt: article.publishedAt || article.submittedAt || article.updatedAt,
+      magazineIssue: serializeMagazineIssue(article.magazineIssue),
+      authorStudent: article.authorStudent
+        ? {
+            id: String(article.authorStudent._id),
+            name: article.authorStudent.name,
+            grade: article.authorStudent.grade,
+            rollNumber: article.authorStudent.rollNumber,
+          }
+        : null,
+    });
 
     return NextResponse.json({
-      articles: articles.map((article) => ({
-        id: String(article._id),
-        title: article.title,
-        content: article.content,
-        category: article.category,
-        publishedAt: article.publishedAt,
-        authorStudent: article.authorStudent
-          ? {
-              id: String(article.authorStudent._id),
-              name: article.authorStudent.name,
-              grade: article.authorStudent.grade,
-              rollNumber: article.authorStudent.rollNumber,
-            }
-          : null,
-      })),
+      articles: articles.map(serializeArticle),
+      wallArticles: wallArticles.map(serializeArticle),
+      globalWallEnabled: Boolean(schoolConfig?.allowStudentGlobalWall),
       student: {
         id: String(student._id),
         name: student.name,

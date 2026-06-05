@@ -4,7 +4,9 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
 import Student from "@/models/Student";
+import "@/models/MagazineIssue";
 import { buildMagazineLifecycle } from "@/lib/lifecycle";
+import { serializeMagazineIssue } from "@/lib/magazineIssues";
 import { getEquivalentGradeValues } from "@/lib/schoolGrades";
 
 export async function GET(request) {
@@ -23,7 +25,7 @@ export async function GET(request) {
 
     const query = { school: session.user.id, isDeleted: { $ne: true } };
     if (view === "approved") {
-      query.status = "APPROVED";
+      query.status = { $in: ["SUBMITTED", "APPROVED"] };
     } else if (view === "magazine") {
       query.isMagazinePublished = true;
     } else {
@@ -42,6 +44,7 @@ export async function GET(request) {
     const articles = await SchoolMagazineArticle.find(query)
       .populate("authorStudent", "name grade rollNumber")
       .populate("reviewedBy", "name schoolName email")
+      .populate("magazineIssue")
       .sort({
         publishedAt: -1,
         reviewedAt: -1,
@@ -57,11 +60,18 @@ export async function GET(request) {
         category: article.category,
         submissionSource: article.submissionSource || "FREE_WRITE",
         status: article.status,
+        showOnSchoolWall:
+          article.status !== "DRAFT" && article.showOnSchoolWall !== false,
         isPublished: Boolean(article.isPublished),
         isMagazinePublished: Boolean(article.isMagazinePublished),
+        isGlobalWallPublished: Boolean(article.isGlobalWallPublished),
+        magazineIssue: serializeMagazineIssue(article.magazineIssue),
+        magazineIssueAssignedAt: article.magazineIssueAssignedAt,
         publishedAt: article.publishedAt,
         magazinePublishedAt: article.magazinePublishedAt,
+        submittedAt: article.submittedAt,
         reviewedAt: article.reviewedAt,
+        createdAt: article.createdAt,
         updatedAt: article.updatedAt,
         lifecycle: buildMagazineLifecycle(article),
         authorStudent: article.authorStudent

@@ -6,7 +6,7 @@ import StudentSchoolMagazine from "@/components/student/StudentSchoolMagazine";
 
 export const metadata = {
   title: "School Magazine",
-  description: "Read your school's published student writing",
+  description: "Read weekly school magazine issues",
 };
 
 export default async function StudentMagazinePage() {
@@ -23,7 +23,7 @@ export default async function StudentMagazinePage() {
   return (
     <DashboardLayout>
       <div className="max-w-7xl mx-auto">
-        <StudentSchoolMagazine />
+        <StudentSchoolMagazine initialView="magazine" lockedView />
       </div>
     </DashboardLayout>
   );
