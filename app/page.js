@@ -3,6 +3,7 @@ import connectDB from "@/lib/db";
 import Event from "@/models/Event";
 import SchoolPromotion from "@/models/SchoolPromotion";
 import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
+import MagazineIssue from "@/models/MagazineIssue";
 import { getRotatingPartnerSpotlights } from "@/lib/partnerSpotlights";
 import { getActiveSchoolPromotions } from "@/lib/schoolPromotions";
 import { diversifyBySchool } from "@/lib/schoolDiversifiedFeed";
@@ -88,6 +89,64 @@ async function getLatestStudentWritings() {
   });
 }
 
+async function getHomeMagazineIssues() {
+  const issues = await MagazineIssue.find({
+    status: "PUBLISHED",
+    showOnHome: true,
+  })
+    .select("title weekStart publishedAt homeShownAt month year school")
+    .sort({ homeShownAt: -1, publishedAt: -1, weekStart: -1, createdAt: -1 })
+    .limit(20)
+    .populate("school", "schoolName")
+    .lean();
+
+  if (issues.length === 0) return [];
+
+  const issueIds = issues.map((issue) => issue._id);
+  const articles = await SchoolMagazineArticle.find({
+    magazineIssue: { $in: issueIds },
+    isMagazinePublished: true,
+    isDeleted: { $ne: true },
+  })
+    .select("title content category magazineIssue magazinePublishedAt updatedAt")
+    .sort({ magazinePublishedAt: 1, updatedAt: 1 })
+    .lean();
+
+  const articlesByIssue = articles.reduce((map, article) => {
+    const key = String(article.magazineIssue);
+    const list = map.get(key) || [];
+    list.push(article);
+    map.set(key, list);
+    return map;
+  }, new Map());
+
+  return issues
+    .map((issue) => {
+      const issueArticles = articlesByIssue.get(String(issue._id)) || [];
+      if (issueArticles.length === 0) return null;
+
+      const firstArticle = issueArticles[0];
+      const schoolId = issue.school?._id ? String(issue.school._id) : "";
+
+      return {
+        id: `magazine-${issue._id}`,
+        href: `/magazines/${issue._id}`,
+        title: issue.title || "School Magazine",
+        content:
+          issueArticles.length === 1
+            ? firstArticle.content
+            : `${firstArticle.title}: ${getPreview(firstArticle.content, 150)} Featuring ${issueArticles.length} selected student writings.`,
+        category: "SCHOOL_MAGAZINE",
+        date: issue.homeShownAt || issue.publishedAt || issue.weekStart,
+        author: "School Magazine",
+        schoolName: issue.school?.schoolName || "School",
+        schoolHref: schoolId ? `/schools/${schoolId}` : "",
+        schoolId,
+      };
+    })
+    .filter(Boolean);
+}
+
 async function getPremiumSpotlightStudentWritings() {
   const premiumPromotions = await SchoolPromotion.find({
     placement: "HOME_SPOTLIGHT",
@@ -164,20 +223,31 @@ async function getHomepageData() {
     homeSpotlights,
     premiumSpotlightWritings,
     latestWritings,
+    homeMagazineIssues,
     upcomingEvents,
   ] = await Promise.all([
     getRotatingPartnerSpotlights(1),
     getActiveSchoolPromotions("HOME_SPOTLIGHT", 5, { randomize: true }),
     getPremiumSpotlightStudentWritings(),
     getLatestStudentWritings(),
+    getHomeMagazineIssues(),
     getUpcomingEvents(),
   ]);
+
+  const publicFeedItems = diversifyBySchool(
+    [...homeMagazineIssues, ...latestWritings],
+    {
+      limit: 5,
+      getSchoolKey: (item) => item.schoolId || item.schoolName,
+      getTime: (item) => item.date,
+    }
+  );
 
   return {
     partnerSpotlights,
     homeSpotlights,
     premiumSpotlightWritings,
-    latestWritings,
+    latestWritings: publicFeedItems,
     upcomingEvents,
   };
 }

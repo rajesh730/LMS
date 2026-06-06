@@ -7,6 +7,7 @@ import SchoolShowcaseProfile from "@/models/SchoolShowcaseProfile";
 import Event from "@/models/Event";
 import Achievement from "@/models/Achievement";
 import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
+import MagazineIssue from "@/models/MagazineIssue";
 import PublicSiteNav from "@/components/public/PublicSiteNav";
 import PublicExplorePanel from "@/components/public/PublicExplorePanel";
 import ExpandableStoryText from "@/components/public/ExpandableStoryText";
@@ -116,7 +117,15 @@ async function getSchoolData(id) {
 
   if (!school) return null;
 
-  const [profile, events, achievements, writings, studentCount, teacherCount, grades] =
+  const [
+    profile,
+    events,
+    achievements,
+    homeMagazines,
+    studentCount,
+    teacherCount,
+    grades,
+  ] =
     await Promise.all([
       SchoolShowcaseProfile.findOne({ school: id, visibility: "PUBLIC" })
         .populate("featuredEvents", "title date eventType visibility")
@@ -142,17 +151,7 @@ async function getSchoolData(id) {
         .populate("student", "name grade")
         .limit(6)
         .lean(),
-      SchoolMagazineArticle.find({
-        school: id,
-        status: "APPROVED",
-        isPublished: true,
-        isDeleted: { $ne: true },
-      })
-        .select("title content category publishedAt updatedAt")
-        .populate("authorStudent", "name grade")
-        .sort({ publishedAt: -1, updatedAt: -1 })
-        .limit(6)
-        .lean(),
+      getSchoolHomeMagazines(id),
       Student.countDocuments({
         school: id,
         status: "ACTIVE",
@@ -175,11 +174,65 @@ async function getSchoolData(id) {
     profile,
     events,
     achievements,
-    writings,
+    magazines: homeMagazines,
     studentCount,
     teacherCount,
     grades,
   };
+}
+
+async function getSchoolHomeMagazines(schoolId) {
+  const issues = await MagazineIssue.find({
+    school: schoolId,
+    status: "PUBLISHED",
+    showOnHome: true,
+  })
+    .select("title publishedAt homeShownAt weekStart")
+    .sort({ homeShownAt: -1, publishedAt: -1, weekStart: -1, createdAt: -1 })
+    .limit(6)
+    .lean();
+
+  if (issues.length === 0) return [];
+
+  const issueIds = issues.map((issue) => issue._id);
+  const articles = await SchoolMagazineArticle.find({
+    school: schoolId,
+    magazineIssue: { $in: issueIds },
+    isMagazinePublished: true,
+    isDeleted: { $ne: true },
+  })
+    .select("title content magazineIssue")
+    .sort({ magazinePublishedAt: 1, updatedAt: 1 })
+    .lean();
+
+  const articlesByIssue = articles.reduce((map, article) => {
+    const key = String(article.magazineIssue);
+    const list = map.get(key) || [];
+    list.push(article);
+    map.set(key, list);
+    return map;
+  }, new Map());
+
+  return issues
+    .map((issue) => {
+      const issueArticles = articlesByIssue.get(String(issue._id)) || [];
+      if (issueArticles.length === 0) return null;
+      const firstArticle = issueArticles[0];
+
+      return {
+        _id: String(issue._id),
+        type: "MAGAZINE",
+        href: `/magazines/${issue._id}`,
+        title: issue.title || "School Magazine",
+        content:
+          issueArticles.length === 1
+            ? firstArticle.content
+            : `${firstArticle.title}: ${getPreview(firstArticle.content, 100)}`,
+        publicDate: issue.homeShownAt || issue.publishedAt || issue.weekStart,
+        articleCount: issueArticles.length,
+      };
+    })
+    .filter(Boolean);
 }
 
 function HeroFallbackArt() {
@@ -293,9 +346,11 @@ function AchievementCard({ achievement }) {
 }
 
 function WritingCard({ writing }) {
+  const isMagazine = writing.type === "MAGAZINE";
+
   return (
     <Link
-      href={`/writings/${writing._id}`}
+      href={isMagazine ? writing.href || "#writings" : `/writings/${writing._id}`}
       className="block min-w-[190px] rounded-xl border border-[#e6eaf7] bg-white p-3 text-[#17120a] shadow-sm transition hover:-translate-y-0.5 hover:border-white/70 hover:shadow-md"
     >
       <div className="pratyo-writing-art relative h-28 overflow-hidden rounded-lg border">
@@ -308,7 +363,7 @@ function WritingCard({ writing }) {
           Published
         </span>
         <span className="rounded-full bg-purple-50 px-2.5 py-1 text-[10px] font-black uppercase text-purple-700">
-          {getCategoryLabel(writing.category)}
+          {isMagazine ? "Magazine" : getCategoryLabel(writing.category)}
         </span>
       </div>
       <h3 className="mt-2 line-clamp-2 text-sm font-black text-[#17120a]">
@@ -318,8 +373,11 @@ function WritingCard({ writing }) {
         {getPreview(writing.content)}
       </p>
       <p className="mt-3 text-xs font-semibold text-[#52657d]">
-        By {writing.authorStudent?.name || "Student"} -{" "}
-        {getReadTime(writing.content)} min read
+        {isMagazine
+          ? `${writing.articleCount || 0} selected writings`
+          : `By ${writing.authorStudent?.name || "Student"} - ${getReadTime(
+              writing.content
+            )} min read`}
       </p>
     </Link>
   );
@@ -373,7 +431,7 @@ function ShowcaseTabs() {
     ["#story", "Story", FaBookOpen],
     ["#events", "Events", FaCalendarAlt],
     ["#achievements", "Achievements", FaTrophy],
-    ["#writings", "Writings", FaBookOpen],
+    ["#writings", "Magazines", FaBookOpen],
     ["#glance", "Info", FaAward],
   ];
 
@@ -417,7 +475,7 @@ export default async function PublicSchoolPage({ params }) {
     profile,
     events,
     achievements,
-    writings,
+    magazines,
     studentCount,
     teacherCount,
     grades,
@@ -659,23 +717,23 @@ export default async function PublicSchoolPage({ params }) {
           <div className="flex items-center justify-between gap-3">
             <h2 className="inline-flex items-center gap-2 text-lg font-black !text-white">
               <FaBookOpen className="!text-white/90" />
-              Latest Student Writings
+              School Magazines
             </h2>
           </div>
-          {writings.length === 0 ? (
+          {magazines.length === 0 ? (
             <div className="mt-5">
               <EmptyPanel
                 icon={FaBookOpen}
-                title="No published writings yet"
-                description="Published school magazine articles will appear here."
+                title="No public magazines yet"
+                description="Published school magazine issues will appear here after the school adds them to home."
                 actionHref="/student-voices"
-                actionLabel="Explore writing"
+                actionLabel="Explore student voices"
               />
             </div>
           ) : (
             <div className="mt-5 flex gap-4 overflow-x-auto pb-2">
-              {writings.map((writing) => (
-                <WritingCard key={writing._id} writing={writing} />
+              {magazines.map((magazine) => (
+                <WritingCard key={magazine._id} writing={magazine} />
               ))}
             </div>
           )}

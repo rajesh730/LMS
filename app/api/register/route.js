@@ -13,17 +13,16 @@ function getCurrentNepaliYearApprox() {
   return today.getFullYear() + (nepaliNewYearHasStarted ? 57 : 56);
 }
 
-function isValidEstablishedYear(value) {
+function isValidEstablishedYear(value, calendar = "AD") {
   const cleanedValue = String(value || "").trim();
   if (!/^\d{4}$/.test(cleanedValue)) return false;
 
   const year = Number.parseInt(cleanedValue, 10);
   const currentAdYear = new Date().getFullYear();
   const currentBsYear = getCurrentNepaliYearApprox();
-  return (
-    (year >= 1900 && year <= currentAdYear) ||
-    (year >= 1957 && year <= currentBsYear)
-  );
+
+  if (calendar === "BS") return year >= 1957 && year <= currentBsYear;
+  return year >= 1900 && year <= currentAdYear;
 }
 
 export async function POST(req) {
@@ -45,6 +44,7 @@ export async function POST(req) {
       schoolPhone,
       website,
       establishedYear,
+      establishedYearCalendar = "AD",
       schoolConfig: submittedSchoolConfig,
     } = await req.json();
 
@@ -76,9 +76,19 @@ export async function POST(req) {
       );
     }
 
-    if (establishedYear && !isValidEstablishedYear(establishedYear)) {
+    if (!["AD", "BS"].includes(establishedYearCalendar)) {
       return NextResponse.json(
-        { message: "Established year cannot be in the future." },
+        { message: "Choose AD or BS for established year." },
+        { status: 400 }
+      );
+    }
+
+    if (
+      establishedYear &&
+      !isValidEstablishedYear(establishedYear, establishedYearCalendar)
+    ) {
+      return NextResponse.json(
+        { message: `Established year must be a valid ${establishedYearCalendar} year.` },
         { status: 400 }
       );
     }
@@ -128,6 +138,7 @@ export async function POST(req) {
       schoolPhone,
       website,
       establishedYear,
+      establishedYearCalendar,
       educationLevels,
       schoolConfig,
     });

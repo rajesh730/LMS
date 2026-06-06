@@ -49,6 +49,15 @@ const MagazineIssueSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    showOnHome: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    homeShownAt: {
+      type: Date,
+      default: null,
+    },
     articles: [
       {
         type: mongoose.Schema.Types.ObjectId,

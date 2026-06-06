@@ -40,10 +40,8 @@ const HREF_INDICATOR_KEYS = {
   "/school/dashboard?tab=magazine": "school.magazine",
   "/student/events": "student.events",
   "/student/notices": "student.notices",
-  "/student/writing": "student.writing",
-  "/student/school-wall": "student.magazine",
-  "/student/magazine": "student.magazine",
-  "/student/global-wall": "student.magazine",
+  "/student/school-wall": "student.schoolWall",
+  "/student/magazine": "student.schoolMagazine",
 };
 
 const SCHOOL_NAV_GROUPS = [

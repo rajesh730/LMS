@@ -840,7 +840,7 @@ function SidebarPanels({ counts, libraryCounts, totalWords }) {
 }
 
 export default function StudentWritingWorkspace() {
-  const { markSurfaceSeen } = useWorkIndicators();
+  useWorkIndicators();
   const [student, setStudent] = useState(null);
   const [writings, setWritings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -873,10 +873,6 @@ export default function StudentWritingWorkspace() {
       if (!silent) setLoading(false);
     }
   }, []);
-
-  useEffect(() => {
-    void markSurfaceSeen("student.writing");
-  }, [markSurfaceSeen]);
 
   useEffect(() => {
     void loadWritings();

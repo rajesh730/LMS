@@ -74,6 +74,11 @@ const UserSchema = new mongoose.Schema(
     establishedYear: {
       type: Number,
     },
+    establishedYearCalendar: {
+      type: String,
+      enum: ["AD", "BS"],
+      default: "AD",
+    },
     status: {
       type: String,
       enum: ["PENDING", "APPROVED", "REJECTED", "SUBSCRIBED", "UNSUBSCRIBED"],

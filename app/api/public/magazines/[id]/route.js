@@ -1,25 +1,9 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
 import mongoose from "mongoose";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
-import Student from "@/models/Student";
 import MagazineIssue from "@/models/MagazineIssue";
 import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
 import { serializeMagazineIssue } from "@/lib/magazineIssues";
-
-function buildStudentLookup(session) {
-  return {
-    isDeleted: { $ne: true },
-    status: "ACTIVE",
-    $or: [
-      { _id: session.user.id },
-      { userId: session.user.id },
-      { email: session.user.email },
-      { username: session.user.email },
-    ],
-  };
-}
 
 function serializeArticle(article) {
   return {
@@ -27,7 +11,8 @@ function serializeArticle(article) {
     title: article.title,
     content: article.content,
     category: article.category,
-    publishedAt: article.publishedAt || article.updatedAt,
+    publishedAt:
+      article.publishedAt || article.magazinePublishedAt || article.updatedAt,
     authorStudent: article.authorStudent
       ? {
           id: String(article.authorStudent._id),
@@ -58,12 +43,6 @@ function getMonthIssueTitle(issue, issuesInMonth) {
 
 export async function GET(_request, props) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session || session.user.role !== "STUDENT") {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    }
-
     const params = await props.params;
     if (!mongoose.Types.ObjectId.isValid(params.id)) {
       return NextResponse.json(
@@ -74,21 +53,10 @@ export async function GET(_request, props) {
 
     await connectDB();
 
-    const student = await Student.findOne(buildStudentLookup(session))
-      .select("_id school name grade rollNumber")
-      .lean();
-
-    if (!student) {
-      return NextResponse.json(
-        { message: "Student profile not found" },
-        { status: 404 }
-      );
-    }
-
     const issue = await MagazineIssue.findOne({
       _id: params.id,
-      school: student.school,
       status: "PUBLISHED",
+      showOnHome: true,
     }).lean();
 
     if (!issue) {
@@ -100,7 +68,7 @@ export async function GET(_request, props) {
 
     const [articles, issuesInMonth] = await Promise.all([
       SchoolMagazineArticle.find({
-        school: student.school,
+        school: issue.school,
         magazineIssue: issue._id,
         isMagazinePublished: true,
         isDeleted: { $ne: true },
@@ -109,10 +77,11 @@ export async function GET(_request, props) {
         .sort({ magazinePublishedAt: 1, publishedAt: 1, updatedAt: 1 })
         .lean(),
       MagazineIssue.find({
-        school: student.school,
+        school: issue.school,
         month: issue.month,
         year: issue.year,
         status: "PUBLISHED",
+        showOnHome: true,
       }).lean(),
     ]);
 
@@ -127,17 +96,12 @@ export async function GET(_request, props) {
       issue: {
         ...serializeMagazineIssue(issue),
         title: getMonthIssueTitle(issue, issuesInMonth),
+        schoolId: String(issue.school),
       },
       articles: articles.map(serializeArticle),
-      student: {
-        id: String(student._id),
-        name: student.name,
-        grade: student.grade,
-        rollNumber: student.rollNumber,
-      },
     });
   } catch (error) {
-    console.error("GET /api/student/magazine-issues/[id] error:", error);
+    console.error("GET /api/public/magazines/[id] error:", error);
     return NextResponse.json(
       { message: "Failed to load magazine" },
       { status: 500 }

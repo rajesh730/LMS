@@ -6,7 +6,8 @@ import UserSurfaceSeenState from "@/models/UserSurfaceSeenState";
 import { publishWorkIndicatorsUpdate } from "@/lib/workIndicatorRealtime";
 
 const ALLOWED_SURFACES = new Set([
-  "student.magazine",
+  "student.schoolWall",
+  "student.schoolMagazine",
   "student.events",
 ]);
 

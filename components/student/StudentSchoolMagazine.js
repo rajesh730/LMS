@@ -457,8 +457,13 @@ export default function StudentSchoolMagazine({
   );
 
   useEffect(() => {
-    void markSurfaceSeen("student.magazine");
-  }, [markSurfaceSeen]);
+    if (activeView === "school-wall") {
+      void markSurfaceSeen("student.schoolWall");
+    }
+    if (activeView === "magazine") {
+      void markSurfaceSeen("student.schoolMagazine");
+    }
+  }, [activeView, markSurfaceSeen]);
 
   useEffect(() => {
     void load();

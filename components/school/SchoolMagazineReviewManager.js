@@ -157,9 +157,20 @@ export default function SchoolMagazineReviewManager({
       }
 
       setSuccess(payload.message || "Writing updated");
+      if (payload.article?.id) {
+        setSubmissions((currentSubmissions) =>
+          currentSubmissions.map((item) =>
+            item.id === payload.article.id
+              ? {
+                  ...item,
+                  showOnSchoolWall:
+                    payload.article.showOnSchoolWall ?? item.showOnSchoolWall,
+                }
+              : item
+          )
+        );
+      }
       setSelectedSubmission(null);
-      await loadSubmissions(pagination.page || 1);
-      onStatsChange?.({ refresh: true });
     } catch (reviewError) {
       setError(reviewError.message || "Failed to update writing");
     } finally {

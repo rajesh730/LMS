@@ -32,7 +32,7 @@ const getCurrentNepaliYearApprox = () => {
   return today.getFullYear() + (nepaliNewYearHasStarted ? 57 : 56);
 };
 
-const validateEstablishedYear = (value) => {
+const validateEstablishedYear = (value, calendar = "AD") => {
   const cleanedValue = String(value || "").trim();
   if (!/^\d{4}$/.test(cleanedValue)) {
     return "Enter a 4-digit established year";
@@ -41,11 +41,16 @@ const validateEstablishedYear = (value) => {
   const year = Number.parseInt(cleanedValue, 10);
   const currentAdYear = new Date().getFullYear();
   const currentBsYear = getCurrentNepaliYearApprox();
-  const isAdYear = year >= 1900 && year <= currentAdYear;
-  const isBsYear = year >= 1957 && year <= currentBsYear;
 
-  if (!isAdYear && !isBsYear) {
-    return `Enter a valid AD year up to ${currentAdYear} or BS year up to ${currentBsYear}`;
+  if (calendar === "BS") {
+    if (year < 1957 || year > currentBsYear) {
+      return `Enter a valid BS year up to ${currentBsYear}`;
+    }
+    return "";
+  }
+
+  if (year < 1900 || year > currentAdYear) {
+    return `Enter a valid AD year up to ${currentAdYear}`;
   }
 
   return "";
@@ -65,6 +70,7 @@ export default function RegisterPage() {
     affiliation: "",
     customAffiliation: "",
     establishedYear: "",
+    establishedYearCalendar: "AD",
     registrationNumber: "",
     schoolPhone: "",
     schoolEmail: "",
@@ -137,7 +143,10 @@ export default function RegisterPage() {
           errors.customAffiliation = "Custom affiliation is required";
         }
         {
-          const yearError = validateEstablishedYear(formData.establishedYear);
+          const yearError = validateEstablishedYear(
+            formData.establishedYear,
+            formData.establishedYearCalendar
+          );
           if (yearError) errors.establishedYear = yearError;
         }
         if (!formData.schoolPhone.trim())
@@ -262,6 +271,7 @@ export default function RegisterPage() {
         educationLevels,
         email: formData.schoolEmail, // Use school email for login
         establishedYear: parseInt(formData.establishedYear), // Convert to number
+        establishedYearCalendar: formData.establishedYearCalendar,
         schoolLocation: locationParts.join(", "),
         schoolConfig,
       };
@@ -418,23 +428,38 @@ export default function RegisterPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label className="block text-sm font-medium text-white mb-2">
-              Established Year (AD or BS) <span className="text-red-400">*</span>
+              Established Year <span className="text-red-400">*</span>
             </label>
-            <input
-              type="text"
-              inputMode="numeric"
-              className={`w-full border rounded-lg p-3 bg-slate-700 text-white placeholder-slate-400 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 ${
-                errors.establishedYear ? "border-red-400" : "border-slate-600"
-              }`}
-              value={formData.establishedYear || ""}
-              onChange={(e) =>
-                updateFormData({ establishedYear: e.target.value })
-              }
-              placeholder="2000 AD or 2057 BS"
-              maxLength={4}
-            />
+            <div className="grid grid-cols-[110px_1fr] gap-2">
+              <select
+                value={formData.establishedYearCalendar}
+                onChange={(e) =>
+                  updateFormData({ establishedYearCalendar: e.target.value })
+                }
+                className="w-full rounded-lg border border-slate-600 bg-slate-700 p-3 font-bold text-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500"
+                aria-label="Established year calendar"
+              >
+                <option value="AD">AD</option>
+                <option value="BS">BS</option>
+              </select>
+              <input
+                type="text"
+                inputMode="numeric"
+                className={`w-full border rounded-lg p-3 bg-slate-700 text-white placeholder-slate-400 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 ${
+                  errors.establishedYear ? "border-red-400" : "border-slate-600"
+                }`}
+                value={formData.establishedYear || ""}
+                onChange={(e) =>
+                  updateFormData({ establishedYear: e.target.value })
+                }
+                placeholder={
+                  formData.establishedYearCalendar === "BS" ? "2057" : "2000"
+                }
+                maxLength={4}
+              />
+            </div>
             <p className="mt-1 text-sm text-slate-400">
-              Future years are not allowed. You can enter either AD or BS.
+              Choose AD or BS first, then enter the year in that calendar.
             </p>
             {errors.establishedYear && (
               <p className="text-red-500 text-sm mt-1">

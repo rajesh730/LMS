@@ -126,14 +126,20 @@ function ArticleMeta({ article }) {
   );
 }
 
-function FeaturedStory({ article }) {
+function buildArticleHref(article, articleHrefPrefix) {
+  if (articleHrefPrefix === "#article-") return `#article-${article.id}`;
+  return `${articleHrefPrefix}${article.id}`;
+}
+
+function FeaturedStory({ article, articleHrefPrefix }) {
   if (!article) return null;
   const meta = getCategoryMeta(article.category);
   const Icon = meta.icon;
 
   return (
     <Link
-      href={`/student/magazine/${article.id}`}
+      id={`article-${article.id}`}
+      href={buildArticleHref(article, articleHrefPrefix)}
       className="grid overflow-hidden rounded-xl border border-[#d7cdbb] bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-purple-300 hover:shadow-lg lg:grid-cols-[0.82fr_1fr]"
     >
       <div className="pratyo-brand-panel relative min-h-72 overflow-hidden">
@@ -165,13 +171,14 @@ function FeaturedStory({ article }) {
   );
 }
 
-function ArticleCard({ article }) {
+function ArticleCard({ article, articleHrefPrefix }) {
   const meta = getCategoryMeta(article.category);
   const Icon = meta.icon;
 
   return (
     <Link
-      href={`/student/magazine/${article.id}`}
+      id={`article-${article.id}`}
+      href={buildArticleHref(article, articleHrefPrefix)}
       className="group rounded-xl border border-[#d7cdbb] bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-purple-300 hover:shadow-lg"
     >
       <div className="flex items-start justify-between gap-3">
@@ -197,7 +204,14 @@ function ArticleCard({ article }) {
   );
 }
 
-export default function StudentMagazineIssueReader({ issueId }) {
+export default function StudentMagazineIssueReader({
+  issueId,
+  apiBasePath = "/api/student/magazine-issues",
+  backHref = "/student/magazine",
+  backHrefPattern = "",
+  backLabel = "Back to magazines",
+  articleHrefPrefix = "/student/magazine/",
+}) {
   const [issue, setIssue] = useState(null);
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -207,7 +221,7 @@ export default function StudentMagazineIssueReader({ issueId }) {
     try {
       setLoading(true);
       setError("");
-      const res = await fetch(`/api/student/magazine-issues/${issueId}`, {
+      const res = await fetch(`${apiBasePath}/${issueId}`, {
         cache: "no-store",
       });
       const payload = await res.json().catch(() => ({}));
@@ -223,7 +237,7 @@ export default function StudentMagazineIssueReader({ issueId }) {
     } finally {
       setLoading(false);
     }
-  }, [issueId]);
+  }, [apiBasePath, issueId]);
 
   useEffect(() => {
     void load();
@@ -259,15 +273,19 @@ export default function StudentMagazineIssueReader({ issueId }) {
 
   const featuredArticle = articles[0] || null;
   const remainingArticles = articles.slice(1);
+  const resolvedBackHref =
+    backHrefPattern && issue?.schoolId
+      ? backHrefPattern.replace("{schoolId}", issue.schoolId)
+      : backHref;
 
   return (
     <div className="space-y-6 text-[#27344a]">
       <Link
-        href="/student/magazine"
+        href={resolvedBackHref}
         className="inline-flex w-fit items-center gap-2 rounded-lg border border-[#d7cdbb] bg-white px-4 py-2 text-sm font-black text-[#0a2f66] shadow-sm transition hover:bg-purple-50"
       >
         <FaArrowLeft />
-        Back to magazines
+        {backLabel}
       </Link>
 
       <section className="grid gap-5 lg:grid-cols-[1fr_340px]">
@@ -284,7 +302,7 @@ export default function StudentMagazineIssueReader({ issueId }) {
             {articles.map((article, index) => (
               <Link
                 key={article.id}
-                href={`/student/magazine/${article.id}`}
+                href={buildArticleHref(article, articleHrefPrefix)}
                 className="flex gap-3 rounded-lg border border-[#edf0f7] bg-[#f8fbff] p-3 transition hover:border-purple-200 hover:bg-white"
               >
                 <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-purple-100 text-xs font-black text-purple-700">
@@ -317,7 +335,10 @@ export default function StudentMagazineIssueReader({ issueId }) {
         </section>
       )}
 
-      <FeaturedStory article={featuredArticle} />
+      <FeaturedStory
+        article={featuredArticle}
+        articleHrefPrefix={articleHrefPrefix}
+      />
 
       {remainingArticles.length > 0 && (
         <section className="rounded-xl border border-[#d7cdbb] bg-[#f8fbff] p-5">
@@ -337,7 +358,11 @@ export default function StudentMagazineIssueReader({ issueId }) {
 
           <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {remainingArticles.map((article) => (
-              <ArticleCard key={article.id} article={article} />
+              <ArticleCard
+                key={article.id}
+                article={article}
+                articleHrefPrefix={articleHrefPrefix}
+              />
             ))}
           </div>
         </section>

@@ -5,7 +5,7 @@ import connectDB from "@/lib/db";
 import Student from "@/models/Student";
 import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
 import SchoolConfig from "@/models/SchoolConfig";
-import "@/models/MagazineIssue";
+import MagazineIssue from "@/models/MagazineIssue";
 import { serializeMagazineIssue } from "@/lib/magazineIssues";
 
 function buildStudentLookup(session) {
@@ -42,10 +42,16 @@ export async function GET() {
       );
     }
 
+    const publishedIssueIds = await MagazineIssue.find({
+      school: student.school,
+      status: "PUBLISHED",
+    }).distinct("_id");
+
     const [articles, wallArticles, schoolConfig] = await Promise.all([
       SchoolMagazineArticle.find({
         school: student.school,
         isMagazinePublished: true,
+        magazineIssue: { $in: publishedIssueIds },
         isDeleted: { $ne: true },
       })
         .populate("authorStudent", "name grade rollNumber")
