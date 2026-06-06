@@ -26,7 +26,7 @@ export default function PublicSiteNav({ active = "home", searchPlaceholder = "Se
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-[#eceef8] bg-white/95 backdrop-blur-xl">
+    <header className="sticky top-0 z-50 border-b border-[var(--brand-border)] bg-white/95 backdrop-blur-xl">
       <div className="mx-auto flex min-h-16 max-w-[1500px] items-center gap-4 px-4 py-3 sm:px-6">
         <Link
           href="/"
@@ -38,27 +38,27 @@ export default function PublicSiteNav({ active = "home", searchPlaceholder = "Se
 
         <form
           action="/student-voices"
-          className="hidden h-11 min-w-0 flex-1 items-center gap-3 rounded-xl bg-[#f4f5fb] px-4 text-sm text-[#526071] md:flex"
+          className="hidden h-11 min-w-0 flex-1 items-center gap-3 rounded-lg border border-[var(--brand-border)] bg-[#f8f9fd] px-4 text-sm text-[var(--brand-muted)] md:flex"
         >
-          <FaSearch className="text-[#526071]" />
+          <FaSearch />
           <input
             name="q"
             type="search"
             placeholder={searchPlaceholder}
-            className="h-full min-w-0 flex-1 border-0 bg-transparent text-sm font-semibold outline-none placeholder:text-[#7a8499]"
+            className="h-full min-w-0 flex-1 border-0 bg-transparent text-sm font-medium outline-none placeholder:text-[#9aa3b5]"
           />
         </form>
 
         <div className="ml-auto hidden items-center gap-3 md:flex">
           <Link
             href="/login"
-            className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#d9dcf2] bg-white px-6 text-sm font-black text-[#4326e8] transition hover:bg-[#f8f7ff]"
+            className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[var(--brand-border)] bg-white px-5 text-sm font-semibold text-[var(--brand-primary)] transition hover:bg-[var(--brand-primary-soft)]"
           >
             Log in
           </Link>
           <Link
             href="/register"
-            className="public-primary-action inline-flex min-h-10 items-center justify-center rounded-lg bg-[#4326e8] px-6 text-sm font-black text-white shadow-lg shadow-[#4326e8]/18 transition hover:bg-[#351acb]"
+            className="public-primary-action inline-flex min-h-10 items-center justify-center rounded-lg bg-[var(--brand-primary)] px-5 text-sm font-semibold text-white shadow-[var(--button-shadow)] transition hover:bg-[var(--brand-primary-hover)]"
           >
             Register
           </Link>
@@ -71,7 +71,7 @@ export default function PublicSiteNav({ active = "home", searchPlaceholder = "Se
             aria-expanded={isOpen}
             aria-controls="public-mobile-menu"
             aria-label={isOpen ? "Close navigation" : "Open navigation"}
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-[#e0e3ef] bg-white text-[#10142f]"
+            className="flex h-10 w-10 items-center justify-center rounded-lg border border-[var(--brand-border)] bg-white text-[var(--brand-ink)]"
           >
             {isOpen ? <FaTimes /> : <FaBars />}
           </button>
@@ -81,21 +81,21 @@ export default function PublicSiteNav({ active = "home", searchPlaceholder = "Se
       <div className="px-4 pb-3 md:hidden">
         <form
           action="/student-voices"
-          className="flex h-11 items-center gap-3 rounded-xl bg-[#f4f5fb] px-4 text-sm text-[#526071]"
+          className="flex h-11 items-center gap-3 rounded-lg border border-[var(--brand-border)] bg-[#f8f9fd] px-4 text-sm text-[var(--brand-muted)]"
         >
           <FaSearch />
           <input
             name="q"
             type="search"
             placeholder={searchPlaceholder}
-            className="min-w-0 flex-1 border-0 bg-transparent text-sm font-semibold outline-none placeholder:text-[#7a8499]"
+            className="min-w-0 flex-1 border-0 bg-transparent text-sm font-medium outline-none placeholder:text-[#9aa3b5]"
           />
         </form>
       </div>
 
       {isOpen && (
-        <div id="public-mobile-menu" className="border-t border-[#eceef8] px-4 pb-4 md:hidden">
-          <div className="mt-3 grid gap-2 rounded-2xl bg-[#f8f7ff] p-2">
+        <div id="public-mobile-menu" className="border-t border-[var(--brand-border)] px-4 pb-4 md:hidden">
+          <div className="mt-3 grid gap-1 rounded-xl border border-[var(--brand-border)] bg-[#f8f9fd] p-2">
             {MOBILE_ITEMS.map((item) => {
               const Icon = item.icon;
               const isActive = active === item.key;
@@ -104,10 +104,10 @@ export default function PublicSiteNav({ active = "home", searchPlaceholder = "Se
                   key={item.key}
                   href={item.href}
                   onClick={() => setIsOpen(false)}
-                  className={`flex min-h-11 items-center gap-3 rounded-xl px-4 text-sm font-black ${
+                  className={`flex min-h-11 items-center gap-3 rounded-lg px-4 text-sm font-semibold ${
                     isActive
-                      ? "bg-white text-[#4326e8] shadow-sm"
-                      : "text-[#111a35] hover:bg-white"
+                      ? "bg-white text-[var(--brand-primary)] shadow-sm"
+                      : "text-[var(--brand-ink)] hover:bg-white"
                   }`}
                 >
                   <Icon />
@@ -119,14 +119,14 @@ export default function PublicSiteNav({ active = "home", searchPlaceholder = "Se
               <Link
                 href="/login"
                 onClick={() => setIsOpen(false)}
-                className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#d9dcf2] bg-white text-sm font-black text-[#4326e8]"
+                className="inline-flex min-h-11 items-center justify-center rounded-lg border border-[var(--brand-border)] bg-white text-sm font-semibold text-[var(--brand-primary)]"
               >
                 Log in
               </Link>
               <Link
                 href="/register"
                 onClick={() => setIsOpen(false)}
-                className="public-primary-action inline-flex min-h-11 items-center justify-center rounded-xl bg-[#4326e8] text-sm font-black text-white"
+                className="public-primary-action inline-flex min-h-11 items-center justify-center rounded-lg bg-[var(--brand-primary)] text-sm font-semibold text-white"
               >
                 Register
               </Link>

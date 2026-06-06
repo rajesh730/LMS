@@ -384,15 +384,22 @@ export default function EventHub({
     const matchesSearch = event.title
       .toLowerCase()
       .includes(searchQuery.toLowerCase());
+    const schoolApprovedEvent =
+      isSchoolView &&
+      event.eventScope === "PLATFORM" &&
+      event.schoolInvitationStatus === "APPROVED";
 
     if (filterStatus === "all") return matchesSearch;
     if (filterStatus === "completed") return matchesSearch;
     if (filterStatus === "participated")
-      return matchesSearch && event.participationStatus;
+      return matchesSearch && (event.participationStatus || schoolApprovedEvent);
     if (filterStatus === "pending")
       return matchesSearch && event.participationStatus === "PENDING";
     if (filterStatus === "approved")
-      return matchesSearch && event.participationStatus === "APPROVED";
+      return (
+        matchesSearch &&
+        (event.participationStatus === "APPROVED" || schoolApprovedEvent)
+      );
     if (filterStatus === "rejected")
       return matchesSearch && event.participationStatus === "REJECTED";
 
@@ -433,7 +440,7 @@ export default function EventHub({
 
   if (loading) {
     return (
-      <div className="rounded-2xl border border-[#d7cdbb] bg-white p-6">
+      <div className="rounded-xl border border-[#dbe5f4] bg-white p-4">
         <div className="max-w-6xl mx-auto">
           <LoadingState
             title="Loading events"
@@ -445,15 +452,15 @@ export default function EventHub({
   }
 
   return (
-    <div className="rounded-2xl border border-[#d8e0f0] bg-white p-5 shadow-[0_14px_36px_rgba(10,47,102,0.06)]">
+    <div className="rounded-xl border border-[#d8e0f0] bg-white p-4 shadow-[0_10px_28px_rgba(10,47,102,0.06)]">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-3">
-            <FaCalendarAlt className="text-2xl text-[#4326e8]" />
-            <h1 className="text-3xl font-black text-[#001233]">{title}</h1>
+        <div className="mb-5">
+          <div className="mb-2 flex items-center gap-3">
+            <FaCalendarAlt className="text-xl text-[#4326e8]" />
+            <h1 className="text-2xl font-black text-[#001233] md:text-[26px]">{title}</h1>
           </div>
-          <p className="text-sm font-semibold text-[#344f77]">{description}</p>
+          <p className="text-sm font-medium text-[#344f77]">{description}</p>
         </div>
 
         {feedback && (
@@ -467,9 +474,9 @@ export default function EventHub({
         )}
 
         {/* Search & Filter */}
-        <div className="mb-8 space-y-4">
+        <div className="mb-5 space-y-3">
           {/* Search Bar */}
-          <div className="flex min-h-12 items-center gap-3 rounded-lg border border-[#d8e0f0] bg-[#f8fbff] px-4 transition focus-within:border-[#4326e8] focus-within:bg-white focus-within:ring-4 focus-within:ring-[#4326e8]/10">
+          <div className="flex min-h-11 items-center gap-3 rounded-lg border border-[#d8e0f0] bg-[#f8fbff] px-3 transition focus-within:border-[#4326e8] focus-within:bg-white focus-within:ring-4 focus-within:ring-[#4326e8]/10">
             <FaSearch className="text-[#52657d]" />
             <input
               type="text"
@@ -489,12 +496,12 @@ export default function EventHub({
           </div>
 
           {showFilters && (
-            <div className="flex flex-wrap gap-3">
+            <div className="flex gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:pb-0">
               {filters.map((filter) => (
                 <button
                   key={filter.id}
                   onClick={() => setFilterStatus(filter.id)}
-                  className={`min-h-11 rounded-lg px-5 text-sm font-black transition-all ${
+                  className={`min-h-10 shrink-0 rounded-lg px-4 text-sm font-black transition-all ${
                     filterStatus === filter.id
                       ? "bg-[#4326e8] text-white shadow-[0_10px_20px_rgba(67,38,232,0.18)]"
                       : "border border-[#d8e0f0] bg-white text-[#4326e8] hover:border-[#cfc4ff] hover:bg-[#f8f6ff]"
@@ -508,7 +515,7 @@ export default function EventHub({
         </div>
 
         {/* Events List */}
-        <div className="space-y-4">
+        <div className="space-y-3">
           {filteredEvents.length === 0 ? (
             <EmptyState
               icon={FaCalendarAlt}
@@ -565,19 +572,19 @@ export default function EventHub({
                       expandedEventId === event._id ? null : event._id
                     );
                   }}
-                  className="w-full cursor-pointer p-5 text-left transition-colors hover:bg-[#fbfcff]"
+                  className="w-full cursor-pointer p-4 text-left transition-colors hover:bg-[#fbfcff]"
                   role="button"
                   tabIndex={0}
                 >
-                  <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_300px]">
+                  <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_280px]">
                     {/* Left: Event Info */}
                     <div className="min-w-0">
-                      <div className="mb-3 flex flex-wrap items-center gap-2">
-                        <h3 className="mr-1 min-w-0 text-2xl font-black leading-tight text-[#001233]">
+                      <div className="mb-2 flex flex-wrap items-center gap-2">
+                        <h3 className="mr-1 min-w-0 text-xl font-black leading-tight text-[#001233] md:text-[22px]">
                           {event.title}
                         </h3>
                         <span
-                          className={`inline-flex min-h-8 items-center rounded-full border px-3 text-xs font-black ${
+                          className={`inline-flex min-h-7 items-center rounded-full border px-2.5 text-[11px] font-black ${
                             event.eventScope === "PLATFORM"
                               ? "border-[#d6ceff] bg-[#f4f1ff] text-[#4326e8]"
                               : "border-[#bfd7f7] bg-[#f8fbff] text-[#0a2f66]"
@@ -594,23 +601,23 @@ export default function EventHub({
                               : event.participationStatus
                           )}
                         {needsSchoolApproval && (
-                          <span className="inline-flex min-h-8 items-center rounded-full border border-amber-200 bg-amber-50 px-3 text-xs font-black text-amber-800">
+                          <span className="inline-flex min-h-7 items-center rounded-full border border-amber-200 bg-amber-50 px-2.5 text-[11px] font-black text-amber-800">
                             School approval needed
                           </span>
                         )}
                         {event.participationStatus && (
-                          <span className="inline-flex min-h-8 items-center rounded-full border border-[#d8e0f0] bg-[#f8fbff] px-3 text-xs font-black text-[#27344a]">
+                          <span className="inline-flex min-h-7 items-center rounded-full border border-[#d8e0f0] bg-[#f8fbff] px-2.5 text-[11px] font-black text-[#27344a]">
                             {getRegisteredSummary(event)}
                           </span>
                         )}
                       </div>
 
-                      <p className="mb-4 line-clamp-2 max-w-3xl text-sm leading-6 text-[#344f77]">
+                      <p className="mb-3 line-clamp-2 max-w-3xl text-sm leading-6 text-[#344f77]">
                         {event.description}
                       </p>
 
                       {event.latestEventNotice && (
-                        <div className="mb-4">
+                        <div className="mb-3">
                           <button
                             type="button"
                             onClick={(e) => {
@@ -619,7 +626,7 @@ export default function EventHub({
                                 current === event._id ? null : event._id
                               );
                             }}
-                            className="inline-flex items-center gap-2 rounded-full border border-[#bdefff] bg-[#e8fbff] px-3 py-2 text-xs font-bold uppercase tracking-wide text-[#07576b] transition hover:bg-[#d8f6ff]"
+                            className="inline-flex items-center gap-2 rounded-full border border-[#bdefff] bg-[#e8fbff] px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-[#07576b] transition hover:bg-[#d8f6ff]"
                           >
                             <FaBell />
                             {event.eventNoticeCount > 1
@@ -657,7 +664,7 @@ export default function EventHub({
                       )}
 
                       <div
-                        className={`mb-4 max-w-3xl rounded-lg border px-4 py-3 text-sm ${getStageClasses(
+                        className={`mb-3 max-w-3xl rounded-lg border px-3 py-2.5 text-sm ${getStageClasses(
                           stage.tone
                         )}`}
                       >
@@ -669,7 +676,7 @@ export default function EventHub({
 
                       {/* Event Details Grid */}
                       <div
-                        className={`grid grid-cols-2 gap-4 ${
+                        className={`grid grid-cols-1 gap-2 sm:grid-cols-2 ${
                           showSchoolMetric ? "md:grid-cols-4" : "md:grid-cols-3"
                         }`}
                       >
@@ -769,7 +776,7 @@ export default function EventHub({
                               expandedEventId === event._id ? null : event._id
                             );
                           }}
-                          className="inline-flex h-10 w-10 items-center justify-center self-end rounded-full text-[#4326e8] transition hover:bg-[#f4f1ff]"
+                          className="inline-flex h-9 w-9 items-center justify-center self-end rounded-full text-[#4326e8] transition hover:bg-[#f4f1ff]"
                           aria-label={
                             expandedEventId === event._id
                               ? "Collapse event"
@@ -805,7 +812,7 @@ export default function EventHub({
                                 e.stopPropagation();
                                 setDetailEvent(event);
                               }}
-                              className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-[#d8e0f0] bg-white px-4 text-sm font-black text-[#4326e8] transition hover:border-[#cfc4ff] hover:bg-[#f8f6ff]"
+                              className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#d8e0f0] bg-white px-3 text-sm font-black text-[#4326e8] transition hover:border-[#cfc4ff] hover:bg-[#f8f6ff]"
                               title="View event details"
                             >
                               <FaEye />
@@ -820,7 +827,7 @@ export default function EventHub({
                                   e.stopPropagation();
                                   setWithdrawTarget(event);
                                 }}
-                                className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-4 text-sm font-black text-rose-800 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-[#52657d]"
+                                className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 text-sm font-black text-rose-800 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-[#52657d]"
                                 title={
                                   registrationLocked
                                     ? "Registration closed"
@@ -843,7 +850,7 @@ export default function EventHub({
                                     );
                                   }
                                 }}
-                                className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-[#4326e8] px-4 text-sm font-black text-white shadow-[0_10px_20px_rgba(67,38,232,0.22)] transition hover:bg-[#3217d3]"
+                                className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-[#4326e8] px-3 text-sm font-black text-white shadow-[0_10px_20px_rgba(67,38,232,0.22)] transition hover:bg-[#3217d3]"
                                 title={
                                   registrationLocked
                                     ? `Track rounds and ${isTeamEvent ? "group" : "participant"} outcome`
@@ -873,7 +880,7 @@ export default function EventHub({
                                   );
                                 }
                               }}
-                              className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-[#4326e8] px-4 text-sm font-black text-white shadow-[0_10px_20px_rgba(67,38,232,0.22)] transition hover:bg-[#3217d3]"
+                              className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-[#4326e8] px-3 text-sm font-black text-white shadow-[0_10px_20px_rgba(67,38,232,0.22)] transition hover:bg-[#3217d3]"
                               title="View school result and certificates"
                             >
                               <FaEdit />
@@ -888,7 +895,7 @@ export default function EventHub({
                               target="_blank"
                               rel="noopener noreferrer"
                               onClick={(e) => e.stopPropagation()}
-                              className="inline-flex min-h-11 items-center rounded-lg bg-[#4326e8] px-4 text-sm font-black text-white shadow-[0_10px_20px_rgba(67,38,232,0.22)] transition hover:bg-[#3217d3]"
+                              className="inline-flex min-h-10 items-center rounded-lg bg-[#4326e8] px-3 text-sm font-black text-white shadow-[0_10px_20px_rgba(67,38,232,0.22)] transition hover:bg-[#3217d3]"
                               title="View published result"
                             >
                               View Result
@@ -904,7 +911,7 @@ export default function EventHub({
                                 e.stopPropagation();
                                 setDetailEvent(event);
                               }}
-                              className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-[#d8e0f0] bg-white px-4 text-sm font-black text-[#4326e8] transition hover:border-[#cfc4ff] hover:bg-[#f8f6ff]"
+                              className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#d8e0f0] bg-white px-3 text-sm font-black text-[#4326e8] transition hover:border-[#cfc4ff] hover:bg-[#f8f6ff]"
                             >
                               <FaEye />
                               View Details
@@ -915,7 +922,7 @@ export default function EventHub({
                               type="button"
                               disabled
                               onClick={(e) => e.stopPropagation()}
-                              className="inline-flex min-h-11 cursor-not-allowed items-center rounded-lg bg-slate-100 px-4 text-sm font-black text-[#52657d] transition whitespace-nowrap"
+                              className="inline-flex min-h-10 cursor-not-allowed items-center rounded-lg bg-slate-100 px-3 text-sm font-black text-[#52657d] transition whitespace-nowrap"
                             >
                               {needsSchoolApproval
                                 ? "Approve First"
@@ -931,7 +938,7 @@ export default function EventHub({
                                   setExpandedEventId(event._id);
                                 }
                               }}
-                              className={`inline-flex min-h-11 items-center rounded-lg px-4 text-sm font-black transition whitespace-nowrap ${
+                              className={`inline-flex min-h-10 items-center rounded-lg px-3 text-sm font-black transition whitespace-nowrap ${
                               registrationLocked || needsSchoolApproval
                                 ? "cursor-not-allowed bg-slate-100 text-[#52657d]"
                                 : "cursor-pointer bg-[#4326e8] text-white shadow-[0_10px_20px_rgba(67,38,232,0.22)] hover:bg-[#3217d3]"
@@ -952,7 +959,7 @@ export default function EventHub({
 
                 {/* Expanded Section - Participation Form */}
                 {expandedEventId === event._id && !needsSchoolApproval && !useManagementPage && (
-                  <div className="space-y-6 border-t border-[#d8e0f0] bg-[#f8fbff] p-6">
+                  <div className="space-y-4 border-t border-[#d8e0f0] bg-[#f8fbff] p-4">
                     {!completedView && !registrationLocked && (
                       <div className="rounded-xl border border-[#d8e0f0] bg-white p-4">
                         <h4 className="mb-3 text-lg font-black text-[#001233]">

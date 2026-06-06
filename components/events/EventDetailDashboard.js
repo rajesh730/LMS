@@ -113,7 +113,7 @@ export default function EventDetailDashboard() {
           <button
             type="button"
             onClick={fetchEventData}
-            className="event-manage-tab-active mt-4 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500"
+             className="event-manage-tab-active mt-4 rounded-lg bg-red-700 px-4 py-2 text-sm font-semibold text-white hover:bg-red-600"
           >
             Try Again
           </button>
@@ -192,6 +192,8 @@ export default function EventDetailDashboard() {
           capacityInfo={capacityInfo}
           perSchoolBreakdown={perSchoolBreakdown}
           event={event}
+          currentUserRole={session?.user?.role}
+          canManagePlatformOperations={session?.user?.role === "SUPER_ADMIN"}
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           onDataChange={fetchEventData}
@@ -204,8 +206,12 @@ export default function EventDetailDashboard() {
           <div className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
             <EventEditorForm
               teachers={teachers}
-              ownerMode="school"
-              showFeaturedOnLanding={false}
+              ownerMode={
+                session?.user?.role === "SUPER_ADMIN" || event.eventScope === "PLATFORM"
+                  ? "platform"
+                  : "school"
+              }
+              showFeaturedOnLanding={session?.user?.role === "SUPER_ADMIN"}
               initialData={editingEvent}
               onEventCreated={async () => {
                 setEditingEvent(null);

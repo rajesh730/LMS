@@ -8,6 +8,7 @@ import Achievement from "@/models/Achievement";
 import EventRound from "@/models/EventRound";
 import RoundParticipant from "@/models/RoundParticipant";
 import ParticipationRequest from "@/models/ParticipationRequest";
+import EventSchoolInvitation from "@/models/EventSchoolInvitation";
 import AuditLog from "@/models/AuditLog";
 import { canManageEventRounds } from "@/lib/eventRoundAccess";
 import {
@@ -56,6 +57,7 @@ async function getTeamRosterContext(eventId) {
     status: { $in: ["APPROVED", "ENROLLED"] },
   })
     .populate("student", "name grade")
+    .populate("school", "schoolName")
     .populate("captainStudent", "name grade")
     .lean();
 
@@ -98,6 +100,113 @@ async function getTeamRosterContext(eventId) {
   return { studentTeamMap, teamMetaMap };
 }
 
+async function getParticipationResultEntries(event) {
+  const eventId = event._id || event;
+  const requests = await ParticipationRequest.find({
+    event: eventId,
+    status: { $in: ["APPROVED", "ENROLLED"] },
+  })
+    .populate("student", "name grade")
+    .populate("school", "schoolName")
+    .populate("captainStudent", "name grade")
+    .sort({ requestedAt: 1, createdAt: 1 })
+    .lean();
+
+  if (requests.length === 0) return [];
+
+  if (!isTeamEvent(event)) {
+    return requests
+      .filter((request) => request.student && request.school)
+      .map((request) => ({
+        studentId: String(request.student._id || request.student),
+        teamKey: "",
+        teamName: "",
+        captainStudent: null,
+        members: [],
+        student: request.student,
+        school: request.school,
+        highestRoundReached: 0,
+        latestStatus: "PARTICIPANT",
+        finalStatus: "PARTICIPANT",
+        placement: "PARTICIPANT",
+        history: [],
+        latestRoundNumber: 0,
+      }));
+  }
+
+  const groupedTeams = new Map();
+  for (const request of requests) {
+    const schoolId = String(request.school?._id || request.school || "");
+    const teamName = String(request.teamName || "").trim() || "School Team";
+    const teamKey = `${schoolId}::${teamName.toLowerCase() || "default-team"}`;
+    if (!schoolId || !request.student) continue;
+
+    if (!groupedTeams.has(teamKey)) {
+      groupedTeams.set(teamKey, {
+        studentId: "",
+        teamKey,
+        teamName,
+        captainStudent: request.captainStudent || null,
+        members: [],
+        student: null,
+        school: request.school,
+        highestRoundReached: 0,
+        latestStatus: "PARTICIPANT",
+        finalStatus: "PARTICIPANT",
+        placement: "PARTICIPANT",
+        history: [],
+        latestRoundNumber: 0,
+      });
+    }
+
+    const entry = groupedTeams.get(teamKey);
+    const studentId = String(request.student._id || request.student);
+    if (!entry.members.some((member) => String(member._id || member) === studentId)) {
+      entry.members.push(request.student);
+    }
+    if (!entry.captainStudent && request.captainStudent) {
+      entry.captainStudent = request.captainStudent;
+    }
+  }
+
+  return Array.from(groupedTeams.values());
+}
+
+async function canViewEventResults(session, event) {
+  if (canManageEventRounds(session, event)) return true;
+
+  if (session?.user?.role !== "SCHOOL_ADMIN") return false;
+
+  const schoolId = session.user.schoolId || session.user.id;
+  if (!schoolId) return false;
+
+  if (event.eventScope === "PLATFORM") {
+    const [approvedInvitation, participation] = await Promise.all([
+      EventSchoolInvitation.exists({
+        event: event._id,
+        school: schoolId,
+        status: "APPROVED",
+      }),
+      ParticipationRequest.exists({
+        event: event._id,
+        school: schoolId,
+        status: { $in: ["APPROVED", "ENROLLED"] },
+      }),
+    ]);
+
+    return Boolean(approvedInvitation || participation);
+  }
+
+  return false;
+}
+
+function filterEntriesForSchool(items = [], schoolId = "") {
+  if (!schoolId) return items;
+  return items.filter(
+    (item) => String(item.school?._id || item.school || "") === String(schoolId)
+  );
+}
+
 function buildLevel(event) {
   return event.eventScope === "PLATFORM" ? "PLATFORM" : "SCHOOL";
 }
@@ -120,12 +229,13 @@ async function getRoundResultContext(event) {
     .lean();
 
   if (rounds.length === 0) {
+    const certificateEntries = await getParticipationResultEntries(event);
     return {
-      hasRounds: false,
+      hasRounds: certificateEntries.length > 0,
       rounds: [],
       finalRound: null,
-      participants: [],
-      certificateEntries: [],
+      participants: certificateEntries,
+      certificateEntries,
     };
   }
 
@@ -204,7 +314,7 @@ async function getRoundResultContext(event) {
     });
   }
 
-  const certificateEntries = Array.from(participantMap.values())
+  let certificateEntries = Array.from(participantMap.values())
     .filter((entry) => !CERTIFICATE_BLOCKED_STATUSES.includes(entry.latestStatus))
     .map((entry) => {
       const status =
@@ -236,6 +346,10 @@ async function getRoundResultContext(event) {
         String(b.teamName || b.student?.name || "")
       );
     });
+
+  if (certificateEntries.length === 0) {
+    certificateEntries = await getParticipationResultEntries(event);
+  }
 
   return {
     hasRounds: true,
@@ -283,6 +397,40 @@ function mergeAchievements(entries, achievements) {
       certificateIssuedAt: achievement?.certificateIssuedAt || null,
     };
   });
+}
+
+function achievementsToParticipantEntries(achievements = []) {
+  return achievements.map((achievement) => ({
+    studentId: String(achievement.student?._id || achievement.student || ""),
+    teamKey:
+      String(achievement.recipientType || "STUDENT").toUpperCase() === "TEAM"
+        ? `TEAM::${String(achievement.school?._id || achievement.school || "")}::${String(
+            achievement.teamName || ""
+          )
+            .trim()
+            .toLowerCase()}`
+        : "",
+    teamName: achievement.teamName || "",
+    captainStudent: achievement.captainStudent || null,
+    members: [],
+    student: achievement.student || null,
+    school: achievement.school || null,
+    highestRoundReached: achievement.highestRoundReached || 0,
+    latestStatus: achievement.finalStatus || achievement.placement || "PARTICIPANT",
+    finalStatus: achievement.finalStatus || achievement.placement || "PARTICIPANT",
+    placement: achievement.placement || "PARTICIPANT",
+    currentPlacement: achievement.placement || "PARTICIPANT",
+    certificateUrl: achievement.certificateUrl || "",
+    certificateCode: achievement.certificateCode || "",
+    certificateRecipientName:
+      achievement.certificateRecipientName ||
+      achievement.teamName ||
+      achievement.student?.name ||
+      "Student",
+    isPublicResult: Boolean(achievement.isPublic),
+    resultId: achievement._id || null,
+    certificateIssuedAt: achievement.certificateIssuedAt || null,
+  }));
 }
 
 async function ensureTeamMemberAchievements({ event, achievements }) {
@@ -416,7 +564,7 @@ export async function GET(req, props) {
       );
     }
 
-    if (!canManageEventRounds(session, event)) {
+    if (!(await canViewEventResults(session, event))) {
       return NextResponse.json(
         { success: false, message: "Forbidden" },
         { status: 403 }
@@ -439,9 +587,19 @@ export async function GET(req, props) {
       .sort({ awardedAt: -1 })
       .lean();
 
-    const participants = roundContext.hasRounds
-      ? mergeAchievements(roundContext.certificateEntries, achievements)
-      : [];
+    const schoolScopeId =
+      session.user.role === "SCHOOL_ADMIN"
+        ? session.user.schoolId || session.user.id
+        : "";
+    const scopedCertificateEntries = filterEntriesForSchool(
+      roundContext.certificateEntries,
+      schoolScopeId
+    );
+    const scopedAchievements = filterEntriesForSchool(achievements, schoolScopeId);
+    const participants =
+      scopedCertificateEntries.length > 0
+        ? mergeAchievements(scopedCertificateEntries, scopedAchievements)
+        : achievementsToParticipantEntries(scopedAchievements);
 
     return NextResponse.json(
       {
@@ -465,7 +623,7 @@ export async function GET(req, props) {
           resultSource: roundContext.hasRounds ? "ROUND_HISTORY" : "ROUND_HISTORY",
           finalRound: roundContext.finalRound,
           rounds: roundContext.rounds,
-          results: roundContext.hasRounds ? achievements : [],
+          results: scopedAchievements,
           backfilledMemberCertificates: insertedMissingMembers,
         },
       },
@@ -559,10 +717,7 @@ async function upsertResults(req, props) {
       achievementCount: existingAchievements.length,
     };
 
-    let entries = [];
-
-    if (roundContext.hasRounds) {
-      entries = roundContext.certificateEntries.map((entry) => ({
+    let entries = roundContext.certificateEntries.map((entry) => ({
         studentId: entry.studentId,
         teamKey: entry.teamKey || "",
         teamName: entry.teamName || "",
@@ -575,7 +730,6 @@ async function upsertResults(req, props) {
         finalStatus: entry.finalStatus,
         highestRoundReached: entry.highestRoundReached,
       }));
-    }
 
     const existingAchievementMap = new Map(
       existingAchievements.map((achievement) => [

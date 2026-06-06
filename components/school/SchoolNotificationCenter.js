@@ -95,7 +95,7 @@ export default function SchoolNotificationCenter() {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-14 z-50 w-[360px] rounded-2xl border border-red-100 bg-white p-4 shadow-[0_20px_50px_rgba(185,28,28,0.14)]">
+        <div className="absolute right-0 top-14 z-50 w-[min(calc(100vw-2rem),360px)] rounded-2xl border border-red-100 bg-white p-4 shadow-[0_20px_50px_rgba(185,28,28,0.14)]">
           <div className="mb-4">
             <div className="flex items-start justify-between gap-3">
               <div>

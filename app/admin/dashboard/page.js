@@ -66,6 +66,14 @@ function getSchoolDistrict(school) {
   return school.district || parseSchoolLocation(school.schoolLocation).district;
 }
 
+function eventSortTime(event) {
+  return new Date(event.createdAt || event.updatedAt || event.date || 0).getTime();
+}
+
+function newestEventsFirst(events = []) {
+  return [...events].sort((a, b) => eventSortTime(b) - eventSortTime(a));
+}
+
 async function fetchJsonWithTimeout(url) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
@@ -463,14 +471,20 @@ function AdminDashboardContent() {
   const platformEvents = events.filter(
     (event) => (event.eventScope || "PLATFORM") === "PLATFORM"
   );
-  const activeEvents = platformEvents.filter(
-    (event) => (event.lifecycleStatus || "ACTIVE") === "ACTIVE"
+  const activeEvents = newestEventsFirst(
+    platformEvents.filter(
+      (event) => (event.lifecycleStatus || "ACTIVE") === "ACTIVE"
+    )
   );
-  const completedEvents = platformEvents.filter(
-    (event) => (event.lifecycleStatus || "ACTIVE") === "COMPLETED"
+  const completedEvents = newestEventsFirst(
+    platformEvents.filter(
+      (event) => (event.lifecycleStatus || "ACTIVE") === "COMPLETED"
+    )
   );
-  const archivedEvents = platformEvents.filter(
-    (event) => (event.lifecycleStatus || "ACTIVE") === "ARCHIVED"
+  const archivedEvents = newestEventsFirst(
+    platformEvents.filter(
+      (event) => (event.lifecycleStatus || "ACTIVE") === "ARCHIVED"
+    )
   );
 
   return (

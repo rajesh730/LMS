@@ -242,7 +242,7 @@ export default function SchoolMagazineReviewManager({
         />
       ) : (
         <div className="space-y-3">
-          <div className="overflow-hidden rounded-lg border border-[#e1e7f2] bg-white shadow-sm">
+          <div className="overflow-x-auto rounded-lg border border-[#e1e7f2] bg-white shadow-sm">
             <div className="grid min-w-[980px] grid-cols-[minmax(240px,1.5fr)_150px_110px_150px_130px_210px] gap-3 border-b border-[#e1e7f2] bg-[#f8fbff] px-4 py-3 text-[11px] font-black uppercase text-[#52657d]">
               <span>Writing</span>
               <span>Student</span>
@@ -251,7 +251,7 @@ export default function SchoolMagazineReviewManager({
               <span>Wall</span>
               <span className="text-right">Action</span>
             </div>
-            <div className="max-w-full overflow-x-auto">
+            <div>
               {submissions.map((submission) => (
                 <div
                   key={submission.id}
@@ -368,7 +368,7 @@ export default function SchoolMagazineReviewManager({
                       : "SHOW_SCHOOL_WALL"
                   )
                 }
-                className="inline-flex h-10 items-center rounded-lg bg-purple-700 px-4 text-sm font-black text-white hover:bg-purple-800 disabled:opacity-60"
+                className="inline-flex h-10 items-center rounded-lg bg-purple-800 px-4 text-sm font-black text-white hover:bg-purple-900 disabled:opacity-60"
               >
                 {selectedSubmission.showOnSchoolWall
                   ? "Hide from School Wall"

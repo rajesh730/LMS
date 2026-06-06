@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { FaExclamationTriangle, FaHome, FaRedo } from "react-icons/fa";
+import Button from "@/components/ui/Button";
 
 export default function GlobalError({ error, reset }) {
   useEffect(() => {
@@ -10,34 +11,28 @@ export default function GlobalError({ error, reset }) {
   }, [error]);
 
   return (
-    <main className="min-h-screen bg-[#071833] px-4 py-16 text-white">
-      <div className="mx-auto max-w-3xl rounded-3xl border border-red-500/20 bg-slate-950/55 p-8 shadow-2xl shadow-black/20 sm:p-12">
-        <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-red-500/10 text-3xl text-red-300">
+    <main className="pratyo-page-shell flex min-h-screen items-center justify-center px-4 py-16">
+      <div className="pratyo-card mx-auto max-w-lg border-red-200 p-8 sm:p-10">
+        <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-red-50 text-2xl text-red-600">
           <FaExclamationTriangle />
         </div>
-        <p className="mt-6 text-xs font-bold uppercase tracking-[0.3em] text-red-200">
+        <p className="mt-6 text-xs font-semibold uppercase tracking-wide text-red-600">
           Something went wrong
         </p>
-        <h1 className="mt-3 text-4xl font-black tracking-tight sm:text-5xl">
-          This screen could not load
-        </h1>
-        <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-300 sm:text-base">
+        <h1 className="pratyo-heading mt-3 text-3xl">This screen could not load</h1>
+        <p className="mt-4 text-sm leading-6 text-[var(--brand-muted)]">
           The app hit an unexpected problem. You can try again, or return to
           the homepage and continue from there.
         </p>
 
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-          <button
-            type="button"
-            onClick={reset}
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#ffb21c] px-5 py-3 font-bold text-[#0a2f66] transition hover:bg-[#ffc44d]"
-          >
+          <Button onClick={reset} className="inline-flex gap-2">
             <FaRedo />
             Try again
-          </button>
+          </Button>
           <Link
             href="/"
-            className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/15 px-5 py-3 font-bold text-white transition hover:bg-white/10"
+            className="pratyo-btn pratyo-btn-secondary inline-flex items-center justify-center gap-2 rounded-lg border border-[var(--brand-border)] bg-white px-4 py-2.5 text-sm font-semibold text-[var(--brand-ink)] no-underline transition hover:bg-[var(--brand-primary-soft)]"
           >
             <FaHome />
             Back to homepage

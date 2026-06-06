@@ -268,7 +268,7 @@ export default function EventCard({
             </button>
           ) : (
             <Link
-              href={`/admin/events/${event._id}/manage`}
+              href={`/admin/events/${event._id}/manage?tab=registrations`}
               className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-purple-700 px-4 text-xs font-black text-white shadow-sm transition hover:bg-purple-800"
             >
               Continue Management

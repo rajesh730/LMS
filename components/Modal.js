@@ -19,23 +19,21 @@ export default function Modal({ isOpen, onClose, title, children }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 backdrop-blur-sm overflow-y-auto">
-      <div className="bg-slate-900 rounded-2xl border border-slate-700 w-full max-w-4xl shadow-2xl my-8 flex flex-col max-h-[90vh]">
-        {/* Header */}
-        <div className="flex justify-between items-center p-6 border-b border-slate-800 sticky top-0 bg-slate-900 rounded-t-2xl z-10">
-          <h2 className="text-xl font-bold text-white">{title}</h2>
+    <div className="pratyo-modal-overlay items-start overflow-y-auto sm:items-center">
+      <div className="my-8 flex w-full max-w-4xl max-h-[90vh] flex-col rounded-[var(--card-radius)] border border-[var(--brand-border)] bg-white shadow-[0_20px_48px_rgba(16,20,47,0.16)]">
+        <div className="sticky top-0 z-10 flex items-center justify-between rounded-t-[var(--card-radius)] border-b border-[var(--brand-border)] bg-white p-5">
+          <h2 className="pratyo-heading text-lg">{title}</h2>
           <button
+            type="button"
             onClick={onClose}
-            className="text-slate-400 hover:text-white transition-colors p-2 hover:bg-slate-800 rounded-full"
+            className="rounded-lg p-2 text-[var(--brand-muted)] transition hover:bg-[var(--brand-primary-soft)] hover:text-[var(--brand-ink)]"
+            aria-label="Close dialog"
           >
-            <FaTimes size={20} />
+            <FaTimes size={18} />
           </button>
         </div>
 
-        {/* Content */}
-        <div className="p-6 overflow-y-auto custom-scrollbar">
-          {children}
-        </div>
+        <div className="overflow-y-auto p-5">{children}</div>
       </div>
     </div>
   );

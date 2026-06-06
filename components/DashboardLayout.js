@@ -28,13 +28,12 @@ export default function DashboardLayout({ children }) {
         };
     }, [isNavOpen]);
 
-    // Keep auth transitions from looking like a broken blank screen.
     if (!session) {
         return (
-            <div className="flex min-h-screen items-center justify-center bg-[#fbfcff] px-4 text-[#10142f]">
+            <div className="pratyo-page-shell flex min-h-screen items-center justify-center px-4">
                 <div className="text-center">
                     <PratyoLogo variant="icon" compact withSurface />
-                    <p className="mt-4 text-sm font-semibold text-[#4326e8]">
+                    <p className="mt-4 text-sm font-semibold text-[var(--brand-primary)]">
                         Loading your workspace...
                     </p>
                 </div>
@@ -43,14 +42,14 @@ export default function DashboardLayout({ children }) {
     }
 
     return (
-        <div className="min-h-screen bg-[#fbfcff] text-[#10142f] font-sans selection:bg-[#4326e8]/18">
+        <div className="pratyo-page-shell min-h-screen font-sans">
             <AuthenticatedPublicLinkGuard />
             {isNavOpen && (
                 <button
                     type="button"
                     aria-label="Close navigation overlay"
                     onClick={() => setIsNavOpen(false)}
-                    className="fixed inset-0 z-40 bg-black/55 backdrop-blur-sm lg:hidden"
+                    className="fixed inset-0 z-40 bg-[rgba(16,20,47,0.4)] backdrop-blur-sm lg:hidden"
                 />
             )}
             <Sidebar
@@ -59,15 +58,15 @@ export default function DashboardLayout({ children }) {
                 onNavigate={() => setIsNavOpen(false)}
             />
 
-            <header className="sticky top-0 z-30 border-b border-[#e6eaf7] bg-white/95 px-4 py-3 text-[#4326e8] shadow-sm backdrop-blur-xl lg:hidden">
+            <header className="sticky top-0 z-30 border-b border-[var(--brand-border)] bg-white/95 px-4 py-3 backdrop-blur-xl lg:hidden">
                 <div className="flex items-center justify-between gap-3">
                     <div className="flex min-w-0 items-center gap-3">
                         <PratyoLogo variant="icon" compact withSurface />
                         <div className="min-w-0">
-                            <p className="truncate text-sm font-bold text-[#4326e8]">
+                            <p className="truncate text-sm font-semibold text-[var(--brand-ink)]">
                                 {session?.user?.name || "Pratyo"}
                             </p>
-                            <p className="text-xs font-black uppercase tracking-wide text-[#526071]">
+                            <p className="text-xs font-medium uppercase tracking-wide text-[var(--brand-muted)]">
                                 {String(session?.user?.role || "Dashboard").replaceAll("_", " ")}
                             </p>
                         </div>
@@ -75,7 +74,7 @@ export default function DashboardLayout({ children }) {
                     <button
                         type="button"
                         onClick={() => setIsNavOpen(true)}
-                        className="rounded-full border border-[#e6eaf7] p-3 text-[#4326e8] transition hover:bg-[#f4f1ff]"
+                        className="rounded-lg border border-[var(--brand-border)] p-2.5 text-[var(--brand-primary)] transition hover:bg-[var(--brand-primary-soft)]"
                         aria-label="Open navigation"
                     >
                         <FaBars />
@@ -83,8 +82,8 @@ export default function DashboardLayout({ children }) {
                 </div>
             </header>
 
-            <main className="min-h-screen overflow-x-hidden transition-all duration-300 lg:ml-64">
-                <div className="mx-auto max-w-7xl px-4 py-5 pb-10 sm:px-6 sm:py-6 lg:p-8">
+            <main className="min-h-screen overflow-x-hidden transition-all duration-300 lg:ml-[var(--sidebar-width)]">
+                <div className="mx-auto max-w-7xl px-3 py-4 pb-8 sm:px-5 sm:py-6 lg:p-8">
                     {children}
                 </div>
             </main>

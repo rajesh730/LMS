@@ -1,11 +1,26 @@
 "use client";
 
 import { useState } from "react";
-import { signOut, useSession } from "next-auth/react";
+import { signIn, signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { signIn } from "next-auth/react";
-import { Eye, EyeOff, Lock, User } from "lucide-react";
 import Link from "next/link";
+import AuthShell, { AuthSessionPanel } from "@/components/auth/AuthShell";
+import Button from "@/components/ui/Button";
+import Input, { PasswordInput } from "@/components/ui/Input";
+import AlertBanner from "@/components/ui/AlertBanner";
+
+const AUTH_LINKS = [
+  { href: "/events", label: "Events" },
+  { href: "/login", label: "School/Admin Login" },
+];
+
+function redirectForRole(role, router) {
+  if (role === "STUDENT") router.push("/student/dashboard");
+  else if (role === "SUPER_ADMIN") router.push("/admin/dashboard");
+  else if (role === "SCHOOL_ADMIN") router.push("/school/dashboard");
+  else if (role === "TEACHER") router.push("/teacher/dashboard");
+  else router.push("/");
+}
 
 export default function StudentLogin() {
   const [username, setUsername] = useState("");
@@ -15,20 +30,8 @@ export default function StudentLogin() {
   const [loading, setLoading] = useState(false);
   const { data: session, status } = useSession();
   const router = useRouter();
-  const currentRole = session?.user?.role
-    ? String(session.user.role).replaceAll("_", " ")
-    : null;
-  const currentName = session?.user?.name || null;
-  const currentEmail = session?.user?.email || null;
 
-  const handleContinue = () => {
-    const role = session?.user?.role;
-    if (role === "STUDENT") router.push("/student/dashboard");
-    else if (role === "SUPER_ADMIN") router.push("/admin/dashboard");
-    else if (role === "SCHOOL_ADMIN") router.push("/school/dashboard");
-    else if (role === "TEACHER") router.push("/teacher/dashboard");
-    else router.push("/");
-  };
+  const handleContinue = () => redirectForRole(session?.user?.role, router);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -45,10 +48,9 @@ export default function StudentLogin() {
       if (result?.error) {
         setError(result.error);
       } else {
-        // Redirect to student dashboard
         router.push("/student/dashboard");
       }
-    } catch (err) {
+    } catch {
       setError("An unexpected error occurred. Please try again.");
     } finally {
       setLoading(false);
@@ -57,247 +59,86 @@ export default function StudentLogin() {
 
   if (status === "authenticated") {
     return (
-      <div className="min-h-screen bg-[#fbfcff] px-4 py-6 text-[#17120a]">
-        <div className="mx-auto mb-8 flex max-w-5xl flex-wrap items-center justify-between gap-3">
-          <Link href="/" className="text-sm font-semibold text-[#0a2f66] hover:underline">
-            Back to home
-          </Link>
-          <div className="flex flex-wrap gap-2 text-sm">
-            <Link href="/events" className="rounded-lg border border-[#d7cdbb] bg-white/70 px-3 py-2 font-semibold text-[#27344a] hover:bg-[#eaf2ff]">
-              Events
-            </Link>
-            <Link href="/login" className="rounded-lg border border-[#d7cdbb] bg-white/70 px-3 py-2 font-semibold text-[#27344a] hover:bg-[#eaf2ff]">
-              School/Admin Login
-            </Link>
-          </div>
+      <AuthShell
+        links={AUTH_LINKS}
+        title="Already signed in"
+        description="Sign out first to log in as a student on this device, or continue with the current account."
+      >
+        <AuthSessionPanel
+          role={String(session?.user?.role || "").replaceAll("_", " ")}
+          name={session?.user?.name}
+          email={session?.user?.email}
+        />
+        <div className="mt-6 space-y-3">
+          <Button fullWidth onClick={handleContinue}>
+            Continue with this account
+          </Button>
+          <Button
+            fullWidth
+            variant="secondary"
+            onClick={() => signOut({ callbackUrl: "/student/login" })}
+          >
+            Sign out and log in as student
+          </Button>
         </div>
-        <div className="flex items-center justify-center">
-        <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-2xl">
-          <div className="text-center">
-            <div className="inline-block bg-blue-100 rounded-full p-4 mb-4">
-              <User size={36} className="text-blue-600" />
-            </div>
-            <h1 className="text-2xl font-bold text-slate-900">
-              You are already signed in
-            </h1>
-            <p className="mt-3 text-sm leading-6 text-slate-600">
-              This browser already has an active session. To log in as a student
-              here, sign out first or use an incognito window / separate browser
-              profile.
-            </p>
-          </div>
-
-          <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4 text-left">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Current account
-            </p>
-            <p className="mt-2 text-sm font-semibold text-slate-900">
-              {currentRole || "Signed-in account"}
-            </p>
-            {currentName && (
-              <p className="mt-1 text-sm text-slate-700">{currentName}</p>
-            )}
-            {currentEmail && (
-              <p className="mt-1 text-xs text-slate-500">{currentEmail}</p>
-            )}
-          </div>
-
-          <div className="mt-6 space-y-3">
-            <button
-              type="button"
-              onClick={handleContinue}
-              className="w-full rounded-lg bg-[#0a2f66] px-4 py-3 font-semibold text-white transition hover:bg-[#123f82]"
-            >
-              Continue with this account
-            </button>
-            <button
-              type="button"
-              onClick={() => signOut({ callbackUrl: "/student/login" })}
-              className="w-full rounded-lg border border-slate-300 px-4 py-3 font-semibold text-slate-700 transition hover:bg-slate-50"
-            >
-              Sign out and log in as student
-            </button>
-          </div>
-        </div>
-        </div>
-      </div>
+      </AuthShell>
     );
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#fbfcff] px-4 py-6 text-[#17120a]">
-      <div className="pratyo-brand-surface-soft pointer-events-none absolute inset-x-0 top-0 h-52 opacity-95" />
-
-      <div className="relative z-10 mx-auto mb-8 flex max-w-5xl flex-wrap items-center justify-between gap-3">
-        <Link href="/" className="text-sm font-semibold text-[#0a2f66] hover:underline">
-          Back to home
-        </Link>
-        <div className="flex flex-wrap gap-2 text-sm">
-          <Link href="/events" className="rounded-lg border border-[#d7cdbb] bg-white/70 px-3 py-2 font-semibold text-[#27344a] hover:bg-[#eaf2ff]">
-            Events
-          </Link>
-          <Link href="/login" className="rounded-lg border border-[#d7cdbb] bg-white/70 px-3 py-2 font-semibold text-[#27344a] hover:bg-[#eaf2ff]">
-            School/Admin Login
-          </Link>
-        </div>
-      </div>
-
-      <div className="relative z-10 mx-auto w-full max-w-md">
-        {/* Logo/Header */}
-        <div className="text-center mb-8">
-          <div className="inline-block bg-white rounded-full p-4 mb-4">
-            <User size={40} className="text-blue-600" />
-          </div>
-          <h1 className="text-4xl font-black text-[#17120a] mb-2">Student Portal</h1>
-          <p className="text-[#52657d]">
-            Log in once and stay signed in until you log out.
-          </p>
-        </div>
-
-        {/* Login Card */}
-        <div className="bg-white rounded-lg shadow-2xl p-8 mb-4">
-          {error && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-6 flex items-start gap-3">
-              <div className="flex-shrink-0 mt-0.5">
-                <svg
-                  className="h-5 w-5 text-red-400"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </div>
-              <div>
-                <p className="font-medium">Login Failed</p>
-                <p className="text-sm mt-1">{error}</p>
-              </div>
-            </div>
-          )}
-
-          <form onSubmit={handleLogin} className="space-y-6">
-            {/* Username Field */}
-            <div>
-              <label htmlFor="username" className="block text-sm font-semibold text-gray-700 mb-2">
-                Username or Email
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
-                  <User size={20} />
-                </div>
-                <input
-                  id="username"
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Enter your username or email"
-                  required
-                  disabled={loading}
-                  className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition disabled:bg-gray-100 disabled:cursor-not-allowed"
-                />
-              </div>
-            </div>
-
-            {/* Password Field */}
-            <div>
-              <label htmlFor="password" className="block text-sm font-semibold text-gray-700 mb-2">
-                Password
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
-                  <Lock size={20} />
-                </div>
-                <input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter your password"
-                  required
-                  disabled={loading}
-                  className="w-full pl-12 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition disabled:bg-gray-100 disabled:cursor-not-allowed"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  disabled={loading}
-                  className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600 disabled:cursor-not-allowed"
-                >
-                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                </button>
-              </div>
-            </div>
-
-            {/* Help */}
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-gray-600">
-                Session stays active on this device.
-              </p>
-              <p className="text-right text-sm font-medium text-blue-700">
-                Need help? Ask your school admin.
-              </p>
-            </div>
-
-            {/* Login Button */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full rounded-lg bg-[#0a2f66] py-3 font-semibold text-white transition hover:bg-[#123f82] disabled:bg-[#8fa8c8] flex items-center justify-center gap-2"
-            >
-              {loading ? (
-                <>
-                  <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                      fill="none"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    />
-                  </svg>
-                  Logging in...
-                </>
-              ) : (
-                "Log In"
-              )}
-            </button>
-          </form>
-
-          {/* Divider */}
-          <div className="my-6 flex items-center gap-4">
-            <div className="flex-1 border-t border-gray-300" />
-            <span className="text-sm text-gray-500">or</span>
-            <div className="flex-1 border-t border-gray-300" />
-          </div>
-
-          {/* Other Options */}
-          <div className="space-y-3">
-            <Link
-              href="/login"
-              className="block w-full text-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium"
-            >
-              School/Admin Login
-            </Link>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <p className="text-center text-[#52657d]">
+    <AuthShell
+      links={AUTH_LINKS}
+      title="Student portal"
+      description="Sign in with the username and password provided by your school."
+      footer={
+        <p className="text-center text-sm text-[var(--brand-muted)]">
           Need help? Contact your school administrator for account support.
         </p>
-      </div>
+      }
+    >
+      {error && (
+        <div className="mb-4">
+          <AlertBanner type="error" title="Login failed" message={error} />
+        </div>
+      )}
 
-      {/* Additional CSS for animations */}
-    </div>
+      <form onSubmit={handleLogin} className="space-y-4">
+        <Input
+          label="Username or email"
+          id="username"
+          type="text"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          placeholder="Enter your username or email"
+          required
+          disabled={loading}
+          autoComplete="username"
+        />
+        <PasswordInput
+          label="Password"
+          id="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          showPassword={showPassword}
+          onToggleShow={() => setShowPassword((v) => !v)}
+          placeholder="Enter your password"
+          required
+          disabled={loading}
+          autoComplete="current-password"
+        />
+        <Button type="submit" fullWidth disabled={loading}>
+          {loading ? "Signing in..." : "Sign in"}
+        </Button>
+      </form>
+
+      <div className="mt-5 text-center">
+        <Link
+          href="/login"
+          className="text-sm font-semibold text-[var(--brand-primary)] hover:underline"
+        >
+          School or admin login
+        </Link>
+      </div>
+    </AuthShell>
   );
 }

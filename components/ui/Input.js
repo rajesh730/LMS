@@ -1,0 +1,126 @@
+import clsx from "clsx";
+import { forwardRef, useImperativeHandle, useRef } from "react";
+import { FaEye, FaEyeSlash } from "react-icons/fa";
+
+export default function InputForwardRef({
+  label,
+  id,
+  error,
+  hint,
+  className = "",
+  wrapperClassName = "",
+  ...props
+}, ref) {
+  const inputRef = useRef();
+  useImperativeHandle(ref, () => inputRef.current);
+
+  const inputId = id || props.name;
+
+  return (
+    <div className={wrapperClassName}>
+      {label && (
+        <label htmlFor={inputId} className="pratyo-field-label">
+          {label}
+        </label>
+      )}
+      <div className="relative">
+        <input
+          ref={inputRef}
+          id={inputId}
+          className={clsx("pratyo-input", className)}
+          {...props}
+        />
+        {error && (
+          <p className="mt-1.5 text-xs font-medium text-red-600" role="alert">
+            {error}
+          </p>
+        )}
+        {hint && !error && (
+          <p className="mt-1.5 text-xs text-[var(--brand-muted)]">{hint}</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const Input = forwardRef(InputForwardRef);
+
+export function PasswordInput({
+  label = "Password",
+  id,
+  showPassword,
+  onToggleShow,
+  className = "",
+  wrapperClassName = "",
+  ...props
+}) {
+  const inputId = id || props.name || "password";
+
+  return (
+    <div className={wrapperClassName}>
+      {label && (
+        <label htmlFor={inputId} className="pratyo-field-label">
+          {label}
+        </label>
+      )}
+      <div className="relative">
+        <input
+          id={inputId}
+          type={showPassword ? "text" : "password"}
+          className={clsx("pratyo-input pr-11", className)}
+          {...props}
+        />
+        {onToggleShow && (
+          <button
+            type="button"
+            onClick={onToggleShow}
+            className="absolute inset-y-0 right-0 flex items-center px-3 text-[var(--brand-muted)] transition hover:text-[var(--brand-primary)]"
+            aria-label={showPassword ? "Hide password" : "Show password"}
+          >
+            {showPassword ? <FaEyeSlash /> : <FaEye />}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export function PasswordInput({
+  label = "Password",
+  id,
+  showPassword,
+  onToggleShow,
+  className = "",
+  wrapperClassName = "",
+  ...props
+}) {
+  const inputId = id || props.name || "password";
+
+  return (
+    <div className={wrapperClassName}>
+      {label && (
+        <label htmlFor={inputId} className="pratyo-field-label">
+          {label}
+        </label>
+      )}
+      <div className="relative">
+        <input
+          id={inputId}
+          type={showPassword ? "text" : "password"}
+          className={clsx("pratyo-input pr-11", className)}
+          {...props}
+        />
+        {onToggleShow && (
+          <button
+            type="button"
+            onClick={onToggleShow}
+            className="absolute inset-y-0 right-0 flex items-center px-3 text-[var(--brand-muted)] transition hover:text-[var(--brand-primary)]"
+            aria-label={showPassword ? "Hide password" : "Show password"}
+          >
+            {showPassword ? <FaEyeSlash /> : <FaEye />}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}

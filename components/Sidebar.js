@@ -44,6 +44,10 @@ const HREF_INDICATOR_KEYS = {
   "/student/magazine": "student.schoolMagazine",
 };
 
+const HREF_SEEN_SURFACES = {
+  "/school/dashboard?tab=platform-events": "school.platformEvents",
+};
+
 const SCHOOL_NAV_GROUPS = [
   {
     title: "School Operations",
@@ -59,7 +63,7 @@ const SCHOOL_NAV_GROUPS = [
   },
   {
     title: "Public Showcase",
-    names: ["School Magazine", "Public Profile"],
+    names: ["Publishing Desk", "Public Profile"],
   },
   {
     title: "Platform",
@@ -79,7 +83,7 @@ export default function Sidebar({
   const searchParams = useSearchParams();
   const currentTab = searchParams?.get("tab");
   const [studentGlobalWallEnabled, setStudentGlobalWallEnabled] = useState(false);
-  const { getIndicator } = useWorkIndicators({
+  const { getIndicator, markSurfaceSeen } = useWorkIndicators({
     enabled: Boolean(role && !isPending),
   });
 
@@ -150,7 +154,7 @@ export default function Sidebar({
       icon: FaBell,
     },
     {
-      name: "School Magazine",
+      name: "Publishing Desk",
       href: "/school/dashboard?tab=magazine",
       icon: FaBookOpen,
     },
@@ -209,19 +213,19 @@ export default function Sidebar({
 
   return (
     <aside
-      className={`pratyo-dark-shell fixed left-0 top-0 z-50 flex h-dvh w-[min(88vw,19rem)] flex-col border-r backdrop-blur-xl transition-transform duration-300 lg:h-screen lg:w-72 lg:translate-x-0 ${
+      className={`pratyo-dark-shell fixed left-0 top-0 z-50 flex h-dvh w-[min(88vw,18rem)] flex-col border-r backdrop-blur-xl transition-transform duration-300 lg:h-screen lg:w-[17rem] lg:translate-x-0 ${
         isMobileOpen ? "translate-x-0" : "-translate-x-full"
       }`}
     >
-      <div className="border-b border-[#e6eaf7] p-4 sm:p-5">
+      <div className="border-b border-[#e6eaf7] p-4">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
           <PratyoLogo variant="icon" compact withSurface />
           <div>
-            <p className="pratyo-muted text-xs font-black uppercase tracking-[0.24em]">
+            <p className="pratyo-muted text-xs font-semibold uppercase tracking-wide">
               Pratyo
             </p>
-            <p className="text-sm font-semibold">
+            <p className="text-sm font-semibold text-[var(--brand-ink)]">
               School Platform
             </p>
           </div>
@@ -237,11 +241,11 @@ export default function Sidebar({
         </div>
       </div>
 
-      <nav className="flex-1 space-y-6 overflow-y-auto p-3 sm:p-4">
+      <nav className="flex-1 space-y-5 overflow-y-auto p-3">
         {groupedLinks.map((group) => (
           <div key={group.title || "main"} className="space-y-2">
             {group.title && (
-              <p className="px-3 text-xs font-black uppercase tracking-[0.08em] text-[#7a8499]">
+              <p className="px-3 text-[11px] font-semibold uppercase tracking-wide text-[var(--brand-muted)]">
                 {group.title}
               </p>
             )}
@@ -256,22 +260,26 @@ export default function Sidebar({
                 <Link
                   key={link.href}
                   href={link.href}
-                  onClick={onNavigate}
+                  onClick={() => {
+                    const seenSurface = HREF_SEEN_SURFACES[link.href];
+                    if (seenSurface) void markSurfaceSeen(seenSurface);
+                    onNavigate?.();
+                  }}
                   aria-current={isActive ? "page" : undefined}
-                  className={`group flex min-h-14 items-center gap-3 rounded-2xl px-4 py-3 transition-all duration-200 ${
+                  className={`group flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 transition-all duration-200 ${
                     isActive
-                      ? "pratyo-sidebar-active bg-[#4326e8] text-white shadow-sm ring-1 ring-[#4326e8]/20"
-                      : "text-[#27344a] hover:bg-[#f4f1ff] hover:text-[#4326e8]"
+                      ? "pratyo-sidebar-active bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]"
+                      : "text-[#27344a] hover:bg-[var(--brand-primary-soft)]/60 hover:text-[var(--brand-primary)]"
                   }`}
                 >
                   <Icon
-                    className={`pratyo-sidebar-icon text-lg ${
+                    className={`pratyo-sidebar-icon text-base ${
                       isActive
-                        ? "text-white"
-                        : "text-[#526071] group-hover:text-[#4326e8]"
+                        ? "text-[var(--brand-primary)]"
+                        : "text-[var(--brand-muted)] group-hover:text-[var(--brand-primary)]"
                     }`}
                   />
-                  <span className="pratyo-sidebar-label min-w-0 flex-1 text-base font-black leading-tight">
+                  <span className="pratyo-sidebar-label min-w-0 flex-1 text-sm font-semibold leading-tight">
                     {link.name}
                   </span>
                   <WorkIndicatorBadge
@@ -291,13 +299,13 @@ export default function Sidebar({
         )}
       </nav>
 
-      <div className="border-t border-[#e6eaf7] p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:p-4">
+      <div className="border-t border-[#e6eaf7] p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
         {session?.user && (
           <div className="mb-3 rounded-xl border border-[#e6eaf7] bg-[#f8f9fd] p-3">
-            <p className="truncate text-base font-black">
+            <p className="truncate text-sm font-semibold text-[var(--brand-ink)]">
               {session.user.name || session.user.email || "Signed in"}
             </p>
-            <p className="pratyo-muted mt-1 truncate text-xs font-bold uppercase tracking-wide">
+            <p className="pratyo-muted mt-1 truncate text-xs font-medium uppercase tracking-wide">
               {String(session.user.role || role || "USER").replaceAll("_", " ")}
             </p>
           </div>
@@ -305,7 +313,7 @@ export default function Sidebar({
         <button
           type="button"
           onClick={() => signOut({ callbackUrl: "/login" })}
-          className="group flex min-h-12 w-full items-center gap-3 rounded-xl px-4 py-3 text-base font-black text-[#27344a] transition-all duration-200 hover:bg-[#f4f1ff] hover:text-[#4326e8]"
+          className="group flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-[#27344a] transition-all duration-200 hover:bg-[var(--brand-primary-soft)] hover:text-[var(--brand-primary)]"
         >
           <FaSignOutAlt className="text-lg group-hover:text-[#4326e8]" />
           <span className="font-medium">Logout</span>

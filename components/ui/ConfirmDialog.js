@@ -2,22 +2,20 @@
 
 import { useEffect } from "react";
 import { FaExclamationTriangle, FaInfoCircle, FaTimes } from "react-icons/fa";
+import Button from "@/components/ui/Button";
 
 const TONE = {
   danger: {
-    icon: "text-rose-300 bg-rose-500/15",
-    confirm: "bg-rose-600 hover:bg-rose-500 text-white",
-    confirmText: "#ffffff",
+    icon: "text-red-600 bg-red-50",
+    confirmVariant: "danger",
   },
   warning: {
-    icon: "text-amber-200 bg-amber-500/15",
-    confirm: "bg-amber-500 hover:bg-amber-400 text-slate-950",
-    confirmText: "#10142f",
+    icon: "text-amber-700 bg-amber-50",
+    confirmVariant: "primary",
   },
   info: {
-    icon: "text-sky-200 bg-sky-500/15",
-    confirm: "bg-blue-600 hover:bg-blue-500 text-white",
-    confirmText: "#ffffff",
+    icon: "text-[var(--brand-primary)] bg-[var(--brand-primary-soft)]",
+    confirmVariant: "primary",
   },
 };
 
@@ -47,51 +45,45 @@ export default function ConfirmDialog({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 p-6 shadow-2xl shadow-slate-950/60">
+    <div className="pratyo-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="confirm-dialog-title">
+      <div className="pratyo-modal-panel" >
         <div className="flex items-start gap-4">
-          <div className={`rounded-2xl p-3 ${styles.icon}`}>
+          <div className={`rounded-xl p-3 ${styles.icon}`}>
             <Icon />
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-3">
-              <h2 className="text-xl font-black text-white">{title}</h2>
+              <h2 id="confirm-dialog-title" className="pratyo-heading text-lg">
+                {title}
+              </h2>
               <button
                 type="button"
                 disabled={busy}
                 onClick={onClose}
-                className="rounded-full p-2 text-slate-500 transition hover:bg-slate-800 hover:text-white disabled:opacity-50"
+                className="rounded-lg p-2 text-[var(--brand-muted)] transition hover:bg-[var(--brand-primary-soft)] hover:text-[var(--brand-ink)] disabled:opacity-50"
                 aria-label="Close confirmation"
               >
                 <FaTimes />
               </button>
             </div>
             {message && (
-              <p className="mt-3 text-sm leading-6 text-slate-300">{message}</p>
+              <p className="mt-3 text-sm leading-6 text-[var(--brand-muted)]">{message}</p>
             )}
           </div>
         </div>
 
-        <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-          <button
-            type="button"
-            disabled={busy}
-            onClick={onClose}
-            className="rounded-xl border border-slate-700 px-4 py-3 text-sm font-bold text-slate-200 transition hover:bg-slate-800 disabled:opacity-50"
-          >
+        <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:justify-end sm:gap-3">
+          <Button variant="secondary" disabled={busy} onClick={onClose}>
             {cancelLabel}
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant={styles.confirmVariant}
             disabled={busy}
             onClick={onConfirm}
-            className={`rounded-xl px-4 py-3 text-sm font-bold transition disabled:cursor-not-allowed disabled:opacity-60 ${styles.confirm}`}
-            style={{ color: styles.confirmText }}
+            className={busy ? "opacity-70" : ""}
           >
-            <span style={{ color: styles.confirmText }}>
-              {busy ? "Working..." : confirmLabel}
-            </span>
-          </button>
+            {busy ? "Working..." : confirmLabel}
+          </Button>
         </div>
       </div>
     </div>

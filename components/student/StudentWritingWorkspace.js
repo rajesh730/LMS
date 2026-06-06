@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   FaBold,
   FaBookOpen,
@@ -354,7 +354,7 @@ function WritingStudioHero({
       <button
         type="button"
         onClick={onNewDraft}
-        className="absolute right-5 top-5 inline-flex items-center gap-2 rounded-lg bg-purple-700 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-purple-600"
+        className="mx-5 mb-5 inline-flex items-center gap-2 rounded-lg bg-purple-700 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-purple-600 sm:absolute sm:right-5 sm:top-5 sm:m-0"
       >
         <FaPlus />
         New Writing
@@ -462,27 +462,29 @@ function WritingWorkflowPanel({ libraryCounts, onSelectLibrary, onSelectStatus }
   );
 }
 
-function EditorToolbar() {
+function EditorToolbar({ onFormat }) {
   const tools = [
-    FaBold,
-    FaItalic,
-    FaUnderline,
-    FaListUl,
-    FaListOl,
-    FaQuoteRight,
-    FaLink,
-    FaImage,
+    ["bold", FaBold, "Bold"],
+    ["italic", FaItalic, "Italic"],
+    ["underline", FaUnderline, "Underline"],
+    ["bullet", FaListUl, "Bullet list"],
+    ["number", FaListOl, "Numbered list"],
+    ["quote", FaQuoteRight, "Quote"],
+    ["link", FaLink, "Link"],
+    ["image", FaImage, "Image"],
   ];
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 border-y border-[#e7dcc8] bg-[#fffdf8] px-3 py-2">
       <div className="flex flex-wrap items-center gap-1.5">
-        {tools.map((Icon, index) => (
+        {tools.map(([command, Icon, label]) => (
           <button
-            key={index}
+            key={command}
             type="button"
+            onClick={() => onFormat(command)}
             className="flex h-8 w-8 items-center justify-center rounded-md text-[#40516b] transition hover:bg-purple-50 hover:text-purple-700"
-            aria-label="Editor tool"
+            aria-label={label}
+            title={label}
           >
             <Icon className="text-xs" />
           </button>
@@ -493,8 +495,10 @@ function EditorToolbar() {
           <button
             key={index}
             type="button"
+            onClick={() => onFormat(index === 0 ? "undo" : "redo")}
             className="flex h-8 w-8 items-center justify-center rounded-md text-[#75869b] transition hover:bg-purple-50 hover:text-purple-700"
-            aria-label="Editor history"
+            aria-label={index === 0 ? "Undo" : "Redo"}
+            title={index === 0 ? "Undo" : "Redo"}
           >
             <Icon className="text-xs" />
           </button>
@@ -514,6 +518,82 @@ function WritingEditor({
   onSave,
   onReset,
 }) {
+  const textareaRef = useRef(null);
+  const historyRef = useRef([]);
+  const redoRef = useRef([]);
+
+  const applyFormat = useCallback(
+    (command) => {
+      const textarea = textareaRef.current;
+      if (!textarea) return;
+
+      if (command === "undo") {
+        const previous = historyRef.current.pop();
+        if (previous === undefined) return;
+        redoRef.current.push(form.content);
+        setForm((current) => ({ ...current, content: previous }));
+        return;
+      }
+
+      if (command === "redo") {
+        const next = redoRef.current.pop();
+        if (next === undefined) return;
+        historyRef.current.push(form.content);
+        setForm((current) => ({ ...current, content: next }));
+        return;
+      }
+
+      const start = textarea.selectionStart || 0;
+      const end = textarea.selectionEnd || 0;
+      const before = form.content.slice(0, start);
+      const selected = form.content.slice(start, end);
+      const after = form.content.slice(end);
+      const fallback = selected || "text";
+      const lines = selected.split("\n");
+      let replacement = fallback;
+
+      if (command === "bold") replacement = `**${fallback}**`;
+      if (command === "italic") replacement = `_${fallback}_`;
+      if (command === "underline") replacement = `<u>${fallback}</u>`;
+      if (command === "bullet") {
+        replacement = (selected ? lines : ["List item"])
+          .map((line) => `- ${line || "List item"}`)
+          .join("\n");
+      }
+      if (command === "number") {
+        replacement = (selected ? lines : ["List item"])
+          .map((line, index) => `${index + 1}. ${line || "List item"}`)
+          .join("\n");
+      }
+      if (command === "quote") {
+        replacement = (selected ? lines : ["Quote"])
+          .map((line) => `> ${line || "Quote"}`)
+          .join("\n");
+      }
+      if (command === "link") {
+        const url = window.prompt("Enter link URL", "https://");
+        if (!url) return;
+        replacement = `[${fallback}](${url})`;
+      }
+      if (command === "image") {
+        const url = window.prompt("Enter image URL", "https://");
+        if (!url) return;
+        replacement = `![${selected || "Image"}](${url})`;
+      }
+
+      historyRef.current.push(form.content);
+      redoRef.current = [];
+      const nextContent = `${before}${replacement}${after}`;
+      setForm((current) => ({ ...current, content: nextContent }));
+
+      window.requestAnimationFrame(() => {
+        textarea.focus();
+        textarea.setSelectionRange(start, start + replacement.length);
+      });
+    },
+    [form.content, setForm]
+  );
+
   return (
     <section className="overflow-hidden rounded-xl border border-[#e7dcc8] bg-white shadow-sm">
       <div className="flex flex-col gap-3 border-b border-[#e7dcc8] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
@@ -565,11 +645,12 @@ function WritingEditor({
         </select>
       </div>
 
-      <EditorToolbar />
+      <EditorToolbar onFormat={applyFormat} />
 
       {editorMode === "WRITE" ? (
         <div className="relative">
           <textarea
+            ref={textareaRef}
             placeholder="Start writing your amazing article here..."
             value={form.content}
             onChange={(event) =>
@@ -749,8 +830,9 @@ function WritingListItem({
         ) : (
           <button
             type="button"
+            onClick={() => onRead(writing)}
             className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#e0d4bf] text-[#75869b]"
-            aria-label="More options"
+            aria-label="Open writing"
           >
             <FaEllipsisV />
           </button>

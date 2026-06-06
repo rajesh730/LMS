@@ -229,7 +229,7 @@ function WritingTable({ articles, busyId, emptyState, mode, onRead, onAction }) 
   }[mode];
 
   return (
-    <div className="overflow-hidden rounded-lg border border-[#e1e7f2] bg-white shadow-sm">
+    <div className="overflow-x-auto rounded-lg border border-[#e1e7f2] bg-white shadow-sm">
       <div className="grid min-w-[920px] grid-cols-[minmax(230px,1.45fr)_140px_90px_125px_190px_170px] gap-3 border-b border-[#e1e7f2] bg-[#f8fbff] px-4 py-3 text-[11px] font-black uppercase text-[#52657d]">
         <span>Writing</span>
         <span>Student</span>
@@ -238,7 +238,7 @@ function WritingTable({ articles, busyId, emptyState, mode, onRead, onAction }) 
         <span>Status</span>
         <span className="text-right">Action</span>
       </div>
-      <div className="max-w-full overflow-x-auto">
+      <div>
         {articles.map((article) => {
           const locked = modeConfig.locked(article);
 
@@ -1091,7 +1091,7 @@ function PublishingPanel({
                       }}
                       className={`rounded-lg border p-4 text-left transition hover:-translate-y-0.5 hover:shadow-md ${
                         isSelected
-                          ? "border-purple-300 bg-purple-700 text-white"
+                          ? "border-purple-300 bg-purple-800 text-white"
                           : "border-[#e1e7f2] bg-[#f8fbff] text-[#17120a] hover:border-purple-200"
                       } cursor-pointer outline-none focus:ring-2 focus:ring-purple-300`}
                     >
