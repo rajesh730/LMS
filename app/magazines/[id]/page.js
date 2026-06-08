@@ -21,7 +21,7 @@ export default async function PublicMagazinePage({ params }) {
           backHref="/schools"
           backHrefPattern="/schools/{schoolId}#writings"
           backLabel="Back to portfolio"
-          articleHrefPrefix="#article-"
+          articleHrefPrefix={`/magazines/${resolvedParams.id}/articles/`}
         />
       </div>
     </main>

@@ -62,7 +62,7 @@ function SchoolSpotlightCard({ promotion, compact = false, className = "" }) {
           <p className="mt-1 line-clamp-1 text-sm leading-6 text-slate-500">
             {promotion.school.location || "School activity profile"}
           </p>
-          <p className={compact ? "mt-2 line-clamp-2 text-sm leading-6 text-slate-700" : "mt-4 line-clamp-4 text-sm leading-6 text-slate-700"}>
+          <p className={compact ? "mt-2 line-clamp-4 text-sm leading-6 text-slate-700" : "mt-4 line-clamp-4 text-sm leading-6 text-slate-700"}>
             {promotion.tagline}
           </p>
         </div>

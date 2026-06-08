@@ -3,6 +3,7 @@ import connectDB from "@/lib/db";
 import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
 import PublicExplorePanel from "@/components/public/PublicExplorePanel";
 import PublicSiteNav from "@/components/public/PublicSiteNav";
+import { stripWritingMarkup } from "@/components/WritingContent";
 import { diversifyBySchool } from "@/lib/schoolDiversifiedFeed";
 import {
   FaArrowRight,
@@ -33,7 +34,7 @@ function formatDate(value) {
 }
 
 function getPreview(value = "", maxLength = 160) {
-  const text = String(value || "").replace(/\s+/g, " ").trim();
+  const text = stripWritingMarkup(value).replace(/\s+/g, " ").trim();
   if (text.length <= maxLength) return text;
   return `${text.slice(0, maxLength).trim()}...`;
 }

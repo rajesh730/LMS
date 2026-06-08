@@ -15,6 +15,7 @@ import {
 } from "react-icons/fa";
 import AlertBanner from "@/components/ui/AlertBanner";
 import LoadingState from "@/components/ui/LoadingState";
+import WritingContent, { stripWritingMarkup } from "@/components/WritingContent";
 import useRealtimeChannel from "@/lib/useRealtimeChannel";
 import { normalizeWritingCategory } from "@/lib/writingCategories";
 
@@ -79,7 +80,7 @@ function getReadTime(content = "") {
 }
 
 function getPreview(content = "", maxLength = 90) {
-  const text = String(content || "").replace(/\s+/g, " ").trim();
+  const text = stripWritingMarkup(content).replace(/\s+/g, " ").trim();
   if (text.length <= maxLength) return text;
   return `${text.slice(0, maxLength).trim()}...`;
 }
@@ -130,7 +131,14 @@ function ArticleMeta({ article }) {
   );
 }
 
-export default function StudentMagazineArticleReader({ articleId }) {
+export default function StudentMagazineArticleReader({
+  articleId,
+  apiBasePath = "/api/student/magazine",
+  backHref = "/student/magazine",
+  backLabel = "Back to magazine",
+  relatedHrefPrefix = "/student/magazine/",
+  relatedTitle = "",
+}) {
   const [article, setArticle] = useState(null);
   const [relatedArticles, setRelatedArticles] = useState([]);
   const [student, setStudent] = useState(null);
@@ -142,7 +150,7 @@ export default function StudentMagazineArticleReader({ articleId }) {
       try {
         if (!silent) setLoading(true);
         setError("");
-        const res = await fetch(`/api/student/magazine/${articleId}`, {
+        const res = await fetch(`${apiBasePath}/${articleId}`, {
           cache: "no-store",
         });
         const payload = await res.json().catch(() => ({}));
@@ -162,7 +170,7 @@ export default function StudentMagazineArticleReader({ articleId }) {
         if (!silent) setLoading(false);
       }
     },
-    [articleId]
+    [apiBasePath, articleId]
   );
 
   useEffect(() => {
@@ -200,11 +208,11 @@ export default function StudentMagazineArticleReader({ articleId }) {
   return (
     <div className="space-y-6 text-[#27344a]">
       <Link
-        href="/student/magazine"
+        href={backHref}
         className="inline-flex items-center gap-2 rounded-lg border border-[#d7cdbb] bg-white px-4 py-2 text-sm font-semibold text-[#0a2f66] shadow-sm transition hover:bg-[#f8fbff]"
       >
         <FaArrowLeft />
-        Back to magazine
+        {backLabel}
       </Link>
 
       <article className="overflow-hidden rounded-2xl border border-[#d7cdbb] bg-white shadow-[0_18px_50px_rgba(10,47,102,0.08)]">
@@ -236,16 +244,17 @@ export default function StudentMagazineArticleReader({ articleId }) {
         </div>
 
         <div className="border-t border-[#d7cdbb] bg-[#fffdf8] px-5 py-8 md:px-10">
-          <div className="mx-auto max-w-3xl whitespace-pre-wrap text-base leading-8 text-[#27344a] md:text-lg">
-            {article.content}
-          </div>
+          <WritingContent
+            content={article.content}
+            className="mx-auto max-w-3xl space-y-4 text-base leading-8 text-[#27344a] md:text-lg"
+          />
         </div>
       </article>
 
       {relatedArticles.length > 0 && (
         <section className="rounded-xl border border-[#d7cdbb] bg-white p-5 shadow-sm">
           <h2 className="text-lg font-bold text-[#17120a]">
-            More {meta.label} Articles
+            {relatedTitle || `More ${meta.label} Articles`}
           </h2>
           <div className="mt-4 grid gap-4 md:grid-cols-3">
             {relatedArticles.map((related) => {
@@ -253,7 +262,7 @@ export default function StudentMagazineArticleReader({ articleId }) {
               return (
                 <Link
                   key={related.id}
-                  href={`/student/magazine/${related.id}`}
+                  href={`${relatedHrefPrefix}${related.id}`}
                   className="rounded-lg border border-[#d7cdbb] bg-[#f8fbff] p-4 transition hover:-translate-y-0.5 hover:border-purple-200 hover:bg-white hover:shadow-md"
                 >
                   <span

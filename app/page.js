@@ -12,6 +12,7 @@ import HomeScrollMemory from "@/components/public/HomeScrollMemory";
 import PublicExplorePanel from "@/components/public/PublicExplorePanel";
 import PublicSiteNav from "@/components/public/PublicSiteNav";
 import SchoolLogoMark from "@/components/public/SchoolLogoMark";
+import { stripWritingMarkup } from "@/components/WritingContent";
 import {
   FaArrowRight,
   FaCalendarAlt,
@@ -35,7 +36,7 @@ function formatDate(value) {
 }
 
 function getPreview(value = "", maxLength = 120) {
-  const text = String(value || "").replace(/\s+/g, " ").trim();
+  const text = stripWritingMarkup(value).replace(/\s+/g, " ").trim();
   if (!text) return "";
   if (text.length <= maxLength) return text;
   return `${text.slice(0, maxLength).trim()}...`;
@@ -135,7 +136,7 @@ async function getHomeMagazineIssues() {
         content:
           issueArticles.length === 1
             ? firstArticle.content
-            : `${firstArticle.title}: ${getPreview(firstArticle.content, 150)} Featuring ${issueArticles.length} selected student writings.`,
+            : `${issueArticles.length} selected student writings published in this school magazine issue.`,
         category: "SCHOOL_MAGAZINE",
         date: issue.homeShownAt || issue.publishedAt || issue.weekStart,
         author: "School Magazine",
@@ -329,8 +330,8 @@ function FeedCard({ item, badge = "Published Writing", actions = true }) {
         <h2 className="text-lg font-bold leading-snug text-[#111827]">
           {item.title || "Published student writing"}
         </h2>
-        <p className="mt-2 line-clamp-3 text-sm leading-6 text-[#4b5565]">
-          {getPreview(item.content, 190)}
+        <p className="mt-2 line-clamp-4 text-sm leading-6 text-[#4b5565]">
+          {getPreview(item.content, 280)}
         </p>
         <Link
           href={voiceHref}

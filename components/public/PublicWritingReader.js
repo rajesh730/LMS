@@ -9,6 +9,7 @@ import {
 import PublicExplorePanel from "@/components/public/PublicExplorePanel";
 import PublicShareButton from "@/components/public/PublicShareButton";
 import SchoolLogoMark from "@/components/public/SchoolLogoMark";
+import WritingContent, { stripWritingMarkup } from "@/components/WritingContent";
 
 function formatDate(value) {
   if (!value) return "";
@@ -25,7 +26,7 @@ function getReadTime(content = "") {
 }
 
 function getPreview(content = "", maxLength = 96) {
-  const text = String(content || "").replace(/\s+/g, " ").trim();
+  const text = stripWritingMarkup(content).replace(/\s+/g, " ").trim();
   if (text.length <= maxLength) return text;
   return `${text.slice(0, maxLength).trim()}...`;
 }
@@ -39,11 +40,15 @@ export default function PublicWritingReader({
   article,
   relatedArticles = [],
   moreFromSchool = [],
+  backHref = "/",
+  backLabel = "Back to Home",
+  currentHref = "",
+  relatedHrefPrefix = "/writings/",
 }) {
   const author = article.authorStudent || {};
   const school = article.school || {};
   const schoolHref = school.id ? `/schools/${school.id}` : "/schools";
-  const currentHref = `/writings/${article.id}`;
+  const shareHref = currentHref || `/writings/${article.id}`;
   const moreItems = moreFromSchool.length > 0 ? moreFromSchool : relatedArticles;
   const schoolName = school.schoolName || "School";
 
@@ -56,14 +61,14 @@ export default function PublicWritingReader({
           <article className="rounded-xl border border-[#e6eaf7] bg-white p-5 shadow-sm md:p-8">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <Link
-                href="/"
+                href={backHref}
                 className="inline-flex items-center gap-2 text-sm font-black text-[#4326e8]"
               >
                 <FaArrowLeft />
-                Back to Home
+                {backLabel}
               </Link>
               <PublicShareButton
-                href={currentHref}
+                href={shareHref}
                 title={article.title}
                 label="Share Story"
                 className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-[#d9dcf2] bg-white px-4 text-sm font-black text-[#4326e8] transition hover:bg-[#f8f7ff]"
@@ -117,9 +122,10 @@ export default function PublicWritingReader({
               </div>
             </div>
 
-            <div className="mx-auto mt-10 max-w-3xl whitespace-pre-wrap text-lg leading-9 text-[#27344a]">
-              {article.content}
-            </div>
+            <WritingContent
+              content={article.content}
+              className="mx-auto mt-10 max-w-3xl space-y-4 text-lg leading-9 text-[#27344a]"
+            />
 
             <div className="mt-10 flex flex-col gap-3 border-t border-[#edf0f7] pt-5 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm font-semibold text-[#526071]">
@@ -158,7 +164,7 @@ export default function PublicWritingReader({
                 {moreItems.slice(0, 3).map((item) => (
                   <Link
                     key={item.id}
-                    href={`/writings/${item.id}`}
+                    href={`${relatedHrefPrefix}${item.id}`}
                     className="rounded-lg border border-[#e6eaf7] bg-[#f8f9fd] p-4 transition hover:bg-white"
                   >
                     <span className="text-xs font-black uppercase text-[#4326e8]">

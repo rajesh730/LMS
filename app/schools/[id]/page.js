@@ -11,6 +11,7 @@ import MagazineIssue from "@/models/MagazineIssue";
 import PublicSiteNav from "@/components/public/PublicSiteNav";
 import PublicExplorePanel from "@/components/public/PublicExplorePanel";
 import ExpandableStoryText from "@/components/public/ExpandableStoryText";
+import { stripWritingMarkup } from "@/components/WritingContent";
 import { normalizeImageUrl } from "@/lib/imageUrls";
 import {
   FaArrowRight,
@@ -46,7 +47,7 @@ function formatDate(value) {
 }
 
 function getPreview(value = "", maxLength = 120) {
-  const text = String(value || "").replace(/\s+/g, " ").trim();
+  const text = stripWritingMarkup(value).replace(/\s+/g, " ").trim();
   if (text.length <= maxLength) return text;
   return `${text.slice(0, maxLength).trim()}...`;
 }

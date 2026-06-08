@@ -49,8 +49,7 @@ export default function HomepageHeroCarousel({ stories = [] }) {
         {
           id: "empty-magazine-hero",
           title: "Student writing, published by schools",
-          content:
-            "Once schools publish student writing to the homepage, the latest stories will rotate here.",
+          content: "",
           category: "School Magazine",
           author: "",
           schoolName: "",
@@ -139,9 +138,11 @@ export default function HomepageHeroCarousel({ stories = [] }) {
               </span>
             </div>
           )}
-          <p className="mt-5 max-w-xl text-base font-semibold leading-8 text-white/90">
-            {getPreview(activeSlide.content, activeSlide.empty ? 180 : 150)}
-          </p>
+          {activeSlide.content && (
+            <p className="mt-5 max-w-xl text-base font-semibold leading-8 text-white/90">
+              {getPreview(activeSlide.content, activeSlide.empty ? 180 : 150)}
+            </p>
+          )}
           <Link
             href={activeSlide.href || "/student-voices"}
             className="mt-6 inline-flex w-fit items-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-black text-[#3120c9] shadow-sm transition hover:-translate-y-0.5"

@@ -1298,19 +1298,12 @@ a[aria-disabled="true"] {
   }
 }
 
-/* Professional nav: subtle active state with left accent */
-.pratyo-dark-shell a.pratyo-sidebar-active {
-  box-shadow: none !important;
-  ring: none !important;
-  border-left: 3px solid var(--brand-primary) !important;
-  border-radius: 0 0.625rem 0.625rem 0 !important;
-  padding-left: calc(0.75rem - 3px) !important;
-}
-
+/* Keep sidebar selection as a clean filled pill without a left rail. */
+.pratyo-dark-shell a.pratyo-sidebar-active,
 .pratyo-dark-shell nav a:not(.pratyo-sidebar-active) {
-  border-left: 3px solid transparent;
-  border-radius: 0 0.625rem 0.625rem 0;
-  padding-left: calc(0.75rem - 3px);
+  border-left: 0 !important;
+  border-radius: 0.75rem !important;
+  padding-left: 0.75rem !important;
 }
 
 .pratyo-dark-shell .pratyo-sidebar-label {

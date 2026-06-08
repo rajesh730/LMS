@@ -22,6 +22,7 @@ import {
 import AlertBanner from "@/components/ui/AlertBanner";
 import EmptyState from "@/components/EmptyState";
 import LoadingState from "@/components/ui/LoadingState";
+import { stripWritingMarkup } from "@/components/WritingContent";
 import useRealtimeChannel from "@/lib/useRealtimeChannel";
 import useWorkIndicators from "@/lib/useWorkIndicators";
 import { normalizeWritingCategory } from "@/lib/writingCategories";
@@ -98,7 +99,7 @@ function formatMonthMagazineTitle(issue, issueNumber) {
 }
 
 function getPreview(content = "", maxLength = 120) {
-  const text = String(content || "").replace(/\s+/g, " ").trim();
+  const text = stripWritingMarkup(content).replace(/\s+/g, " ").trim();
   if (text.length <= maxLength) return text;
   return `${text.slice(0, maxLength).trim()}...`;
 }
@@ -187,8 +188,8 @@ function ArticleCard({ article, disableLink = false }) {
         <h3 className="mt-3 line-clamp-2 text-base font-bold leading-snug text-[#17120a] group-hover:text-purple-700">
           {article.title}
         </h3>
-        <p className="mt-2 line-clamp-2 text-sm leading-6 text-[#52657d]">
-          {getPreview(article.content, 90)}
+        <p className="mt-2 line-clamp-4 text-sm leading-6 text-[#52657d]">
+          {getPreview(article.content, 240)}
         </p>
         <ArticleMeta article={article} />
       </div>
@@ -238,8 +239,8 @@ function SchoolWallCard({ article, disableLinks = false }) {
         <h3 className="text-xl font-black leading-tight text-[#111827]">
           {article.title || "Student writing"}
         </h3>
-        <p className="mt-2 line-clamp-3 text-sm leading-6 text-[#4b5565]">
-          {getPreview(article.content, 190)}
+        <p className="mt-2 line-clamp-4 text-sm leading-6 text-[#4b5565]">
+          {getPreview(article.content, 280)}
         </p>
         {disableLinks ? (
           <span className="mt-3 inline-flex text-sm font-black text-[#4326e8]">
@@ -247,7 +248,7 @@ function SchoolWallCard({ article, disableLinks = false }) {
           </span>
         ) : (
           <Link
-            href={`/student/magazine/${article.id}`}
+            href={`/student/school-wall/${article.id}`}
             className="mt-3 inline-flex text-sm font-black text-[#4326e8]"
           >
             Read More
@@ -264,7 +265,7 @@ function SchoolWallCard({ article, disableLinks = false }) {
           </span>
         ) : (
           <Link
-            href={`/student/magazine/${article.id}`}
+            href={`/student/school-wall/${article.id}`}
             className="inline-flex items-center gap-2 text-[#3120c9]"
           >
             Open
@@ -304,7 +305,9 @@ function MagazineIssueCard({ issue }) {
         </h3>
         <p className="mt-2 line-clamp-2 text-sm font-semibold leading-6 text-[#52657d]">
           {coverArticle
-            ? `Featuring ${coverArticle.authorStudent?.name || "student"} and more student voices.`
+            ? `${issue.articles.length} selected student ${
+                issue.articles.length === 1 ? "writing" : "writings"
+              } chosen by your school.`
             : "Open this magazine to read selected student writing."}
         </p>
         <span className="mt-4 inline-flex items-center gap-2 rounded-full bg-purple-50 px-3 py-2 text-xs font-black text-purple-700">
@@ -553,7 +556,11 @@ export default function StudentSchoolMagazine({
     [activeArticles, activeCategory]
   );
 
-  const featuredArticle = activeArticles[0] || null;
+  const selectedArticle = activeArticles[0] || null;
+  const selectedArticleHref =
+    activeView === "school-wall"
+      ? `/student/school-wall/${selectedArticle?.id}`
+      : `/student/magazine/${selectedArticle?.id}`;
   const writerStats = useMemo(() => {
     const map = new Map();
     activeArticles.forEach((article) => {
@@ -830,25 +837,25 @@ export default function StudentSchoolMagazine({
 
         {!lockedView && (
         <aside className="space-y-5">
-          {featuredArticle && (
+          {selectedArticle && (
             <section className="rounded-xl border border-[#d7cdbb] bg-white p-4 shadow-sm">
               <h2 className="text-sm font-bold text-[#17120a]">
-                Featured Article
+                Selected Writing
               </h2>
               <div className="mt-3">
-                <MagazineArt category={featuredArticle.category} large />
+                <MagazineArt category={selectedArticle.category} large />
                 <h3 className="mt-4 text-xl font-bold leading-tight text-[#17120a]">
-                  {featuredArticle.title}
+                  {selectedArticle.title}
                 </h3>
-                <ArticleMeta article={featuredArticle} />
-                <p className="mt-3 line-clamp-3 text-sm leading-6 text-[#52657d]">
-                  {getPreview(featuredArticle.content, 130)}
+                <ArticleMeta article={selectedArticle} />
+                <p className="mt-3 line-clamp-4 text-sm leading-6 text-[#52657d]">
+                  {getPreview(selectedArticle.content, 240)}
                 </p>
                 <Link
-                  href={`/student/magazine/${featuredArticle.id}`}
+                  href={selectedArticleHref}
                   className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-pink-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-pink-500"
                 >
-                  Read Full Article
+                  Read Article
                   <FaChevronRight />
                 </Link>
               </div>

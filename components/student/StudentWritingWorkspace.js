@@ -18,29 +18,22 @@ import {
   FaItalic,
   FaLayerGroup,
   FaLightbulb,
-  FaLink,
-  FaListOl,
-  FaListUl,
   FaPaperPlane,
   FaPenNib,
   FaPlus,
-  FaQuoteLeft,
-  FaQuoteRight,
   FaRegFileAlt,
-  FaRedo,
   FaSchool,
   FaStar,
   FaTags,
   FaTimes,
   FaTrash,
   FaTrophy,
-  FaUnderline,
-  FaUndo,
 } from "react-icons/fa";
 import EmptyState from "@/components/EmptyState";
 import AlertBanner from "@/components/ui/AlertBanner";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import LoadingState from "@/components/ui/LoadingState";
+import WritingContent from "@/components/WritingContent";
 import useRealtimeChannel from "@/lib/useRealtimeChannel";
 import useWorkIndicators from "@/lib/useWorkIndicators";
 import {
@@ -466,46 +459,146 @@ function EditorToolbar({ onFormat }) {
   const tools = [
     ["bold", FaBold, "Bold"],
     ["italic", FaItalic, "Italic"],
-    ["underline", FaUnderline, "Underline"],
-    ["bullet", FaListUl, "Bullet list"],
-    ["number", FaListOl, "Numbered list"],
-    ["quote", FaQuoteRight, "Quote"],
-    ["link", FaLink, "Link"],
-    ["image", FaImage, "Image"],
+    ["highlight", FaStar, "Highlight"],
   ];
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-y border-[#e7dcc8] bg-[#fffdf8] px-3 py-2">
-      <div className="flex flex-wrap items-center gap-1.5">
+    <div className="flex flex-wrap items-center gap-3 border-y border-[#d8dfea] bg-[#f8fafc] px-3 py-2">
+      <span className="text-xs font-black uppercase tracking-[0.12em] text-[#475569]">
+        Format
+      </span>
+      <div className="flex flex-wrap items-center gap-2">
         {tools.map(([command, Icon, label]) => (
           <button
             key={command}
             type="button"
-            onClick={() => onFormat(command)}
-            className="flex h-8 w-8 items-center justify-center rounded-md text-[#40516b] transition hover:bg-purple-50 hover:text-purple-700"
+            onMouseDown={(event) => {
+              event.preventDefault();
+              onFormat(command);
+            }}
+            className="inline-flex h-10 min-w-10 items-center justify-center gap-2 rounded-lg border border-[#c9d3e5] bg-white px-3 text-sm font-black text-[#3120c9] transition hover:border-[#4326e8] hover:bg-[#f4f1ff]"
             aria-label={label}
             title={label}
           >
-            <Icon className="text-xs" />
-          </button>
-        ))}
-      </div>
-      <div className="flex items-center gap-1.5">
-        {[FaUndo, FaRedo].map((Icon, index) => (
-          <button
-            key={index}
-            type="button"
-            onClick={() => onFormat(index === 0 ? "undo" : "redo")}
-            className="flex h-8 w-8 items-center justify-center rounded-md text-[#75869b] transition hover:bg-purple-50 hover:text-purple-700"
-            aria-label={index === 0 ? "Undo" : "Redo"}
-            title={index === 0 ? "Undo" : "Redo"}
-          >
-            <Icon className="text-xs" />
+            <Icon className="text-sm" />
+            <span className="hidden sm:inline">{label}</span>
           </button>
         ))}
       </div>
     </div>
   );
+}
+
+function InlineFormattedText({ text }) {
+  const pattern =
+    /(\{\{highlight\}\}.*?\{\{\/highlight\}\}|\*\*[^*]+\*\*|_[^_]+_)/g;
+  const parts = String(text || "").split(pattern).filter(Boolean);
+
+  return parts.map((part, index) => {
+    const highlight = part.match(/^\{\{highlight\}\}(.*)\{\{\/highlight\}\}$/);
+    if (highlight) {
+      return (
+        <mark
+          key={`${part}-${index}`}
+          className="rounded bg-[#fff1a6] px-1 font-semibold text-[#111827]"
+        >
+          {highlight[1]}
+        </mark>
+      );
+    }
+
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return <strong key={`${part}-${index}`}>{part.slice(2, -2)}</strong>;
+    }
+
+    if (part.startsWith("_") && part.endsWith("_")) {
+      return <em key={`${part}-${index}`}>{part.slice(1, -1)}</em>;
+    }
+
+    return <span key={`${part}-${index}`}>{part}</span>;
+  });
+}
+
+function renderFormattedContent(content) {
+  const lines = String(content || "").split("\n");
+  const blocks = [];
+  let index = 0;
+
+  while (index < lines.length) {
+    const line = lines[index];
+
+    if (!line.trim()) {
+      blocks.push(<div key={`space-${index}`} className="h-3" />);
+      index += 1;
+      continue;
+    }
+
+    if (/^\s*-\s+/.test(line)) {
+      const items = [];
+      while (index < lines.length && /^\s*-\s+/.test(lines[index])) {
+        items.push(lines[index].replace(/^\s*-\s+/, ""));
+        index += 1;
+      }
+      blocks.push(
+        <ul key={`ul-${index}`} className="list-disc space-y-2 pl-6">
+          {items.map((item, itemIndex) => (
+            <li key={`${item}-${itemIndex}`}>
+              <InlineFormattedText text={item} />
+            </li>
+          ))}
+        </ul>
+      );
+      continue;
+    }
+
+    if (/^\s*\d+\.\s+/.test(line)) {
+      const items = [];
+      while (index < lines.length && /^\s*\d+\.\s+/.test(lines[index])) {
+        items.push(lines[index].replace(/^\s*\d+\.\s+/, ""));
+        index += 1;
+      }
+      blocks.push(
+        <ol key={`ol-${index}`} className="list-decimal space-y-2 pl-6">
+          {items.map((item, itemIndex) => (
+            <li key={`${item}-${itemIndex}`}>
+              <InlineFormattedText text={item} />
+            </li>
+          ))}
+        </ol>
+      );
+      continue;
+    }
+
+    if (/^\s*>\s?/.test(line)) {
+      const quotes = [];
+      while (index < lines.length && /^\s*>\s?/.test(lines[index])) {
+        quotes.push(lines[index].replace(/^\s*>\s?/, ""));
+        index += 1;
+      }
+      blocks.push(
+        <blockquote
+          key={`quote-${index}`}
+          className="border-l-4 border-purple-200 bg-purple-50/60 px-4 py-3 font-semibold text-[#40516b]"
+        >
+          {quotes.map((quote, quoteIndex) => (
+            <p key={`${quote}-${quoteIndex}`}>
+              <InlineFormattedText text={quote} />
+            </p>
+          ))}
+        </blockquote>
+      );
+      continue;
+    }
+
+    blocks.push(
+      <p key={`p-${index}`}>
+        <InlineFormattedText text={line} />
+      </p>
+    );
+    index += 1;
+  }
+
+  return <div className="space-y-3">{blocks}</div>;
 }
 
 function WritingEditor({
@@ -519,29 +612,11 @@ function WritingEditor({
   onReset,
 }) {
   const textareaRef = useRef(null);
-  const historyRef = useRef([]);
-  const redoRef = useRef([]);
 
   const applyFormat = useCallback(
     (command) => {
       const textarea = textareaRef.current;
       if (!textarea) return;
-
-      if (command === "undo") {
-        const previous = historyRef.current.pop();
-        if (previous === undefined) return;
-        redoRef.current.push(form.content);
-        setForm((current) => ({ ...current, content: previous }));
-        return;
-      }
-
-      if (command === "redo") {
-        const next = redoRef.current.pop();
-        if (next === undefined) return;
-        historyRef.current.push(form.content);
-        setForm((current) => ({ ...current, content: next }));
-        return;
-      }
 
       const start = textarea.selectionStart || 0;
       const end = textarea.selectionEnd || 0;
@@ -549,40 +624,14 @@ function WritingEditor({
       const selected = form.content.slice(start, end);
       const after = form.content.slice(end);
       const fallback = selected || "text";
-      const lines = selected.split("\n");
       let replacement = fallback;
 
       if (command === "bold") replacement = `**${fallback}**`;
       if (command === "italic") replacement = `_${fallback}_`;
-      if (command === "underline") replacement = `<u>${fallback}</u>`;
-      if (command === "bullet") {
-        replacement = (selected ? lines : ["List item"])
-          .map((line) => `- ${line || "List item"}`)
-          .join("\n");
-      }
-      if (command === "number") {
-        replacement = (selected ? lines : ["List item"])
-          .map((line, index) => `${index + 1}. ${line || "List item"}`)
-          .join("\n");
-      }
-      if (command === "quote") {
-        replacement = (selected ? lines : ["Quote"])
-          .map((line) => `> ${line || "Quote"}`)
-          .join("\n");
-      }
-      if (command === "link") {
-        const url = window.prompt("Enter link URL", "https://");
-        if (!url) return;
-        replacement = `[${fallback}](${url})`;
-      }
-      if (command === "image") {
-        const url = window.prompt("Enter image URL", "https://");
-        if (!url) return;
-        replacement = `![${selected || "Image"}](${url})`;
+      if (command === "highlight") {
+        replacement = `{{highlight}}${fallback}{{/highlight}}`;
       }
 
-      historyRef.current.push(form.content);
-      redoRef.current = [];
       const nextContent = `${before}${replacement}${after}`;
       setForm((current) => ({ ...current, content: nextContent }));
 
@@ -664,8 +713,10 @@ function WritingEditor({
           </span>
         </div>
       ) : (
-        <article className="min-h-[340px] whitespace-pre-wrap bg-white px-5 py-5 text-base leading-8 text-[#27344a]">
-          {form.content || "Your preview will appear here as you write."}
+        <article className="min-h-[340px] bg-white px-5 py-5 text-base leading-8 text-[#27344a]">
+          {form.content
+            ? renderFormattedContent(form.content)
+            : "Your preview will appear here as you write."}
         </article>
       )}
 
@@ -868,12 +919,14 @@ function SidebarPanels({ counts, libraryCounts, totalWords }) {
         </div>
       </section>
 
-      <section className="pratyo-brand-surface rounded-xl border border-slate-700/20 p-5 text-white shadow-sm">
-        <FaQuoteLeft className="text-2xl text-white/82" />
-        <p className="mt-4 text-sm font-bold leading-6 text-white">
+      <section className="rounded-xl border border-[#d8dfea] bg-white p-5 text-[#111827] shadow-sm">
+        <FaLightbulb className="text-2xl text-[#3120c9]" />
+        <p className="mt-4 text-sm font-bold leading-6 text-[#111827]">
           Words have power. Use yours to inspire the world.
         </p>
-        <p className="mt-3 text-xs text-white/72">School writing studio</p>
+        <p className="mt-3 text-xs font-semibold text-[#475569]">
+          School writing studio
+        </p>
       </section>
 
       <section className="rounded-xl border border-[#e7dcc8] bg-white p-4 shadow-sm">
@@ -1321,8 +1374,11 @@ export default function StudentWritingWorkspace() {
               </div>
             </div>
 
-            <article className="mx-5 mb-8 mt-5 whitespace-pre-wrap rounded-xl border border-[#d7cdbb] bg-[#fffdf8] p-5 text-base leading-8 text-[#27344a] md:mx-8 md:p-7 md:text-lg">
-              {readingWriting.content}
+            <article className="mx-5 mb-8 mt-5 rounded-xl border border-[#d7cdbb] bg-[#fffdf8] p-5 md:mx-8 md:p-7">
+              <WritingContent
+                content={readingWriting.content}
+                className="space-y-4 text-base leading-8 text-[#27344a] md:text-lg"
+              />
             </article>
 
             <div className="flex flex-wrap gap-3 border-t border-[#d7cdbb] bg-[#f8fbff] px-5 py-4 md:px-8">
