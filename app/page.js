@@ -254,16 +254,18 @@ async function getHomepageData() {
 
 function EmptyPanel({ title, description, href = "", action = "" }) {
   return (
-    <section className="rounded-2xl border border-[#edf0f7] bg-white p-6 text-center shadow-sm">
-      <FaFeatherAlt className="mx-auto text-2xl text-[#4326e8]" />
-      <h2 className="mt-3 text-lg font-black text-[#111827]">{title}</h2>
+    <section className="pratyo-empty-state">
+      <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--brand-primary-soft)] shadow-sm">
+        <FaFeatherAlt className="text-xl text-[var(--brand-primary)]" />
+      </div>
+      <h2 className="text-lg font-bold text-[#111827]">{title}</h2>
       <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[#667085]">
         {description}
       </p>
       {href && action && (
         <Link
           href={href}
-          className="mt-4 inline-flex items-center gap-2 rounded-lg bg-[#4326e8] px-4 py-2 text-sm font-black text-white"
+          className="mt-5 inline-flex items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-5 py-2.5 text-sm font-semibold text-white shadow-[var(--button-shadow)] transition hover:bg-[var(--brand-primary-hover)]"
         >
           {action}
           <FaArrowRight />
@@ -277,26 +279,29 @@ function AuthorLine({ name, school, badge = "Published Writing", onBrand = false
   return (
     <div className="flex items-center gap-3">
       <span
-        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-black ${
+        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
           onBrand
-            ? "border border-white/25 bg-white/14 text-white"
-            : "bg-[#f0edff] text-[#4326e8]"
+            ? "border border-white/25 bg-white/20 text-white"
+            : "text-white shadow-sm"
         }`}
+        style={onBrand ? {} : { background: "linear-gradient(135deg, var(--brand-primary), #6d4af8)" }}
       >
         {getInitials(name)}
       </span>
       <div className="min-w-0 flex-1">
-        <p className={`truncate text-sm font-black ${onBrand ? "text-white" : "text-[#111827]"}`}>
+        <p className={`truncate text-sm font-semibold ${onBrand ? "text-white" : "text-[#111827]"}`}>
           {name}
         </p>
-        <p className={`truncate text-xs font-bold ${onBrand ? "text-white/78" : "text-[#667085]"}`}>
-          <FaShieldAlt className={`mr-1 inline ${onBrand ? "text-white/72" : "text-[#2f7fdb]"}`} />
-          {school}
+        <p className={`mt-0.5 flex items-center gap-1 truncate text-xs font-medium ${onBrand ? "text-white/78" : "text-[#667085]"}`}>
+          <FaShieldAlt className={`shrink-0 ${onBrand ? "text-white/60" : "text-[var(--brand-primary)]"}`} />
+          <span className="truncate">{school}</span>
         </p>
       </div>
       <span
-        className={`rounded-full px-3 py-1 text-[10px] font-black ${
-          onBrand ? "bg-white text-[#0d3d47]" : "bg-[#f1edff] text-[#4326e8]"
+        className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ${
+          onBrand
+            ? "border-white/25 bg-white/15 text-white"
+            : "border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]"
         }`}
       >
         {badge}
@@ -309,35 +314,41 @@ function FeedCard({ item, badge = "Published Writing", actions = true }) {
   const voiceHref = item.href || item.schoolHref || "/student-voices";
 
   return (
-    <article className="rounded-2xl border border-[#edf0f7] bg-white p-5 text-[#111827] shadow-sm">
+    <article className="feed-card group relative overflow-hidden rounded-2xl border border-[#edf0f7] bg-white p-5 text-[#111827] shadow-sm">
+      {/* Accent line at top */}
+      <div
+        className="absolute inset-x-0 top-0 h-0.5 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+        style={{ background: "linear-gradient(90deg, var(--brand-primary), #6d4af8)" }}
+      />
       <AuthorLine
         name={item.author || item.studentLabel || "Student"}
         school={item.schoolName || "School"}
         badge={badge}
       />
-      <div className="mt-4">
-        <div className="min-w-0">
-          <h2 className="text-xl font-black leading-tight text-[#111827]">
-            {item.title || "Published student writing"}
-          </h2>
-          <p className="mt-2 line-clamp-3 text-sm leading-6 text-[#4b5565]">
-            {getPreview(item.content, 190)}
-          </p>
-          <Link
-            href={voiceHref}
-            className="mt-3 inline-flex text-sm font-black text-[#4326e8]"
-          >
-            Read More
-            <FaArrowRight className="ml-2 mt-0.5" />
-          </Link>
-        </div>
+      <div className="mt-4 min-w-0">
+        <h2 className="text-lg font-bold leading-snug text-[#111827]">
+          {item.title || "Published student writing"}
+        </h2>
+        <p className="mt-2 line-clamp-3 text-sm leading-6 text-[#4b5565]">
+          {getPreview(item.content, 190)}
+        </p>
+        <Link
+          href={voiceHref}
+          className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--brand-primary)] transition hover:gap-2.5"
+        >
+          Read More
+          <FaArrowRight className="text-xs" />
+        </Link>
       </div>
       {actions && (
-        <div className="mt-5 flex items-center justify-between border-t border-[#f0f2f7] pt-4 text-xs font-bold text-[#4b5565]">
-          <span>{formatDate(item.date)}</span>
-          <Link href={voiceHref} className="inline-flex items-center gap-2 text-[#3120c9]">
-            Open
-            <FaArrowRight />
+        <div className="mt-4 flex items-center justify-between border-t border-[#f0f2f7] pt-4">
+          <span className="text-xs font-medium text-[#9aa3b5]">{formatDate(item.date)}</span>
+          <Link
+            href={voiceHref}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--brand-border)] bg-[#f8f9fd] px-3 py-1.5 text-xs font-semibold text-[var(--brand-primary)] transition hover:border-[var(--brand-primary-border)] hover:bg-[var(--brand-primary-soft)]"
+          >
+            Open Article
+            <FaArrowRight className="text-[10px]" />
           </Link>
         </div>
       )}
@@ -348,9 +359,13 @@ function FeedCard({ item, badge = "Published Writing", actions = true }) {
 function SectionTitle({ title, href = "/" }) {
   return (
     <div className="mb-4 flex items-center justify-between">
-      <h2 className="text-base font-black text-[#111827]">{title}</h2>
-      <Link href={href} className="text-xs font-black text-[#4326e8]">
+      <h2 className="text-[15px] font-bold text-[#111827]">{title}</h2>
+      <Link
+        href={href}
+        className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--brand-primary)] transition hover:underline"
+      >
         View all
+        <FaArrowRight className="text-[10px]" />
       </Link>
     </div>
   );
@@ -358,59 +373,64 @@ function SectionTitle({ title, href = "/" }) {
 
 function RightColumn({ schools, partner, event }) {
   return (
-    <aside className="hidden space-y-5 lg:block">
+    <aside className="hidden space-y-4 lg:block">
+      {/* Featured Schools card */}
       {schools.length > 0 && (
-        <section className="rounded-2xl border border-[#edf0f7] bg-white p-5 shadow-sm">
-          <SectionTitle title="Featured Schools" href="/schools" />
-          <div className="space-y-4">
+        <section className="overflow-hidden rounded-2xl border border-[#edf0f7] bg-white shadow-sm">
+          <div className="border-b border-[#edf0f7] px-5 py-4">
+            <SectionTitle title="Featured Schools" href="/schools" />
+          </div>
+          <div className="divide-y divide-[#f4f6fa] px-5">
             {schools.slice(0, 5).map((school) => (
               <Link
                 key={school.id || school._id || school.title}
                 href={school.href || "/schools"}
-                className="flex items-center gap-3"
+                className="group flex items-center gap-3 py-3.5 transition hover:opacity-80"
               >
                 <SchoolLogoMark
                   imageUrl={school.profile?.coverImageUrl}
                   name={school.title || school.schoolName}
-                  className="h-10 w-10"
+                  className="h-9 w-9 rounded-xl"
                 />
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-black text-[#111827]">
+                  <span className="block truncate text-sm font-semibold text-[#111827]">
                     {school.title || school.schoolName}
                   </span>
-                  <span className="block truncate text-xs font-bold text-[#667085]">
+                  <span className="block truncate text-xs text-[#667085]">
                     {school.tagline || school.location || "School profile"}
                   </span>
                 </span>
-                <FaArrowRight className="text-xs text-[#4326e8]" />
+                <FaArrowRight className="shrink-0 text-[10px] text-[var(--brand-primary)] opacity-0 transition group-hover:opacity-100" />
               </Link>
             ))}
           </div>
         </section>
       )}
 
+      {/* Upcoming event card */}
       {event && (
-        <section className="pratyo-brand-surface rounded-2xl p-6 text-white shadow-xl shadow-slate-950/12">
-          <p className="text-sm font-black text-white">Upcoming Event</p>
-          <div className="mt-5 flex items-start gap-4">
-            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-white/16">
-              <FaCalendarAlt className="text-2xl text-white" />
+        <section
+          className="pratyo-brand-surface overflow-hidden rounded-2xl p-5 text-white shadow-lg"
+          style={{ boxShadow: "0 8px 32px rgba(67,38,232,0.18)" }}
+        >
+          <div className="mb-4 flex items-center gap-2">
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/20">
+              <FaCalendarAlt className="text-xs text-white" />
             </span>
-            <div>
-              <h3 className="font-black text-white">{event.title}</h3>
-              <p className="mt-2 text-sm leading-6 text-white/86">
-                {getPreview(event.description, 110)}
-              </p>
-            </div>
+            <p className="text-xs font-bold uppercase tracking-widest text-white/80">Upcoming Event</p>
           </div>
-          <div className="mt-5 flex items-center justify-between">
-            <span className="inline-flex items-center gap-2 text-sm font-bold text-white/88">
-              <FaCalendarAlt />
+          <h3 className="font-bold leading-snug text-white">{event.title}</h3>
+          <p className="mt-2 text-sm leading-6 text-white/78">
+            {getPreview(event.description, 100)}
+          </p>
+          <div className="mt-5 flex items-center justify-between gap-3">
+            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-white/75">
+              <FaCalendarAlt className="text-[10px]" />
               {formatDate(event.date)}
             </span>
             <Link
               href={event.href}
-              className="inline-flex h-10 items-center rounded-lg bg-white px-5 text-sm font-black text-[#4326e8]"
+              className="inline-flex h-9 items-center rounded-xl bg-white px-4 text-xs font-semibold text-[var(--brand-primary)] transition hover:bg-white/90"
             >
               View Event
             </Link>
@@ -418,16 +438,20 @@ function RightColumn({ schools, partner, event }) {
         </section>
       )}
 
+      {/* Partner card */}
       {partner && (
         <section className="rounded-2xl border border-[#edf0f7] bg-white p-5 shadow-sm">
           <SectionTitle title="Featured Partner" href="/partners" />
-          <div className="flex items-center gap-4">
-            <div className="text-3xl font-black text-[#c1262d]">
-              {partner.name}
+          <div className="flex items-start gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#fff0f0] text-lg font-bold text-[#c1262d]">
+              {String(partner.name || "P")[0]}
             </div>
-            <p className="text-sm leading-6 text-[#4b5565]">
-              {partner.description}
-            </p>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-[#111827]">{partner.name}</p>
+              <p className="mt-1 text-xs leading-5 text-[#667085]">
+                {getPreview(String(partner.description || ""), 80)}
+              </p>
+            </div>
           </div>
         </section>
       )}
@@ -441,7 +465,8 @@ function MobileActivityList({ writings, events }) {
   if (writings[0]) {
     items.push({
       icon: FaFeatherAlt,
-      tone: "bg-[#f0edff] text-[#4326e8]",
+      bgClass: "bg-[var(--brand-primary-soft)]",
+      iconColor: "text-[var(--brand-primary)]",
       title: writings[0].title,
       text: `Published by ${writings[0].author}.`,
       time: formatDate(writings[0].date),
@@ -451,7 +476,8 @@ function MobileActivityList({ writings, events }) {
   if (events[0]) {
     items.push({
       icon: FaRegCalendarAlt,
-      tone: "bg-[#e9f9ef] text-[#14a05f]",
+      bgClass: "bg-emerald-50",
+      iconColor: "text-emerald-600",
       title: events[0].title,
       text: events[0].description,
       time: formatDate(events[0].date),
@@ -463,24 +489,26 @@ function MobileActivityList({ writings, events }) {
   return (
     <section>
       <SectionTitle title="Recent Activity" href="/events" />
-      <div className="rounded-2xl border border-[#edf0f7] bg-white">
+      <div className="overflow-hidden rounded-2xl border border-[#edf0f7] bg-white shadow-sm">
         {items.map((item, index) => {
           const Icon = item.icon;
           return (
             <div
               key={item.title}
-              className={`flex gap-3 p-4 ${index > 0 ? "border-t border-[#edf0f7]" : ""}`}
+              className={`flex gap-3 px-4 py-3.5 ${index > 0 ? "border-t border-[#f0f2f7]" : ""}`}
             >
-              <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${item.tone}`}>
-                <Icon />
+              <span
+                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${item.bgClass}`}
+              >
+                <Icon className={`text-sm ${item.iconColor}`} />
               </span>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-black text-[#111827]">{item.title}</p>
-                <p className="mt-1 line-clamp-2 text-xs font-semibold leading-5 text-[#667085]">
+                <p className="line-clamp-1 text-sm font-semibold text-[#111827]">{item.title}</p>
+                <p className="mt-0.5 line-clamp-1 text-xs leading-5 text-[#667085]">
                   {item.text}
                 </p>
               </div>
-              <span className="text-xs font-bold text-[#667085]">{item.time}</span>
+              <span className="shrink-0 text-xs text-[#9aa3b5]">{item.time}</span>
             </div>
           );
         })}
@@ -495,19 +523,19 @@ function MobileSchoolScroller({ schools }) {
   return (
     <section>
       <SectionTitle title="Featured Schools" href="/schools" />
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-4 gap-2.5">
         {schools.slice(0, 4).map((school) => (
           <Link
             key={school.id || school.title}
             href={school.href || "/schools"}
-            className="relative rounded-xl border border-[#edf0f7] bg-white p-3 text-center shadow-sm"
+            className="group flex flex-col items-center rounded-2xl border border-[#edf0f7] bg-white p-3 pt-4 text-center shadow-sm transition hover:border-[var(--brand-primary-border)] hover:shadow-md"
           >
             <SchoolLogoMark
               imageUrl={school.profile?.coverImageUrl}
               name={school.title}
-              className="mx-auto mt-2 h-12 w-12"
+              className="h-11 w-11 rounded-xl"
             />
-            <p className="mt-2 line-clamp-2 min-h-9 text-xs font-black leading-tight text-[#111827]">
+            <p className="mt-2 line-clamp-1 text-[10px] font-bold leading-tight text-[#111827] w-full truncate px-0.5">
               {school.title}
             </p>
           </Link>
@@ -524,44 +552,49 @@ function MobileVoiceFeed({ writings }) {
 
   return (
     <section className="md:hidden">
-      <div className="mb-4 flex items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <SectionTitle title="Student Writings" href="/student-voices" />
+      {/* Category pills */}
+      <div className="mb-4 flex items-center gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {tags.map((tag, index) => (
           <span
             key={tag}
-            className={`shrink-0 rounded-full border px-4 py-2 text-xs font-black ${
+            className={`shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition ${
               index === 0
-                ? "home-primary-action border-[#4326e8] bg-[#4326e8] text-white"
-                : "border-[#edf0f7] bg-white text-[#1f2a44]"
+                ? "home-primary-action border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white"
+                : "border-[#edf0f7] bg-white text-[#3d4a5c] hover:border-[var(--brand-primary-border)]"
             }`}
           >
             {tag}
           </span>
         ))}
       </div>
-      <div className="space-y-4">
-        {items.map((item, index) => (
-          <article key={item.id || item.title} className="rounded-2xl border border-[#edf0f7] bg-white p-4 shadow-sm">
+      {/* Feed articles */}
+      <div className="space-y-3.5">
+        {items.map((item) => (
+          <article
+            key={item.id || item.title}
+            className="group relative overflow-hidden rounded-2xl border border-[#edf0f7] bg-white p-4 shadow-sm transition hover:shadow-md"
+          >
+            {/* Top accent */}
+            <div
+              className="absolute inset-x-0 top-0 h-0.5 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+              style={{ background: "linear-gradient(90deg, var(--brand-primary), #6d4af8)" }}
+            />
             <div className="mb-3 flex items-center justify-between">
-              <span className="rounded-full bg-[#f0edff] px-3 py-1 text-[10px] font-black text-[#4326e8]">
+              <span className="inline-flex items-center rounded-full border border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)] px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--brand-primary)]">
                 {getCategoryLabel(item.category)}
               </span>
-              <span className="text-xs font-bold text-[#667085]">{formatDate(item.date)}</span>
+              <span className="text-[11px] text-[#9aa3b5]">{formatDate(item.date)}</span>
             </div>
-            <AuthorLine name={item.author} school={item.schoolName} badge={getCategoryLabel(item.category)} />
-            <h2 className="mt-3 text-lg font-black text-[#111827]">{item.title}</h2>
-            <p className="mt-1 line-clamp-2 text-sm leading-6 text-[#4b5565]">
-              {getPreview(item.content, 105)}
-            </p>
-            <div className="mt-3 flex items-center justify-between">
-              <Link href={item.href || "/student-voices"} className="text-sm font-black text-[#4326e8]">
-                Read Story
-              </Link>
+            <AuthorLine name={item.author} school={item.schoolName} badge="" />
+            <h2 className="mt-2.5 text-base font-bold leading-snug text-[#111827]">{item.title}</h2>
+            <div className="mt-3.5 flex items-center justify-between">
               <Link
                 href={item.href || "/student-voices"}
-                className="inline-flex items-center gap-2 text-xs font-bold text-[#3120c9]"
+                className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--brand-primary)] transition hover:gap-2.5"
               >
-                Open
-                <FaArrowRight />
+                Read Story
+                <FaArrowRight className="text-[10px]" />
               </Link>
             </div>
           </article>
@@ -631,8 +664,8 @@ export default async function Home() {
                         <h2 className="font-black text-white">
                           {activeEvent.title}
                         </h2>
-                        <p className="mt-1 text-xs leading-5 text-white/86">
-                          {getPreview(activeEvent.description, 100)}
+                        <p className="mt-1 line-clamp-1 text-xs text-white/80">
+                          {getPreview(activeEvent.description, 80)}
                         </p>
                       </div>
                     </div>

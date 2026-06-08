@@ -71,6 +71,22 @@ const SCHOOL_NAV_GROUPS = [
   },
 ];
 
+function getInitials(name = "") {
+  return String(name)
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0])
+    .join("")
+    .toUpperCase() || "U";
+}
+
+function getRoleLabel(role) {
+  return String(role || "User")
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 export default function Sidebar({
   role,
   isRestricted = false,
@@ -94,10 +110,7 @@ export default function Sidebar({
   }, [session]);
 
   useEffect(() => {
-    if (role !== "STUDENT" || isPending) {
-      return;
-    }
-
+    if (role !== "STUDENT" || isPending) return;
     let cancelled = false;
     async function loadStudentMagazineSettings() {
       try {
@@ -110,11 +123,8 @@ export default function Sidebar({
         if (!cancelled) setStudentGlobalWallEnabled(false);
       }
     }
-
     void loadStudentMagazineSettings();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [isPending, role]);
 
   const adminLinks = [
@@ -133,46 +143,18 @@ export default function Sidebar({
     { name: "Overview", href: "/school/dashboard", icon: FaChartPie },
     { name: "Students", href: "/school/dashboard?tab=students", icon: FaUsers },
     { name: "Teachers", href: "/school/dashboard?tab=teachers", icon: FaChalkboardTeacher },
-    {
-      name: "Platform Events",
-      href: "/school/dashboard?tab=platform-events",
-      icon: FaCalendarAlt,
-    },
-    {
-      name: "School Events",
-      href: "/school/dashboard?tab=school-events",
-      icon: FaCalendarAlt,
-    },
-    {
-      name: "Student Notices",
-      href: "/school/dashboard?tab=student-notices",
-      icon: FaBell,
-    },
-    {
-      name: "Received Notices",
-      href: "/school/dashboard?tab=notices",
-      icon: FaBell,
-    },
-    {
-      name: "Publishing Desk",
-      href: "/school/dashboard?tab=magazine",
-      icon: FaBookOpen,
-    },
-    {
-      name: "Public Profile",
-      href: "/school/dashboard?tab=showcase",
-      icon: FaSchool,
-    },
+    { name: "Platform Events", href: "/school/dashboard?tab=platform-events", icon: FaCalendarAlt },
+    { name: "School Events", href: "/school/dashboard?tab=school-events", icon: FaCalendarAlt },
+    { name: "Student Notices", href: "/school/dashboard?tab=student-notices", icon: FaBell },
+    { name: "Received Notices", href: "/school/dashboard?tab=notices", icon: FaBell },
+    { name: "Publishing Desk", href: "/school/dashboard?tab=magazine", icon: FaBookOpen },
+    { name: "Public Profile", href: "/school/dashboard?tab=showcase", icon: FaSchool },
     { name: "Feedback", href: "/school/dashboard?tab=feedback", icon: FaCommentDots },
     { name: "Settings", href: "/school/dashboard?tab=settings", icon: FaCog },
   ];
 
   const teacherLinks = [
-    {
-      name: "Mentor Workspace",
-      href: "/teacher/dashboard",
-      icon: FaChalkboardTeacher,
-    },
+    { name: "Mentor Workspace", href: "/teacher/dashboard", icon: FaChalkboardTeacher },
   ];
 
   const studentLinks = [
@@ -196,11 +178,10 @@ export default function Sidebar({
   else if (role === "TEACHER") links = teacherLinks;
   else if (role === "STUDENT") links = studentLinks;
 
-  // RESTRICTION LOGIC
   if (isPending) {
-    links = []; // Hide all navigation for pending users
+    links = [];
   } else if (isRestricted && role === "SCHOOL_ADMIN") {
-    links = links.filter(link => link.name === "Settings");
+    links = links.filter((link) => link.name === "Settings");
   }
 
   const groupedLinks =
@@ -211,112 +192,131 @@ export default function Sidebar({
         })).filter((group) => group.links.length > 0)
       : [{ title: null, links }];
 
+  const userName = session?.user?.name || session?.user?.email || "User";
+  const userRole = session?.user?.role || role || "USER";
+  const initials = getInitials(session?.user?.name || "");
+
   return (
     <aside
-      className={`pratyo-dark-shell fixed left-0 top-0 z-50 flex h-dvh w-[min(88vw,18rem)] flex-col border-r backdrop-blur-xl transition-transform duration-300 lg:h-screen lg:w-[17rem] lg:translate-x-0 ${
+      className={`pratyo-dark-shell fixed left-0 top-0 z-50 flex h-dvh flex-col border-r transition-transform duration-300 lg:h-screen lg:translate-x-0 ${
         isMobileOpen ? "translate-x-0" : "-translate-x-full"
       }`}
+      style={{ width: "min(88vw, 17rem)" }}
     >
-      <div className="border-b border-[#e6eaf7] p-4">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
+      {/* ── Logo / brand header ─── */}
+      <div className="sidebar-header-band flex items-center justify-between gap-3 px-4 py-3.5">
+        <div className="flex items-center gap-3 min-w-0">
           <PratyoLogo variant="icon" compact withSurface />
-          <div>
-            <p className="pratyo-muted text-xs font-semibold uppercase tracking-wide">
+          <div className="min-w-0">
+            <p className="text-[11px] font-bold uppercase tracking-widest text-[var(--brand-primary)] leading-none">
               Pratyo
             </p>
-            <p className="text-sm font-semibold text-[var(--brand-ink)]">
+            <p className="text-sm font-semibold text-[var(--brand-ink)] leading-tight mt-0.5 truncate">
               School Platform
             </p>
           </div>
-          </div>
-          <button
-            type="button"
-            onClick={onNavigate}
-            className="rounded-lg p-2 text-[#27344a] transition hover:bg-[#f4f1ff] hover:text-[#4326e8] lg:hidden"
-            aria-label="Close navigation"
-          >
-            <FaTimes />
-          </button>
         </div>
+        <button
+          type="button"
+          onClick={onNavigate}
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[var(--brand-border)] bg-white text-[var(--brand-muted)] transition hover:bg-[var(--brand-primary-soft)] hover:text-[var(--brand-primary)] lg:hidden"
+          aria-label="Close navigation"
+        >
+          <FaTimes className="text-xs" />
+        </button>
       </div>
 
-      <nav className="flex-1 space-y-5 overflow-y-auto p-3">
+      {/* ── Navigation ─── */}
+      <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-4">
         {groupedLinks.map((group) => (
-          <div key={group.title || "main"} className="space-y-2">
+          <div key={group.title || "main"}>
             {group.title && (
-              <p className="px-3 text-[11px] font-semibold uppercase tracking-wide text-[var(--brand-muted)]">
-                {group.title}
-              </p>
+              <p className="sidebar-group-label mb-1.5 mt-1">{group.title}</p>
             )}
-            {group.links.map((link) => {
-              const Icon = link.icon;
-              const currentHref = pathname + (currentTab ? `?tab=${currentTab}` : "");
-              const isNestedActive =
-                !link.href.includes("?") && pathname?.startsWith(`${link.href}/`);
-              const isActive = link.href === currentHref || isNestedActive;
-              const indicator = getIndicator(HREF_INDICATOR_KEYS[link.href]);
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  onClick={() => {
-                    const seenSurface = HREF_SEEN_SURFACES[link.href];
-                    if (seenSurface) void markSurfaceSeen(seenSurface);
-                    onNavigate?.();
-                  }}
-                  aria-current={isActive ? "page" : undefined}
-                  className={`group flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 transition-all duration-200 ${
-                    isActive
-                      ? "pratyo-sidebar-active bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]"
-                      : "text-[#27344a] hover:bg-[var(--brand-primary-soft)]/60 hover:text-[var(--brand-primary)]"
-                  }`}
-                >
-                  <Icon
-                    className={`pratyo-sidebar-icon text-base ${
+            <div className="space-y-0.5">
+              {group.links.map((link) => {
+                const Icon = link.icon;
+                const currentHref = pathname + (currentTab ? `?tab=${currentTab}` : "");
+                const isNestedActive =
+                  !link.href.includes("?") && pathname?.startsWith(`${link.href}/`);
+                const isActive = link.href === currentHref || isNestedActive;
+                const indicator = getIndicator(HREF_INDICATOR_KEYS[link.href]);
+
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    onClick={() => {
+                      const seenSurface = HREF_SEEN_SURFACES[link.href];
+                      if (seenSurface) void markSurfaceSeen(seenSurface);
+                      onNavigate?.();
+                    }}
+                    aria-current={isActive ? "page" : undefined}
+                    className={`group flex min-h-[2.625rem] items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold transition-all duration-150 ${
                       isActive
-                        ? "text-[var(--brand-primary)]"
-                        : "text-[var(--brand-muted)] group-hover:text-[var(--brand-primary)]"
+                        ? "pratyo-sidebar-active bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]"
+                        : "text-[#3d4a5c] hover:bg-[var(--brand-primary-soft)]/70 hover:text-[var(--brand-primary)]"
                     }`}
-                  />
-                  <span className="pratyo-sidebar-label min-w-0 flex-1 text-sm font-semibold leading-tight">
-                    {link.name}
-                  </span>
-                  <WorkIndicatorBadge
-                    count={indicator.count}
-                    tone={indicator.tone}
-                    compact
-                  />
-                </Link>
-              );
-            })}
+                  >
+                    <span
+                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-all duration-150 ${
+                        isActive
+                          ? "bg-[var(--brand-primary)] text-white shadow-sm"
+                          : "bg-[#f0eeff] text-[var(--brand-muted)] group-hover:bg-[var(--brand-primary-soft)] group-hover:text-[var(--brand-primary)]"
+                      }`}
+                    >
+                      <Icon className="pratyo-sidebar-icon text-xs" />
+                    </span>
+                    <span className="pratyo-sidebar-label min-w-0 flex-1 truncate leading-tight">
+                      {link.name}
+                    </span>
+                    <WorkIndicatorBadge
+                      count={indicator.count}
+                      tone={indicator.tone}
+                      compact
+                    />
+                  </Link>
+                );
+              })}
+            </div>
           </div>
         ))}
+
         {links.length === 0 && (
-        <div className="rounded-xl border border-[#e6eaf7] bg-[#f8f9fd] p-4 text-sm leading-6 text-[#526071]">
+          <div className="rounded-xl border border-dashed border-[var(--brand-border)] bg-[#f8f9fd] px-4 py-5 text-center text-sm leading-6 text-[#526071]">
+            <FaSchool className="mx-auto mb-2 text-lg text-[var(--brand-primary)] opacity-40" />
             Navigation will appear after your account is active.
           </div>
         )}
       </nav>
 
-      <div className="border-t border-[#e6eaf7] p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+      {/* ── User card + Logout ─── */}
+      <div
+        className="border-t border-[var(--brand-border)] px-3 pt-3"
+        style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}
+      >
         {session?.user && (
-          <div className="mb-3 rounded-xl border border-[#e6eaf7] bg-[#f8f9fd] p-3">
-            <p className="truncate text-sm font-semibold text-[var(--brand-ink)]">
-              {session.user.name || session.user.email || "Signed in"}
-            </p>
-            <p className="pratyo-muted mt-1 truncate text-xs font-medium uppercase tracking-wide">
-              {String(session.user.role || role || "USER").replaceAll("_", " ")}
-            </p>
+          <div className="sidebar-user-card mb-2">
+            <div className="sidebar-avatar">{initials}</div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-[var(--brand-ink)] leading-tight">
+                {userName}
+              </p>
+              <p className="mt-0.5 truncate text-[11px] font-medium uppercase tracking-wide text-[var(--brand-muted)]">
+                {getRoleLabel(userRole)}
+              </p>
+            </div>
           </div>
         )}
         <button
           type="button"
           onClick={() => signOut({ callbackUrl: "/login" })}
-          className="group flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-[#27344a] transition-all duration-200 hover:bg-[var(--brand-primary-soft)] hover:text-[var(--brand-primary)]"
+          className="group flex min-h-[2.5rem] w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold text-[#3d4a5c] transition-all duration-150 hover:bg-red-50 hover:text-red-600"
         >
-          <FaSignOutAlt className="text-lg group-hover:text-[#4326e8]" />
-          <span className="font-medium">Logout</span>
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#fff0f0] text-red-400 group-hover:bg-red-100 group-hover:text-red-600 transition-all duration-150">
+            <FaSignOutAlt className="text-xs" />
+          </span>
+          <span>Log out</span>
         </button>
       </div>
     </aside>

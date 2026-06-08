@@ -223,35 +223,35 @@ export default function EventCard({
             </div>
             <div className="mt-3 flex flex-wrap gap-2">
               {isArchivedMode ? (
-                <button
-                  type="button"
-                  onClick={() => onUpdateStatus?.(event._id, "ACTIVE")}
-                  className="inline-flex min-h-9 items-center gap-2 rounded-xl bg-white px-4 text-xs font-black text-[#0a2f66] transition hover:bg-[#f8fbff]"
-                >
-                  <FaHistory />
-                  Restore Event
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  disabled={isDeleting}
-                  onClick={() => onDelete?.(event)}
-                  className="inline-flex min-h-9 items-center gap-2 rounded-xl bg-white px-4 text-xs font-black text-rose-700 transition hover:bg-rose-50 disabled:cursor-wait disabled:opacity-60"
-                >
-                  <FaArchive />
-                  Delete / Archive Event
-                </button>
-              )}
-              {event.participants?.length > 0 && (
-                <button
-                  type="button"
-                  onClick={exportToCSV}
-                  className="inline-flex min-h-9 items-center gap-2 rounded-xl bg-white px-4 text-xs font-black text-[#0a2f66] transition hover:bg-[#f8fbff]"
-                >
-                  <FaDownload />
-                  Export
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={() => onUpdateStatus?.(event._id, "ACTIVE")}
+                className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-[#cbd5e1] bg-white px-3.5 py-1.5 text-xs font-bold text-[#1e293b] transition hover:bg-[#f8fafc] hover:text-[#0a2f66]"
+              >
+                <FaHistory />
+                Restore Event
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => onDelete?.(event)}
+                className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-rose-200 bg-white px-3.5 py-1.5 text-xs font-bold text-rose-700 transition hover:bg-rose-50 disabled:cursor-wait disabled:opacity-60"
+              >
+                <FaArchive />
+                Delete / Archive Event
+              </button>
+            )}
+            {event.participants?.length > 0 && (
+              <button
+                type="button"
+                onClick={exportToCSV}
+                className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-[#cbd5e1] bg-white px-3.5 py-1.5 text-xs font-bold text-[#1e293b] transition hover:bg-[#f8fafc] hover:text-[#0a2f66]"
+              >
+                <FaDownload />
+                Export
+              </button>
+            )}
             </div>
           </div>
         </div>
@@ -261,7 +261,7 @@ export default function EventCard({
             <button
               type="button"
               onClick={() => onUpdateStatus?.(event._id, "ACTIVE")}
-              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-purple-700 px-4 text-xs font-black text-white shadow-sm transition hover:bg-purple-800"
+              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-purple-700 px-4 text-xs font-bold text-white shadow-sm transition hover:bg-purple-800"
             >
               <FaHistory />
               Restore Event
@@ -269,7 +269,7 @@ export default function EventCard({
           ) : (
             <Link
               href={`/admin/events/${event._id}/manage?tab=registrations`}
-              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-purple-700 px-4 text-xs font-black text-white shadow-sm transition hover:bg-purple-800"
+              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-purple-700 px-4 text-xs font-bold text-white shadow-sm transition hover:bg-purple-800"
             >
               Continue Management
             </Link>
@@ -278,7 +278,7 @@ export default function EventCard({
             <button
               type="button"
               onClick={() => onEdit?.(event)}
-              className="inline-flex min-h-8 items-center gap-2 rounded-lg bg-white px-3 text-[11px] font-black text-[#0a2f66] transition hover:bg-[#f8fbff]"
+              className="inline-flex min-h-8 items-center gap-2 rounded-lg border border-[#cbd5e1] bg-white px-3 text-[11px] font-bold text-[#1e293b] transition hover:bg-[#f8fafc]"
             >
               <FaEdit />
               Edit Event
@@ -287,7 +287,7 @@ export default function EventCard({
           {!isArchivedMode && (
             <Link
               href={`/admin/events/${event._id}/manage?tab=notices`}
-              className="inline-flex min-h-8 items-center gap-2 rounded-lg bg-white px-3 text-[11px] font-black text-[#0a2f66] transition hover:bg-[#f8fbff]"
+              className="inline-flex min-h-8 items-center gap-2 rounded-lg border border-[#cbd5e1] bg-white px-3 text-[11px] font-bold text-[#1e293b] transition hover:bg-[#f8fafc]"
             >
               <FaBell />
               Event Notices

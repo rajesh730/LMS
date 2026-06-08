@@ -96,7 +96,7 @@ export default function StudentActivityOverview() {
 
   return (
     <div className="space-y-5">
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="mobile-accessory-info grid grid-cols-2 gap-4 sm:grid sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard label="Achievements" value={metrics.achievementsCount || 0} />
         <MetricCard label="Wins" value={metrics.winsCount || 0} />
         <MetricCard label="Finalist" value={metrics.finalistCount || 0} />

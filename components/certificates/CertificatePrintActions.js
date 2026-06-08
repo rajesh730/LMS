@@ -19,7 +19,7 @@ export default function CertificatePrintActions({ autoPrint = false }) {
     <button
       type="button"
       onClick={() => window.print()}
-      className="rounded-full bg-slate-900 px-5 py-2 text-sm font-semibold text-white"
+      className="rounded-lg bg-[#4326e8] px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-[#3217d3]"
     >
       Download PDF
     </button>

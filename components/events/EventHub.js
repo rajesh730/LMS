@@ -501,10 +501,10 @@ export default function EventHub({
                 <button
                   key={filter.id}
                   onClick={() => setFilterStatus(filter.id)}
-                  className={`min-h-10 shrink-0 rounded-lg px-4 text-sm font-black transition-all ${
+                  className={`min-h-10 shrink-0 rounded-lg px-4 text-sm font-bold transition-all ${
                     filterStatus === filter.id
                       ? "bg-[#4326e8] text-white shadow-[0_10px_20px_rgba(67,38,232,0.18)]"
-                      : "border border-[#d8e0f0] bg-white text-[#4326e8] hover:border-[#cfc4ff] hover:bg-[#f8f6ff]"
+                      : "border border-[#d8e0f0] bg-white text-[#3116be] hover:border-[#4326e8] hover:bg-[#f4f1ff]"
                   }`}
                 >
                   {filter.label}
@@ -580,11 +580,11 @@ export default function EventHub({
                     {/* Left: Event Info */}
                     <div className="min-w-0">
                       <div className="mb-2 flex flex-wrap items-center gap-2">
-                        <h3 className="mr-1 min-w-0 text-xl font-black leading-tight text-[#001233] md:text-[22px]">
+                        <h3 className="mr-1 min-w-0 text-xl font-bold leading-tight text-[#001233] md:text-[22px]">
                           {event.title}
                         </h3>
                         <span
-                          className={`inline-flex min-h-7 items-center rounded-full border px-2.5 text-[11px] font-black ${
+                          className={`inline-flex min-h-7 items-center rounded-full border px-2.5 text-[11px] font-bold ${
                             event.eventScope === "PLATFORM"
                               ? "border-[#d6ceff] bg-[#f4f1ff] text-[#4326e8]"
                               : "border-[#bfd7f7] bg-[#f8fbff] text-[#0a2f66]"
@@ -601,18 +601,18 @@ export default function EventHub({
                               : event.participationStatus
                           )}
                         {needsSchoolApproval && (
-                          <span className="inline-flex min-h-7 items-center rounded-full border border-amber-200 bg-amber-50 px-2.5 text-[11px] font-black text-amber-800">
+                          <span className="inline-flex min-h-7 items-center rounded-full border border-amber-200 bg-amber-50 px-2.5 text-[11px] font-bold text-amber-800">
                             School approval needed
                           </span>
                         )}
                         {event.participationStatus && (
-                          <span className="inline-flex min-h-7 items-center rounded-full border border-[#d8e0f0] bg-[#f8fbff] px-2.5 text-[11px] font-black text-[#27344a]">
+                          <span className="inline-flex min-h-7 items-center rounded-full border border-[#d8e0f0] bg-[#f8fbff] px-2.5 text-[11px] font-bold text-[#27344a]">
                             {getRegisteredSummary(event)}
                           </span>
                         )}
                       </div>
 
-                      <p className="mb-3 line-clamp-2 max-w-3xl text-sm leading-6 text-[#344f77]">
+                      <p className="mb-3 line-clamp-1 max-w-3xl text-sm leading-6 text-[#1e293b]">
                         {event.description}
                       </p>
 
@@ -663,105 +663,25 @@ export default function EventHub({
                         </div>
                       )}
 
-                      <div
-                        className={`mb-3 max-w-3xl rounded-lg border px-3 py-2.5 text-sm ${getStageClasses(
-                          stage.tone
-                        )}`}
-                      >
-                        <div className="font-black">{stage.label}</div>
-                        <div className="text-xs opacity-90">
-                          {stage.nextAction}
-                        </div>
-                      </div>
-
-                      {/* Event Details Grid */}
-                      <div
-                        className={`grid grid-cols-1 gap-2 sm:grid-cols-2 ${
-                          showSchoolMetric ? "md:grid-cols-4" : "md:grid-cols-3"
-                        }`}
-                      >
-                        {/* Date */}
-                        <div className="flex items-center gap-3 rounded-lg border border-[#eef2f8] bg-white px-3 py-2">
-                          <FaCalendarAlt className="text-[#52657d]" />
-                          <div>
-                            <p className="text-[10px] font-black uppercase text-[#52657d]">
-                              Date
-                            </p>
-                            <p className="text-sm font-black text-[#17120a]">
-                              {new Date(event.date).toLocaleDateString(
-                                "en-US",
-                                {
-                                  month: "short",
-                                  day: "numeric",
-                                  year: "numeric",
-                                }
-                              )}
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Deadline */}
-                        <div className="flex items-center gap-3 rounded-lg border border-[#eef2f8] bg-white px-3 py-2">
-                          <FaClock className="text-[#52657d]" />
-                          <div>
-                            <p className="text-[10px] font-black uppercase text-[#52657d]">
-                              Deadline
-                            </p>
-                            <p
-                              className={`text-sm font-black ${
-                                event.deadline &&
-                                isDatePast(event.deadline, { endOfDay: true })
-                                  ? "text-rose-700"
-                                  : "text-emerald-700"
-                              }`}
-                            >
-                              {event.deadline
-                                ? new Date(event.deadline).toLocaleDateString(
-                                    "en-US",
-                                    {
-                                      month: "short",
-                                      day: "numeric",
-                                    }
-                                  )
-                                : "No deadline"}
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Capacity */}
-                        <div className="flex items-center gap-3 rounded-lg border border-[#eef2f8] bg-white px-3 py-2">
-                          <FaUsers className="text-[#52657d]" />
-                          <div>
-                            <p className="text-[10px] font-black uppercase text-[#52657d]">
-                              {isTeamEvent ? "Team Capacity" : "Capacity"}
-                            </p>
-                            <p
-                              className={`text-sm font-black ${getCapacityColor(
-                                event.enrolled || 0,
-                                event.capacity
-                              )}`}
-                            >
-                              {event.capacity
-                                ? `${event.enrolled || 0}/${event.capacity}`
-                                : `${event.enrolled || 0}/Unlimited`}
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Schools */}
-                        {showSchoolMetric && (
-                          <div className="flex items-center gap-3 rounded-lg border border-[#eef2f8] bg-white px-3 py-2">
-                            <FaMapMarkerAlt className="text-[#52657d]" />
-                            <div>
-                              <p className="text-[10px] font-black uppercase text-[#52657d]">
-                                Schools
-                              </p>
-                              <p className="text-sm font-black text-[#17120a]">
-                                {event.schoolCount || 0} schools
-                              </p>
-                            </div>
-                          </div>
+                      {/* Clean Single-line Meta Info */}
+                      <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs font-semibold text-[#334155]">
+                        <span className="inline-flex items-center gap-1.5">
+                          <FaCalendarAlt className="text-[#4326e8]" />
+                          {new Date(event.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                        </span>
+                        <span className="inline-flex items-center gap-1.5">
+                          <FaMapMarkerAlt className="text-[#4326e8]" />
+                          {String(event.eventMode || event.mode || "Online").replaceAll("_", " ")}
+                        </span>
+                        {event.participationStatus && (
+                          <span className="inline-flex items-center gap-1.5">
+                            <FaUsers className="text-[#4326e8]" />
+                            {getRegisteredSummary(event)}
+                          </span>
                         )}
+                        <span className="rounded-full bg-[#f1f5f9] px-2 py-0.5 text-[10px] font-bold text-[#475569]">
+                          Stage: {stage.label}
+                        </span>
                       </div>
                     </div>
 
@@ -799,20 +719,20 @@ export default function EventHub({
                               target="_blank"
                               rel="noopener noreferrer"
                               onClick={(e) => e.stopPropagation()}
-                              className="rounded-lg border border-[#d7cdbb] bg-white px-3 py-2 font-semibold text-[#0a2f66] transition-colors hover:bg-[#eaf2ff]"
+                              className="rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-sm font-bold text-[#4326e8] transition-colors hover:bg-[#f8fafc]"
                               title="View public overall result"
                             >
-                              Open Public Result
+                              Open Result
                             </Link>
                           )}
-                          {event.visibility === "PUBLIC" && !completedView && !useManagementPage && (
+                           {event.visibility === "PUBLIC" && !completedView && !useManagementPage && (
                             <button
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setDetailEvent(event);
                               }}
-                              className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#d8e0f0] bg-white px-3 text-sm font-black text-[#4326e8] transition hover:border-[#cfc4ff] hover:bg-[#f8f6ff]"
+                              className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#e2e8f0] bg-white px-3 text-sm font-bold text-[#3116be] transition hover:border-[#4326e8] hover:bg-[#f4f1ff]"
                               title="View event details"
                             >
                               <FaEye />
@@ -827,7 +747,7 @@ export default function EventHub({
                                   e.stopPropagation();
                                   setWithdrawTarget(event);
                                 }}
-                                className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 text-sm font-black text-rose-800 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-[#52657d]"
+                                className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-rose-300 bg-rose-50 px-3 text-sm font-bold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-[#52657d]"
                                 title={
                                   registrationLocked
                                     ? "Registration closed"
@@ -850,7 +770,7 @@ export default function EventHub({
                                     );
                                   }
                                 }}
-                                className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-[#4326e8] px-3 text-sm font-black text-white shadow-[0_10px_20px_rgba(67,38,232,0.22)] transition hover:bg-[#3217d3]"
+                                className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-[#4326e8] px-3 text-sm font-bold text-white shadow-md transition hover:bg-[#3217d3]"
                                 title={
                                   registrationLocked
                                     ? `Track rounds and ${isTeamEvent ? "group" : "participant"} outcome`
@@ -872,35 +792,35 @@ export default function EventHub({
                             <Link
                               href={useManagementPage ? managementHref : "#"}
                               onClick={(e) => {
-                                e.stopPropagation();
-                                if (!useManagementPage) {
-                                  e.preventDefault();
-                                  setExpandedEventId(
-                                    expandedEventId === event._id ? null : event._id
-                                  );
-                                }
-                              }}
-                              className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-[#4326e8] px-3 text-sm font-black text-white shadow-[0_10px_20px_rgba(67,38,232,0.22)] transition hover:bg-[#3217d3]"
-                              title="View school result and certificates"
-                            >
-                              <FaEdit />
-                              {useManagementPage
-                                ? "Continue Management"
-                                : "View Results & Certificates"}
-                            </Link>
-                          )}
-                          {isStudentView && event.visibility === "PUBLIC" && event.finalOutcomeReady && (
-                            <Link
-                              href={`/events/${event._id}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              onClick={(e) => e.stopPropagation()}
-                              className="inline-flex min-h-10 items-center rounded-lg bg-[#4326e8] px-3 text-sm font-black text-white shadow-[0_10px_20px_rgba(67,38,232,0.22)] transition hover:bg-[#3217d3]"
-                              title="View published result"
-                            >
-                              View Result
-                            </Link>
-                          )}
+                                  e.stopPropagation();
+                                  if (!useManagementPage) {
+                                    e.preventDefault();
+                                    setExpandedEventId(
+                                      expandedEventId === event._id ? null : event._id
+                                    );
+                                  }
+                                }}
+                                className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-[#4326e8] px-3 text-sm font-bold text-white shadow-md transition hover:bg-[#3217d3]"
+                                title="View school result and certificates"
+                              >
+                                <FaEdit />
+                                {useManagementPage
+                                  ? "Continue Management"
+                                  : "View Results & Certificates"}
+                              </Link>
+                            )}
+                            {isStudentView && event.visibility === "PUBLIC" && event.finalOutcomeReady && (
+                              <Link
+                                href={`/events/${event._id}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="inline-flex min-h-10 items-center rounded-lg bg-[#4326e8] px-3 text-sm font-bold text-white shadow-md transition hover:bg-[#3217d3]"
+                                title="View published result"
+                              >
+                                View Result
+                              </Link>
+                            )}
                         </div>
                       ) : (
                         <div className="flex w-full flex-wrap justify-end gap-2">
@@ -911,7 +831,7 @@ export default function EventHub({
                                 e.stopPropagation();
                                 setDetailEvent(event);
                               }}
-                              className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#d8e0f0] bg-white px-3 text-sm font-black text-[#4326e8] transition hover:border-[#cfc4ff] hover:bg-[#f8f6ff]"
+                              className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#e2e8f0] bg-white px-3 text-sm font-bold text-[#4326e8] transition hover:border-[#cfc4ff] hover:bg-[#f8f6ff]"
                             >
                               <FaEye />
                               View Details
@@ -922,7 +842,7 @@ export default function EventHub({
                               type="button"
                               disabled
                               onClick={(e) => e.stopPropagation()}
-                              className="inline-flex min-h-10 cursor-not-allowed items-center rounded-lg bg-slate-100 px-3 text-sm font-black text-[#52657d] transition whitespace-nowrap"
+                              className="inline-flex min-h-10 cursor-not-allowed items-center rounded-lg bg-slate-100 px-3 text-sm font-bold text-[#52657d] transition whitespace-nowrap"
                             >
                               {needsSchoolApproval
                                 ? "Approve First"
@@ -938,17 +858,17 @@ export default function EventHub({
                                   setExpandedEventId(event._id);
                                 }
                               }}
-                              className={`inline-flex min-h-10 items-center rounded-lg px-3 text-sm font-black transition whitespace-nowrap ${
-                              registrationLocked || needsSchoolApproval
-                                ? "cursor-not-allowed bg-slate-100 text-[#52657d]"
-                                : "cursor-pointer bg-[#4326e8] text-white shadow-[0_10px_20px_rgba(67,38,232,0.22)] hover:bg-[#3217d3]"
-                            }`}
+                              className={`inline-flex min-h-10 items-center rounded-lg px-3 text-sm font-bold transition whitespace-nowrap ${
+                                registrationLocked || needsSchoolApproval
+                                  ? "cursor-not-allowed bg-slate-100 text-[#52657d]"
+                                  : "cursor-pointer bg-[#4326e8] text-white shadow-md hover:bg-[#3217d3]"
+                              }`}
                             >
                               {isStudentView
-                              ? "View Event"
-                              : isTeamEvent
-                              ? "Register Groups"
-                              : "Register Participants"}
+                                ? "View Event"
+                                : isTeamEvent
+                                ? "Register Groups"
+                                : "Register Participants"}
                             </Link>
                           )}
                         </div>
@@ -959,7 +879,54 @@ export default function EventHub({
 
                 {/* Expanded Section - Participation Form */}
                 {expandedEventId === event._id && !needsSchoolApproval && !useManagementPage && (
-                  <div className="space-y-4 border-t border-[#d8e0f0] bg-[#f8fbff] p-4">
+                  <div className="space-y-4 border-t border-[#e2e8f0] bg-[#f8fafc] p-5">
+                    {/* Stage Banner */}
+                    <div className={`max-w-3xl rounded-lg border px-3 py-2.5 text-sm ${getStageClasses(stage.tone)}`}>
+                      <div className="font-bold text-[#1e293b]">{stage.label}</div>
+                      <div className="text-xs text-[#334155] opacity-90">{stage.nextAction}</div>
+                    </div>
+
+                    {/* Event Details Grid */}
+                    <div className={`grid grid-cols-1 gap-2 sm:grid-cols-2 ${showSchoolMetric ? "md:grid-cols-4" : "md:grid-cols-3"}`}>
+                      {/* Date */}
+                      <div className="flex items-center gap-3 rounded-lg border border-[#eef2f8] bg-white px-3 py-2">
+                        <FaCalendarAlt className="text-[#4326e8]" />
+                        <div>
+                          <p className="text-[10px] font-bold uppercase text-[#475569]">Date</p>
+                          <p className="text-sm font-bold text-[#1e293b]">{new Date(event.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</p>
+                        </div>
+                      </div>
+                      {/* Deadline */}
+                      <div className="flex items-center gap-3 rounded-lg border border-[#eef2f8] bg-white px-3 py-2">
+                        <FaClock className="text-[#4326e8]" />
+                        <div>
+                          <p className="text-[10px] font-bold uppercase text-[#475569]">Deadline</p>
+                          <p className={`text-sm font-bold ${event.deadline && isDatePast(event.deadline, { endOfDay: true }) ? "text-rose-700" : "text-emerald-700"}`}>
+                            {event.deadline ? new Date(event.deadline).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "No deadline"}
+                          </p>
+                        </div>
+                      </div>
+                      {/* Capacity */}
+                      <div className="flex items-center gap-3 rounded-lg border border-[#eef2f8] bg-white px-3 py-2">
+                        <FaUsers className="text-[#4326e8]" />
+                        <div>
+                          <p className="text-[10px] font-bold uppercase text-[#475569]">{isTeamEvent ? "Team Capacity" : "Capacity"}</p>
+                          <p className={`text-sm font-bold ${getCapacityColor(event.enrolled || 0, event.capacity)}`}>
+                            {event.capacity ? `${event.enrolled || 0}/${event.capacity}` : `${event.enrolled || 0}/Unlimited`}
+                          </p>
+                        </div>
+                      </div>
+                      {/* Schools */}
+                      {showSchoolMetric && (
+                        <div className="flex items-center gap-3 rounded-lg border border-[#eef2f8] bg-white px-3 py-2">
+                          <FaMapMarkerAlt className="text-[#4326e8]" />
+                          <div>
+                            <p className="text-[10px] font-bold uppercase text-[#475569]">Schools</p>
+                            <p className="text-sm font-bold text-[#1e293b]">{event.schoolCount || 0} schools</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                     {!completedView && !registrationLocked && (
                       <div className="rounded-xl border border-[#d8e0f0] bg-white p-4">
                         <h4 className="mb-3 text-lg font-black text-[#001233]">

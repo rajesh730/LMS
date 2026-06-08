@@ -283,19 +283,19 @@ function WritingStudioHero({
     <section className="relative overflow-hidden rounded-2xl border border-[#e7dcc8] bg-white shadow-[0_18px_50px_rgba(10,47,102,0.08)]">
       <div className="grid gap-6 p-5 md:p-8 xl:grid-cols-[1fr_0.86fr]">
         <div className="relative z-10 min-w-0">
-          <p className="text-xs font-black uppercase text-purple-700">
+          <p className="mobile-accessory-info text-xs font-black uppercase text-purple-700 sm:block">
             Creative Writing Studio
           </p>
-          <h1 className="mt-4 max-w-2xl text-4xl font-black leading-tight text-[#17120a] md:text-5xl">
+          <h1 className="mobile-accessory-info mt-4 max-w-2xl text-4xl font-black leading-tight text-[#17120a] sm:block md:text-5xl">
             Share your voice.{" "}
             <span className="text-pink-600">Inspire your school.</span>
           </h1>
-          <p className="mt-4 max-w-xl text-sm leading-6 text-[#52657d] md:text-base">
+          <p className="mobile-accessory-info mt-4 max-w-xl text-sm leading-6 text-[#52657d] sm:block md:text-base">
             Express your ideas, stories, and creativity. Your words can become a
             draft, a school magazine article, or a platform prompt response.
           </p>
 
-          <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mobile-accessory-info mt-6 grid gap-3 sm:grid sm:grid-cols-2 lg:grid-cols-4">
             {[
               [FaPenNib, libraryCounts.FREE, "Free Writing", "rose"],
               [FaSchool, libraryCounts.SCHOOL, "School Writing", "indigo"],
@@ -333,7 +333,7 @@ function WritingStudioHero({
           </div>
         </div>
 
-        <div className="pratyo-brand-surface relative min-h-72 overflow-hidden rounded-2xl p-6">
+        <div className="mobile-accessory-info pratyo-brand-surface relative min-h-72 overflow-hidden rounded-2xl p-6 sm:block">
           <div className="absolute right-12 top-16 h-32 w-52 rotate-[-6deg] rounded-lg border border-[#d7cdbb] bg-white/80 shadow-xl" />
           <div className="absolute right-24 top-24 h-32 w-52 rotate-[7deg] rounded-lg border border-[#d7cdbb] bg-white/85 shadow-xl" />
           <FaPenNib className="absolute right-12 top-10 text-5xl text-white/78" />

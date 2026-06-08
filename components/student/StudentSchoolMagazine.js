@@ -619,7 +619,7 @@ export default function StudentSchoolMagazine({
 
   return (
     <div className="space-y-6 text-[#27344a]">
-      <section className="overflow-hidden rounded-2xl border border-[#d7cdbb] bg-white shadow-[0_18px_50px_rgba(10,47,102,0.08)]">
+      <section className="mobile-accessory-info overflow-hidden rounded-2xl border border-[#d7cdbb] bg-white shadow-[0_18px_50px_rgba(10,47,102,0.08)] sm:block">
         <div className="grid gap-6 p-5 md:p-8 xl:grid-cols-[1fr_0.85fr]">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-3">

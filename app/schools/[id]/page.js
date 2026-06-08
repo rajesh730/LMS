@@ -414,12 +414,20 @@ function AtGlance({ school, studentCount, teacherCount, grades }) {
           <p className="text-sm font-semibold text-[#52657d]">
             Public school details are not available yet.
           </p>
-        ) : items.map(([label, value]) => (
-          <div key={label} className="flex items-center justify-between gap-4">
-            <span className="text-sm font-semibold text-[#52657d]">{label}</span>
-            <strong className="text-right text-sm text-[#17120a]">{value}</strong>
-          </div>
-        ))}
+        ) : items.map(([label, value]) => {
+          const isExcessOnMobile = ["Total Students", "Teachers"].includes(label);
+          return (
+            <div
+              key={label}
+              className={`items-center justify-between gap-4 ${
+                isExcessOnMobile ? "hidden sm:flex" : "flex"
+              }`}
+            >
+              <span className="text-sm font-semibold text-[#52657d]">{label}</span>
+              <strong className="text-right text-sm text-[#17120a]">{value}</strong>
+            </div>
+          );
+        })}
       </div>
     </section>
   );
@@ -611,29 +619,33 @@ export default async function PublicSchoolPage({ params }) {
           </div>
         </section>
 
-        <section className="grid gap-4 md:grid-cols-4">
+        <section className="grid grid-cols-2 gap-4 md:grid-cols-4">
           <MetricCard
             icon={FaCalendarAlt}
             label="Events Hosted"
             value={metrics.eventsHosted || events.length || 0}
           />
-          <MetricCard
-            icon={FaUsers}
-            label="Events Joined"
-            value={metrics.eventsParticipated || 0}
-            href="/events"
-          />
+          <div className="hidden sm:block">
+            <MetricCard
+              icon={FaUsers}
+              label="Events Joined"
+              value={metrics.eventsParticipated || 0}
+              href="/events"
+            />
+          </div>
           <MetricCard
             icon={FaTrophy}
             label="Awards Earned"
             value={metrics.awardsCount || achievements.length || 0}
             href="#achievements"
           />
-          <MetricCard
-            icon={FaGraduationCap}
-            label="Students Recognized"
-            value={studentCount || 0}
-          />
+          <div className="hidden sm:block">
+            <MetricCard
+              icon={FaGraduationCap}
+              label="Students Recognized"
+              value={studentCount || 0}
+            />
+          </div>
         </section>
 
         <ShowcaseTabs />

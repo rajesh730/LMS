@@ -59,16 +59,16 @@ function placementTone(value) {
 
 function FactItem({ icon: Icon, label: title, value }) {
   return (
-    <div className="rounded-lg border border-[#e6eaf7] bg-[#f8f9fd] p-4">
-      <div className="flex items-center gap-3">
-        <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#f4f1ff] text-[#4326e8]">
+    <div className="rounded-lg border border-[#e6eaf7] bg-[#f8f9fd] p-3 sm:p-4">
+      <div className="flex items-center gap-2 sm:gap-3">
+        <span className="flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-lg bg-[#f4f1ff] text-[#4326e8] text-sm sm:text-base">
           <Icon />
         </span>
-        <span className="min-w-0">
-          <span className="block text-[10px] font-black uppercase text-[#526071]">
+        <span className="min-w-0 flex-1">
+          <span className="block text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-[#526071] truncate">
             {title}
           </span>
-          <strong className="mt-0.5 block break-words text-sm text-[#10142f]">
+          <strong className="mt-0.5 block break-words text-xs sm:text-sm text-[#10142f]">
             {value}
           </strong>
         </span>
@@ -101,70 +101,129 @@ function ResultsTable({ achievements, resultsPublished }) {
           No public result records are available yet.
         </p>
       ) : (
-        <div className="mt-4 overflow-x-auto rounded-lg border border-[#e6eaf7]">
-          <table className="min-w-full text-left text-sm">
-            <thead className="bg-[#f8f9fd] text-[#526071]">
-              <tr>
-                <th className="px-4 py-3 font-black">Student</th>
-                <th className="px-4 py-3 font-black">School</th>
-                <th className="px-4 py-3 font-black">Placement</th>
-                <th className="px-4 py-3 font-black">Certificate</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#e6eaf7]">
-              {achievements.map((achievement) => {
-                const studentName =
-                  achievement.certificateRecipientName ||
-                  achievement.student?.name ||
-                  "Student";
+        <>
+          {/* Desktop Table View */}
+          <div className="hidden sm:block mt-4 overflow-x-auto rounded-lg border border-[#e6eaf7]">
+            <table className="min-w-full text-left text-sm">
+              <thead className="bg-[#f8f9fd] text-[#526071]">
+                <tr>
+                  <th className="px-4 py-3 font-black">Student</th>
+                  <th className="px-4 py-3 font-black">School</th>
+                  <th className="px-4 py-3 font-black">Placement</th>
+                  <th className="px-4 py-3 font-black">Certificate</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#e6eaf7]">
+                {achievements.map((achievement) => {
+                  const studentName =
+                    achievement.certificateRecipientName ||
+                    achievement.student?.name ||
+                    "Student";
 
-                return (
-                  <tr key={String(achievement._id)}>
-                    <td className="px-4 py-3 font-bold text-[#10142f]">
+                  return (
+                    <tr key={String(achievement._id)}>
+                      <td className="px-4 py-3 font-bold text-[#10142f]">
+                        {studentName}
+                      </td>
+                      <td className="px-4 py-3">
+                        {achievement.school?._id ? (
+                          <Link
+                            href={`/schools/${achievement.school._id}`}
+                            className="font-semibold text-[#0a2f66] hover:text-[#4326e8]"
+                          >
+                            {achievement.school.schoolName || "School"}
+                          </Link>
+                        ) : (
+                          <span className="text-[#526071]">School</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`rounded-full px-2.5 py-1 text-[10px] font-black ${placementTone(
+                            achievement.placement
+                          )}`}
+                        >
+                          {formatPlacement(achievement.placement)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        {achievement.certificateUrl ? (
+                          <a
+                            href={achievement.certificateUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 whitespace-nowrap text-xs font-black text-[#4326e8]"
+                          >
+                            View certificate
+                            <FaExternalLinkAlt />
+                          </a>
+                        ) : (
+                          <span className="text-[#8a9ab1]">Not public</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile Card-based View */}
+          <div className="block sm:hidden mt-4 space-y-3">
+            {achievements.map((achievement) => {
+              const studentName =
+                achievement.certificateRecipientName ||
+                achievement.student?.name ||
+                "Student";
+
+              return (
+                <div
+                  key={String(achievement._id)}
+                  className="rounded-xl border border-[#e6eaf7] p-4 bg-[#f8f9fd] shadow-sm flex flex-col gap-2.5"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-bold text-[#10142f] text-sm truncate">
                       {studentName}
-                    </td>
-                    <td className="px-4 py-3">
-                      {achievement.school?._id ? (
-                        <Link
-                          href={`/schools/${achievement.school._id}`}
-                          className="font-semibold text-[#0a2f66] hover:text-[#4326e8]"
-                        >
-                          {achievement.school.schoolName || "School"}
-                        </Link>
-                      ) : (
-                        <span className="text-[#526071]">School</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`rounded-full px-2.5 py-1 text-[10px] font-black ${placementTone(
-                          achievement.placement
-                        )}`}
+                    </span>
+                    <span
+                      className={`shrink-0 rounded-full px-2.5 py-1 text-[9px] font-black uppercase ${placementTone(
+                        achievement.placement
+                      )}`}
+                    >
+                      {formatPlacement(achievement.placement)}
+                    </span>
+                  </div>
+                  <div className="text-xs text-[#526071] flex items-center gap-1.5">
+                    <FaSchool className="text-[#4326e8] shrink-0" />
+                    {achievement.school?._id ? (
+                      <Link
+                        href={`/schools/${achievement.school._id}`}
+                        className="font-semibold text-[#0a2f66] hover:text-[#4326e8] truncate"
                       >
-                        {formatPlacement(achievement.placement)}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      {achievement.certificateUrl ? (
-                        <a
-                          href={achievement.certificateUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1 whitespace-nowrap text-xs font-black text-[#4326e8]"
-                        >
-                          View certificate
-                          <FaExternalLinkAlt />
-                        </a>
-                      ) : (
-                        <span className="text-[#8a9ab1]">Not public</span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                        {achievement.school.schoolName || "School"}
+                      </Link>
+                    ) : (
+                      <span className="truncate">School</span>
+                    )}
+                  </div>
+                  {achievement.certificateUrl && (
+                    <div className="mt-1.5 pt-2 border-t border-[#e6eaf7] flex justify-end">
+                      <a
+                        href={achievement.certificateUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1.5 text-xs font-black text-[#4326e8]"
+                      >
+                        View certificate
+                        <FaExternalLinkAlt className="text-[10px]" />
+                      </a>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </>
       )}
     </section>
   );
@@ -327,14 +386,14 @@ export default async function PublicEventPage({ params }) {
               </p>
             </div>
 
-            <div className="mt-8 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <div className="mt-8 grid grid-cols-2 gap-3 md:grid-cols-2 xl:grid-cols-4">
               <FactItem icon={FaCalendarAlt} label="Event Date" value={formatDate(event.date)} />
-              <FactItem icon={FaRegCalendarAlt} label="Deadline" value={event.registrationDeadline ? formatDate(event.registrationDeadline) : "No deadline"} />
               <FactItem icon={FaMapMarkerAlt} label="Location" value={location} />
-              <FactItem icon={FaUsers} label="Organizer" value={organizer} />
+              <FactItem icon={FaRegCalendarAlt} label="Deadline" value={event.registrationDeadline ? formatDate(event.registrationDeadline) : "No deadline"} className="hidden sm:block" />
+              <FactItem icon={FaUsers} label="Organizer" value={organizer} className="hidden sm:block" />
             </div>
 
-            <div className="mt-6 grid gap-3 md:grid-cols-3">
+            <div className="hidden sm:grid mt-6 grid-cols-2 gap-3 md:grid-cols-3">
               <FactItem
                 icon={FaClipboardList}
                 label="Format"
@@ -396,7 +455,7 @@ export default async function PublicEventPage({ params }) {
             resultsPublished={event.resultsPublished}
           />
 
-          <section className="rounded-xl border border-[#e6eaf7] bg-white p-5 shadow-sm">
+          <section className="hidden sm:block rounded-xl border border-[#e6eaf7] bg-white p-5 shadow-sm">
             <h2 className="inline-flex items-center gap-2 text-base font-black text-[#10142f]">
               <FaSchool className="text-[#4326e8]" />
               Participating Schools

@@ -91,9 +91,13 @@ export default function DashboardOverview() {
   const gradeCount = stats.students?.byGrade?.length || 0;
 
   return (
-    <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <MetricCard icon={FaUserGraduate} value={totalStudents} label="Students" />
-      <MetricCard icon={FaChalkboardTeacher} value={totalTeachers} label="Teachers" />
+    <section className="mobile-accessory-info grid grid-cols-2 gap-4 sm:grid sm:grid-cols-2 xl:grid-cols-4">
+      <div className="hidden sm:block">
+        <MetricCard icon={FaUserGraduate} value={totalStudents} label="Students" />
+      </div>
+      <div className="hidden sm:block">
+        <MetricCard icon={FaChalkboardTeacher} value={totalTeachers} label="Teachers" />
+      </div>
       <MetricCard icon={FaCalendarAlt} value={totalEvents} label="Events" />
       <MetricCard icon={FaLayerGroup} value={gradeCount} label="Grades" />
     </section>

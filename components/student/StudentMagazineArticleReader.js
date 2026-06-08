@@ -223,14 +223,16 @@ export default function StudentMagazineArticleReader({ articleId }) {
             </h1>
             <ArticleMeta article={article} />
             {student && (
-              <p className="mt-3 text-sm text-[#52657d]">
+              <p className="mobile-accessory-info mt-3 text-sm text-[#52657d] sm:block">
                 Reading as {student.name} - {student.grade} - Roll{" "}
                 {student.rollNumber || "-"}
               </p>
             )}
           </div>
 
-          <MagazineArt category={article.category} />
+          <div className="mobile-accessory-info sm:block">
+            <MagazineArt category={article.category} />
+          </div>
         </div>
 
         <div className="border-t border-[#d7cdbb] bg-[#fffdf8] px-5 py-8 md:px-10">
