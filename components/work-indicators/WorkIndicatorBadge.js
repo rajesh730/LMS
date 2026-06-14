@@ -17,7 +17,7 @@ export default function WorkIndicatorBadge({
 
   if (numericCount <= 0) return null;
 
-  const toneClass = "pratyo-notification-badge bg-red-500 text-white ring-1 ring-red-200";
+  const toneClass = "pravyo-notification-badge bg-red-500 text-white ring-1 ring-red-200";
 
   return (
     <span

@@ -10,6 +10,7 @@ import {
   FaStar,
   FaSyncAlt,
 } from "react-icons/fa";
+import { normalizeImageUrl } from "@/lib/imageUrls";
 
 function label(value) {
   return String(value || "")
@@ -131,6 +132,23 @@ function proposalActionMessage(action) {
   if (action === "archive") return "Proposal archived.";
   if (action === "update") return "Proposal updated successfully.";
   return "Proposal updated.";
+}
+
+function PartnerLogoPreview({ logoUrl, name, className = "h-16 w-16" }) {
+  const image = normalizeImageUrl(logoUrl);
+
+  return (
+    <span
+      className={`flex shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[#d7ddea] bg-white text-lg font-black text-[#4326e8] shadow-sm ${className}`.trim()}
+    >
+      {image ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={image} alt="" className="h-full w-full object-cover" />
+      ) : (
+        (name || "P").charAt(0).toUpperCase()
+      )}
+    </span>
+  );
 }
 
 export default function AdminPartnerWorkspace({ onChanged }) {
@@ -411,6 +429,7 @@ export default function AdminPartnerWorkspace({ onChanged }) {
               const canRestoreProposal = isDeclined || isArchived;
               const canArchiveProposal = !isArchived;
               const canViewEvent = isPublished && Boolean(proposal.linkedEvent);
+              const proposalLogoUrl = proposal.logoUrl || resolvedPartner?.logoUrl || "";
 
               return (
                 <article
@@ -442,12 +461,20 @@ export default function AdminPartnerWorkspace({ onChanged }) {
                         )}
                       </div>
                       <div>
-                        <p className="text-base font-black text-[#17120a]">
-                          {proposal.organizationName}
-                        </p>
-                        <p className="mt-1 text-sm font-semibold text-[#52657d]">
-                          {(proposal.proposedRoles || []).map(label).join(", ")}
-                        </p>
+                        <div className="flex items-center gap-3">
+                          <PartnerLogoPreview
+                            logoUrl={proposalLogoUrl}
+                            name={proposal.organizationName}
+                          />
+                          <div className="min-w-0">
+                            <p className="truncate text-base font-black text-[#17120a]">
+                              {proposal.organizationName}
+                            </p>
+                            <p className="mt-1 text-sm font-semibold text-[#52657d]">
+                              {(proposal.proposedRoles || []).map(label).join(", ")}
+                            </p>
+                          </div>
+                        </div>
                       </div>
                       <p className="max-w-4xl text-sm leading-6 text-[#344f77]">
                         {proposal.eventDescription}
@@ -929,6 +956,31 @@ export default function AdminPartnerWorkspace({ onChanged }) {
                       defaultValue={editingProposal.website}
                       className="w-full rounded-lg bg-slate-950 border border-slate-800 p-2.5 text-sm text-white"
                     />
+                  </div>
+                  <div className="space-y-1 md:col-span-2">
+                    <label className="text-xs font-semibold text-slate-400">
+                      Partner Logo Link
+                    </label>
+                    <div className="grid gap-3 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-center">
+                      <PartnerLogoPreview
+                        logoUrl={editingProposal.logoUrl}
+                        name={editingProposal.organizationName}
+                        className="h-16 w-16"
+                      />
+                      <div>
+                        <input
+                          type="url"
+                          name="logoUrl"
+                          defaultValue={editingProposal.logoUrl || ""}
+                          placeholder="https://... or public Google Drive image link"
+                          className="w-full rounded-lg bg-slate-950 border border-slate-800 p-2.5 text-sm text-white"
+                          required
+                        />
+                        <p className="mt-1 text-xs text-slate-500">
+                          Required before approval. Use a direct image URL or public Google Drive image link.
+                        </p>
+                      </div>
+                    </div>
                   </div>
                   <div className="space-y-1 md:col-span-2">
                     <label className="text-xs font-semibold text-slate-400">Location</label>

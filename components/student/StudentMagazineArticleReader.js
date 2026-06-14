@@ -91,7 +91,7 @@ function MagazineArt({ category }) {
 
   return (
     <div
-      className="pratyo-brand-panel relative min-h-72 overflow-hidden rounded-2xl border p-8"
+      className="pravyo-brand-panel relative min-h-72 overflow-hidden rounded-2xl border p-8"
     >
       <div className="absolute left-10 top-10 h-32 w-44 rotate-[-8deg] rounded-lg border border-white/80 bg-white/75 shadow-xl" />
       <div className="absolute left-32 top-16 h-32 w-44 rotate-[8deg] rounded-lg border border-white/80 bg-white/75 shadow-xl" />
@@ -107,16 +107,20 @@ function MagazineArt({ category }) {
 }
 
 function ArticleMeta({ article }) {
+  const publishedDate = formatDate(article.publishedAt);
+
   return (
-    <div className="mt-4 flex flex-wrap items-center gap-4 text-sm text-[#52657d]">
+    <div className="student-magazine-article-meta mt-4 flex flex-wrap items-center gap-4 text-sm text-[#52657d]">
       <span className="inline-flex items-center gap-2">
         <FaUser className="text-[#75869b]" />
         {article.authorStudent?.name || "Student"}
       </span>
-      <span className="inline-flex items-center gap-2">
-        <FaCalendarAlt className="text-[#75869b]" />
-        {formatDate(article.publishedAt)}
-      </span>
+      {publishedDate && (
+        <span className="inline-flex items-center gap-2">
+          <FaCalendarAlt className="text-[#75869b]" />
+          {publishedDate}
+        </span>
+      )}
       <span className="inline-flex items-center gap-2">
         <FaClock className="text-[#75869b]" />
         {getReadTime(article.content)} min read
@@ -204,19 +208,22 @@ export default function StudentMagazineArticleReader({
   }
 
   const meta = getCategoryMeta(article.category);
+  const issueBackHref = article.magazineIssue?.id
+    ? `/student/magazine/issues/${article.magazineIssue.id}`
+    : backHref;
 
   return (
-    <div className="space-y-6 text-[#27344a]">
+    <div className="student-magazine-article-reader space-y-6 text-[#27344a]">
       <Link
-        href={backHref}
-        className="inline-flex items-center gap-2 rounded-lg border border-[#d7cdbb] bg-white px-4 py-2 text-sm font-semibold text-[#0a2f66] shadow-sm transition hover:bg-[#f8fbff]"
+        href={issueBackHref}
+        className="student-magazine-article-back inline-flex items-center gap-2 rounded-lg border border-[#d7cdbb] bg-white px-4 py-2 text-sm font-semibold text-[#0a2f66] shadow-sm transition hover:bg-[#f8fbff]"
       >
         <FaArrowLeft />
-        {backLabel}
+        {article.magazineIssue?.id ? "Back" : backLabel}
       </Link>
 
-      <article className="overflow-hidden rounded-2xl border border-[#d7cdbb] bg-white shadow-[0_18px_50px_rgba(10,47,102,0.08)]">
-        <div className="grid gap-6 p-5 md:p-8 xl:grid-cols-[1fr_0.72fr]">
+      <article className="student-magazine-article-card overflow-hidden rounded-2xl border border-[#d7cdbb] bg-white shadow-[0_18px_50px_rgba(10,47,102,0.08)]">
+        <div className="student-magazine-article-head grid gap-6 p-5 md:p-8 xl:grid-cols-[1fr_0.72fr]">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <span
@@ -226,7 +233,7 @@ export default function StudentMagazineArticleReader({
               </span>
             </div>
 
-            <h1 className="mt-5 max-w-4xl text-4xl font-bold leading-tight text-[#17120a] md:text-5xl">
+            <h1 className="student-reader-title mt-5 max-w-4xl text-4xl font-bold leading-tight text-[#17120a] md:text-5xl">
               {article.title}
             </h1>
             <ArticleMeta article={article} />
@@ -243,7 +250,7 @@ export default function StudentMagazineArticleReader({
           </div>
         </div>
 
-        <div className="border-t border-[#d7cdbb] bg-[#fffdf8] px-5 py-8 md:px-10">
+        <div className="student-magazine-article-body border-t border-[#d7cdbb] bg-[#fffdf8] px-5 py-8 md:px-10">
           <WritingContent
             content={article.content}
             className="mx-auto max-w-3xl space-y-4 text-base leading-8 text-[#27344a] md:text-lg"
@@ -252,7 +259,7 @@ export default function StudentMagazineArticleReader({
       </article>
 
       {relatedArticles.length > 0 && (
-        <section className="rounded-xl border border-[#d7cdbb] bg-white p-5 shadow-sm">
+        <section className="student-magazine-related rounded-xl border border-[#d7cdbb] bg-white p-5 shadow-sm">
           <h2 className="text-lg font-bold text-[#17120a]">
             {relatedTitle || `More ${meta.label} Articles`}
           </h2>

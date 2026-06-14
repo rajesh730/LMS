@@ -19,12 +19,24 @@ function sanitizeRoles(roles) {
   return next.length ? next : ["ORGANIZER_PARTNER"];
 }
 
+function sanitizeUrl(value) {
+  const next = String(value || "").trim();
+  if (!next) return "";
+  try {
+    const url = new URL(next);
+    return ["http:", "https:"].includes(url.protocol) ? next : "";
+  } catch {
+    return "";
+  }
+}
+
 export async function POST(req) {
   try {
     const body = await req.json();
 
     const requiredFields = [
       "organizationName",
+      "logoUrl",
       "contactName",
       "contactEmail",
       "eventTitle",
@@ -35,6 +47,17 @@ export async function POST(req) {
     if (missing.length > 0) {
       return NextResponse.json(
         { success: false, message: `Missing fields: ${missing.join(", ")}` },
+        { status: 400 }
+      );
+    }
+
+    const logoUrl = sanitizeUrl(body.logoUrl);
+    if (!logoUrl) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Please provide a valid partner logo link.",
+        },
         { status: 400 }
       );
     }
@@ -52,6 +75,7 @@ export async function POST(req) {
       organizationName: body.organizationName,
       organizationType: body.organizationType || "COMPANY",
       website: body.website || "",
+      logoUrl,
       location: body.location || "",
       contactName: body.contactName,
       contactEmail: body.contactEmail,
@@ -116,7 +140,7 @@ export async function GET() {
     await connectDB();
     const proposals = await EventProposal.find({})
       .sort({ createdAt: -1 })
-      .populate("organizer", "organizationName slug verificationStatus profileVisibility")
+      .populate("organizer", "organizationName slug logoUrl verificationStatus profileVisibility")
       .populate("linkedEvent", "title date visibility lifecycleStatus")
       .populate("reviewedBy", "name email")
       .populate("statusHistory.changedBy", "name email")

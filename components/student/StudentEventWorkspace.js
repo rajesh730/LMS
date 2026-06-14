@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { FaCalendarAlt, FaCheckCircle, FaSchool } from "react-icons/fa";
 import EventHub from "@/components/events/EventHub";
+import StudentQuickNav from "@/components/student/StudentQuickNav";
 import StudentNotificationCenter from "@/components/student/StudentNotificationCenter";
 import useWorkIndicators from "@/lib/useWorkIndicators";
 import useRealtimeChannel from "@/lib/useRealtimeChannel";
@@ -90,8 +91,9 @@ export default function StudentEventWorkspace() {
   ];
 
   return (
-    <div className="space-y-6 text-slate-200">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+    <div className="student-events-mobile-shell space-y-6 text-slate-200">
+        <StudentQuickNav className="sm:hidden" />
+        <div className="student-events-intro flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-4xl font-bold text-white">Student Events</h1>
             <p className="mt-2 text-slate-400">
@@ -102,7 +104,7 @@ export default function StudentEventWorkspace() {
           <StudentNotificationCenter />
         </div>
 
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-2">
+        <div className="student-events-tabs rounded-2xl border border-slate-800 bg-slate-900/70 p-2">
           <div className="flex flex-wrap gap-2">
             {tabs.map((tab) => {
               const Icon = tab.icon;

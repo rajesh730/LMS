@@ -53,12 +53,12 @@ export default function PublicWritingReader({
   const schoolName = school.schoolName || "School";
 
   return (
-    <div className="mx-auto max-w-[1500px] px-4 py-5 pb-16 sm:px-6">
+    <div className="public-reader-shell mx-auto max-w-[1500px] px-0 py-5 pb-16 sm:px-6">
       <div className="grid gap-5 xl:grid-cols-[230px_minmax(0,1fr)]">
         <PublicExplorePanel active="home" />
 
         <main className="min-w-0">
-          <article className="rounded-xl border border-[#e6eaf7] bg-white p-5 shadow-sm md:p-8">
+          <article className="mobile-full-bleed-card rounded-xl border border-[#e6eaf7] bg-white p-5 shadow-sm md:p-8">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <Link
                 href={backHref}
@@ -124,7 +124,7 @@ export default function PublicWritingReader({
 
             <WritingContent
               content={article.content}
-              className="mx-auto mt-10 max-w-3xl space-y-4 text-lg leading-9 text-[#27344a]"
+              className="public-reader-content mx-auto mt-10 max-w-3xl space-y-4 text-lg leading-9 text-[#27344a]"
             />
 
             <div className="mt-10 flex flex-col gap-3 border-t border-[#edf0f7] pt-5 sm:flex-row sm:items-center sm:justify-between">
@@ -151,7 +151,7 @@ export default function PublicWritingReader({
           </article>
 
           {moreItems.length > 0 && (
-            <section className="mt-5 rounded-xl border border-[#e6eaf7] bg-white p-5 shadow-sm">
+            <section className="mobile-full-bleed-card mt-5 rounded-xl border border-[#e6eaf7] bg-white p-5 shadow-sm">
               <div className="flex items-center justify-between gap-3">
                 <h2 className="text-base font-black text-[#10142f]">
                   More from this school

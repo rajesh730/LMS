@@ -72,12 +72,23 @@ function optionalNumber(value) {
   return Number.isFinite(next) && next > 0 ? next : null;
 }
 
+function sanitizeUrl(value) {
+  const next = String(value || "").trim();
+  if (!next) return "";
+  try {
+    const url = new URL(next);
+    return ["http:", "https:"].includes(url.protocol) ? next : "";
+  } catch {
+    return "";
+  }
+}
+
 function buildEventPartnerFromProposal(proposal, organizer) {
   return {
     organizer: organizer._id,
     role: proposal.proposedRoles?.[0] || "ORGANIZER_PARTNER",
     displayName: organizer.organizationName || proposal.organizationName || "",
-    logoUrl: organizer.logoUrl || "",
+    logoUrl: organizer.logoUrl || proposal.logoUrl || "",
     website: organizer.website || proposal.website || "",
     isPrimary: true,
   };
@@ -133,6 +144,7 @@ async function approveOrganizerForProposal(proposal, body) {
       organizationType: proposal.organizationType,
       partnerRoles: proposal.proposedRoles,
       website: proposal.website,
+      logoUrl: proposal.logoUrl || "",
       location: proposal.location,
       contactName: proposal.contactName,
       contactEmail: proposal.contactEmail,
@@ -160,6 +172,7 @@ async function approveOrganizerForProposal(proposal, body) {
     organizer.organizationType =
       organizer.organizationType || proposal.organizationType;
     organizer.website = organizer.website || proposal.website;
+    organizer.logoUrl = organizer.logoUrl || proposal.logoUrl;
     organizer.location = organizer.location || proposal.location;
     organizer.contactName = organizer.contactName || proposal.contactName;
     organizer.contactEmail =
@@ -195,6 +208,33 @@ export async function PUT(req, props) {
       return NextResponse.json(
         { success: false, message: "Proposal not found" },
         { status: 404 }
+      );
+    }
+
+    if (body.logoUrl !== undefined) {
+      const logoUrl = sanitizeUrl(body.logoUrl);
+      if (!logoUrl) {
+        return NextResponse.json(
+          { success: false, message: "Please provide a valid partner logo link." },
+          { status: 400 }
+        );
+      }
+      proposal.logoUrl = logoUrl;
+    }
+
+    const actionsRequiringLogo = new Set([
+      "mark_reviewing",
+      "approve_partner",
+      "approve",
+      "publish_event",
+      "restore",
+      "reopen",
+      "update",
+    ]);
+    if (actionsRequiringLogo.has(action) && !proposal.logoUrl) {
+      return NextResponse.json(
+        { success: false, message: "Partner logo link is required before continuing." },
+        { status: 400 }
       );
     }
 
@@ -385,6 +425,7 @@ export async function PUT(req, props) {
       if (body.contactEmail !== undefined) proposal.contactEmail = body.contactEmail;
       if (body.contactPhone !== undefined) proposal.contactPhone = body.contactPhone;
       if (body.website !== undefined) proposal.website = body.website;
+      if (body.logoUrl !== undefined) proposal.logoUrl = sanitizeUrl(body.logoUrl);
       if (body.location !== undefined) proposal.location = body.location;
       if (body.eventMode !== undefined) proposal.eventMode = body.eventMode;
       if (body.venue !== undefined) proposal.venue = body.venue;
@@ -409,7 +450,7 @@ export async function PUT(req, props) {
     });
 
     const populated = await EventProposal.findById(proposal._id)
-      .populate("organizer", "organizationName slug verificationStatus profileVisibility")
+      .populate("organizer", "organizationName slug logoUrl verificationStatus profileVisibility")
       .populate("linkedEvent", "title date visibility lifecycleStatus")
       .populate("reviewedBy", "name email")
       .populate("statusHistory.changedBy", "name email")

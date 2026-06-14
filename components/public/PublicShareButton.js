@@ -5,7 +5,7 @@ import { FaCheck, FaShareAlt } from "react-icons/fa";
 
 export default function PublicShareButton({
   href,
-  title = "Pratyo",
+  title = "Pravyo",
   label = "Share",
   className = "",
 }) {

@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  FaArrowLeft,
+  FaArrowRight,
   FaBold,
   FaBookOpen,
   FaCalendarAlt,
@@ -18,6 +20,7 @@ import {
   FaItalic,
   FaLayerGroup,
   FaLightbulb,
+  FaLock,
   FaPaperPlane,
   FaPenNib,
   FaPlus,
@@ -30,6 +33,8 @@ import {
   FaTrophy,
 } from "react-icons/fa";
 import EmptyState from "@/components/EmptyState";
+import Modal from "@/components/Modal";
+import StudentQuickNav from "@/components/student/StudentQuickNav";
 import AlertBanner from "@/components/ui/AlertBanner";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import LoadingState from "@/components/ui/LoadingState";
@@ -251,7 +256,7 @@ function CategoryArt({ category, className = "" }) {
 
   return (
     <div
-      className={`pratyo-brand-panel relative overflow-hidden rounded-lg border ${className}`}
+      className={`pravyo-brand-panel relative overflow-hidden rounded-lg border ${className}`}
     >
       <div className="absolute left-6 top-5 h-16 w-24 rotate-[-8deg] rounded-md border border-white/80 bg-white/75 shadow-sm" />
       <div className="absolute left-16 top-9 h-16 w-24 rotate-[8deg] rounded-md border border-white/80 bg-white/75 shadow-sm" />
@@ -326,7 +331,7 @@ function WritingStudioHero({
           </div>
         </div>
 
-        <div className="mobile-accessory-info pratyo-brand-surface relative min-h-72 overflow-hidden rounded-2xl p-6 sm:block">
+        <div className="mobile-accessory-info pravyo-brand-surface relative min-h-72 overflow-hidden rounded-2xl p-6 sm:block">
           <div className="absolute right-12 top-16 h-32 w-52 rotate-[-6deg] rounded-lg border border-[#d7cdbb] bg-white/80 shadow-xl" />
           <div className="absolute right-24 top-24 h-32 w-52 rotate-[7deg] rounded-lg border border-[#d7cdbb] bg-white/85 shadow-xl" />
           <FaPenNib className="absolute right-12 top-10 text-5xl text-white/78" />
@@ -347,7 +352,7 @@ function WritingStudioHero({
       <button
         type="button"
         onClick={onNewDraft}
-        className="mx-5 mb-5 inline-flex items-center gap-2 rounded-lg bg-purple-700 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-purple-600 sm:absolute sm:right-5 sm:top-5 sm:m-0"
+        className="student-writing-new-button mx-5 mb-5 inline-flex items-center gap-2 rounded-lg bg-purple-700 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-purple-600 sm:absolute sm:right-5 sm:top-5 sm:m-0"
       >
         <FaPlus />
         New Writing
@@ -409,7 +414,7 @@ function WritingWorkflowPanel({ libraryCounts, onSelectLibrary, onSelectStatus }
   ];
 
   return (
-    <section className="rounded-xl border border-[#e7dcc8] bg-white p-5 shadow-sm">
+    <section className="writing-workflow-panel rounded-xl border border-[#e7dcc8] bg-white p-5 shadow-sm">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 className="text-lg font-black text-[#17120a]">Writing Workflow</h2>
@@ -610,6 +615,7 @@ function WritingEditor({
   saving,
   onSave,
   onReset,
+  resetLabel = "New",
 }) {
   const textareaRef = useRef(null);
 
@@ -644,9 +650,9 @@ function WritingEditor({
   );
 
   return (
-    <section className="overflow-hidden rounded-xl border border-[#e7dcc8] bg-white shadow-sm">
+    <section className="student-writing-editor overflow-hidden rounded-xl border border-[#e7dcc8] bg-white shadow-sm">
       <div className="flex flex-col gap-3 border-b border-[#e7dcc8] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2">
+        <div className="student-writing-mode-tabs flex items-center gap-2">
           {["WRITE", "PREVIEW"].map((mode) => (
             <button
               key={mode}
@@ -694,7 +700,9 @@ function WritingEditor({
         </select>
       </div>
 
-      <EditorToolbar onFormat={applyFormat} />
+      <div className="student-writing-format-tools">
+        <EditorToolbar onFormat={applyFormat} />
+      </div>
 
       {editorMode === "WRITE" ? (
         <div className="relative">
@@ -720,8 +728,8 @@ function WritingEditor({
         </article>
       )}
 
-      <div className="flex flex-col gap-3 border-t border-[#e7dcc8] bg-[#fffdf8] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap gap-2">
+      <div className="student-writing-actions flex flex-col gap-3 border-t border-[#e7dcc8] bg-[#fffdf8] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="student-writing-extra-actions flex flex-wrap gap-2">
           <button
             type="button"
             className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold text-purple-700 transition hover:bg-purple-50"
@@ -738,7 +746,7 @@ function WritingEditor({
           </button>
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="student-writing-save-actions flex flex-wrap gap-2">
           <button
             type="button"
             disabled={saving}
@@ -765,8 +773,8 @@ function WritingEditor({
               onClick={onReset}
               className="inline-flex items-center gap-2 rounded-lg border border-[#e0d4bf] bg-white px-4 py-2 text-sm font-bold text-[#52657d] transition hover:bg-[#f8fbff]"
             >
-              <FaPlus />
-              New
+              {resetLabel === "Cancel" ? <FaTimes /> : <FaPlus />}
+              {resetLabel}
             </button>
           )}
         </div>
@@ -779,47 +787,113 @@ function WritingListItem({
   writing,
   onRead,
   onEdit,
+  onStatusAction,
   onDelete,
 }) {
   const categoryMeta = getCategoryMeta(writing.category);
   const statusMeta = getStatusMeta(writing.status);
   const libraryMeta = getLibraryMeta(writing);
   const LibraryIcon = libraryMeta.icon;
-  const canEdit =
-    ["DRAFT", "REJECTED", "SUBMITTED"].includes(writing.status) &&
-    !writing.isMagazinePublished &&
-    !writing.isPublished;
-  const canDelete =
-    ["DRAFT", "REJECTED"].includes(writing.status);
-  const actionLabel =
-    writing.status === "APPROVED"
-      ? "Read"
-    : writing.status === "DRAFT"
-      ? "Edit"
-    : writing.status === "REJECTED"
-      ? "Edit"
-    : writing.status === "SUBMITTED"
-      ? "Edit"
-      : "Read";
+  const [menuOpen, setMenuOpen] = useState(false);
+  const status = String(writing.status || "DRAFT").toUpperCase();
+  const isPrivate = status === "DRAFT" || status === "REJECTED";
+  const primaryStatusAction = isPrivate
+    ? {
+        label: "Send to school",
+        icon: FaPaperPlane,
+        action: "SUBMITTED",
+      }
+    : {
+        label: "Make private",
+        icon: FaLock,
+        action: "MAKE_PRIVATE",
+      };
+  const PrimaryStatusIcon = primaryStatusAction.icon;
+
+  const runMenuAction = (callback) => {
+    setMenuOpen(false);
+    callback();
+  };
 
   return (
-    <article className="grid gap-4 rounded-xl border border-[#e7dcc8] bg-white p-3 shadow-sm transition hover:border-purple-200 hover:shadow-md md:grid-cols-[128px_1fr_auto]">
+    <article className="student-writing-list-item grid gap-4 rounded-xl border border-[#e7dcc8] bg-white p-3 shadow-sm transition hover:border-purple-200 hover:shadow-md md:grid-cols-[128px_1fr]">
       <CategoryArt category={writing.category} className="h-28" />
 
       <div className="min-w-0">
-        <div className="flex flex-wrap items-center gap-2">
-          <StatusPill status={writing.status} />
-          <span
-            className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-bold ${categoryMeta.chip}`}
-          >
-            {categoryMeta.label}
-          </span>
-          <span
-            className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold ${libraryMeta.chip}`}
-          >
-            <LibraryIcon />
-            {libraryMeta.label}
-          </span>
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <StatusPill status={writing.status} />
+            <span
+              className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-bold ${categoryMeta.chip}`}
+            >
+              {categoryMeta.label}
+            </span>
+            <span
+              className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold ${libraryMeta.chip}`}
+            >
+              <LibraryIcon />
+              {libraryMeta.label}
+            </span>
+          </div>
+          <div className="student-writing-action-menu relative shrink-0">
+            <button
+              type="button"
+              onClick={() => setMenuOpen((current) => !current)}
+              onBlur={(event) => {
+                if (!event.currentTarget.parentElement?.contains(event.relatedTarget)) {
+                  setMenuOpen(false);
+                }
+              }}
+              className="student-writing-menu-button flex h-9 w-9 items-center justify-center rounded-lg border border-[#d8e0f0] bg-white text-[#52657d] transition hover:bg-[#f8fbff]"
+              aria-label="Writing options"
+              aria-expanded={menuOpen}
+            >
+              <FaEllipsisV />
+            </button>
+            {menuOpen && (
+              <div
+                className="student-writing-menu absolute right-0 top-10 z-20 w-44 overflow-hidden rounded-lg border border-[#d8e0f0] bg-white py-1 text-sm font-bold text-[#27344a] shadow-lg"
+                onMouseDown={(event) => event.preventDefault()}
+              >
+                <button
+                  type="button"
+                  onClick={() => runMenuAction(() => onRead(writing))}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-[#f8fbff]"
+                >
+                  <FaEye className="text-[#1f4e79]" />
+                  Open
+                </button>
+                <button
+                  type="button"
+                  onClick={() => runMenuAction(() => onEdit(writing))}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-[#f8fbff]"
+                >
+                  <FaEdit className="text-[#1f4e79]" />
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    runMenuAction(() =>
+                      onStatusAction(writing, primaryStatusAction.action)
+                    )
+                  }
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-[#f8fbff]"
+                >
+                  <PrimaryStatusIcon className="text-[#1f4e79]" />
+                  {primaryStatusAction.label}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => runMenuAction(() => onDelete(writing))}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-red-700 hover:bg-red-50"
+                >
+                  <FaTrash />
+                  Delete
+                </button>
+              </div>
+            )}
+          </div>
         </div>
         <h3 className="mt-2 line-clamp-1 text-base font-black text-[#17120a]">
           {writing.title}
@@ -839,55 +913,14 @@ function WritingListItem({
             {statusMeta.label}
           </span>
         </div>
-      </div>
-
-      <div className="flex items-start justify-end gap-2 md:min-w-32">
-        {canEdit ? (
-          <button
-            type="button"
-            onClick={() => onEdit(writing)}
-            className="inline-flex items-center gap-2 rounded-lg border border-purple-200 bg-white px-3 py-2 text-sm font-bold text-purple-700 transition hover:bg-purple-50"
-          >
-            <FaEdit />
-            {actionLabel}
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={() => onRead(writing)}
-            className="inline-flex items-center gap-2 rounded-lg border border-purple-200 bg-white px-3 py-2 text-sm font-bold text-purple-700 transition hover:bg-purple-50"
-          >
-            <FaBookOpen />
-            {actionLabel}
-          </button>
-        )}
         <button
           type="button"
           onClick={() => onRead(writing)}
-          className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#e0d4bf] text-[#52657d] transition hover:bg-[#f8fbff]"
-          aria-label="Read writing"
+          className="student-writing-read-more mt-3 inline-flex items-center gap-2 text-sm font-black text-[#4326e8]"
         >
-          <FaEye />
+          Read More
+          <FaArrowRight />
         </button>
-        {canDelete ? (
-          <button
-            type="button"
-            onClick={() => onDelete(writing)}
-            className="flex h-10 w-10 items-center justify-center rounded-lg border border-red-200 bg-red-50 text-red-700 transition hover:bg-red-100"
-            aria-label="Delete writing"
-          >
-            <FaTrash />
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={() => onRead(writing)}
-            className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#e0d4bf] text-[#75869b]"
-            aria-label="Open writing"
-          >
-            <FaEllipsisV />
-          </button>
-        )}
       </div>
     </article>
   );
@@ -901,7 +934,7 @@ function SidebarPanels({ counts, libraryCounts, totalWords }) {
   ];
 
   return (
-    <aside className="space-y-5">
+    <aside className="student-writing-sidebar space-y-5">
       <section className="rounded-xl border border-[#e7dcc8] bg-white p-4 shadow-sm">
         <h2 className="text-sm font-black text-[#17120a]">Writing Tips</h2>
         <div className="mt-4 space-y-4">
@@ -983,11 +1016,14 @@ export default function StudentWritingWorkspace() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [form, setForm] = useState(buildEmptyForm());
+  const [editForm, setEditForm] = useState(buildEmptyForm());
   const [readingWriting, setReadingWriting] = useState(null);
+  const [editingWriting, setEditingWriting] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [activeLibrary, setActiveLibrary] = useState("ALL");
   const [activeStatus, setActiveStatus] = useState("ALL");
   const [editorMode, setEditorMode] = useState("WRITE");
+  const [editEditorMode, setEditEditorMode] = useState("WRITE");
 
   const loadWritings = useCallback(async ({ silent = false } = {}) => {
     try {
@@ -1029,14 +1065,21 @@ export default function StudentWritingWorkspace() {
     setReadingWriting(null);
     setSuccess("");
     setError("");
-    setEditorMode("WRITE");
-    setForm({
+    setEditEditorMode("WRITE");
+    setEditingWriting(writing);
+    setEditForm({
       id: writing.id,
       title: writing.title || "",
       content: writing.content || "",
       category: normalizeCategory(writing.category),
       status: writing.status || "DRAFT",
     });
+  }, []);
+
+  const closeEditDialog = useCallback(() => {
+    setEditingWriting(null);
+    setEditForm(buildEmptyForm());
+    setEditEditorMode("WRITE");
   }, []);
 
   const handleSave = async (nextStatus = "DRAFT") => {
@@ -1076,6 +1119,40 @@ export default function StudentWritingWorkspace() {
     }
   };
 
+  const handleEditSave = async (nextStatus = "DRAFT") => {
+    if (!editForm.id) return;
+
+    try {
+      setSaving(true);
+      setError("");
+      setSuccess("");
+
+      const res = await fetch(`/api/student/writings/${editForm.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: editForm.title,
+          content: editForm.content,
+          category: editForm.category,
+          status: nextStatus,
+        }),
+      });
+
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(payload.message || "Failed to save writing");
+      }
+
+      setSuccess(payload.message || "Writing saved");
+      closeEditDialog();
+      await loadWritings();
+    } catch (saveError) {
+      setError(saveError.message || "Failed to save writing");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleDelete = async () => {
     if (!deleteTarget) return;
     try {
@@ -1093,12 +1170,55 @@ export default function StudentWritingWorkspace() {
       if (form.id === deleteTarget.id) {
         resetForm();
       }
+      if (editForm.id === deleteTarget.id) {
+        closeEditDialog();
+      }
       setDeleteTarget(null);
       setSuccess(payload.message || "Writing deleted");
       await loadWritings();
     } catch (deleteError) {
       setError(deleteError.message || "Failed to delete writing");
       setDeleteTarget(null);
+    }
+  };
+
+  const handleStatusAction = async (writing, action) => {
+    try {
+      setError("");
+      setSuccess("");
+
+      const isMakePrivate = action === "MAKE_PRIVATE";
+      const res = await fetch(`/api/student/writings/${writing.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(
+          isMakePrivate
+            ? { action: "MAKE_PRIVATE" }
+            : {
+                title: writing.title,
+                content: writing.content,
+                category: writing.category,
+                status: action,
+              }
+        ),
+      });
+      const payload = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(payload.message || "Failed to update writing");
+      }
+
+      if (isMakePrivate && form.id === writing.id) {
+        resetForm();
+      }
+      if (isMakePrivate && editForm.id === writing.id) {
+        closeEditDialog();
+      }
+
+      setSuccess(payload.message || "Writing updated");
+      await loadWritings();
+    } catch (actionError) {
+      setError(actionError.message || "Failed to update writing");
     }
   };
 
@@ -1155,13 +1275,16 @@ export default function StudentWritingWorkspace() {
   }, [form.id]);
 
   return (
-    <div className="space-y-5 text-[#27344a]">
-      <WritingStudioHero
-        student={student}
-        writings={writings}
-        libraryCounts={libraryCounts}
-        onNewDraft={resetForm}
-      />
+    <div className="student-writing-mobile-shell space-y-5 text-[#27344a]">
+      <StudentQuickNav className="sm:hidden" />
+      <div className="student-writing-hero-wrap">
+        <WritingStudioHero
+          student={student}
+          writings={writings}
+          libraryCounts={libraryCounts}
+          onNewDraft={resetForm}
+        />
+      </div>
 
       {error && <AlertBanner type="error" title="Action needed" message={error} />}
       {success && <AlertBanner type="success" message={success} />}
@@ -1172,8 +1295,8 @@ export default function StudentWritingWorkspace() {
         onSelectStatus={setActiveStatus}
       />
 
-      <div className="grid gap-5 xl:grid-cols-[1fr_310px]">
-        <main className="min-w-0 space-y-5">
+      <div className="student-writing-content-grid grid gap-5 xl:grid-cols-[1fr_310px]">
+        <main className="student-writing-content-main min-w-0 space-y-5">
           <WritingEditor
             form={form}
             setForm={setForm}
@@ -1185,7 +1308,7 @@ export default function StudentWritingWorkspace() {
             onReset={resetForm}
           />
 
-          <section className="rounded-xl border border-[#e7dcc8] bg-white p-5 shadow-sm">
+          <section className="student-writing-library rounded-xl border border-[#e7dcc8] bg-white p-5 shadow-sm">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h2 className="text-lg font-black text-[#17120a]">
@@ -1253,7 +1376,7 @@ export default function StudentWritingWorkspace() {
               })}
             </div>
 
-            <div className="mt-4 flex flex-wrap gap-2">
+            <div className="student-writing-status-chips mt-4 flex flex-wrap gap-2">
               {[
                 ["ALL", "All"],
                 ["DRAFT", "Drafts"],
@@ -1306,6 +1429,7 @@ export default function StudentWritingWorkspace() {
                     writing={writing}
                     onRead={setReadingWriting}
                     onEdit={startEdit}
+                    onStatusAction={handleStatusAction}
                     onDelete={setDeleteTarget}
                   />
                 ))}
@@ -1323,7 +1447,7 @@ export default function StudentWritingWorkspace() {
 
       {readingWriting && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#17120a]/70 p-4 backdrop-blur-sm">
-          <div className="max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-2xl border border-[#d7cdbb] bg-white shadow-2xl">
+          <div className="student-writing-reader-modal max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-2xl border border-[#d7cdbb] bg-white shadow-2xl">
             <div className="grid gap-5 p-5 md:p-8 xl:grid-cols-[1fr_0.48fr]">
               <div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -1361,16 +1485,8 @@ export default function StudentWritingWorkspace() {
                 </div>
               </div>
 
-              <div className="flex items-start justify-between gap-3">
+              <div className="student-writing-reader-art flex items-start justify-between gap-3">
                 <CategoryArt category={readingWriting.category} className="h-32 flex-1" />
-                <button
-                  type="button"
-                  onClick={() => setReadingWriting(null)}
-                  aria-label="Close writing reader"
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[#d7cdbb] bg-white text-[#0a2f66] transition hover:bg-[#f8fbff]"
-                >
-                  <FaTimes />
-                </button>
               </div>
             </div>
 
@@ -1382,6 +1498,14 @@ export default function StudentWritingWorkspace() {
             </article>
 
             <div className="flex flex-wrap gap-3 border-t border-[#d7cdbb] bg-[#f8fbff] px-5 py-4 md:px-8">
+              <button
+                type="button"
+                onClick={() => setReadingWriting(null)}
+                className="inline-flex items-center gap-2 rounded-lg border border-[#d7cdbb] bg-white px-4 py-2 text-sm font-bold text-[#0a2f66] transition hover:bg-[#f8fbff]"
+              >
+                <FaArrowLeft />
+                Back to writing
+              </button>
               {["DRAFT", "REJECTED", "SUBMITTED"].includes(
                 readingWriting.status
               ) && (
@@ -1398,6 +1522,30 @@ export default function StudentWritingWorkspace() {
           </div>
         </div>
       )}
+
+      <Modal
+        isOpen={Boolean(editingWriting)}
+        onClose={closeEditDialog}
+        title="Edit writing"
+        panelClassName="student-writing-edit-panel"
+        headerClassName="student-writing-edit-header"
+        titleClassName="student-writing-edit-title"
+        bodyClassName="student-writing-edit-body"
+      >
+        <div className="student-writing-edit-dialog">
+          <WritingEditor
+            form={editForm}
+            setForm={setEditForm}
+            editorMode={editEditorMode}
+            setEditorMode={setEditEditorMode}
+            activeEditingLabel="Editing writing"
+            saving={saving}
+            onSave={handleEditSave}
+            onReset={closeEditDialog}
+            resetLabel="Cancel"
+          />
+        </div>
+      </Modal>
 
       <ConfirmDialog
         open={Boolean(deleteTarget)}

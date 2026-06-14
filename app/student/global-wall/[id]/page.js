@@ -5,11 +5,11 @@ import DashboardLayout from "@/components/DashboardLayout";
 import StudentMagazineArticleReader from "@/components/student/StudentMagazineArticleReader";
 
 export const metadata = {
-  title: "Read Article",
-  description: "Read a full article from your school magazine",
+  title: "Read Global Wall Writing",
+  description: "Read a full writing post from the Global Wall",
 };
 
-export default async function StudentMagazineArticlePage({ params }) {
+export default async function StudentGlobalWallArticlePage({ params }) {
   const session = await getServerSession(authOptions);
 
   if (!session) {
@@ -24,8 +24,15 @@ export default async function StudentMagazineArticlePage({ params }) {
 
   return (
     <DashboardLayout>
-      <div className="student-magazine-article-page mx-auto max-w-7xl">
-        <StudentMagazineArticleReader articleId={resolvedParams.id} />
+      <div className="mx-auto max-w-7xl">
+        <StudentMagazineArticleReader
+          articleId={resolvedParams.id}
+          apiBasePath="/api/student/global-wall"
+          backHref="/student/global-wall"
+          backLabel="Back to global wall"
+          relatedHrefPrefix="/student/global-wall/"
+          relatedTitle="More Global Wall Writing"
+        />
       </div>
     </DashboardLayout>
   );

@@ -34,7 +34,7 @@ jest.mock("@/lib/realtimeBus", () => ({
     provider: "in-memory",
     redisConfigured: false,
     instanceId: "instance-1",
-    streamKey: "pratyo:realtime:events",
+    streamKey: "pravyo:realtime:events",
     pollIntervalMs: 1500,
     startedAt: "2026-05-25T00:00:00.000Z",
     counters: {
@@ -109,7 +109,7 @@ describe("admin diagnostics routes", () => {
       provider: "in-memory",
       redisConfigured: false,
       instanceId: "instance-1",
-      streamKey: "pratyo:realtime:events",
+      streamKey: "pravyo:realtime:events",
       pollIntervalMs: 1500,
       startedAt: "2026-05-25T00:00:00.000Z",
       counters: {

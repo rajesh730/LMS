@@ -2,7 +2,7 @@ import './globals.css';
 import { Providers } from './providers';
 
 const siteUrl =
-  process.env.NEXT_PUBLIC_SITE_URL || "https://pratyo.infobytesnepal.com";
+  process.env.NEXT_PUBLIC_SITE_URL || "https://pravyo.infobytesnepal.com";
 
 const siteDescription =
   "School events, results, magazines, certificates, notices, and student writing in one connected platform.";
@@ -10,11 +10,11 @@ const siteDescription =
 export const metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "Pratyo",
-    template: "%s | Pratyo",
+    default: "Pravyo",
+    template: "%s | Pravyo",
   },
   description: siteDescription,
-  applicationName: "Pratyo",
+  applicationName: "Pravyo",
   keywords: [
     "school events",
     "student writing",
@@ -23,9 +23,9 @@ export const metadata = {
     "talent platform",
     "results and showcases",
   ],
-  authors: [{ name: "Pratyo" }],
-  creator: "Pratyo",
-  publisher: "Pratyo",
+  authors: [{ name: "Pravyo" }],
+  creator: "Pravyo",
+  publisher: "Pravyo",
   formatDetection: {
     email: false,
     address: false,
@@ -35,31 +35,30 @@ export const metadata = {
     canonical: "/",
   },
   openGraph: {
-    title: "Pratyo",
+    title: "Pravyo",
     description: siteDescription,
     url: siteUrl,
-    siteName: "Pratyo",
+    siteName: "Pravyo",
     type: "website",
     locale: "en_US",
     images: [
       {
-        url: "/pratyo-og.png",
+        url: "/pravyo-og.png",
         width: 1200,
         height: 630,
-        alt: "Pratyo",
+        alt: "Pravyo",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Pratyo",
+    title: "Pravyo",
     description: siteDescription,
-    images: ["/pratyo-og.png"],
+    images: ["/pravyo-og.png"],
   },
   icons: {
     icon: [
-      { url: "/favicon.ico", sizes: "any" },
-      { url: "/pratyo-icon.png", type: "image/png", sizes: "512x512" },
+      { url: "/pravyo-icon.png", type: "image/png", sizes: "512x512" },
     ],
     apple: [{ url: "/apple-icon.png", type: "image/png", sizes: "180x180" }],
   },

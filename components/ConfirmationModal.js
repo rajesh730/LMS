@@ -51,7 +51,7 @@ export default function ConfirmationModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      <div className="pratyo-card w-full max-w-md rounded-2xl p-6 shadow-2xl">
+      <div className="pravyo-card w-full max-w-md rounded-2xl p-6 shadow-2xl">
         {/* Header */}
         <div className="flex items-center gap-3 mb-4">
           <div className="flex-shrink-0">

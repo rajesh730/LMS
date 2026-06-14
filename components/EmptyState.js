@@ -16,11 +16,11 @@ export default function EmptyState({
     "When the right information is available, it will appear here automatically.";
 
   return (
-    <div className="pratyo-card flex flex-col items-center justify-center rounded-[var(--card-radius)] border-dashed px-6 py-12 text-center">
+    <div className="pravyo-card flex flex-col items-center justify-center rounded-[var(--card-radius)] border-dashed px-6 py-12 text-center">
       <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]">
         <Icon className="text-2xl" />
       </div>
-      <h3 className="pratyo-heading text-lg">{title}</h3>
+      <h3 className="pravyo-heading text-lg">{title}</h3>
       <p className="mt-2 max-w-md text-sm leading-6 text-[var(--brand-muted)]">
         {helperText}
       </p>

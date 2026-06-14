@@ -22,6 +22,7 @@ import PartnerEventsBrowser from "@/components/public/PartnerEventsBrowser";
 import PublicExplorePanel from "@/components/public/PublicExplorePanel";
 import PublicSiteNav from "@/components/public/PublicSiteNav";
 import { PublicPageShell } from "@/components/public/PublicLayout";
+import { normalizeImageUrl } from "@/lib/imageUrls";
 
 export const dynamic = "force-dynamic";
 
@@ -33,13 +34,15 @@ function label(value) {
 }
 
 function PartnerLogo({ partner, className = "" }) {
+  const image = normalizeImageUrl(partner.logoUrl);
+
   return (
     <div
-      className={`pratyo-brand-surface flex items-center justify-center overflow-hidden rounded-2xl text-white shadow-lg ${className}`.trim()}
+      className={`pravyo-brand-surface flex items-center justify-center overflow-hidden rounded-2xl text-white shadow-lg ${className}`.trim()}
     >
-      {partner.logoUrl ? (
+      {image ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={partner.logoUrl} alt="" className="h-full w-full object-cover" />
+        <img src={image} alt="" className="h-full w-full object-cover" />
       ) : (
         <span className="text-4xl font-black">
           {partner.organizationName?.charAt(0)?.toUpperCase() || "P"}
@@ -52,7 +55,7 @@ function PartnerLogo({ partner, className = "" }) {
 function HeroArt() {
   return (
     <div className="relative hidden min-h-56 overflow-hidden rounded-2xl lg:block">
-      <div className="pratyo-brand-surface absolute inset-0" />
+      <div className="pravyo-brand-surface absolute inset-0" />
       <div className="absolute bottom-5 left-9 h-24 w-32 -rotate-6 rounded-2xl border border-white/80 bg-white/75 shadow-xl" />
       <div className="absolute bottom-8 right-8 h-28 w-40 rotate-6 rounded-2xl border border-white/80 bg-white/70 shadow-xl" />
       <FaTrophy className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-8xl text-amber-400 drop-shadow" />
@@ -158,7 +161,7 @@ function ImpactSidebar({ metrics, schools, partner }) {
         )}
       </section>
 
-      <section className="pratyo-brand-surface overflow-hidden rounded-2xl p-5 text-white shadow-[0_18px_45px_rgba(10,47,102,0.18)]">
+      <section className="pravyo-brand-surface overflow-hidden rounded-2xl p-5 text-white shadow-[0_18px_45px_rgba(10,47,102,0.18)]">
         <h2 className="text-base font-black">Want to collaborate?</h2>
         <p className="mt-2 text-sm leading-6 text-white/80">
           New organizations can submit an event idea for platform review.
@@ -402,7 +405,7 @@ export default async function PartnerPortfolioPage({ params }) {
                       trusted opportunities where they can learn, compete, and grow.
                     </p>
                   </div>
-                  <div className="pratyo-brand-surface relative h-40 overflow-hidden rounded-xl">
+                  <div className="pravyo-brand-surface relative h-40 overflow-hidden rounded-xl">
                     <FaHandshake className="absolute bottom-8 left-10 text-5xl text-white/70" />
                     <FaTrophy className="absolute right-10 top-8 text-6xl text-white/78" />
                   </div>

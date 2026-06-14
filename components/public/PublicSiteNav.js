@@ -13,7 +13,7 @@ import {
   FaTrophy,
   FaFeatherAlt,
 } from "react-icons/fa";
-import PratyoLogo from "@/components/brand/PratyoLogo";
+import PravyoLogo from "@/components/brand/PravyoLogo";
 
 const NAV_ITEMS = [
   { label: "Home",     href: "/",        key: "home",     icon: FaHome },
@@ -68,7 +68,7 @@ export default function PublicSiteNav({
         }}
       >
         {/* ── Main bar ─────────────────────────────────────── */}
-        <div className="mx-auto flex h-16 max-w-[1500px] items-center gap-4 px-4 sm:px-6">
+        <div className="mx-auto flex h-14 max-w-[1500px] items-center gap-3 px-2 sm:h-16 sm:px-6 md:gap-4">
 
           {/* Logo */}
           <Link
@@ -76,9 +76,9 @@ export default function PublicSiteNav({
             onClick={() => setIsOpen(false)}
             className="flex shrink-0 items-center gap-2.5"
           >
-            <PratyoLogo variant="icon" compact imageClassName="h-9 w-9" />
+            <PravyoLogo variant="icon" compact imageClassName="h-9 w-9" />
             <span className="hidden text-[15px] font-bold text-[var(--brand-ink)] sm:block">
-              Pratyo
+              Pravyo
             </span>
           </Link>
 
@@ -163,10 +163,10 @@ export default function PublicSiteNav({
         </div>
 
         {/* ── Mobile search bar (always visible on sm) ──── */}
-        <div className="border-t border-[var(--brand-border)] px-4 py-2.5 sm:hidden">
+        <div className="public-mobile-search-wrap border-t border-[var(--brand-border)] px-2 py-2.5 sm:hidden">
           <form
             action="/student-voices"
-            className="flex h-10 items-center gap-2.5 rounded-xl border border-[var(--brand-border)] bg-[#f8f9fd] px-3.5 text-sm text-[var(--brand-muted)] focus-within:border-[var(--brand-primary)] focus-within:bg-white focus-within:shadow-[0_0_0_3px_rgba(67,38,232,0.1)]"
+            className="public-mobile-search-form flex h-10 items-center gap-2.5 rounded-xl border border-[var(--brand-border)] bg-[#f8f9fd] px-3.5 text-sm text-[var(--brand-muted)] focus-within:border-[var(--brand-primary)] focus-within:bg-white focus-within:shadow-[0_0_0_3px_rgba(67,38,232,0.1)]"
           >
             <FaSearch className="shrink-0" />
             <input
@@ -182,7 +182,7 @@ export default function PublicSiteNav({
         {isOpen && (
           <div
             id="public-mobile-menu"
-            className="public-mobile-menu border-t border-[var(--brand-border)] bg-white px-4 pb-5 pt-3 md:hidden"
+            className="public-mobile-menu border-t border-[var(--brand-border)] bg-white px-2 pb-5 pt-3 md:hidden"
           >
             {/* Nav links grid */}
             <div className="grid gap-1 rounded-2xl border border-[var(--brand-border)] bg-[#f8f9fd] p-2">

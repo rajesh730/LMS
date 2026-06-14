@@ -140,7 +140,7 @@ function FeaturedEvent({ event }) {
             </span>
             <span className="inline-flex items-center gap-2">
               <FaMapMarkerAlt className="text-[#4326e8]" />
-              {event.schoolName || event.partnerName || "Pratyo"}
+              {event.schoolName || event.partnerName || "Pravyo"}
             </span>
             <span className="hidden sm:inline-flex items-center gap-2">
               <FaUsers className="text-[#4326e8]" />
@@ -215,7 +215,7 @@ function EventRow({ event }) {
           </span>
           <span className="inline-flex items-center gap-1.5">
             <FaSchool className="text-[#4326e8]" />
-            {event.schoolName || event.partnerName || "Pratyo"}
+            {event.schoolName || event.partnerName || "Pravyo"}
           </span>
           <span className="hidden sm:inline-flex items-center gap-1.5">
             <FaUsers className="text-[#4326e8]" />

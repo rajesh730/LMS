@@ -6,9 +6,9 @@ import { PublicPageShell } from "@/components/public/PublicLayout";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Become a Pratyo Partner",
+  title: "Become a Pravyo Partner",
   description:
-    "Apply to partner with Pratyo on student competitions, showcases, school programs, and public opportunities.",
+    "Apply to partner with Pravyo on student competitions, showcases, school programs, and public opportunities.",
 };
 
 export default function PartnersPage() {
@@ -25,7 +25,7 @@ export default function PartnersPage() {
               Partnership Application
             </p>
             <h1 className="mt-2 text-3xl font-black leading-tight text-[#17120a] md:text-4xl">
-              Become a Pratyo Partner.
+              Become a Pravyo Partner.
             </h1>
             <p className="mt-3 max-w-3xl text-sm leading-7 text-[#52657d]">
               Share your organization details, partnership role, and the student

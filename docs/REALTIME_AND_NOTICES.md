@@ -1,6 +1,6 @@
 # Realtime And Notices
 
-This document explains how the current realtime and notice-delivery system works in Pratyo, how to configure it, and how to QA it safely.
+This document explains how the current realtime and notice-delivery system works in Pravyo, how to configure it, and how to QA it safely.
 
 ## Scope
 

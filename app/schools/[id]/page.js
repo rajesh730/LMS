@@ -238,7 +238,7 @@ async function getSchoolHomeMagazines(schoolId) {
 
 function HeroFallbackArt() {
   return (
-    <div className="pratyo-brand-surface absolute inset-0">
+    <div className="pravyo-brand-surface absolute inset-0">
       <div className="absolute bottom-0 left-0 right-0 h-36 bg-gradient-to-t from-black/50 to-transparent" />
       <div className="absolute bottom-10 right-12 hidden h-28 w-48 rounded-2xl border border-white/25 bg-white/12 backdrop-blur-sm md:block" />
       <div className="absolute right-28 top-12 hidden h-16 w-36 -rotate-6 rounded-2xl border border-white/20 bg-white/10 backdrop-blur-sm md:block" />
@@ -354,7 +354,7 @@ function WritingCard({ writing }) {
       href={isMagazine ? writing.href || "#writings" : `/writings/${writing._id}`}
       className="block min-w-[190px] rounded-xl border border-[#e6eaf7] bg-white p-3 text-[#17120a] shadow-sm transition hover:-translate-y-0.5 hover:border-white/70 hover:shadow-md"
     >
-      <div className="pratyo-writing-art relative h-28 overflow-hidden rounded-lg border">
+      <div className="pravyo-writing-art relative h-28 overflow-hidden rounded-lg border">
         <div className="absolute right-8 top-7 h-14 w-24 rounded-2xl border border-white/18 bg-white/10" />
         <FaBookOpen className="absolute right-5 top-5 text-4xl !text-white drop-shadow" />
         <FaPenNib className="absolute bottom-5 left-5 text-2xl !text-white drop-shadow" />
@@ -669,7 +669,7 @@ export default async function PublicSchoolPage({ params }) {
                   }
                   limit={120}
                 />
-                <div className="pratyo-brand-panel relative h-32 overflow-hidden rounded-xl border">
+                <div className="pravyo-brand-panel relative h-32 overflow-hidden rounded-xl border">
                   <FaSchool className="absolute bottom-5 right-6 text-5xl text-white/78" />
                 </div>
               </div>
@@ -725,7 +725,7 @@ export default async function PublicSchoolPage({ params }) {
 
         <section
           id="writings"
-          className="pratyo-brand-surface scroll-mt-28 rounded-2xl border border-white/18 p-5 shadow-sm"
+          className="pravyo-brand-surface scroll-mt-28 rounded-2xl border border-white/18 p-5 shadow-sm"
         >
           <div className="flex items-center justify-between gap-3">
             <h2 className="inline-flex items-center gap-2 text-lg font-black !text-white">
@@ -752,7 +752,7 @@ export default async function PublicSchoolPage({ params }) {
           )}
         </section>
 
-        <section className="pratyo-brand-surface relative overflow-hidden rounded-2xl p-5 shadow-lg">
+        <section className="pravyo-brand-surface relative overflow-hidden rounded-2xl p-5 shadow-lg">
           <div className="absolute inset-0 bg-gradient-to-r from-black/18 via-transparent to-black/10" />
           <div className="relative z-10 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="flex items-start gap-4">
@@ -793,7 +793,7 @@ export default async function PublicSchoolPage({ params }) {
 
       <footer className="border-t border-[#d7cdbb] px-4 py-6 text-center text-sm text-[#52657d]">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p>&copy; 2026 Pratyo. Student talent, school recognition, public events, and verified certificates.</p>
+          <p>&copy; 2026 Pravyo. Student talent, school recognition, public events, and verified certificates.</p>
           <div className="flex justify-center gap-4 text-[#0a2f66]">
             <FaFacebookF />
             <FaTwitter />

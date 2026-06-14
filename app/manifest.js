@@ -1,7 +1,7 @@
 export default function manifest() {
   return {
-    name: "Pratyo",
-    short_name: "Pratyo",
+    name: "Pravyo",
+    short_name: "Pravyo",
     description:
       "School events, results, magazines, certificates, notices, and student writing in one connected platform.",
     start_url: "/",
@@ -10,7 +10,7 @@ export default function manifest() {
     theme_color: "#071833",
     icons: [
       {
-        src: "/pratyo-icon.png",
+        src: "/pravyo-icon.png",
         sizes: "512x512",
         type: "image/png",
       },
@@ -18,11 +18,6 @@ export default function manifest() {
         src: "/apple-icon.png",
         sizes: "180x180",
         type: "image/png",
-      },
-      {
-        src: "/pratyo-logo.svg",
-        sizes: "any",
-        type: "image/svg+xml",
       },
     ],
   };

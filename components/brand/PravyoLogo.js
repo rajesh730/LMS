@@ -1,10 +1,8 @@
 import Image from "next/image";
 import clsx from "clsx";
-import pratyoIcon from "@/logo/pratyo logo icon.png";
-import pratyoWordmark from "@/logo/pratyo logo by name.png";
-import pratyoLockup from "@/logo/pratyo full logo.png";
+import pravyoLogo from "@/logo/pravyo logo by name.png";
 
-export default function PratyoLogo({
+export default function PravyoLogo({
   compact = false,
   iconOnly = false,
   variant,
@@ -17,20 +15,20 @@ export default function PratyoLogo({
   const resolvedVariant = variant || (iconOnly ? "icon" : "wordmark");
   const assets = {
     icon: {
-      src: pratyoIcon,
-      alt: "Pratyo icon",
+      src: pravyoLogo,
+      alt: "Pravyo icon",
       width: compact ? 40 : 52,
       height: compact ? 40 : 52,
     },
     wordmark: {
-      src: pratyoWordmark,
-      alt: "Pratyo",
+      src: pravyoLogo,
+      alt: "Pravyo",
       width: compact ? 126 : 220,
       height: compact ? 34 : 60,
     },
     lockup: {
-      src: pratyoLockup,
-      alt: "Pratyo logo",
+      src: pravyoLogo,
+      alt: "Pravyo logo",
       width: compact ? 152 : 260,
       height: compact ? 152 : 260,
     },

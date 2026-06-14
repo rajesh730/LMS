@@ -22,6 +22,7 @@ import {
 import AlertBanner from "@/components/ui/AlertBanner";
 import EmptyState from "@/components/EmptyState";
 import LoadingState from "@/components/ui/LoadingState";
+import StudentQuickNav from "@/components/student/StudentQuickNav";
 import { stripWritingMarkup } from "@/components/WritingContent";
 import useRealtimeChannel from "@/lib/useRealtimeChannel";
 import useWorkIndicators from "@/lib/useWorkIndicators";
@@ -114,13 +115,19 @@ function getInitials(name = "") {
   return (parts[0]?.[0] || "S") + (parts[1]?.[0] || "");
 }
 
+function formatGradeLabel(value) {
+  const grade = String(value || "").trim();
+  if (!grade) return "Grade";
+  return /^grade\b/i.test(grade) ? grade : `Grade ${grade}`;
+}
+
 function MagazineArt({ category, large = false }) {
   const meta = getCategoryMeta(category);
   const Icon = meta.icon;
 
   return (
     <div
-      className={`pratyo-brand-panel relative overflow-hidden rounded-lg border ${
+      className={`pravyo-brand-panel relative overflow-hidden rounded-lg border ${
         large ? "h-52" : "h-36"
       }`}
     >
@@ -210,12 +217,15 @@ function ArticleCard({ article, disableLink = false }) {
   );
 }
 
-function SchoolWallCard({ article, disableLinks = false }) {
+function SchoolWallCard({ article, href }) {
   const meta = getCategoryMeta(article.category);
   const author = article.authorStudent?.name || "Student";
+  const publishedDate = formatDate(article.publishedAt);
+  const gradeLabel = formatGradeLabel(article.authorStudent?.grade);
+  const articleHref = href || `/student/school-wall/${article.id}`;
 
   return (
-    <article className="rounded-2xl border border-[#edf0f7] bg-white p-5 text-[#111827] shadow-sm">
+    <article className="mobile-wall-card mobile-feed-card rounded-2xl border border-[#edf0f7] bg-white p-4 sm:p-5 text-[#111827] shadow-sm">
       <div className="flex items-center gap-3">
         <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#f0edff] text-sm font-black text-[#4326e8]">
           {getInitials(author)}
@@ -226,8 +236,8 @@ function SchoolWallCard({ article, disableLinks = false }) {
           </p>
           <p className="truncate text-xs font-bold text-[#667085]">
             <FaShieldAlt className="mr-1 inline text-[#2f7fdb]" />
-            {article.authorStudent?.grade || "Grade"} - Roll{" "}
-            {article.authorStudent?.rollNumber || "-"}
+            {gradeLabel}
+            {publishedDate ? ` - ${publishedDate}` : ""}
           </p>
         </div>
         <span className={`rounded-full px-3 py-1 text-[10px] font-black ${meta.chip}`}>
@@ -236,42 +246,19 @@ function SchoolWallCard({ article, disableLinks = false }) {
       </div>
 
       <div className="mt-4">
-        <h3 className="text-xl font-black leading-tight text-[#111827]">
+        <h3 className="student-wall-card-title text-lg font-bold leading-tight text-[#111827] sm:text-xl">
           {article.title || "Student writing"}
         </h3>
         <p className="mt-2 line-clamp-4 text-sm leading-6 text-[#4b5565]">
           {getPreview(article.content, 280)}
         </p>
-        {disableLinks ? (
-          <span className="mt-3 inline-flex text-sm font-black text-[#4326e8]">
-            Global Wall
-          </span>
-        ) : (
-          <Link
-            href={`/student/school-wall/${article.id}`}
-            className="mt-3 inline-flex text-sm font-black text-[#4326e8]"
-          >
-            Read More
-            <FaChevronRight className="ml-2 mt-0.5" />
-          </Link>
-        )}
-      </div>
-
-      <div className="mt-5 flex items-center justify-between border-t border-[#f0f2f7] pt-4 text-xs font-bold text-[#4b5565]">
-        <span>{formatDate(article.publishedAt)}</span>
-        {disableLinks ? (
-          <span className="inline-flex items-center gap-2 text-[#3120c9]">
-            Public Selection
-          </span>
-        ) : (
-          <Link
-            href={`/student/school-wall/${article.id}`}
-            className="inline-flex items-center gap-2 text-[#3120c9]"
-          >
-            Open
-            <FaChevronRight />
-          </Link>
-        )}
+        <Link
+          href={articleHref}
+          className="mt-3 inline-flex text-sm font-black text-[#4326e8]"
+        >
+          Read More
+          <FaChevronRight className="ml-2 mt-0.5" />
+        </Link>
       </div>
     </article>
   );
@@ -283,9 +270,9 @@ function MagazineIssueCard({ issue }) {
   return (
     <Link
       href={`/student/magazine/issues/${issue.id}`}
-      className="group min-h-[280px] rounded-xl border border-[#d7cdbb] bg-white p-4 text-left shadow-sm transition hover:-translate-y-1 hover:border-purple-300 hover:shadow-xl"
+      className="student-magazine-issue-card mobile-wall-card mobile-feed-card group min-h-[280px] rounded-xl border border-[#d7cdbb] bg-white p-4 text-left shadow-sm transition hover:-translate-y-1 hover:border-purple-300 hover:shadow-xl"
     >
-      <div className="pratyo-brand-panel relative h-40 overflow-hidden rounded-lg border">
+      <div className="student-magazine-issue-art pravyo-brand-panel relative h-40 overflow-hidden rounded-lg border">
         <div className="absolute inset-x-0 top-0 h-12 bg-white/12" />
         <div className="absolute left-5 top-6 h-20 w-14 rounded-sm bg-white/80 shadow-md" />
         <div className="absolute left-20 top-10 h-20 w-14 rounded-sm bg-white/65 shadow-md" />
@@ -300,7 +287,7 @@ function MagazineIssueCard({ issue }) {
         <p className="text-xs font-black uppercase text-purple-700">
           School Magazine
         </p>
-        <h3 className="mt-1 text-2xl font-black text-[#17120a] transition group-hover:text-purple-700">
+        <h3 className="mt-1 text-xl font-bold text-[#17120a] transition group-hover:text-purple-700 sm:text-2xl">
           {issue.title}
         </h3>
         <p className="mt-2 line-clamp-2 text-sm font-semibold leading-6 text-[#52657d]">
@@ -625,12 +612,13 @@ export default function StudentSchoolMagazine({
   }
 
   return (
-    <div className="space-y-6 text-[#27344a]">
+    <div className="student-reading-mobile-shell space-y-4 text-[#27344a] sm:space-y-6">
+      <StudentQuickNav className="sm:hidden" />
       <section className="mobile-accessory-info overflow-hidden rounded-2xl border border-[#d7cdbb] bg-white shadow-[0_18px_50px_rgba(10,47,102,0.08)] sm:block">
         <div className="grid gap-6 p-5 md:p-8 xl:grid-cols-[1fr_0.85fr]">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-3">
-              <span className="pratyo-brand-surface flex h-12 w-12 items-center justify-center rounded-xl text-white shadow-lg shadow-slate-950/20">
+              <span className="pravyo-brand-surface flex h-12 w-12 items-center justify-center rounded-xl text-white shadow-lg shadow-slate-950/20">
                 <FaBookOpen />
               </span>
               <div>
@@ -683,7 +671,7 @@ export default function StudentSchoolMagazine({
             </div>
           </div>
 
-          <div className="pratyo-brand-surface relative min-h-72 overflow-hidden rounded-2xl p-6">
+          <div className="pravyo-brand-surface relative min-h-72 overflow-hidden rounded-2xl p-6">
             <div className="absolute right-8 top-8 h-36 w-52 rotate-[-8deg] rounded-lg border border-[#d7cdbb] bg-white/80 shadow-xl" />
             <div className="absolute right-20 top-14 h-36 w-52 rotate-[8deg] rounded-lg border border-[#d7cdbb] bg-white/80 shadow-xl" />
             <FaFeatherAlt className="absolute right-10 top-10 text-5xl text-white/78" />
@@ -704,11 +692,11 @@ export default function StudentSchoolMagazine({
         </div>
       </section>
 
-      <div className={lockedView ? "grid gap-5" : "grid gap-5 xl:grid-cols-[1fr_280px]"}>
-        <main className="min-w-0 space-y-5">
-          <section className="rounded-xl border border-[#d7cdbb] bg-white p-4 shadow-sm">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
+      <div className={lockedView ? "student-reading-content-grid grid gap-4 sm:gap-5" : "student-reading-content-grid grid gap-4 sm:gap-5 xl:grid-cols-[1fr_280px]"}>
+        <main className="student-reading-content-main min-w-0 space-y-5">
+          <section className="student-reading-mobile-surface student-magazine-view-surface mobile-tight-card rounded-xl border border-[#d7cdbb] bg-white p-3 shadow-sm sm:p-4">
+            <div className="student-reading-view-heading flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="student-mobile-replaced-title">
                 <h2 className="text-lg font-bold text-[#17120a]">
                   {activeView === "magazine"
                     ? "School Magazine"
@@ -718,12 +706,12 @@ export default function StudentSchoolMagazine({
                 </h2>
                 <div className="mt-1 h-1 w-16 rounded-full bg-purple-500" />
               </div>
-              <div className="flex items-center gap-2 rounded-full border border-[#d7cdbb] bg-[#f8fbff] px-3 py-2 text-sm text-[#52657d]">
-                <FaSearch />
-                {activeView === "magazine"
-                  ? `${selectedMagazineMonth?.issues.length || 0} magazines`
-                  : `${filteredArticles.length} showing`}
-              </div>
+              {activeView !== "magazine" && (
+                <div className="student-magazine-count-pill flex items-center gap-2 rounded-full border border-[#d7cdbb] bg-[#f8fbff] px-3 py-2 text-sm text-[#52657d]">
+                  <FaSearch />
+                  {`${filteredArticles.length} showing`}
+                </div>
+              )}
             </div>
             {!lockedView && (
               <div className="mt-4 flex flex-wrap gap-2">
@@ -754,7 +742,7 @@ export default function StudentSchoolMagazine({
             )}
 
             {activeView === "magazine" && (
-              <div className="mt-5 rounded-lg border border-[#d7cdbb] bg-[#fffdf8] p-4">
+              <div className="student-magazine-month-panel mt-3 sm:mt-5">
                 {magazineMonths.length === 0 ? (
                   <p className="text-sm font-semibold text-[#52657d]">
                     No magazines yet.
@@ -779,7 +767,7 @@ export default function StudentSchoolMagazine({
                         </select>
                       </label>
 
-                      <div className="rounded-full border border-[#d7cdbb] bg-white px-3 py-2 text-xs font-black text-[#52657d]">
+                      <div className="student-magazine-month-count rounded-full border border-[#d7cdbb] bg-white px-3 py-2 text-xs font-black text-[#52657d]">
                         {selectedMagazineMonth?.issues.length || 0}{" "}
                         {selectedMagazineMonth?.issues.length === 1
                           ? "magazine"
@@ -788,7 +776,7 @@ export default function StudentSchoolMagazine({
                       </div>
                     </div>
 
-                    <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    <div className="mt-4 grid gap-3 sm:gap-4 md:grid-cols-2 xl:grid-cols-3">
                       {selectedMagazineMonth?.issues.map((issue) => (
                         <MagazineIssueCard
                           key={issue.id}
@@ -810,12 +798,16 @@ export default function StudentSchoolMagazine({
             ) : (
               <>
                 {activeView === "school-wall" || activeView === "global" ? (
-                  <div className="mt-5 space-y-4">
+                  <div className="student-wall-list mt-4 space-y-3 sm:mt-5 sm:space-y-4">
                     {filteredArticles.map((article) => (
                       <SchoolWallCard
                         key={article.id}
                         article={article}
-                        disableLinks={activeView === "global"}
+                        href={
+                          activeView === "global"
+                            ? `/student/global-wall/${article.id}`
+                            : `/student/school-wall/${article.id}`
+                        }
                       />
                     ))}
                   </div>
@@ -867,7 +859,7 @@ export default function StudentSchoolMagazine({
               <h2 className="text-sm font-bold text-[#17120a]">
                 Student Spotlight
               </h2>
-              <div className="pratyo-brand-surface relative mx-auto mt-5 flex h-24 w-24 items-center justify-center rounded-full text-3xl font-bold text-white shadow-lg shadow-slate-950/20">
+              <div className="pravyo-brand-surface relative mx-auto mt-5 flex h-24 w-24 items-center justify-center rounded-full text-3xl font-bold text-white shadow-lg shadow-slate-950/20">
                 {spotlight.name.charAt(0).toUpperCase()}
                 <span className="absolute -right-1 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-amber-400 text-white shadow">
                   <FaCrown className="text-sm" />

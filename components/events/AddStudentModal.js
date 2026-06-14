@@ -85,7 +85,7 @@ export default function AddStudentModal({ event, onClose, onSuccess }) {
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="pratyo-brand-surface sticky top-0 text-white p-6 border-b">
+        <div className="pravyo-brand-surface sticky top-0 text-white p-6 border-b">
           <h2 className="text-2xl font-bold">Add Students to Event</h2>
           <p className="text-emerald-50 text-sm mt-1">
             Select students to manually add to this event

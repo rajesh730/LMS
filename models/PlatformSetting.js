@@ -11,7 +11,7 @@ const PlatformSettingSchema = new mongoose.Schema(
     general: {
       platformName: {
         type: String,
-        default: "Pratyo",
+        default: "Pravyo",
         trim: true,
       },
       supportEmail: {

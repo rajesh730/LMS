@@ -57,6 +57,39 @@ export async function PATCH(request, props) {
       );
     }
 
+    const body = await request.json();
+    const action = String(body.action || "").toUpperCase();
+
+    if (action === "MAKE_PRIVATE") {
+      article.status = "DRAFT";
+      article.showOnSchoolWall = false;
+      article.isMagazinePublished = false;
+      article.isPublished = false;
+      article.isFeatured = false;
+      article.isGlobalWallPublished = false;
+      article.publicationScope = "SCHOOL_ONLY";
+      article.magazineIssue = null;
+      article.magazineIssueAssignedAt = null;
+      article.magazinePublishedAt = null;
+      article.publishedAt = null;
+      article.reviewedAt = null;
+      article.reviewedBy = null;
+      article.reviewNote = "";
+
+      await article.save();
+
+      publishWorkIndicatorsUpdate("student-writing-updated", {
+        schoolId: String(student.school),
+        studentId: String(student._id),
+        status: article.status,
+      });
+
+      return NextResponse.json({
+        message: "Writing made private",
+        article,
+      });
+    }
+
     if (article.isMagazinePublished || article.isPublished) {
       return NextResponse.json(
         {
@@ -66,7 +99,6 @@ export async function PATCH(request, props) {
       );
     }
 
-    const body = await request.json();
     const nextTitle = String(body.title || "").trim();
     const nextContent = String(body.content || "").trim();
     const nextCategory = normalizeWritingCategory(body.category || article.category);
@@ -178,18 +210,17 @@ export async function DELETE(request, props) {
       );
     }
 
-    if (!["DRAFT", "REJECTED"].includes(article.status)) {
-      return NextResponse.json(
-        { message: "Only private writings can be deleted" },
-        { status: 400 }
-      );
-    }
-
     article.isDeleted = true;
     article.deletedAt = new Date();
     article.deletedBy = student._id;
+    article.showOnSchoolWall = false;
     article.isPublished = false;
+    article.isFeatured = false;
+    article.isMagazinePublished = false;
+    article.isGlobalWallPublished = false;
     article.publishedAt = null;
+    article.magazinePublishedAt = null;
+    article.homeShownAt = null;
     await article.save();
 
     publishWorkIndicatorsUpdate("student-writing-deleted", {

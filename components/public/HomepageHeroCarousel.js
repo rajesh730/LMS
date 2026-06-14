@@ -86,16 +86,13 @@ export default function HomepageHeroCarousel({ stories = [] }) {
 
   return (
     <section
-      className="pratyo-brand-surface relative min-h-[360px] overflow-hidden rounded-2xl p-5 text-white shadow-sm md:min-h-[430px] md:p-7"
+      className="home-mobile-hero-bleed pravyo-brand-surface relative min-h-[280px] overflow-hidden rounded-2xl p-4 text-white shadow-sm md:min-h-[390px] md:p-7"
     >
-      <div className={`absolute -right-16 top-14 h-64 w-64 rounded-full ${tone.glow} blur-3xl`} />
-      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black/36 to-transparent" />
-      <div className="absolute right-8 top-8 hidden h-28 w-28 rotate-6 rounded-3xl border border-white/20 bg-white/10 backdrop-blur md:block" />
-      <div className="absolute right-24 top-28 hidden h-16 w-40 -rotate-3 rounded-2xl border border-white/15 bg-white/8 backdrop-blur md:block" />
+      <div className="absolute bottom-0 left-0 right-0 h-px bg-white/20" />
 
-      <div className="relative z-10 flex min-h-[320px] flex-col justify-between md:min-h-[376px]">
+      <div className="relative z-10 flex min-h-[248px] flex-col justify-between md:min-h-[336px]">
         <div className="flex items-center justify-between gap-3">
-          <span className="inline-flex items-center gap-2 rounded-lg bg-white px-3 py-1.5 text-xs font-black text-[#3120c9] shadow-sm">
+          <span className="inline-flex items-center gap-2 rounded-lg bg-white px-3 py-1.5 text-xs font-bold text-[#1f4e79] shadow-sm">
             <FaStar />
             School Magazine
           </span>
@@ -122,15 +119,15 @@ export default function HomepageHeroCarousel({ stories = [] }) {
         </div>
 
         <div className="max-w-3xl">
-          <p className="mb-3 inline-flex items-center gap-2 text-xs font-black uppercase text-white/92">
+          <p className="mb-3 inline-flex items-center gap-2 text-xs font-bold uppercase text-white/92">
             <FaBookOpen />
             {activeSlide.category}
           </p>
-          <h1 className="max-w-4xl text-3xl font-black leading-tight text-white drop-shadow-sm md:text-5xl">
+          <h1 className="home-mobile-hero-title max-w-4xl text-xl font-semibold leading-tight text-white md:text-4xl md:font-bold">
             {activeSlide.title}
           </h1>
           {!activeSlide.empty && (
-            <div className="mt-3 flex flex-wrap gap-3 text-sm font-black text-white">
+            <div className="home-mobile-hero-meta mt-3 flex flex-wrap gap-3 text-sm font-semibold text-white">
               <span>by {activeSlide.author}</span>
               <span className="inline-flex items-center gap-2">
                 <FaShieldAlt className="text-white/80" />
@@ -139,13 +136,13 @@ export default function HomepageHeroCarousel({ stories = [] }) {
             </div>
           )}
           {activeSlide.content && (
-            <p className="mt-5 max-w-xl text-base font-semibold leading-8 text-white/90">
+            <p className="home-mobile-hero-copy mt-4 max-w-xl text-sm font-medium leading-6 text-white/90 md:mt-5 md:text-base md:leading-7">
               {getPreview(activeSlide.content, activeSlide.empty ? 180 : 150)}
             </p>
           )}
           <Link
             href={activeSlide.href || "/student-voices"}
-            className="mt-6 inline-flex w-fit items-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-black text-[#3120c9] shadow-sm transition hover:-translate-y-0.5"
+            className="mt-5 inline-flex w-fit items-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-[#1f4e79] shadow-sm transition hover:-translate-y-0.5 md:mt-6"
           >
             {activeSlide.empty ? "Explore Schools" : "Read Story"}
             <FaArrowRight />

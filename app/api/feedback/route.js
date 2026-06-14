@@ -173,7 +173,7 @@ export async function POST(request) {
 
     return NextResponse.json(
       {
-        message: "Feedback submitted. Thank you for helping improve Pratyo.",
+        message: "Feedback submitted. Thank you for helping improve Pravyo.",
         feedback: serializeFeedback(feedback),
       },
       { status: 201 }

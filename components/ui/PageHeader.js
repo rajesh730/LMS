@@ -11,9 +11,9 @@ export default function PageHeader({
   return (
     <section
       className={[
-        "pratyo-card",
-        fullWidth ? "" : "-mx-4",
-        "rounded-none border-x-0 p-5",
+        "pravyo-card",
+        fullWidth ? "" : "-mx-2",
+        "rounded-none border-x-0 p-3",
         "sm:mx-0 sm:rounded-[var(--card-radius)] sm:border-x sm:p-6",
         className,
       ]
@@ -29,8 +29,8 @@ export default function PageHeader({
               </span>
             )}
             <div>
-              {eyebrow && <p className="pratyo-eyebrow mobile-accessory-info sm:block">{eyebrow}</p>}
-              <h1 className="pratyo-heading mt-1 text-xl sm:text-2xl">{title}</h1>
+              {eyebrow && <p className="pravyo-eyebrow mobile-accessory-info sm:block">{eyebrow}</p>}
+              <h1 className="pravyo-heading mt-1 text-xl sm:text-2xl">{title}</h1>
             </div>
           </div>
           {description && (

@@ -104,7 +104,7 @@ export default function FeedbackForm({ audience = "school" }) {
             Feedback
           </p>
           <h2 className="mt-2 text-2xl font-black text-[#17120a]">
-            Help improve Pratyo
+            Help improve Pravyo
           </h2>
           <p className="mt-2 text-sm leading-6 text-[#52657d]">
             Share what is working, what is confusing, or what should be improved

@@ -4,7 +4,7 @@ import Sidebar from './Sidebar';
 import { signOut, useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
 import { FaBars, FaTimes } from 'react-icons/fa';
-import PratyoLogo from '@/components/brand/PratyoLogo';
+import PravyoLogo from '@/components/brand/PravyoLogo';
 import AuthenticatedPublicLinkGuard from '@/components/AuthenticatedPublicLinkGuard';
 
 function getInitials(name = '') {
@@ -20,6 +20,7 @@ function getInitials(name = '') {
 export default function DashboardLayout({ children }) {
   const { data: session } = useSession();
   const [isNavOpen, setIsNavOpen] = useState(false);
+  const [isHeaderHidden, setIsHeaderHidden] = useState(false);
 
   useEffect(() => {
     if (session?.error === 'SessionRevoked') {
@@ -34,12 +35,30 @@ export default function DashboardLayout({ children }) {
     return () => { document.body.style.overflow = previousOverflow; };
   }, [isNavOpen]);
 
+  useEffect(() => {
+    let lastScrollY = window.scrollY;
+
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      const scrollingDown = currentScrollY > lastScrollY;
+      const movedEnough = Math.abs(currentScrollY - lastScrollY) > 8;
+
+      if (movedEnough) {
+        setIsHeaderHidden(scrollingDown && currentScrollY > 72);
+        lastScrollY = currentScrollY;
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   if (!session) {
     return (
-      <div className="pratyo-page-shell flex min-h-screen items-center justify-center px-4">
-        <div className="text-center pratyo-animate-fade-up">
+      <div className="pravyo-page-shell flex min-h-screen items-center justify-center px-4">
+        <div className="text-center pravyo-animate-fade-up">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--brand-primary-soft)] shadow-sm">
-            <PratyoLogo variant="icon" compact withSurface />
+            <PravyoLogo variant="icon" compact withSurface />
           </div>
           <p className="text-sm font-semibold text-[var(--brand-primary)]">
             Loading your workspace…
@@ -55,7 +74,7 @@ export default function DashboardLayout({ children }) {
   const initials = getInitials(session?.user?.name || '');
 
   return (
-    <div className="pratyo-page-shell min-h-screen font-sans">
+    <div className="pravyo-page-shell min-h-screen font-sans">
       <AuthenticatedPublicLinkGuard />
 
       {/* Overlay backdrop for mobile nav */}
@@ -77,7 +96,9 @@ export default function DashboardLayout({ children }) {
 
       {/* ── Mobile top header ─────────────────────────────── */}
       <header
-        className="dashboard-mobile-header sticky top-0 z-30 px-4 py-2.5 lg:hidden"
+        className={`dashboard-mobile-header sticky top-0 z-30 px-3 py-2.5 lg:hidden ${
+          isHeaderHidden && !isNavOpen ? 'dashboard-mobile-header-hidden' : ''
+        }`}
         style={{
           background: 'linear-gradient(135deg, #ffffff 60%, #f4f1ff 100%)',
           borderBottom: '1px solid var(--brand-border)',
@@ -87,7 +108,7 @@ export default function DashboardLayout({ children }) {
         <div className="flex items-center justify-between gap-3">
           {/* Logo + user info */}
           <div className="flex min-w-0 items-center gap-3">
-            <PratyoLogo variant="icon" compact withSurface />
+            <PravyoLogo variant="icon" compact withSurface />
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-[var(--brand-ink)] leading-tight">
                 {userName}
@@ -121,7 +142,7 @@ export default function DashboardLayout({ children }) {
       <main
         className="min-h-screen overflow-x-hidden transition-all duration-300 lg:ml-[var(--sidebar-width)]"
       >
-        <div className="mx-auto max-w-7xl px-3 py-4 pb-10 sm:px-5 sm:py-6 lg:p-8">
+        <div className="dashboard-content-frame mx-auto max-w-7xl px-0 py-3 pb-10 sm:px-5 sm:py-6 lg:p-8">
           {children}
         </div>
       </main>

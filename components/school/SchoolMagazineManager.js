@@ -863,7 +863,7 @@ function PublishingPanel({
       title: "Show To Home",
       eyebrow: "Public Homepage Selection",
       helper:
-        "Writing stays hidden from public by default. Read first, choose the best pieces, then show them on the Pratyo home page.",
+        "Writing stays hidden from public by default. Read first, choose the best pieces, then show them on the Pravyo home page.",
       loadingTitle: "Loading public choices",
       loadingMessage: "Preparing student writing for public homepage selection.",
       emptyTitle: "No writing ready for public home",

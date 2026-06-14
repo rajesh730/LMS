@@ -47,7 +47,7 @@ function buildEventPartnerFromProposal(proposal) {
     organizer: organizer._id || organizer,
     role: proposal.proposedRoles?.[0] || "ORGANIZER_PARTNER",
     displayName: organizer.organizationName || proposal.organizationName || "",
-    logoUrl: organizer.logoUrl || "",
+    logoUrl: organizer.logoUrl || proposal.logoUrl || "",
     website: organizer.website || proposal.website || "",
     isPrimary: true,
   };

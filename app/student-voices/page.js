@@ -21,7 +21,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Student Voices",
-  description: "Read public student writing and featured school stories on Pratyo.",
+  description: "Read public student writing and featured school stories on Pravyo.",
 };
 
 function formatDate(value) {

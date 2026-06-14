@@ -41,7 +41,7 @@ async function main() {
   if (seenExists) {
     const result = await db.collection("usersurfaceseenstates").deleteMany({
       surface: {
-        $in: ["student.pratyoPulse", "school.pratyoPulse", "admin.challenges"],
+        $in: ["student.pravyoPulse", "school.pravyoPulse", "admin.challenges"],
       },
     });
     results.push(

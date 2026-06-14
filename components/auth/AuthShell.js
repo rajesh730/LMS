@@ -1,5 +1,5 @@
 import Link from "next/link";
-import PratyoLogo from "@/components/brand/PratyoLogo";
+import PravyoLogo from "@/components/brand/PravyoLogo";
 
 const DEFAULT_LINKS = [
   { href: "/events", label: "Events" },
@@ -36,13 +36,13 @@ export function AuthTopBar({ links = DEFAULT_LINKS }) {
 
 export function AuthCard({ title, description, children, footer }) {
   return (
-    <div className="pratyo-card w-full max-w-md rounded-2xl p-8">
+    <div className="auth-mobile-card pravyo-card w-full max-w-md rounded-2xl p-8">
       <div className="mb-6 text-center">
         <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--brand-primary-soft)]">
-          <PratyoLogo variant="icon" compact />
+          <PravyoLogo variant="icon" compact />
         </div>
         {title && (
-          <h1 className="pratyo-heading text-2xl text-[var(--brand-ink)]">{title}</h1>
+          <h1 className="pravyo-heading text-2xl text-[var(--brand-ink)]">{title}</h1>
         )}
         {description && (
           <p className="mt-2 text-sm leading-6 text-[var(--brand-muted)]">{description}</p>
@@ -56,9 +56,9 @@ export function AuthCard({ title, description, children, footer }) {
 
 export default function AuthShell({ links, title, description, children, footer }) {
   return (
-    <div className="pratyo-page-shell">
+    <div className="pravyo-page-shell">
       <AuthTopBar links={links} />
-      <div className="flex items-center justify-center px-4 pb-12">
+      <div className="flex items-center justify-center px-0 pb-12 sm:px-4">
         <AuthCard title={title} description={description} footer={footer}>
           {children}
         </AuthCard>
@@ -70,7 +70,7 @@ export default function AuthShell({ links, title, description, children, footer 
 export function AuthSessionPanel({ role, name, email }) {
   return (
     <div className="rounded-xl border border-[var(--brand-border)] bg-[var(--brand-primary-soft)]/40 p-4 text-left">
-      <p className="pratyo-eyebrow">Current account</p>
+      <p className="pravyo-eyebrow">Current account</p>
       <p className="mt-2 text-sm font-semibold text-[var(--brand-ink)]">
         {role || "Signed-in account"}
       </p>

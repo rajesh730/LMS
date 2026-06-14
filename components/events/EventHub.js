@@ -560,7 +560,7 @@ export default function EventHub({
                 return (
               <div
                 key={event._id}
-                className="overflow-hidden rounded-xl border border-[#d8e0f0] bg-white shadow-sm transition-all hover:border-[#b9c9eb] hover:shadow-[0_14px_30px_rgba(10,47,102,0.08)]"
+                className="event-hub-card overflow-hidden rounded-xl border border-[#d8e0f0] bg-white shadow-sm transition-all hover:border-[#b9c9eb] hover:shadow-[0_14px_30px_rgba(10,47,102,0.08)]"
               >
                 {/* Event Card - Clickable Header */}
                 <div
@@ -679,7 +679,7 @@ export default function EventHub({
                             {getRegisteredSummary(event)}
                           </span>
                         )}
-                        <span className="rounded-full bg-[#f1f5f9] px-2 py-0.5 text-[10px] font-bold text-[#475569]">
+                        <span className="event-stage-chip rounded-full bg-[#f1f5f9] px-2 py-0.5 text-[10px] font-bold text-[#475569]">
                           Stage: {stage.label}
                         </span>
                       </div>
@@ -696,7 +696,7 @@ export default function EventHub({
                               expandedEventId === event._id ? null : event._id
                             );
                           }}
-                          className="inline-flex h-9 w-9 items-center justify-center self-end rounded-full text-[#4326e8] transition hover:bg-[#f4f1ff]"
+                          className="event-expand-toggle inline-flex h-9 w-9 items-center justify-center self-end rounded-full text-[#4326e8] transition hover:bg-[#f4f1ff]"
                           aria-label={
                             expandedEventId === event._id
                               ? "Collapse event"
@@ -712,7 +712,7 @@ export default function EventHub({
                       )}
 
                       {event.participationStatus ? (
-                        <div className="flex w-full flex-wrap justify-end gap-2">
+                        <div className="event-action-group flex w-full flex-wrap justify-end gap-2">
                           {event.visibility === "PUBLIC" && completedView && event.resultsPublished && (
                             <Link
                               href={`/events/${event._id}`}
@@ -732,7 +732,7 @@ export default function EventHub({
                                 e.stopPropagation();
                                 setDetailEvent(event);
                               }}
-                              className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#e2e8f0] bg-white px-3 text-sm font-bold text-[#3116be] transition hover:border-[#4326e8] hover:bg-[#f4f1ff]"
+                              className="event-details-action inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#e2e8f0] bg-white px-3 text-sm font-bold text-[#3116be] transition hover:border-[#4326e8] hover:bg-[#f4f1ff]"
                               title="View event details"
                             >
                               <FaEye />
@@ -823,7 +823,7 @@ export default function EventHub({
                             )}
                         </div>
                       ) : (
-                        <div className="flex w-full flex-wrap justify-end gap-2">
+                        <div className="event-action-group flex w-full flex-wrap justify-end gap-2">
                           {event.visibility === "PUBLIC" && !useManagementPage && (
                             <button
                               type="button"
@@ -831,7 +831,7 @@ export default function EventHub({
                                 e.stopPropagation();
                                 setDetailEvent(event);
                               }}
-                              className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#e2e8f0] bg-white px-3 text-sm font-bold text-[#4326e8] transition hover:border-[#cfc4ff] hover:bg-[#f8f6ff]"
+                              className="event-details-action inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#e2e8f0] bg-white px-3 text-sm font-bold text-[#4326e8] transition hover:border-[#cfc4ff] hover:bg-[#f8f6ff]"
                             >
                               <FaEye />
                               View Details
@@ -879,9 +879,9 @@ export default function EventHub({
 
                 {/* Expanded Section - Participation Form */}
                 {expandedEventId === event._id && !needsSchoolApproval && !useManagementPage && (
-                  <div className="space-y-4 border-t border-[#e2e8f0] bg-[#f8fafc] p-5">
+                  <div className="event-expanded-panel space-y-4 border-t border-[#e2e8f0] bg-[#f8fafc] p-5">
                     {/* Stage Banner */}
-                    <div className={`max-w-3xl rounded-lg border px-3 py-2.5 text-sm ${getStageClasses(stage.tone)}`}>
+                    <div className={`event-stage-banner max-w-3xl rounded-lg border px-3 py-2.5 text-sm ${getStageClasses(stage.tone)}`}>
                       <div className="font-bold text-[#1e293b]">{stage.label}</div>
                       <div className="text-xs text-[#334155] opacity-90">{stage.nextAction}</div>
                     </div>
@@ -889,7 +889,7 @@ export default function EventHub({
                     {/* Event Details Grid */}
                     <div className={`grid grid-cols-1 gap-2 sm:grid-cols-2 ${showSchoolMetric ? "md:grid-cols-4" : "md:grid-cols-3"}`}>
                       {/* Date */}
-                      <div className="flex items-center gap-3 rounded-lg border border-[#eef2f8] bg-white px-3 py-2">
+                      <div className="event-metric-pill flex items-center gap-3 rounded-lg border border-[#eef2f8] bg-white px-3 py-2">
                         <FaCalendarAlt className="text-[#4326e8]" />
                         <div>
                           <p className="text-[10px] font-bold uppercase text-[#475569]">Date</p>
@@ -897,7 +897,7 @@ export default function EventHub({
                         </div>
                       </div>
                       {/* Deadline */}
-                      <div className="flex items-center gap-3 rounded-lg border border-[#eef2f8] bg-white px-3 py-2">
+                      <div className="event-metric-pill flex items-center gap-3 rounded-lg border border-[#eef2f8] bg-white px-3 py-2">
                         <FaClock className="text-[#4326e8]" />
                         <div>
                           <p className="text-[10px] font-bold uppercase text-[#475569]">Deadline</p>
@@ -907,7 +907,7 @@ export default function EventHub({
                         </div>
                       </div>
                       {/* Capacity */}
-                      <div className="flex items-center gap-3 rounded-lg border border-[#eef2f8] bg-white px-3 py-2">
+                      <div className="event-metric-pill flex items-center gap-3 rounded-lg border border-[#eef2f8] bg-white px-3 py-2">
                         <FaUsers className="text-[#4326e8]" />
                         <div>
                           <p className="text-[10px] font-bold uppercase text-[#475569]">{isTeamEvent ? "Team Capacity" : "Capacity"}</p>
@@ -918,7 +918,7 @@ export default function EventHub({
                       </div>
                       {/* Schools */}
                       {showSchoolMetric && (
-                        <div className="flex items-center gap-3 rounded-lg border border-[#eef2f8] bg-white px-3 py-2">
+                        <div className="event-metric-pill flex items-center gap-3 rounded-lg border border-[#eef2f8] bg-white px-3 py-2">
                           <FaMapMarkerAlt className="text-[#4326e8]" />
                           <div>
                             <p className="text-[10px] font-bold uppercase text-[#475569]">Schools</p>
@@ -1017,16 +1017,16 @@ export default function EventHub({
                     )}
 
                     {isStudentView && event.participationStatus && (
-                      <div className="rounded-xl border border-[#d7cdbb] bg-white p-4">
+                      <div className="event-student-status-panel rounded-xl border border-[#d7cdbb] bg-white p-4">
                         <h4 className="mb-3 text-lg font-semibold text-[#17120a]">
                           Your Event Status
                         </h4>
-                        <div className={`rounded-xl border px-4 py-3 text-sm ${getStageClasses(stage.tone)}`}>
+                        <div className={`event-stage-banner rounded-xl border px-4 py-3 text-sm ${getStageClasses(stage.tone)}`}>
                           <div className="font-semibold">{stage.label}</div>
                           <div className="mt-1 text-xs opacity-90">{stage.nextAction}</div>
                         </div>
                         <div className="mt-4 grid gap-3 md:grid-cols-3">
-                          <div className="rounded-lg border border-[#d7cdbb] bg-[#f8fbff] px-4 py-3">
+                          <div className="event-status-tag rounded-lg border border-[#d7cdbb] bg-[#f8fbff] px-4 py-3">
                             <div className="text-xs uppercase tracking-wide text-[#52657d]">
                               Registration
                             </div>
@@ -1034,7 +1034,7 @@ export default function EventHub({
                               {event.participationStatus}
                             </div>
                           </div>
-                          <div className="rounded-lg border border-[#d7cdbb] bg-[#f8fbff] px-4 py-3">
+                          <div className="event-status-tag rounded-lg border border-[#d7cdbb] bg-[#f8fbff] px-4 py-3">
                             <div className="text-xs uppercase tracking-wide text-[#52657d]">
                               Event Mode
                             </div>
@@ -1046,7 +1046,7 @@ export default function EventHub({
                                 : "Registered"}
                             </div>
                           </div>
-                          <div className="rounded-lg border border-[#d7cdbb] bg-[#f8fbff] px-4 py-3">
+                          <div className="event-status-tag rounded-lg border border-[#d7cdbb] bg-[#f8fbff] px-4 py-3">
                             <div className="text-xs uppercase tracking-wide text-[#52657d]">
                               Public Result
                             </div>
@@ -1060,7 +1060,7 @@ export default function EventHub({
                             <button
                               type="button"
                               onClick={() => setDetailEvent(event)}
-                              className="inline-flex items-center gap-2 rounded-lg border border-[#d7cdbb] bg-white px-3 py-2 text-sm font-semibold text-[#0a2f66] hover:bg-[#eaf2ff]"
+                              className="event-status-detail-button inline-flex items-center gap-2 rounded-lg border border-[#d7cdbb] bg-white px-3 py-2 text-sm font-semibold text-[#0a2f66] hover:bg-[#eaf2ff]"
                             >
                               View Details
                             </button>

@@ -2,13 +2,13 @@ import clsx from "clsx";
 import { forwardRef } from "react";
 
 const VARIANTS = {
-  primary: "pratyo-btn-primary bg-[#4326e8] text-white hover:bg-[#3217d3]",
+  primary: "pravyo-btn-primary bg-[#4326e8] text-white hover:bg-[#3217d3]",
   secondary:
-    "pratyo-btn-secondary border border-[#e6eaf7] bg-white text-[#27344a] hover:bg-[#f4f1ff]",
+    "pravyo-btn-secondary border border-[#e6eaf7] bg-white text-[#27344a] hover:bg-[#f4f1ff]",
   ghost: "border border-transparent bg-transparent text-[#27344a] hover:bg-[#f4f1ff]",
-  danger: "pratyo-btn-danger bg-[#b42318] text-white hover:bg-[#9f1f14]",
+  danger: "pravyo-btn-danger bg-[#b42318] text-white hover:bg-[#9f1f14]",
   outline:
-    "pratyo-btn-outline border border-[#d9dcf2] bg-white text-[#4326e8] hover:bg-[#f4f1ff]",
+    "pravyo-btn-outline border border-[#d9dcf2] bg-white text-[#4326e8] hover:bg-[#f4f1ff]",
 };
 
 const SIZES = {
@@ -34,7 +34,7 @@ export default function Button({
     <Component
       type={asChild ? undefined : type}
       className={clsx(
-        "pratyo-btn inline-flex items-center justify-center gap-2 font-semibold transition-disabled",
+        "pravyo-btn inline-flex items-center justify-center gap-2 font-semibold transition-disabled",
         VARIANTS[variant] || VARIANTS.primary,
         SIZES[size] || SIZES.md,
         fullWidth && "w-full",
@@ -64,7 +64,7 @@ export function ButtonLink({
     <a
       href={href || "#"}
       className={clsx(
-        "pratyo-btn inline-flex items-center justify-center gap-2 font-semibold no-underline transition-disabled",
+        "pravyo-btn inline-flex items-center justify-center gap-2 font-semibold no-underline transition-disabled",
         VARIANTS[variant] || VARIANTS.primary,
         SIZES[size] || SIZES.md,
         fullWidth && "w-full",

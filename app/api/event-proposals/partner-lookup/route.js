@@ -31,7 +31,7 @@ export async function GET(request) {
       email ? { $or: [{ contactEmail: email }, { contactPhone: { $ne: "" } }] } : { contactPhone: { $ne: "" } }
     )
       .select(
-        "organizationName organizationType website location contactName contactEmail contactPhone verificationStatus profileVisibility slug partnerRoles"
+        "organizationName organizationType website logoUrl location contactName contactEmail contactPhone verificationStatus profileVisibility slug partnerRoles"
       )
       .limit(100)
       .lean();
@@ -55,6 +55,7 @@ export async function GET(request) {
         organizationName: partner.organizationName || "",
         organizationType: partner.organizationType || "ACADEMY",
         website: partner.website || "",
+        logoUrl: partner.logoUrl || "",
         location: partner.location || "",
         contactName: partner.contactName || "",
         contactEmail: partner.contactEmail || "",

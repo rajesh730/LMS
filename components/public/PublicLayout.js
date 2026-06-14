@@ -4,7 +4,7 @@ import { FaArrowRight } from "react-icons/fa";
 export function PublicPageShell({ children, className = "" }) {
   return (
     <main
-      className={`pratyo-public-shell pratyo-page-shell min-h-screen overflow-x-hidden pb-32 md:pb-0 ${className}`.trim()}
+      className={`pravyo-public-shell pravyo-page-shell min-h-screen overflow-x-hidden pb-32 md:pb-0 ${className}`.trim()}
     >
       {children}
     </main>
@@ -13,7 +13,7 @@ export function PublicPageShell({ children, className = "" }) {
 
 export function PublicContainer({ children, className = "" }) {
   return (
-    <div className={`mx-auto w-full max-w-7xl px-4 sm:px-6 ${className}`.trim()}>
+    <div className={`mx-auto w-full max-w-7xl px-2 sm:px-6 ${className}`.trim()}>
       {children}
     </div>
   );
@@ -31,9 +31,9 @@ export function PublicHero({
     <section className="border-b border-[var(--brand-border)] bg-white">
       <PublicContainer className="py-6 lg:py-8">
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-stretch">
-          <div className="min-w-0 rounded-[var(--card-radius)] border border-[var(--brand-border)] bg-white p-6 shadow-[var(--card-shadow)] lg:p-7">
+          <div className="mobile-full-bleed-card min-w-0 rounded-[var(--card-radius)] border border-[var(--brand-border)] bg-white p-4 shadow-[var(--card-shadow)] sm:p-6 lg:p-7">
             {eyebrow && <PublicEyebrow>{eyebrow}</PublicEyebrow>}
-            <h1 className="pratyo-heading mt-3 max-w-4xl text-3xl sm:text-4xl">
+            <h1 className="pravyo-heading mt-3 max-w-4xl text-3xl sm:text-4xl">
               {title}
             </h1>
             {description && (
@@ -68,8 +68,8 @@ export function PublicSectionHeader({ eyebrow, title, description, action }) {
   return (
     <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
       <div className="min-w-0">
-        {eyebrow && <p className="pratyo-eyebrow">{eyebrow}</p>}
-        <h2 className="pratyo-heading mt-1 text-xl sm:text-2xl">{title}</h2>
+        {eyebrow && <p className="pravyo-eyebrow">{eyebrow}</p>}
+        <h2 className="pravyo-heading mt-1 text-xl sm:text-2xl">{title}</h2>
         {description && (
           <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--brand-muted)]">
             {description}
@@ -90,7 +90,7 @@ export function PublicCard({
 }) {
   return (
     <Component
-      className={`min-w-0 rounded-[var(--card-radius)] border border-[var(--brand-border)] bg-white p-5 shadow-[var(--card-shadow)] transition ${
+      className={`mobile-full-bleed-card min-w-0 rounded-[var(--card-radius)] border border-[var(--brand-border)] bg-white p-3 shadow-[var(--card-shadow)] transition sm:p-5 ${
         flushMobile ? "-mx-4 rounded-none border-x-0 sm:mx-0 sm:rounded-[var(--card-radius)] sm:border-x" : ""
       } ${className}`.trim()}
       {...props}

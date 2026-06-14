@@ -255,7 +255,7 @@ async function getHomepageData() {
 
 function EmptyPanel({ title, description, href = "", action = "" }) {
   return (
-    <section className="pratyo-empty-state">
+    <section className="pravyo-empty-state">
       <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--brand-primary-soft)] shadow-sm">
         <FaFeatherAlt className="text-xl text-[var(--brand-primary)]" />
       </div>
@@ -411,7 +411,7 @@ function RightColumn({ schools, partner, event }) {
       {/* Upcoming event card */}
       {event && (
         <section
-          className="pratyo-brand-surface overflow-hidden rounded-2xl p-5 text-white shadow-lg"
+          className="pravyo-brand-surface overflow-hidden rounded-2xl p-5 text-white shadow-lg"
           style={{ boxShadow: "0 8px 32px rgba(67,38,232,0.18)" }}
         >
           <div className="mb-4 flex items-center gap-2">
@@ -522,7 +522,7 @@ function MobileSchoolScroller({ schools }) {
   if (schools.length === 0) return null;
 
   return (
-    <section>
+    <section className="home-mobile-bleed">
       <SectionTitle title="Featured Schools" href="/schools" />
       <div className="grid grid-cols-4 gap-2.5">
         {schools.slice(0, 4).map((school) => (
@@ -552,7 +552,7 @@ function MobileVoiceFeed({ writings }) {
   const tags = ["All", ...new Set(items.map((item) => getCategoryLabel(item.category)))];
 
   return (
-    <section className="md:hidden">
+    <section className="home-mobile-bleed home-mobile-feed md:hidden">
       <SectionTitle title="Student Writings" href="/student-voices" />
       {/* Category pills */}
       <div className="mb-4 flex items-center gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -574,7 +574,7 @@ function MobileVoiceFeed({ writings }) {
         {items.map((item) => (
           <article
             key={item.id || item.title}
-            className="group relative overflow-hidden rounded-2xl border border-[#edf0f7] bg-white p-4 shadow-sm transition hover:shadow-md"
+            className="home-mobile-card mobile-feed-card group relative overflow-hidden rounded-2xl border border-[#edf0f7] bg-white p-4 shadow-sm transition hover:shadow-md"
           >
             {/* Top accent */}
             <div
@@ -589,6 +589,11 @@ function MobileVoiceFeed({ writings }) {
             </div>
             <AuthorLine name={item.author} school={item.schoolName} badge="" />
             <h2 className="mt-2.5 text-base font-bold leading-snug text-[#111827]">{item.title}</h2>
+            {item.content && (
+              <p className="mt-2 line-clamp-3 text-sm leading-6 text-[#526071]">
+                {getPreview(item.content, 180)}
+              </p>
+            )}
             <div className="mt-3.5 flex items-center justify-between">
               <Link
                 href={item.href || "/student-voices"}
@@ -620,11 +625,11 @@ export default async function Home() {
   const hasMainContent = feedItems.length > 0;
 
   return (
-    <main className="pratyo-home-shell min-h-screen bg-[#fbfcff] text-[#111827]">
+    <main className="pravyo-home-shell min-h-screen bg-[#fbfcff] text-[#111827]">
       <PublicSiteNav active="home" />
       <HomeScrollMemory />
 
-      <div className="mx-auto grid max-w-[1480px] gap-6 px-4 pb-28 pt-5 md:px-5 md:pb-10 xl:grid-cols-[230px_minmax(0,1fr)]">
+      <div className="mx-auto grid max-w-[1480px] gap-5 px-1 pb-28 pt-3 sm:px-4 md:px-5 md:pb-10 xl:grid-cols-[230px_minmax(0,1fr)]">
         <PublicExplorePanel active="home" variant="home" />
 
         <div className="min-w-0">
@@ -650,13 +655,9 @@ export default async function Home() {
                 )}
               </div>
 
-              <div className="space-y-6 md:hidden">
-                <MobileActivityList
-                  writings={latestWritings}
-                  events={upcomingEvents}
-                />
+              <div className="home-mobile-content space-y-6 md:hidden">
                 {activeEvent && (
-                  <section className="pratyo-brand-surface rounded-2xl p-5 text-white shadow-xl shadow-slate-950/12">
+                  <section className="pravyo-brand-surface rounded-2xl p-5 text-white shadow-xl shadow-slate-950/12">
                     <div className="flex items-center gap-4">
                       <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-white/16">
                         <FaCalendarAlt className="text-2xl text-white" />

@@ -60,7 +60,7 @@ function buildEventPartnerFromProposal(proposal) {
     organizer: organizer._id || organizer,
     role: proposal.proposedRoles?.[0] || "ORGANIZER_PARTNER",
     displayName: organizer.organizationName || proposal.organizationName || "",
-    logoUrl: organizer.logoUrl || "",
+    logoUrl: organizer.logoUrl || proposal.logoUrl || "",
     website: organizer.website || proposal.website || "",
     isPrimary: true,
   };
@@ -459,7 +459,7 @@ export async function GET(req) {
       // For admin, populate participant school details
       if (session.user.role === "SUPER_ADMIN") {
         events = await Event.find(query)
-          .sort({ date: 1 })
+          .sort({ createdAt: -1, _id: -1 })
           .populate("assignedMentors", "name subject roles")
           .populate("sourceProposal", "eventTitle organizationName status")
           .populate(
@@ -470,7 +470,7 @@ export async function GET(req) {
       } else {
         // For schools/teachers, just get basic data
         events = await Event.find(query)
-          .sort({ date: 1 })
+          .sort({ createdAt: -1, _id: -1 })
           .populate("assignedMentors", "name subject roles")
           .populate(
             "partners.organizer",

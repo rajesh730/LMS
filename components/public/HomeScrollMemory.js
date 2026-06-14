@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 
-const STORAGE_KEY = "pratyo:home-scroll";
+const STORAGE_KEY = "pravyo:home-scroll";
 const MAX_AGE_MS = 15 * 60 * 1000;
 
 function isWritingLink(href) {

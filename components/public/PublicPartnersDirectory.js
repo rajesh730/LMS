@@ -19,6 +19,7 @@ import {
   FaTrophy,
   FaUsers,
 } from "react-icons/fa";
+import { normalizeImageUrl } from "@/lib/imageUrls";
 
 function label(value) {
   return String(value || "Other")
@@ -57,15 +58,17 @@ function partnerHref(partner) {
 }
 
 function PartnerLogo({ partner, size = "h-12 w-12" }) {
+  const image = normalizeImageUrl(partner.logoUrl);
+
   return (
     <span
       className={`flex shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#f4f1ff] text-lg font-black text-[#4326e8] ${size}`.trim()}
     >
-      {partner.logoUrl ? (
+      {image ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={partner.logoUrl} alt="" className="h-full w-full object-cover" />
+        <img src={image} alt="" className="h-full w-full object-cover" />
       ) : (
-        (partner.name || "P").charAt(0).toUpperCase()
+        (partner.organizationName || partner.name || "P").charAt(0).toUpperCase()
       )}
     </span>
   );
@@ -300,7 +303,7 @@ export default function PublicPartnersDirectory({
               </h1>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-[#52657d]">
                 Explore event organizers, sponsors, mentors, and trusted school
-                collaborators approved for public activity on Pratyo.
+                collaborators approved for public activity on Pravyo.
               </p>
             </div>
             <Link

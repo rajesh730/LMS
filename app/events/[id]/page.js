@@ -323,7 +323,7 @@ export default async function PublicEventPage({ params }) {
     String(event.participationFormat || "INDIVIDUAL").toUpperCase() === "TEAM";
   const organizer = isInternalEvent
     ? event.school?.schoolName || "School"
-    : "Pratyo";
+    : "Pravyo";
   const location = event.school?.schoolLocation || "Online Event";
   const sortedAchievements = [...achievements].sort((a, b) => {
     const order = {
@@ -497,7 +497,7 @@ export default async function PublicEventPage({ params }) {
                   Interested in this event?
                 </h2>
                 <p className="mt-1 text-sm leading-6 text-[#526071]">
-                  Schools can participate from their Pratyo dashboard.
+                  Schools can participate from their Pravyo dashboard.
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">

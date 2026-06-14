@@ -45,15 +45,15 @@ export default function ConfirmDialog({
   if (!open) return null;
 
   return (
-    <div className="pratyo-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="confirm-dialog-title">
-      <div className="pratyo-modal-panel" >
+    <div className="pravyo-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="confirm-dialog-title">
+      <div className="pravyo-modal-panel" >
         <div className="flex items-start gap-4">
           <div className={`rounded-xl p-3 ${styles.icon}`}>
             <Icon />
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-3">
-              <h2 id="confirm-dialog-title" className="pratyo-heading text-lg">
+              <h2 id="confirm-dialog-title" className="pravyo-heading text-lg">
                 {title}
               </h2>
               <button

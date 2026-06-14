@@ -2,8 +2,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import connectDB from "@/lib/db";
 import Achievement from "@/models/Achievement";
+import SchoolShowcaseProfile from "@/models/SchoolShowcaseProfile";
 import { formatPlacementLabel } from "@/lib/results";
-import PratyoLogo from "@/components/brand/PratyoLogo";
+import { normalizeImageUrl } from "@/lib/imageUrls";
+import PravyoLogo from "@/components/brand/PravyoLogo";
 import CertificatePrintActions from "@/components/certificates/CertificatePrintActions";
 
 export const dynamic = "force-dynamic";
@@ -11,12 +13,70 @@ export const dynamic = "force-dynamic";
 async function getCertificate(id) {
   await connectDB();
 
-  return Achievement.findById(id)
+  const achievement = await Achievement.findById(id)
     .populate("student", "name grade")
     .populate("captainStudent", "name grade")
     .populate("school", "schoolName")
-    .populate("event", "title eventType date visibility participationFormat")
+    .populate({
+      path: "event",
+      select:
+        "title eventType date visibility participationFormat eventScope partnerBrandingEnabled partners",
+      populate: {
+        path: "partners.organizer",
+        select: "organizationName logoUrl",
+      },
+    })
     .lean();
+
+  if (!achievement?.school?._id) {
+    return achievement;
+  }
+
+  const schoolProfile = await SchoolShowcaseProfile.findOne({
+    school: achievement.school._id,
+  })
+    .select("coverImageUrl")
+    .lean();
+
+  return {
+    ...achievement,
+    schoolProfile: schoolProfile || null,
+  };
+}
+
+function getInitials(value) {
+  return String(value || "S")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
+}
+
+function CertificateLogoMark({ imageUrl, label, fallbackText }) {
+  const image = normalizeImageUrl(imageUrl);
+
+  return (
+    <div className="flex min-w-[92px] flex-col items-center gap-2 text-center">
+      <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl border border-[#e1d4a4] bg-[#fffaf0] shadow-sm print:h-12 print:w-12">
+        {image ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={image}
+            alt={label}
+            className="h-full w-full object-contain p-1.5"
+          />
+        ) : (
+          <span className="text-sm font-black text-[#8a641b]">
+            {getInitials(fallbackText || label)}
+          </span>
+        )}
+      </div>
+      <p className="max-w-[9rem] truncate text-[10px] font-black uppercase tracking-[0.08em] text-[#526071] print:text-[9px]">
+        {label}
+      </p>
+    </div>
+  );
 }
 
 export default async function CertificatePage({ params, searchParams }) {
@@ -48,6 +108,18 @@ export default async function CertificatePage({ params, searchParams }) {
     achievement.certificateRecipientName ||
     "School Team";
   const autoPrint = resolvedSearchParams?.download === "pdf";
+  const schoolName = achievement.school?.schoolName || "Participating School";
+  const partnerLogo = Array.isArray(achievement.event?.partners)
+    ? achievement.event.partners
+        .filter((partner) => partner?.logoUrl || partner?.organizer?.logoUrl)
+        .sort((a, b) => Number(Boolean(b?.isPrimary)) - Number(Boolean(a?.isPrimary)))[0]
+    : null;
+  const partnerLogoUrl =
+    partnerLogo?.logoUrl || partnerLogo?.organizer?.logoUrl || "";
+  const partnerName =
+    partnerLogo?.displayName ||
+    partnerLogo?.organizer?.organizationName ||
+    "Event Partner";
 
   return (
     <main className="certificate-print-page min-h-screen bg-[#f5f7fb] px-4 py-8 text-[#10142f] print:min-h-0 print:bg-white print:p-0">
@@ -75,12 +147,31 @@ export default async function CertificatePage({ params, searchParams }) {
               <p className="text-xs font-bold uppercase text-[#8a641b]">
                 Certificate of Recognition
               </p>
-              <div className="mt-4 flex justify-center">
-                <PratyoLogo
-                  variant="wordmark"
-                  imageClassName="w-[150px] sm:w-[190px]"
-                  className="items-center"
+              <div className="mt-4 flex flex-wrap items-start justify-center gap-4 md:gap-7 print:flex-nowrap print:gap-5">
+                <CertificateLogoMark
+                  imageUrl={achievement.schoolProfile?.coverImageUrl}
+                  label={schoolName}
+                  fallbackText={schoolName}
                 />
+                <div className="flex min-w-[120px] flex-col items-center gap-2 text-center">
+                  <div className="flex h-14 items-center justify-center rounded-2xl border border-[#e1d4a4] bg-white px-4 shadow-sm print:h-12">
+                    <PravyoLogo
+                      variant="wordmark"
+                      imageClassName="w-[126px] sm:w-[150px] print:w-[112px]"
+                      className="items-center"
+                    />
+                  </div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.08em] text-[#526071] print:text-[9px]">
+                    Pravyo Platform
+                  </p>
+                </div>
+                {partnerLogoUrl && (
+                  <CertificateLogoMark
+                    imageUrl={partnerLogoUrl}
+                    label={partnerName}
+                    fallbackText={partnerName}
+                  />
+                )}
               </div>
               <p className="mt-3 text-[11px] font-black uppercase text-[#526071]">
                 Official Digital Certificate
@@ -90,7 +181,7 @@ export default async function CertificatePage({ params, searchParams }) {
                   ? "Certificate preview for administrator review"
                   : isTeamCertificate
                   ? "Issued for the recognized team result through the participating school."
-                  : "Issued through the participating school as a verified Pratyo achievement record."}
+                  : "Issued through the participating school as a verified Pravyo achievement record."}
               </p>
             </div>
 
@@ -256,7 +347,7 @@ export default async function CertificatePage({ params, searchParams }) {
                   Verified by
                 </p>
                 <p className="mt-2 text-lg font-black text-[#10142f]">
-                  Pratyo Platform
+                  Pravyo Platform
                 </p>
                 <p className="mt-1 text-xs text-[#526071]">
                   Multi-school talent, activity, and competition record

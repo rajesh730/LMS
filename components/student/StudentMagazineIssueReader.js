@@ -72,7 +72,7 @@ function getPreview(content = "", maxLength = 180) {
 
 function IssueCoverArt({ issue, articles }) {
   return (
-    <div className="pratyo-brand-panel relative min-h-[420px] overflow-hidden rounded-xl border border-white/20 p-6 text-white shadow-2xl">
+    <div className="student-issue-cover pravyo-brand-panel relative min-h-[420px] overflow-hidden rounded-xl border border-white/20 p-6 text-white shadow-2xl">
       <div className="absolute left-8 top-8 h-36 w-24 rounded-md bg-white/82 shadow-xl" />
       <div className="absolute left-28 top-20 h-36 w-24 rounded-md bg-white/68 shadow-xl" />
       <div className="absolute bottom-20 right-10 h-1.5 w-52 rotate-[-16deg] rounded-full bg-white/35" />
@@ -82,7 +82,7 @@ function IssueCoverArt({ issue, articles }) {
 
       <div className="relative flex min-h-[360px] flex-col justify-end">
         <p className="text-xs font-black uppercase tracking-[0.2em] text-white/85">
-          Pratyo School Magazine
+          Pravyo School Magazine
         </p>
         <h1 className="mt-4 max-w-xl text-5xl font-black leading-tight md:text-6xl">
           {issue.title}
@@ -129,7 +129,7 @@ function ArticleCard({ article, index, href }) {
   return (
     <Link
       href={href}
-      className="group rounded-xl border border-[#d7cdbb] bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-purple-300 hover:bg-white hover:shadow-lg"
+      className="student-issue-article-card group rounded-xl border border-[#d7cdbb] bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-purple-300 hover:bg-white hover:shadow-lg"
     >
       <div className="flex items-start justify-between gap-3">
         <span className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-black ${meta.chip}`}>
@@ -142,7 +142,7 @@ function ArticleCard({ article, index, href }) {
       <h3 className="mt-4 line-clamp-2 text-xl font-black leading-snug text-[#17120a] group-hover:text-purple-700">
         {article.title}
       </h3>
-      <p className="mt-3 line-clamp-4 text-sm leading-6 text-[#52657d]">
+      <p className="student-issue-article-preview mt-3 line-clamp-4 text-sm leading-6 text-[#52657d]">
         {getPreview(article.content, 240)}
       </p>
       <ArticleMeta article={article} />
@@ -226,19 +226,19 @@ export default function StudentMagazineIssueReader({
       : backHref;
 
   return (
-    <div className="space-y-6 text-[#27344a]">
+    <div className="student-issue-reader-shell space-y-6 text-[#27344a]">
       <Link
         href={resolvedBackHref}
-        className="inline-flex w-fit items-center gap-2 rounded-lg border border-[#d7cdbb] bg-white px-4 py-2 text-sm font-black text-[#0a2f66] shadow-sm transition hover:bg-purple-50"
+        className="student-issue-back inline-flex w-fit items-center gap-2 rounded-lg border border-[#d7cdbb] bg-white px-4 py-2 text-sm font-black text-[#0a2f66] shadow-sm transition hover:bg-purple-50"
       >
         <FaArrowLeft />
         {backLabel}
       </Link>
 
-      <section className="grid gap-5 lg:grid-cols-[1fr_340px]">
+      <section className="student-issue-intro grid gap-5 lg:grid-cols-[1fr_340px]">
         <IssueCoverArt issue={issue} articles={articles} />
 
-        <aside className="rounded-xl border border-[#d7cdbb] bg-white p-5 shadow-sm">
+        <aside className="student-issue-contents rounded-xl border border-[#d7cdbb] bg-white p-5 shadow-sm">
           <p className="text-xs font-black uppercase tracking-[0.16em] text-purple-700">
             Issue Contents
           </p>
@@ -270,7 +270,7 @@ export default function StudentMagazineIssueReader({
       </section>
 
       {categoryCounts.length > 0 && (
-        <section className="flex flex-wrap gap-2">
+        <section className="student-issue-category-counts flex flex-wrap gap-2">
           {categoryCounts.map(([label, count]) => (
             <span
               key={label}
@@ -282,7 +282,7 @@ export default function StudentMagazineIssueReader({
         </section>
       )}
 
-      <section className="grid gap-4 md:grid-cols-2">
+      <section className="student-issue-writing-list grid gap-4 md:grid-cols-2">
         {articles.map((article, index) => (
           <ArticleCard
             key={article.id}

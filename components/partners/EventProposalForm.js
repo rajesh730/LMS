@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { normalizeImageUrl } from "@/lib/imageUrls";
 import { buildGradeLabels, normalizeGradeValue } from "@/lib/schoolGrades";
 
 const ROLE_OPTIONS = [
@@ -28,6 +29,7 @@ const initialForm = {
   organizationName: "",
   organizationType: "ACADEMY",
   website: "",
+  logoUrl: "",
   location: "",
   contactName: "",
   contactEmail: "",
@@ -67,6 +69,8 @@ export default function EventProposalForm() {
   const update = (field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
+
+  const logoPreview = normalizeImageUrl(form.logoUrl);
 
   const updateLookup = (field, value) => {
     setLookup((prev) => ({ ...prev, [field]: value }));
@@ -122,13 +126,14 @@ export default function EventProposalForm() {
 
       setStatus("success");
       setMessage(
-        "Application received. The Pratyo team will review it before anything is shown to schools."
+        "Application received. The Pravyo team will review it before anything is shown to schools."
       );
       setForm((prev) => ({
         ...initialForm,
         organizationName: prev.organizationName,
         organizationType: prev.organizationType,
         website: prev.website,
+        logoUrl: prev.logoUrl,
         location: prev.location,
         contactName: prev.contactName,
         contactEmail: prev.contactEmail,
@@ -179,6 +184,7 @@ export default function EventProposalForm() {
         organizationName: data.partner.organizationName || prev.organizationName,
         organizationType: data.partner.organizationType || prev.organizationType,
         website: data.partner.website || prev.website,
+        logoUrl: data.partner.logoUrl || prev.logoUrl,
         location: data.partner.location || prev.location,
         contactName: data.partner.contactName || prev.contactName,
         contactEmail: data.partner.contactEmail || lookup.email || prev.contactEmail,
@@ -329,6 +335,40 @@ export default function EventProposalForm() {
               className={fieldClass}
             />
           </Field>
+          <div className="rounded-lg border border-[#e1e7f2] bg-[#f8f9fd] p-4 md:col-span-2">
+            <div className="grid gap-4 sm:grid-cols-[auto_minmax(0,1fr)]">
+              <div className="shrink-0">
+                <p className="mb-2 text-[10px] font-black uppercase text-[#52657d]">
+                  Logo preview
+                </p>
+                <span className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-xl border border-[#d7ddea] bg-white text-2xl font-black text-[#4326e8] shadow-sm">
+                  {logoPreview ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={logoPreview}
+                      alt="Partner logo preview"
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    (form.organizationName || "P").charAt(0).toUpperCase()
+                  )}
+                </span>
+              </div>
+              <Field label="Partner Logo Link">
+                <input
+                  required
+                  type="url"
+                  value={form.logoUrl}
+                  onChange={(e) => update("logoUrl", e.target.value)}
+                  placeholder="https://... or public Google Drive image link"
+                  className={fieldClass}
+                />
+                <p className="mt-2 text-[11px] font-semibold text-[#52657d]">
+                  Required: square logo, PNG/JPG or public Google Drive image link.
+                </p>
+              </Field>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -469,7 +509,7 @@ export default function EventProposalForm() {
       <section className="rounded-xl border border-[#e6eaf7] bg-white p-5 shadow-sm">
         <h2 className="text-lg font-black text-[#17120a]">Before You Submit</h2>
         <p className="mt-2 text-sm leading-6 text-[#52657d]">
-          Pratyo reviews public partner requests before schools see them.
+          Pravyo reviews public partner requests before schools see them.
           Student data is never shared automatically with outside partners.
         </p>
         <div className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-center">

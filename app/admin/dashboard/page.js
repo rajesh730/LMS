@@ -67,7 +67,9 @@ function getSchoolDistrict(school) {
 }
 
 function eventSortTime(event) {
-  return new Date(event.createdAt || event.updatedAt || event.date || 0).getTime();
+  const value = event.createdAt || event.updatedAt || event.date || 0;
+  const timestamp = new Date(value).getTime();
+  return Number.isNaN(timestamp) ? 0 : timestamp;
 }
 
 function newestEventsFirst(events = []) {

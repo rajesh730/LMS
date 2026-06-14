@@ -19,7 +19,7 @@ export default function InputForwardRef({
   return (
     <div className={wrapperClassName}>
       {label && (
-        <label htmlFor={inputId} className="pratyo-field-label">
+        <label htmlFor={inputId} className="pravyo-field-label">
           {label}
         </label>
       )}
@@ -27,7 +27,7 @@ export default function InputForwardRef({
         <input
           ref={inputRef}
           id={inputId}
-          className={clsx("pratyo-input", className)}
+          className={clsx("pravyo-input", className)}
           {...props}
         />
         {error && (
@@ -59,7 +59,7 @@ export function PasswordInput({
   return (
     <div className={wrapperClassName}>
       {label && (
-        <label htmlFor={inputId} className="pratyo-field-label">
+        <label htmlFor={inputId} className="pravyo-field-label">
           {label}
         </label>
       )}
@@ -67,7 +67,7 @@ export function PasswordInput({
         <input
           id={inputId}
           type={showPassword ? "text" : "password"}
-          className={clsx("pratyo-input pr-11", className)}
+          className={clsx("pravyo-input pr-11", className)}
           {...props}
         />
         {onToggleShow && (

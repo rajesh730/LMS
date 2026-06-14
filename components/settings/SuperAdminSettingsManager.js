@@ -18,7 +18,7 @@ import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 const defaultConfig = {
   general: {
-    platformName: "Pratyo",
+    platformName: "Pravyo",
     supportEmail: "",
     supportPhone: "",
     defaultTimezone: "Asia/Kathmandu",

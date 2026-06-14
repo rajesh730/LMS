@@ -9,7 +9,6 @@ import {
   FaCheckCircle,
   FaCircle,
   FaEdit,
-  FaExclamationCircle,
   FaFilter,
   FaHistory,
   FaPlus,
@@ -78,16 +77,6 @@ function isRegistrationOpen(event) {
   );
 }
 
-function needsAction(event) {
-  const state = String(event.lifecycleStatus || "ACTIVE").toUpperCase();
-  return (
-    state === "ACTIVE" &&
-    isApprovedEvent(event) &&
-    (!isRegistrationOpen(event) || Number(event.pendingEntryCount || 0) > 0) &&
-    !event.resultsPublished
-  );
-}
-
 function getCurrentStageLabel(event) {
   const state = String(event.lifecycleStatus || "ACTIVE").toUpperCase();
   if (state === "ARCHIVED") return "Archived";
@@ -109,7 +98,6 @@ export default function SchoolOwnedEventsManager({
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
   const [gradeFilter, setGradeFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
   const [visibilityFilter, setVisibilityFilter] = useState("");
   const [showFilters, setShowFilters] = useState(true);
   const [editingEvent, setEditingEvent] = useState(null);
@@ -188,12 +176,17 @@ export default function SchoolOwnedEventsManager({
     const live = events.filter(
       (event) =>
         String(event.lifecycleStatus || "ACTIVE").toUpperCase() === "ACTIVE" &&
-        isApprovedEvent(event)
+        isApprovedEvent(event) &&
+        getRegisteredCount(event) > 0
+    );
+    const registrationOpen = events.filter(
+      (event) =>
+        isRegistrationOpen(event) &&
+        getRegisteredCount(event) === 0
     );
     return {
       live: live.length,
-      registrationOpen: events.filter(isRegistrationOpen).length,
-      actionRequired: events.filter(needsAction).length,
+      registrationOpen: registrationOpen.length,
       drafts: events.filter(
         (event) => String(event.status || "").toUpperCase() === "PENDING"
       ).length,
@@ -214,9 +207,13 @@ export default function SchoolOwnedEventsManager({
       const state = String(event.lifecycleStatus || "ACTIVE").toUpperCase();
       const matchesStatus =
         activeFilter === "ALL" ||
-        (activeFilter === "ACTIVE" && state === "ACTIVE" && isApprovedEvent(event)) ||
-        (activeFilter === "REGISTRATION" && isRegistrationOpen(event)) ||
-        (activeFilter === "ACTION" && needsAction(event)) ||
+        (activeFilter === "ACTIVE" &&
+          state === "ACTIVE" &&
+          isApprovedEvent(event) &&
+          getRegisteredCount(event) > 0) ||
+        (activeFilter === "REGISTRATION" &&
+          isRegistrationOpen(event) &&
+          getRegisteredCount(event) === 0) ||
         (activeFilter === "DRAFTS" &&
           String(event.status || "").toUpperCase() === "PENDING") ||
         (activeFilter === "COMPLETED" &&
@@ -229,10 +226,6 @@ export default function SchoolOwnedEventsManager({
       const matchesType = !typeFilter || event.eventType === typeFilter;
       const matchesGrade =
         !gradeFilter || (event.eligibleGrades || []).includes(gradeFilter);
-      const matchesRecordStatus =
-        !statusFilter ||
-        String(event.status || "").toUpperCase() === statusFilter ||
-        state === statusFilter;
       const matchesVisibility =
         !visibilityFilter || event.visibility === visibilityFilter;
       return (
@@ -240,11 +233,10 @@ export default function SchoolOwnedEventsManager({
         matchesSearch &&
         matchesType &&
         matchesGrade &&
-        matchesRecordStatus &&
         matchesVisibility
       );
     });
-  }, [activeFilter, events, gradeFilter, search, statusFilter, typeFilter, visibilityFilter]);
+  }, [activeFilter, events, gradeFilter, search, typeFilter, visibilityFilter]);
 
   const handleStatusChange = async (eventId, lifecycleStatus) => {
     try {
@@ -327,14 +319,6 @@ export default function SchoolOwnedEventsManager({
       tone: "emerald",
     },
     {
-      key: "ACTION",
-      label: "Action Required",
-      value: eventMetrics.actionRequired,
-      note: "Results / certificates",
-      icon: FaExclamationCircle,
-      tone: "amber",
-    },
-    {
       key: "COMPLETED",
       label: "Completed",
       value: eventMetrics.completed,
@@ -361,10 +345,9 @@ export default function SchoolOwnedEventsManager({
   };
 
   const filterTabs = [
-    ["ALL", "All Events", FaCalendarAlt, events.length],
     ["ACTIVE", "Live Events", FaCircle, eventMetrics.live],
     ["REGISTRATION", "Registration Open", FaUsers, eventMetrics.registrationOpen],
-    ["ACTION", "Action Required", FaExclamationCircle, eventMetrics.actionRequired],
+    ["ALL", "All Events", FaCalendarAlt, events.length],
     ["COMPLETED", "Completed", FaCheckCircle, eventMetrics.completed],
     ["DRAFTS", "Drafts", FaEdit, eventMetrics.drafts],
     ["ARCHIVED", "Archived", FaArchive, eventMetrics.archived],
@@ -453,16 +436,11 @@ export default function SchoolOwnedEventsManager({
               >
                 <Icon />
                 {label}
-                {key === "ACTION" && count > 0 && (
-                  <span className="rounded-full bg-red-500 px-2 py-0.5 text-[10px] text-white">
-                    {count}
-                  </span>
-                )}
               </button>
             ))}
           </div>
 
-          <div className="grid gap-3 border-t border-[#e1e7f2] p-4 lg:grid-cols-[minmax(240px,1fr)_150px_150px_150px_150px_auto_auto]">
+          <div className="grid gap-3 border-t border-[#e1e7f2] p-4 lg:grid-cols-[minmax(240px,1fr)_150px_150px_150px_auto_auto]">
             <div className="relative">
               <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-[#75869b]" />
               <input
@@ -502,20 +480,6 @@ export default function SchoolOwnedEventsManager({
               ))}
             </select>
             <select
-              value={statusFilter}
-              onChange={(event) => setStatusFilter(event.target.value)}
-              className={`h-12 rounded-xl border border-[#dbe5f4] bg-white px-4 text-sm font-black text-[#24314d] outline-none transition focus:border-purple-300 ${
-                showFilters ? "" : "hidden"
-              }`}
-            >
-              <option value="">All Status</option>
-              <option value="APPROVED">Approved</option>
-              <option value="PENDING">Pending</option>
-              <option value="ACTIVE">Active</option>
-              <option value="COMPLETED">Completed</option>
-              <option value="ARCHIVED">Archived</option>
-            </select>
-            <select
               value={visibilityFilter}
               onChange={(event) => setVisibilityFilter(event.target.value)}
               className={`h-12 rounded-xl border border-[#dbe5f4] bg-white px-4 text-sm font-black text-[#24314d] outline-none transition focus:border-purple-300 ${
@@ -533,7 +497,6 @@ export default function SchoolOwnedEventsManager({
                 setSearch("");
                 setTypeFilter("");
                 setGradeFilter("");
-                setStatusFilter("");
                 setVisibilityFilter("");
               }}
               className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-[#dbe5f4] bg-white px-4 text-sm font-black text-[#0a2f66] transition hover:bg-[#f8fbff]"
@@ -711,7 +674,8 @@ export default function SchoolOwnedEventsManager({
                             ))}
                           </div>
                           <div className="mt-3 flex flex-wrap gap-2">
-                            {(event.lifecycleStatus || "ACTIVE") !== "ARCHIVED" ? (
+                            {!isFinished &&
+                            (event.lifecycleStatus || "ACTIVE") !== "ARCHIVED" ? (
                               <button
                                 type="button"
                                 onClick={() => setArchiveTarget(event)}
@@ -720,7 +684,7 @@ export default function SchoolOwnedEventsManager({
                                 <FaArchive />
                                 Delete / Archive Event
                               </button>
-                            ) : (
+                            ) : (event.lifecycleStatus || "ACTIVE") === "ARCHIVED" ? (
                               <button
                                 type="button"
                                 onClick={() => handleStatusChange(event._id, "ACTIVE")}
@@ -729,26 +693,30 @@ export default function SchoolOwnedEventsManager({
                                 <FaHistory />
                                 Restore Event
                               </button>
-                            )}
+                            ) : null}
                           </div>
                         </div>
                       </div>
 
                       <div className="relative flex flex-col gap-2 border-l border-[#e1e7f2] pl-4">
                         <Link
-                          href={`/school/events/${event._id}/manage?tab=registrations`}
+                          href={`/school/events/${event._id}/manage?tab=${
+                            isFinished ? "results" : "registrations"
+                          }`}
                           className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-purple-700 px-4 text-xs font-black text-white shadow-sm transition hover:bg-purple-800"
                         >
-                          Continue Management
+                          {isFinished ? "Results" : "Continue Management"}
                         </Link>
-                        <button
-                          type="button"
-                          onClick={() => setEditingEvent(event)}
-                          className="inline-flex min-h-8 items-center gap-2 rounded-lg bg-white px-3 text-[11px] font-black text-[#0a2f66] transition hover:bg-[#f8fbff]"
-                        >
-                          <FaEdit />
-                          Edit Event
-                        </button>
+                        {!isFinished && (
+                          <button
+                            type="button"
+                            onClick={() => setEditingEvent(event)}
+                            className="inline-flex min-h-8 items-center gap-2 rounded-lg bg-white px-3 text-[11px] font-black text-[#0a2f66] transition hover:bg-[#f8fbff]"
+                          >
+                            <FaEdit />
+                            Edit Event
+                          </button>
+                        )}
                         <Link
                           href={`/school/events/${event._id}/manage?tab=notices`}
                           className="inline-flex min-h-8 items-center gap-2 rounded-lg bg-white px-3 text-[11px] font-black text-[#0a2f66] transition hover:bg-[#f8fbff]"

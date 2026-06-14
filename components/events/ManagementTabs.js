@@ -43,6 +43,11 @@ export default function ManagementTabs({
     currentUserRole === "SUPER_ADMIN" && isPlatformCompetition;
   const canControlEventOperations =
     !isPlatformCompetition || canManagePlatformOperations;
+  const isCompletedEvent =
+    event.resultsPublished ||
+    ["COMPLETED", "ARCHIVED"].includes(
+      String(event.lifecycleStatus || "ACTIVE").toUpperCase()
+    );
 
   const availableTabs = [
     {
@@ -82,7 +87,8 @@ export default function ManagementTabs({
     : "overview";
   const completedRounds = event.resultsPublished ? "1/1" : "0/1";
   const quickActions = [
-    canControlEventOperations && { label: "Edit Event", icon: FaEdit, onClick: onEdit },
+    canControlEventOperations &&
+      !isCompletedEvent && { label: "Edit Event", icon: FaEdit, onClick: onEdit },
     canControlEventOperations && { label: "Event Notices", icon: FaBell, onClick: () => setActiveTab("notices") },
     {
       label: "Manage Participants",
@@ -95,7 +101,8 @@ export default function ManagementTabs({
       icon: FaCertificate,
       onClick: () => setActiveTab("results"),
     },
-    canControlEventOperations && { label: "Archive Event", icon: FaArchive, onClick: onArchive, danger: true },
+    canControlEventOperations &&
+      !isCompletedEvent && { label: "Archive Event", icon: FaArchive, onClick: onArchive, danger: true },
   ].filter((action) => action && typeof action.onClick === "function");
 
   return (

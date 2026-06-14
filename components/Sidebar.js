@@ -23,7 +23,7 @@ import {
   FaTimes,
   FaHandshake,
 } from "react-icons/fa";
-import PratyoLogo from "@/components/brand/PratyoLogo";
+import PravyoLogo from "@/components/brand/PravyoLogo";
 import WorkIndicatorBadge from "@/components/work-indicators/WorkIndicatorBadge";
 import useWorkIndicators from "@/lib/useWorkIndicators";
 
@@ -198,7 +198,7 @@ export default function Sidebar({
 
   return (
     <aside
-      className={`pratyo-dark-shell fixed left-0 top-0 z-50 flex h-dvh flex-col border-r transition-transform duration-300 lg:h-screen lg:translate-x-0 ${
+      className={`pravyo-dark-shell fixed left-0 top-0 z-50 flex h-dvh flex-col border-r transition-transform duration-300 lg:h-screen lg:translate-x-0 ${
         isMobileOpen ? "translate-x-0" : "-translate-x-full"
       }`}
       style={{ width: "min(88vw, 17rem)" }}
@@ -206,10 +206,10 @@ export default function Sidebar({
       {/* ── Logo / brand header ─── */}
       <div className="sidebar-header-band flex items-center justify-between gap-3 px-4 py-3.5">
         <div className="flex items-center gap-3 min-w-0">
-          <PratyoLogo variant="icon" compact withSurface />
+          <PravyoLogo variant="icon" compact withSurface />
           <div className="min-w-0">
             <p className="text-[11px] font-bold uppercase tracking-widest text-[var(--brand-primary)] leading-none">
-              Pratyo
+              Pravyo
             </p>
             <p className="text-sm font-semibold text-[var(--brand-ink)] leading-tight mt-0.5 truncate">
               School Platform
@@ -254,7 +254,7 @@ export default function Sidebar({
                     aria-current={isActive ? "page" : undefined}
                     className={`group flex min-h-[2.625rem] items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold transition-all duration-150 ${
                       isActive
-                        ? "pratyo-sidebar-active bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]"
+                        ? "pravyo-sidebar-active bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]"
                         : "text-[#3d4a5c] hover:bg-[var(--brand-primary-soft)]/70 hover:text-[var(--brand-primary)]"
                     }`}
                   >
@@ -265,9 +265,9 @@ export default function Sidebar({
                           : "bg-[#f0eeff] text-[var(--brand-muted)] group-hover:bg-[var(--brand-primary-soft)] group-hover:text-[var(--brand-primary)]"
                       }`}
                     >
-                      <Icon className="pratyo-sidebar-icon text-xs" />
+                      <Icon className="pravyo-sidebar-icon text-xs" />
                     </span>
-                    <span className="pratyo-sidebar-label min-w-0 flex-1 truncate leading-tight">
+                    <span className="pravyo-sidebar-label min-w-0 flex-1 truncate leading-tight">
                       {link.name}
                     </span>
                     <WorkIndicatorBadge

@@ -162,7 +162,7 @@ export default async function PublicSchoolsPage() {
     <PublicPageShell className="bg-[#f8f9fd]">
       <PublicSiteNav active="schools" />
 
-      <div className="mx-auto grid max-w-[1500px] gap-5 px-4 py-5 sm:px-6 xl:grid-cols-[230px_minmax(0,1fr)]">
+      <div className="schools-mobile-shell mx-auto grid max-w-[1500px] gap-5 px-0 py-4 sm:px-6 sm:py-5 xl:grid-cols-[230px_minmax(0,1fr)]">
         <PublicExplorePanel active="schools" variant="schools" />
         <PublicSchoolsDirectory
           schools={publicSchools}

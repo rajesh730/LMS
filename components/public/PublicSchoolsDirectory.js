@@ -9,6 +9,7 @@ import {
   FaLayerGroup,
   FaMapMarkerAlt,
   FaSearch,
+  FaSlidersH,
   FaSyncAlt,
   FaTrophy,
   FaUsers,
@@ -95,33 +96,33 @@ function SchoolRow({ school }) {
   return (
     <Link
       href={`/schools/${school.id}`}
-      className="group grid gap-4 rounded-xl border border-[#e6eaf7] bg-white p-4 shadow-sm transition hover:border-[#cfc4ff] hover:shadow-md md:grid-cols-[64px_minmax(0,1fr)_auto]"
+      className="school-directory-row group grid grid-cols-[44px_minmax(0,1fr)] gap-3 rounded-xl border border-[#e6eaf7] bg-white p-3 shadow-sm transition hover:border-[#cfc4ff] hover:shadow-md md:grid-cols-[64px_minmax(0,1fr)_auto] md:gap-4 md:p-4"
     >
-      <SchoolMark school={school} size="h-14 w-14" />
+      <SchoolMark school={school} size="school-directory-logo h-11 w-11 md:h-14 md:w-14" />
       <div className="min-w-0">
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 md:flex">
           <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-black uppercase text-emerald-800">
             <FaCheckCircle />
             Verified
           </span>
         </div>
-        <h3 className="mt-2 break-words text-base font-black text-[#17120a] group-hover:text-[#4326e8]">
+        <h3 className="mt-2 break-words text-sm font-black text-[#17120a] group-hover:text-[#4326e8] md:text-base">
           {school.name}
         </h3>
-        <p className="mt-1 flex items-start gap-2 text-sm leading-5 text-[#52657d]">
+        <p className="mt-1 flex items-start gap-2 text-xs leading-5 text-[#52657d] md:text-sm">
           <FaMapMarkerAlt className="mt-1 shrink-0 text-[#4326e8]" />
-          <span>{school.location || "Location not listed"}</span>
+          <span className="line-clamp-1 md:line-clamp-none">{school.location || "Location not listed"}</span>
         </p>
         {school.profile?.summary && (
-          <p className="mt-2 line-clamp-2 text-sm leading-5 text-[#52657d]">
+          <p className="school-directory-summary mt-2 line-clamp-1 text-xs leading-5 text-[#52657d] md:line-clamp-2 md:text-sm">
             {school.profile.summary}
           </p>
         )}
-        <div className="mt-3 grid gap-2 text-xs sm:grid-cols-4">
+        <div className="school-directory-metrics mt-2 flex flex-wrap gap-1.5 text-[11px] md:mt-3 md:grid md:gap-2 md:text-xs lg:grid-cols-4">
           {metrics.map(([value, label, Icon]) => (
             <span
               key={label}
-              className="flex items-center gap-2 rounded-lg bg-[#f8f9fd] px-3 py-2 font-bold text-[#24314d]"
+              className="flex items-center gap-1.5 rounded-md bg-[#f8f9fd] px-2 py-1 font-bold text-[#24314d] md:gap-2 md:rounded-lg md:px-3 md:py-2"
             >
               <Icon className="text-[#4326e8]" />
               {numberLabel(value)} {label}
@@ -129,7 +130,7 @@ function SchoolRow({ school }) {
           ))}
         </div>
       </div>
-      <span className="inline-flex min-h-10 items-center justify-center gap-2 self-center rounded-lg border border-[#e6eaf7] px-4 text-sm font-black text-[#4326e8] transition group-hover:bg-[#f4f1ff]">
+      <span className="school-directory-action col-span-2 inline-flex min-h-9 items-center justify-center gap-2 self-center rounded-lg border border-[#e6eaf7] px-3 text-xs font-black text-[#4326e8] transition group-hover:bg-[#f4f1ff] md:col-span-1 md:min-h-10 md:px-4 md:text-sm">
         View Profile
         <FaArrowRight />
       </span>
@@ -141,6 +142,8 @@ export default function PublicSchoolsDirectory({ schools = [] }) {
   const [query, setQuery] = useState("");
   const [province, setProvince] = useState("All Provinces");
   const [district, setDistrict] = useState("All Districts");
+  const [visibleCount, setVisibleCount] = useState(24);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const provinces = useMemo(
     () => ["All Provinces", ...new Set(schools.map(getProvince))],
@@ -168,18 +171,22 @@ export default function PublicSchoolsDirectory({ schools = [] }) {
       .sort((a, b) => scoreSchool(b) - scoreSchool(a));
   }, [district, province, query, schools]);
 
+  const visibleSchools = filteredSchools.slice(0, visibleCount);
+  const hasMore = visibleCount < filteredSchools.length;
+
   const clearFilters = () => {
     setQuery("");
     setProvince("All Provinces");
     setDistrict("All Districts");
+    setVisibleCount(24);
   };
 
   return (
     <div className="min-w-0">
       <div className="min-w-0 space-y-5">
-        <section className="rounded-xl border border-[#e6eaf7] bg-white p-5 shadow-sm">
+        <section className="schools-hero-panel rounded-xl border border-[#e6eaf7] bg-white p-5 shadow-sm">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div className="min-w-0">
+            <div className="schools-hero-copy min-w-0">
               <p className="text-[11px] font-black uppercase text-[#4326e8]">
                 Schools
               </p>
@@ -188,12 +195,12 @@ export default function PublicSchoolsDirectory({ schools = [] }) {
               </h1>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-[#52657d]">
                 A clean public directory for students, parents, and partners to
-                explore active schools on Pratyo.
+                explore active schools on Pravyo.
               </p>
             </div>
             <Link
               href="/register"
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#4326e8] px-5 text-sm font-black text-white transition hover:bg-[#3217d3]"
+              className="schools-register-action inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#4326e8] px-5 text-sm font-black text-white transition hover:bg-[#3217d3]"
             >
               Register School
               <FaArrowRight />
@@ -201,8 +208,22 @@ export default function PublicSchoolsDirectory({ schools = [] }) {
           </div>
         </section>
 
-        <section className="rounded-xl border border-[#e6eaf7] bg-white p-4 shadow-sm">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
+        <section className="school-filter-panel rounded-xl border border-[#e6eaf7] bg-white p-4 shadow-sm">
+          <button
+            type="button"
+            onClick={() => setFiltersOpen((open) => !open)}
+            className="school-filter-toggle hidden w-full min-h-10 items-center justify-between rounded-lg border border-[#e6eaf7] bg-white px-3 text-sm font-black text-[#0a2f66]"
+            aria-expanded={filtersOpen}
+          >
+            <span className="inline-flex items-center gap-2">
+              <FaSlidersH />
+              Search and filters
+            </span>
+            <span className="text-xs text-[#52657d]">
+              {filtersOpen ? "Hide" : "Show"}
+            </span>
+          </button>
+          <div className={`school-filter-fields flex flex-col gap-3 lg:flex-row lg:items-end ${filtersOpen ? "is-open" : ""}`}>
             <label className="block min-w-0 lg:flex-1">
               <span className="mb-1.5 flex items-center gap-2 text-[10px] font-black uppercase text-[#52657d]">
                 <FaSearch className="text-[#4326e8]" />
@@ -210,28 +231,37 @@ export default function PublicSchoolsDirectory({ schools = [] }) {
               </span>
               <input
                 value={query}
-                onChange={(event) => setQuery(event.target.value)}
+                onChange={(event) => {
+                  setQuery(event.target.value);
+                  setVisibleCount(24);
+                }}
                 placeholder="Search school or location..."
                 className="min-h-11 w-full rounded-lg border border-[#e6eaf7] bg-[#f8f9fd] px-4 text-sm font-semibold text-[#24314d] outline-none transition placeholder:text-[#8a9ab1] focus:border-[#4326e8] focus:bg-white focus:ring-4 focus:ring-[#4326e8]/10"
               />
             </label>
-            <SelectField
-              label="Province"
-              value={province}
-              onChange={(value) => {
-                setProvince(value);
-                setDistrict("All Districts");
-              }}
-              options={provinces}
-              className="lg:w-56"
-            />
-            <SelectField
-              label="District"
-              value={district}
-              onChange={setDistrict}
-              options={districts}
-              className="lg:w-56"
-            />
+            <div className="school-filter-pair grid gap-3 lg:contents">
+              <SelectField
+                label="Province"
+                value={province}
+                onChange={(value) => {
+                  setProvince(value);
+                  setDistrict("All Districts");
+                  setVisibleCount(24);
+                }}
+                options={provinces}
+                className="lg:w-56"
+              />
+              <SelectField
+                label="District"
+                value={district}
+                onChange={(value) => {
+                  setDistrict(value);
+                  setVisibleCount(24);
+                }}
+                options={districts}
+                className="lg:w-56"
+              />
+            </div>
             <button
               type="button"
               onClick={clearFilters}
@@ -258,10 +288,21 @@ export default function PublicSchoolsDirectory({ schools = [] }) {
               No schools match these filters yet.
             </div>
           ) : (
-            <div className="space-y-3">
-              {filteredSchools.map((school) => (
+            <div className="space-y-2 md:space-y-3">
+              {visibleSchools.map((school) => (
                 <SchoolRow key={school.id} school={school} />
               ))}
+              {hasMore && (
+                <div className="pt-2 text-center">
+                  <button
+                    type="button"
+                    onClick={() => setVisibleCount((count) => count + 24)}
+                    className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#d9dcf2] bg-white px-5 text-sm font-black text-[#4326e8] transition hover:bg-[#f4f1ff]"
+                  >
+                    Load more schools
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </section>

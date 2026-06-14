@@ -20,7 +20,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Winners",
-  description: "Public Pratyo winners, certificates, and school achievements.",
+  description: "Public Pravyo winners, certificates, and school achievements.",
 };
 
 function formatDate(value) {
@@ -152,7 +152,7 @@ export default async function WinnersPage() {
                   Celebrated students, certificates, and school success.
                 </h1>
                 <p className="mt-4 max-w-2xl text-sm font-semibold leading-7 text-[#526071]">
-                  A focused public record of Pratyo achievements. Each winner links
+                  A focused public record of Pravyo achievements. Each winner links
                   back to the event, school, and certificate when available.
                 </p>
               </div>

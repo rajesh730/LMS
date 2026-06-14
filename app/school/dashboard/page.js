@@ -425,8 +425,8 @@ function SchoolDashboardContent() {
         onNavigate={() => setIsNavOpen(false)}
       />
 
-      <main className="min-h-screen flex-1 overflow-x-hidden bg-[#f8f9fd] px-4 py-4 sm:px-6 lg:ml-72 lg:h-screen lg:overflow-y-auto">
-        <header className="sticky top-0 z-30 -mx-4 mb-5 border-b border-[#e6eaf7] bg-white/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6">
+      <main className="min-h-screen flex-1 overflow-x-hidden bg-[#f8f9fd] px-2 py-3 sm:px-6 sm:py-4 lg:ml-72 lg:h-screen lg:overflow-y-auto">
+        <header className="sticky top-0 z-30 -mx-2 mb-4 border-b border-[#e6eaf7] bg-white/95 px-2 py-3 backdrop-blur sm:-mx-6 sm:mb-5 sm:px-6">
           <div className="mx-auto flex max-w-[1500px] items-center gap-3">
             <button
               type="button"

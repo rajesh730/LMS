@@ -1,6 +1,6 @@
-# Pratyo School Platform
+# Pravyo School Platform
 
-Pratyo is a Next.js + MongoDB platform for school activities, events, notices, student writing, certificates, and platform-led student challenges.
+Pravyo is a Next.js + MongoDB platform for school activities, events, notices, student writing, certificates, and platform-led student challenges.
 
 ## Product Scope
 

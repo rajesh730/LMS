@@ -28,6 +28,16 @@ const EventProposalSchema = new mongoose.Schema(
       default: "",
       trim: true,
     },
+    logoUrl: {
+      type: String,
+      required: [
+        function requireLogoUrl() {
+          return !["DECLINED", "REJECTED", "ARCHIVED"].includes(this.status);
+        },
+        "Please provide a partner logo link",
+      ],
+      trim: true,
+    },
     location: {
       type: String,
       default: "",
