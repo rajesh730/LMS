@@ -23,8 +23,11 @@ import LoadingState from "@/components/ui/LoadingState";
 import AlertBanner from "@/components/ui/AlertBanner";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import useRealtimeChannel from "@/lib/useRealtimeChannel";
-import { getEventStage, isDatePast } from "@/lib/eventUiStatus";
 import { isTeamEventLike } from "@/lib/eventParticipationFormat";
+import {
+  formatEventWorkflowStatus,
+  getEventWorkflowStatus,
+} from "@/lib/eventWorkflow";
 
 function formatType(value) {
   return String(value || "EVENT").replaceAll("_", " ");
@@ -63,26 +66,11 @@ function isApprovedEvent(event) {
 }
 
 function isRegistrationOpen(event) {
-  const state = String(event.lifecycleStatus || "ACTIVE").toUpperCase();
-  const deadline = event.registrationDeadline || event.deadline;
-  return (
-    state === "ACTIVE" &&
-    isApprovedEvent(event) &&
-    !(
-      deadline &&
-      isDatePast(deadline, {
-        endOfDay: true,
-      })
-    )
-  );
+  return getEventWorkflowStatus(event) === "OPEN_FOR_REGISTRATION";
 }
 
 function getCurrentStageLabel(event) {
-  const state = String(event.lifecycleStatus || "ACTIVE").toUpperCase();
-  if (state === "ARCHIVED") return "Archived";
-  if (state === "COMPLETED" || event.resultsPublished) return "Completed";
-  if (isRegistrationOpen(event)) return "Registration";
-  return "Round 1";
+  return formatEventWorkflowStatus(getEventWorkflowStatus(event));
 }
 
 export default function SchoolOwnedEventsManager({
@@ -187,9 +175,6 @@ export default function SchoolOwnedEventsManager({
     return {
       live: live.length,
       registrationOpen: registrationOpen.length,
-      drafts: events.filter(
-        (event) => String(event.status || "").toUpperCase() === "PENDING"
-      ).length,
       completed: events.filter(
         (event) =>
           String(event.lifecycleStatus || "").toUpperCase() === "COMPLETED" ||
@@ -214,8 +199,6 @@ export default function SchoolOwnedEventsManager({
         (activeFilter === "REGISTRATION" &&
           isRegistrationOpen(event) &&
           getRegisteredCount(event) === 0) ||
-        (activeFilter === "DRAFTS" &&
-          String(event.status || "").toUpperCase() === "PENDING") ||
         (activeFilter === "COMPLETED" &&
           (state === "COMPLETED" || event.resultsPublished)) ||
         (activeFilter === "ARCHIVED" && state === "ARCHIVED");
@@ -349,7 +332,6 @@ export default function SchoolOwnedEventsManager({
     ["REGISTRATION", "Registration Open", FaUsers, eventMetrics.registrationOpen],
     ["ALL", "All Events", FaCalendarAlt, events.length],
     ["COMPLETED", "Completed", FaCheckCircle, eventMetrics.completed],
-    ["DRAFTS", "Drafts", FaEdit, eventMetrics.drafts],
     ["ARCHIVED", "Archived", FaArchive, eventMetrics.archived],
   ];
 
@@ -530,7 +512,7 @@ export default function SchoolOwnedEventsManager({
             <div className="space-y-3">
               {filteredEvents.map((event) => {
                 const isTeamEvent = isTeamEventLike(event);
-                const stage = getEventStage(event);
+                const workflowStatus = getEventWorkflowStatus(event);
                 const eventState = String(
                   event.lifecycleStatus || "ACTIVE"
                 ).toUpperCase();
@@ -552,44 +534,55 @@ export default function SchoolOwnedEventsManager({
                   ["Current", currentStage, isFinished ? "Finished" : "Live"],
                   [
                     "Results",
-                    event.resultsPublished ? "Published" : "Pending",
-                    event.resultsPublished ? "Ready" : "-",
+                    workflowStatus === "RESULTS_PUBLISHED" ? "Published" : "Draft",
+                    workflowStatus === "RESULTS_DRAFT"
+                      ? "Review"
+                      : workflowStatus === "RESULTS_PUBLISHED"
+                      ? "Ready"
+                      : "-",
                   ],
                   [
                     "Certificates",
-                    event.resultsPublished ? "Published" : "Pending",
-                    event.resultsPublished ? "Ready" : "-",
+                    workflowStatus === "RESULTS_PUBLISHED" ? "Active" : "Preview",
+                    workflowStatus === "RESULTS_PUBLISHED" ? "Ready" : "-",
                   ],
                 ];
                 const steps = [
                   {
                     label: "Registration",
-                    active: currentStage === "Registration",
-                    complete: isApprovedEvent(event),
+                    active: ["OPEN_FOR_REGISTRATION", "REGISTRATION_CLOSED"].includes(
+                      workflowStatus
+                    ),
+                    complete: !["DRAFT", "OPEN_FOR_REGISTRATION"].includes(
+                      workflowStatus
+                    ),
                   },
                   {
-                    label: "Round 1",
-                    active: currentStage === "Round 1",
-                    complete: currentStage !== "Registration" || isFinished,
+                    label: "Rounds",
+                    active: workflowStatus === "ROUND_ACTIVE",
+                    complete: [
+                      "RESULTS_DRAFT",
+                      "RESULTS_PUBLISHED",
+                      "COMPLETED",
+                    ].includes(workflowStatus),
                   },
                   {
-                    label: "Round 2",
-                    active: currentStage === "Round 2",
-                    complete: isFinished,
+                    label: "Results Draft",
+                    active: workflowStatus === "RESULTS_DRAFT",
+                    complete: ["RESULTS_PUBLISHED", "COMPLETED"].includes(
+                      workflowStatus
+                    ),
                   },
                   {
-                    label: "Results",
-                    active: !event.resultsPublished && isFinished,
-                    complete: Boolean(event.resultsPublished),
-                  },
-                  {
-                    label: "Certificates",
-                    active: false,
-                    complete: Boolean(event.resultsPublished),
+                    label: "Published",
+                    active: workflowStatus === "RESULTS_PUBLISHED",
+                    complete: ["RESULTS_PUBLISHED", "COMPLETED"].includes(
+                      workflowStatus
+                    ),
                   },
                   {
                     label: "Completed",
-                    active: eventState === "COMPLETED",
+                    active: false,
                     complete: isFinished,
                   },
                 ];
@@ -635,7 +628,7 @@ export default function SchoolOwnedEventsManager({
                               {registered}
                               {capacity ? `/${capacity}` : ""} {getEventUnitLabel(event)}
                             </span>
-                            <span className="truncate">Stage: {stage.label}</span>
+                            <span className="truncate">Workflow: {currentStage}</span>
                           </div>
                         </div>
                       </div>
@@ -742,7 +735,6 @@ export default function SchoolOwnedEventsManager({
               <EventEditorForm
                 teachers={teachers}
                 ownerMode="school"
-                showFeaturedOnLanding={false}
                 initialData={editingEvent}
                 onEventCreated={async () => {
                   setEditingEvent(null);

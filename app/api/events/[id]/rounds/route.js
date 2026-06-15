@@ -206,6 +206,8 @@ export async function POST(req, props) {
       status: payload.status,
     });
     await round.save();
+    event.eventWorkflowStatus = "ROUND_ACTIVE";
+    await event.save();
 
     // Auto-populate participants
     let sourceParticipants = [];

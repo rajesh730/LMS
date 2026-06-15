@@ -214,7 +214,7 @@ export default function ManagementTabs({
               fixedEventId={event.id || event._id}
               embedded
               title="Event Results & Certificates"
-              description="Final placements and school-issued digital certificates are prepared automatically."
+              description="Review draft placements and publish final school-issued digital certificates after confirmation."
             />
           )}
         </div>

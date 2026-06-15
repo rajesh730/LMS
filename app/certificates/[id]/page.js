@@ -1,8 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import Achievement from "@/models/Achievement";
 import SchoolShowcaseProfile from "@/models/SchoolShowcaseProfile";
+import { isActiveCertificateRecord } from "@/lib/certificates";
 import { formatPlacementLabel } from "@/lib/results";
 import { normalizeImageUrl } from "@/lib/imageUrls";
 import PravyoLogo from "@/components/brand/PravyoLogo";
@@ -20,11 +23,7 @@ async function getCertificate(id) {
     .populate({
       path: "event",
       select:
-        "title eventType date visibility participationFormat eventScope partnerBrandingEnabled partners",
-      populate: {
-        path: "partners.organizer",
-        select: "organizationName logoUrl",
-      },
+        "title eventType eventOwnershipType date visibility participationFormat eventScope resultsPublished",
     })
     .lean();
 
@@ -53,12 +52,12 @@ function getInitials(value) {
     .join("");
 }
 
-function CertificateLogoMark({ imageUrl, label, fallbackText }) {
+function CertificateLogoMark({ imageUrl, label, fallbackText, design }) {
   const image = normalizeImageUrl(imageUrl);
 
   return (
     <div className="flex min-w-[92px] flex-col items-center gap-2 text-center">
-      <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl border border-[#e1d4a4] bg-[#fffaf0] shadow-sm print:h-12 print:w-12">
+      <div className={`flex h-14 w-14 items-center justify-center overflow-hidden shadow-sm print:h-12 print:w-12 ${design.logoMark}`}>
         {image ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -67,16 +66,150 @@ function CertificateLogoMark({ imageUrl, label, fallbackText }) {
             className="h-full w-full object-contain p-1.5"
           />
         ) : (
-          <span className="text-sm font-black text-[#8a641b]">
+          <span className={`text-sm font-black ${design.logoInitial}`}>
             {getInitials(fallbackText || label)}
           </span>
         )}
       </div>
-      <p className="max-w-[9rem] truncate text-[10px] font-black uppercase tracking-[0.08em] text-[#526071] print:text-[9px]">
+      <p className={`max-w-[9rem] truncate text-[10px] font-black uppercase tracking-[0.08em] print:text-[9px] ${design.logoCaption}`}>
         {label}
       </p>
     </div>
   );
+}
+
+function resolveEventOwnership(event) {
+  if (event?.eventOwnershipType) return event.eventOwnershipType;
+  return event?.eventScope === "SCHOOL" ? "SCHOOL_EVENT" : "PLATFORM_EVENT";
+}
+
+function buildCertificateMeta({ achievement, schoolName }) {
+  const ownershipType = resolveEventOwnership(achievement.event);
+  const eventTitle = achievement.event?.title || achievement.title || "Event";
+  const rows =
+    ownershipType === "SCHOOL_EVENT"
+      ? [
+          ["School Event", schoolName],
+          ["Managed by", "Pravyo"],
+        ]
+      : [
+          ["Platform Event", eventTitle],
+          ["Associated School", schoolName],
+          ["Managed by", "Pravyo"],
+        ];
+
+  return { ownershipType, rows };
+}
+
+function buildCertificateLogos({ ownershipType, schoolName, schoolLogoUrl, design }) {
+  const schoolLogo = (
+    <CertificateLogoMark
+      key="school"
+      imageUrl={schoolLogoUrl}
+      label={schoolName}
+      fallbackText={schoolName}
+      design={design}
+    />
+  );
+  const pravyoLogo = (
+    <div key="pravyo" className="flex min-w-[120px] flex-col items-center gap-2 text-center">
+      <div className={`flex h-14 items-center justify-center px-4 shadow-sm print:h-12 ${design.brandLogoBox}`}>
+        <PravyoLogo
+          variant="wordmark"
+          imageClassName="w-[126px] sm:w-[150px] print:w-[112px]"
+          className="items-center"
+        />
+      </div>
+      <p className={`text-[10px] font-black uppercase tracking-[0.08em] print:text-[9px] ${design.logoCaption}`}>
+        Pravyo
+      </p>
+    </div>
+  );
+  if (ownershipType === "PLATFORM_EVENT") return [pravyoLogo, schoolLogo];
+  return [schoolLogo, pravyoLogo];
+}
+
+const CERTIFICATE_DESIGNS = {
+  classic: {
+    label: "Classic",
+    title: "Certificate of Recognition",
+    page: "bg-[#f5f2ea] text-[#231b12]",
+    sheet:
+      "rounded-[1.4rem] border-[8px] border-[#b8892f] bg-[#fffdf8] shadow-[0_22px_70px_rgba(58,39,12,0.16)]",
+    frame:
+      "rounded-[1rem] border border-[#d8b45f] px-8 py-9 md:px-12 bg-[linear-gradient(180deg,#fffdf8,#fffaf0)]",
+    eyebrow: "text-[#8a641b]",
+    subcopy: "text-[#6d604c]",
+    recipient: "text-[#2a1f14]",
+    recipientMeta: "text-[#6d604c]",
+    accent: "text-[#8a641b]",
+    statement: "rounded-xl border border-[#ead9a8] bg-[#fffaf0] px-6 py-5 text-center",
+    metaCard: "rounded-xl border border-[#ead9a8] bg-white p-4",
+    logoMark: "rounded-2xl border border-[#e1d4a4] bg-[#fffaf0]",
+    brandLogoBox: "rounded-2xl border border-[#e1d4a4] bg-white",
+    logoInitial: "text-[#8a641b]",
+    logoCaption: "text-[#6d604c]",
+    score: "rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-4 print:hidden",
+    team: "rounded-xl border border-[#ead9a8] bg-[#fffaf0] px-5 py-4 print:hidden",
+    footerRule: "border-[#ead9a8]",
+  },
+  modern: {
+    label: "Modern",
+    title: "Achievement Certificate",
+    page: "bg-[#eef4f8] text-[#111827]",
+    sheet:
+      "rounded-xl border border-[#d6e2ea] bg-white shadow-[0_22px_70px_rgba(17,24,39,0.12)]",
+    frame:
+      "rounded-lg border-0 px-8 py-9 md:px-12 bg-[linear-gradient(135deg,#ffffff_0%,#ffffff_56%,#f3f8fb_100%)]",
+    eyebrow: "text-[#1f4e79]",
+    subcopy: "text-[#5f6b7a]",
+    recipient: "text-[#111827]",
+    recipientMeta: "text-[#5f6b7a]",
+    accent: "text-[#1f4e79]",
+    statement: "rounded-lg border border-[#dfe5eb] bg-[#f8fbff] px-6 py-5 text-center",
+    metaCard: "rounded-lg border border-[#dfe5eb] bg-white p-4",
+    logoMark: "rounded-lg border border-[#dfe5eb] bg-[#f8fbff]",
+    brandLogoBox: "rounded-lg border border-[#dfe5eb] bg-white",
+    logoInitial: "text-[#1f4e79]",
+    logoCaption: "text-[#5f6b7a]",
+    score: "rounded-lg border border-[#cfe8dc] bg-[#f1fbf6] px-5 py-4 print:hidden",
+    team: "rounded-lg border border-[#d6e2ea] bg-[#f8fbff] px-5 py-4 print:hidden",
+    footerRule: "border-[#dfe5eb]",
+  },
+  best: {
+    label: "Best",
+    title: "Certificate of Achievement",
+    page: "bg-[#f5f7fb] text-[#10142f]",
+    sheet:
+      "rounded-[1.25rem] border-[6px] border-[#1f4e79] bg-white shadow-[0_24px_72px_rgba(16,20,47,0.16)]",
+    frame:
+      "rounded-[0.85rem] border border-[#c9a64a] px-8 py-9 md:px-12 bg-[linear-gradient(135deg,#ffffff_0%,#ffffff_58%,#f8fbff_100%)]",
+    eyebrow: "text-[#1f4e79]",
+    subcopy: "text-[#526071]",
+    recipient: "text-[#10142f]",
+    recipientMeta: "text-[#526071]",
+    accent: "text-[#9b6b13]",
+    statement: "rounded-xl border border-[#d9e3ef] bg-[#f8fbff] px-6 py-5 text-center shadow-sm",
+    metaCard: "rounded-xl border border-[#e6eaf7] bg-white p-4 shadow-sm",
+    logoMark: "rounded-xl border border-[#d9e3ef] bg-[#f8fbff]",
+    brandLogoBox: "rounded-xl border border-[#d9e3ef] bg-white",
+    logoInitial: "text-[#1f4e79]",
+    logoCaption: "text-[#526071]",
+    score: "rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-4 print:hidden",
+    team: "rounded-xl border border-[#d6e6fb] bg-[#f7fbff] px-5 py-4 print:hidden",
+    footerRule: "border-[#d9e3ef]",
+  },
+};
+
+function resolveCertificateDesign(value) {
+  const key = String(value || "best").toLowerCase();
+  return CERTIFICATE_DESIGNS[key] ? key : "best";
+}
+
+function buildDesignHref(id, designKey, { isPreviewMode }) {
+  const params = new URLSearchParams({ design: designKey });
+  if (isPreviewMode) params.set("preview", "1");
+  return `/certificates/${id}?${params.toString()}`;
 }
 
 export default async function CertificatePage({ params, searchParams }) {
@@ -84,8 +217,21 @@ export default async function CertificatePage({ params, searchParams }) {
   const resolvedSearchParams = await searchParams;
   const achievement = await getCertificate(resolvedParams.id);
   const isPreviewMode = resolvedSearchParams?.preview === "1";
+  const designKey = resolveCertificateDesign(resolvedSearchParams?.design);
+  const design = CERTIFICATE_DESIGNS[designKey];
+  const session = await getServerSession(authOptions);
+  const canPreviewCertificate = ["SUPER_ADMIN", "SCHOOL_ADMIN", "TEACHER"].includes(
+    session?.user?.role
+  );
+  const certificateActive =
+    isActiveCertificateRecord(achievement) &&
+    Boolean(achievement.event?.resultsPublished);
 
-  if (!achievement || (!achievement.certificateIssuedAt && !isPreviewMode)) {
+  if (
+    !achievement ||
+    (!certificateActive &&
+      (!isPreviewMode || !canPreviewCertificate))
+  ) {
     notFound();
   }
 
@@ -109,26 +255,40 @@ export default async function CertificatePage({ params, searchParams }) {
     "School Team";
   const autoPrint = resolvedSearchParams?.download === "pdf";
   const schoolName = achievement.school?.schoolName || "Participating School";
-  const partnerLogo = Array.isArray(achievement.event?.partners)
-    ? achievement.event.partners
-        .filter((partner) => partner?.logoUrl || partner?.organizer?.logoUrl)
-        .sort((a, b) => Number(Boolean(b?.isPrimary)) - Number(Boolean(a?.isPrimary)))[0]
-    : null;
-  const partnerLogoUrl =
-    partnerLogo?.logoUrl || partnerLogo?.organizer?.logoUrl || "";
-  const partnerName =
-    partnerLogo?.displayName ||
-    partnerLogo?.organizer?.organizationName ||
-    "Event Partner";
+  const certificateMeta = buildCertificateMeta({
+    achievement,
+    schoolName,
+  });
+  const certificateLogos = buildCertificateLogos({
+    ownershipType: certificateMeta.ownershipType,
+    schoolName,
+    schoolLogoUrl: achievement.schoolProfile?.coverImageUrl,
+    design,
+  });
 
   return (
-    <main className="certificate-print-page min-h-screen bg-[#f5f7fb] px-4 py-8 text-[#10142f] print:min-h-0 print:bg-white print:p-0">
+    <main className={`certificate-print-page min-h-screen px-4 py-8 print:min-h-0 print:bg-white print:p-0 ${design.page}`}>
       <div className="mx-auto max-w-6xl print:max-w-none">
-        <div className="flex items-center justify-between gap-4 mb-6 print:hidden">
+        <div className="mb-6 flex flex-col gap-4 print:hidden lg:flex-row lg:items-center lg:justify-between">
           <Link href="/" className="text-sm font-bold text-[#526071] hover:text-[#10142f]">
             Back to platform
           </Link>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex rounded-lg border border-[#d9e3ef] bg-white p-1 shadow-sm">
+              {Object.entries(CERTIFICATE_DESIGNS).map(([key, option]) => (
+                <Link
+                  key={key}
+                  href={buildDesignHref(resolvedParams.id, key, { isPreviewMode })}
+                  className={`rounded-md px-3 py-1.5 text-xs font-black transition ${
+                    designKey === key
+                      ? "bg-[#1f4e79] text-white"
+                      : "text-[#526071] hover:bg-[#f8fbff] hover:text-[#1f4e79]"
+                  }`}
+                >
+                  {option.label}
+                </Link>
+              ))}
+            </div>
             <CertificatePrintActions autoPrint={autoPrint} />
             {eventHref && (
               <Link
@@ -141,58 +301,41 @@ export default async function CertificatePage({ params, searchParams }) {
           </div>
         </div>
 
-        <section className="certificate-sheet rounded-[1.4rem] border-[8px] border-[#d8b45f] bg-white shadow-[0_22px_70px_rgba(16,20,47,0.14)] print:shadow-none">
-          <div className="certificate-frame rounded-[1rem] border border-[#d8b45f]/60 px-8 py-9 md:px-12">
+        <section className={`certificate-sheet relative overflow-hidden print:shadow-none ${design.sheet}`}>
+          {designKey === "best" && (
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-2 bg-[#c9a64a]" />
+          )}
+          {designKey === "modern" && (
+            <div className="pointer-events-none absolute left-0 top-0 h-full w-2 bg-[#1f4e79]" />
+          )}
+          <div className={`certificate-frame relative ${design.frame}`}>
             <div className="text-center">
-              <p className="text-xs font-bold uppercase text-[#8a641b]">
-                Certificate of Recognition
+              <p className={`text-xs font-bold uppercase ${design.eyebrow}`}>
+                {design.title}
               </p>
               <div className="mt-4 flex flex-wrap items-start justify-center gap-4 md:gap-7 print:flex-nowrap print:gap-5">
-                <CertificateLogoMark
-                  imageUrl={achievement.schoolProfile?.coverImageUrl}
-                  label={schoolName}
-                  fallbackText={schoolName}
-                />
-                <div className="flex min-w-[120px] flex-col items-center gap-2 text-center">
-                  <div className="flex h-14 items-center justify-center rounded-2xl border border-[#e1d4a4] bg-white px-4 shadow-sm print:h-12">
-                    <PravyoLogo
-                      variant="wordmark"
-                      imageClassName="w-[126px] sm:w-[150px] print:w-[112px]"
-                      className="items-center"
-                    />
-                  </div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.08em] text-[#526071] print:text-[9px]">
-                    Pravyo Platform
-                  </p>
-                </div>
-                {partnerLogoUrl && (
-                  <CertificateLogoMark
-                    imageUrl={partnerLogoUrl}
-                    label={partnerName}
-                    fallbackText={partnerName}
-                  />
-                )}
+                {certificateLogos}
               </div>
-              <p className="mt-3 text-[11px] font-black uppercase text-[#526071]">
+              <p className={`mt-3 text-[11px] font-black uppercase ${design.subcopy}`}>
                 Official Digital Certificate
               </p>
-              <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-[#526071]">
+              <p className={`mx-auto mt-3 max-w-2xl text-sm leading-6 ${design.subcopy}`}>
                 {isPreviewMode
                   ? "Certificate preview for administrator review"
                   : isTeamCertificate
-                  ? "Issued for the recognized team result through the participating school."
-                  : "Issued through the participating school as a verified Pravyo achievement record."}
+                  ? "Prepared for the recognized team result through the participating school."
+                  : "Prepared through the participating school as a Pravyo achievement record."}
               </p>
             </div>
 
             <div className="mt-9 text-center">
-              <p className="text-xs font-bold uppercase text-[#526071]">
-                {isParticipantCertificate ? "Issued to" : "Awarded to"}
+              <p className={`text-xs font-bold uppercase ${design.subcopy}`}>
+                {isParticipantCertificate ? "Presented to" : "Awarded to"}
               </p>
-              <h2 className="mt-3 text-4xl font-black leading-tight text-[#10142f] md:text-5xl">
+              <h2 className={`mt-3 text-4xl font-black leading-tight md:text-5xl ${design.recipient}`}>
                 {recipientName}
               </h2>
-              <p className="mt-3 text-base font-semibold text-[#526071]">
+              <p className={`mt-3 text-base font-semibold ${design.recipientMeta}`}>
                 {achievement.school?.schoolName || "School participant"}
                 {isTeamCertificate
                   ? achievement.captainStudent?.name
@@ -203,9 +346,9 @@ export default async function CertificatePage({ params, searchParams }) {
                   : ""}
               </p>
               {isTeamCertificate && (
-                <p className="mx-auto mt-2 max-w-2xl text-sm text-[#526071]">
+                <p className={`mx-auto mt-2 max-w-2xl text-sm ${design.subcopy}`}>
                   Team recognition recorded for{" "}
-                  <span className="font-bold text-[#10142f]">{teamLabel}</span>
+                  <span className={`font-bold ${design.recipient}`}>{teamLabel}</span>
                   {achievement.captainStudent?.name
                     ? ` under captain ${achievement.captainStudent.name}.`
                     : "."}
@@ -213,36 +356,36 @@ export default async function CertificatePage({ params, searchParams }) {
               )}
             </div>
 
-            <div className="mt-7 rounded-xl border border-[#e6eaf7] bg-[#f8fbff] px-6 py-5 text-center">
+            <div className={`mt-7 ${design.statement}`}>
               <p className="text-base leading-7 text-[#344054]">
                 This certificate confirms that{" "}
-                <span className="font-bold text-[#10142f]">
+                <span className={`font-bold ${design.recipient}`}>
                   {recipientName || "the participant"}
                 </span>{" "}
                 {isParticipantCertificate ? (
                   <>
                     participated in{" "}
-                    <span className="font-bold text-[#10142f]">
+                    <span className={`font-bold ${design.recipient}`}>
                       {achievement.event?.title || achievement.title}
                     </span>
                   </>
                 ) : (
                   <>
                     {isTeamCertificate ? "earned" : "earned"}{" "}
-                    <span className="font-bold text-[#8a641b]">
+                    <span className={`font-bold ${design.accent}`}>
                       {placementLabel}
                     </span>{" "}
                     in{" "}
-                    <span className="font-bold text-[#10142f]">
+                    <span className={`font-bold ${design.recipient}`}>
                       {achievement.event?.title || achievement.title}
                     </span>
                   </>
                 )}
-                .
+                . 
               </p>
-              <p className="mx-auto mt-3 max-w-3xl text-xs leading-5 text-[#526071]">
-                This digital certificate is issued to{" "}
-                <span className="font-bold text-[#10142f]">
+              <p className={`mx-auto mt-3 max-w-3xl text-xs leading-5 ${design.subcopy}`}>
+                This digital certificate is prepared for{" "}
+                <span className={`font-bold ${design.recipient}`}>
                   {achievement.school?.schoolName || "the school"}
                 </span>{" "}
                 {isTeamCertificate
@@ -250,42 +393,41 @@ export default async function CertificatePage({ params, searchParams }) {
                   : "for official sharing with the student or parent."}
               </p>
               {achievement.description && (
-                <p className="mx-auto mt-3 max-w-3xl text-xs leading-5 text-[#526071] print:hidden">
+                <p className={`mx-auto mt-3 max-w-3xl text-xs leading-5 print:hidden ${design.subcopy}`}>
                   {achievement.description}
                 </p>
               )}
             </div>
 
             <div className="certificate-meta-grid mt-7 grid gap-3 md:grid-cols-3">
-              <div className="rounded-xl border border-[#e6eaf7] bg-white p-4">
-                <p className="text-[11px] font-black uppercase text-[#526071]">
-                  {isTeamCertificate ? "Team Name" : "Event Date"}
-                </p>
-                <p className="mt-2 text-sm font-bold text-[#10142f]">
-                  {isTeamCertificate
-                    ? teamLabel
-                    : achievement.event?.date
-                    ? new Date(achievement.event.date).toLocaleDateString()
-                    : "Not available"}
-                </p>
-              </div>
-              <div className="rounded-xl border border-[#e6eaf7] bg-white p-4">
-                <p className="text-[11px] font-black uppercase text-[#526071]">
+              {certificateMeta.rows.map(([label, value]) => (
+                <div
+                  key={label}
+                  className={design.metaCard}
+                >
+                  <p className={`text-[11px] font-black uppercase ${design.subcopy}`}>
+                    {label}
+                  </p>
+                  <p className={`mt-2 text-sm font-bold ${design.recipient}`}>
+                    {value || "Not available"}
+                  </p>
+                </div>
+              ))}
+              <div className={design.metaCard}>
+                <p className={`text-[11px] font-black uppercase ${design.subcopy}`}>
                   Certificate Code
                 </p>
-                <p className="mt-2 text-sm font-bold text-[#10142f]">
+                <p className={`mt-2 text-sm font-bold ${design.recipient}`}>
                   {achievement.certificateCode || "Pending"}
                 </p>
               </div>
-              <div className="rounded-xl border border-[#e6eaf7] bg-white p-4">
-                <p className="text-[11px] font-black uppercase text-[#526071]">
-                  {isTeamCertificate ? "Event Date" : "Issued On"}
+              <div className={design.metaCard}>
+                <p className={`text-[11px] font-black uppercase ${design.subcopy}`}>
+                  {isTeamCertificate ? "Team Name" : "Active On"}
                 </p>
-                <p className="mt-2 text-sm font-bold text-[#10142f]">
+                <p className={`mt-2 text-sm font-bold ${design.recipient}`}>
                   {isTeamCertificate
-                    ? achievement.event?.date
-                      ? new Date(achievement.event.date).toLocaleDateString()
-                      : "Not available"
+                    ? teamLabel
                     : achievement.certificateIssuedAt
                     ? new Date(achievement.certificateIssuedAt).toLocaleDateString()
                     : "Preview only"}
@@ -294,14 +436,14 @@ export default async function CertificatePage({ params, searchParams }) {
             </div>
 
             {isTeamCertificate && (
-              <div className="mt-6 rounded-xl border border-[#d6e6fb] bg-[#f7fbff] px-5 py-4 print:hidden">
-                <p className="text-xs font-black uppercase text-[#33598f]">
+              <div className={`mt-6 ${design.team}`}>
+                <p className={`text-xs font-black uppercase ${design.eyebrow}`}>
                   Team Certificate Context
                 </p>
-                <p className="mt-2 text-sm leading-6 text-[#526071]">
+                <p className={`mt-2 text-sm leading-6 ${design.subcopy}`}>
                   This certificate represents the official result recorded for the team{" "}
-                  <span className="font-semibold text-slate-900">{teamLabel}</span> in{" "}
-                  <span className="font-semibold text-slate-900">
+                  <span className={`font-semibold ${design.recipient}`}>{teamLabel}</span> in{" "}
+                  <span className={`font-semibold ${design.recipient}`}>
                     {achievement.event?.title || achievement.title}
                   </span>
                   . Schools can share this certificate alongside their internal roster and team member communication.
@@ -310,7 +452,7 @@ export default async function CertificatePage({ params, searchParams }) {
             )}
 
             {achievement.totalScore > 0 && (
-              <div className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-4 print:hidden">
+              <div className={`mt-6 ${design.score}`}>
                 <p className="text-xs font-black uppercase text-emerald-700">
                   Score Summary
                 </p>
@@ -341,21 +483,18 @@ export default async function CertificatePage({ params, searchParams }) {
               </div>
             )}
 
-            <div className="mt-8 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+            <div className={`mt-8 flex flex-col gap-5 border-t pt-5 md:flex-row md:items-end md:justify-between ${design.footerRule}`}>
               <div>
-                <p className="text-xs font-black uppercase text-[#526071]">
-                  Verified by
+                <p className={`text-xs font-black uppercase ${design.subcopy}`}>
+                  Managed by
                 </p>
-                <p className="mt-2 text-lg font-black text-[#10142f]">
-                  Pravyo Platform
-                </p>
-                <p className="mt-1 text-xs text-[#526071]">
-                  Multi-school talent, activity, and competition record
+                <p className={`mt-2 text-lg font-black ${design.recipient}`}>
+                  Pravyo
                 </p>
               </div>
 
-              <div className="text-xs font-semibold text-[#526071]">
-                Reference link: /certificates/{achievement._id.toString()}
+              <div className={`text-xs font-semibold ${design.subcopy}`}>
+                Certificate Code: {achievement.certificateCode || "Pending"}
               </div>
             </div>
           </div>

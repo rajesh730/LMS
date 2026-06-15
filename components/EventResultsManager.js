@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import {
   FaAward,
   FaCertificate,
@@ -53,7 +53,6 @@ export default function EventResultsManager({
   const [expandedTeams, setExpandedTeams] = useState({});
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [searchTerm, setSearchTerm] = useState("");
-  const autoIssuedRef = useRef(false);
 
   const eventId = fixedEventId;
 
@@ -88,44 +87,42 @@ export default function EventResultsManager({
     "TEAM";
   const resultsPublished = Boolean(detail?.event?.resultsPublished);
 
-  const issueCertificatesAutomatically = useCallback(async () => {
-    if (!eventId || autoIssuedRef.current || resultsPublished || participants.length === 0) {
-      return;
-    }
-
+  const saveResults = useCallback(async ({ publish = false } = {}) => {
+    if (!eventId || participants.length === 0) return;
     try {
-      autoIssuedRef.current = true;
       setSaving(true);
-      setMessage("Preparing final results and certificates automatically...");
+      setMessage(
+        publish
+          ? "Publishing final results and issuing certificates..."
+          : "Preparing draft results and certificate previews..."
+      );
       setError("");
       const res = await fetch(`/api/events/${eventId}/results`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          resultsPublished: true,
+          resultsPublished: publish,
           publishPublicly: false,
+          confirmPublish: publish,
         }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(data.message || "Failed to prepare certificates.");
+        throw new Error(data.message || "Failed to save results.");
       }
-      setMessage("Results and school certificates are ready.");
+      setMessage(
+        publish
+          ? "Final results published and certificates issued."
+          : "Draft results and certificate previews are ready for review."
+      );
       await loadDetail();
     } catch (saveError) {
-      autoIssuedRef.current = false;
       setError(saveError.message);
       setMessage("");
     } finally {
       setSaving(false);
     }
-  }, [eventId, loadDetail, participants.length, resultsPublished]);
-
-  useEffect(() => {
-    if (!loading) {
-      issueCertificatesAutomatically();
-    }
-  }, [issueCertificatesAutomatically, loading]);
+  }, [eventId, loadDetail, participants.length]);
 
   const resultSummary = useMemo(() => {
     const source = participants;
@@ -227,9 +224,10 @@ export default function EventResultsManager({
 
   const bulkDownloadCertificates = () => {
     const certificateLinks = issuedResults
+      .filter((result) => result.certificateIssuedAt)
       .map((result) => {
         const targetId = result.resultId || result._id;
-        return targetId ? `/certificates/${targetId}?download=pdf&preview=1` : "";
+        return targetId ? `/certificates/${targetId}?download=pdf` : "";
       })
       .filter(Boolean);
 
@@ -240,11 +238,11 @@ export default function EventResultsManager({
 
     certificateLinks.forEach((link, index) => {
       window.setTimeout(() => {
-        window.open(`${link}?download=pdf`, "_blank", "noopener,noreferrer");
+        window.open(link, "_blank", "noopener,noreferrer");
       }, index * 250);
     });
 
-    setMessage("Opened certificate PDF downloads in new tabs.");
+    setMessage("Opened active certificate PDF downloads in new tabs.");
   };
 
   const toggleTeamExpansion = (teamId) => {
@@ -296,13 +294,34 @@ export default function EventResultsManager({
                 <span>{participants.length} / {participants.length || 0} enrolled</span>
                 <span className="inline-flex items-center gap-1 text-emerald-700">
                   <FaCheckCircle />
-                  {saving ? "Auto preparing" : resultsPublished ? "Completed" : "Automatic"}
+                  {saving
+                    ? "Saving"
+                    : resultsPublished
+                    ? "Published"
+                    : issuedResults.length > 0
+                    ? "Draft ready"
+                    : "Draft pending"}
                 </span>
               </div>
             </div>
           </div>
-          <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-black text-emerald-800">
-            Certificates are issued privately to schools automatically.
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <button
+              type="button"
+              disabled={saving || loading || participants.length === 0 || resultsPublished}
+              onClick={() => saveResults({ publish: false })}
+              className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#dbe5f4] bg-white px-4 text-xs font-black text-[#0a2f66] hover:bg-[#f8fbff] disabled:opacity-50"
+            >
+              Prepare Draft
+            </button>
+            <button
+              type="button"
+              disabled={saving || loading || participants.length === 0 || resultsPublished}
+              onClick={() => saveResults({ publish: true })}
+              className="inline-flex min-h-10 items-center justify-center rounded-lg bg-[#0a2f66] px-4 text-xs font-black text-white hover:bg-[#1150a1] disabled:opacity-50"
+            >
+              Publish Final Results
+            </button>
           </div>
         </div>
         {message && <div className="mt-4 text-sm font-semibold text-[#1150a1]">{message}</div>}
@@ -328,7 +347,7 @@ export default function EventResultsManager({
           <div>
             <h3 className="text-lg font-black text-[#17120a]">Final Placements</h3>
             <p className="mt-1 text-xs font-semibold text-[#52657d]">
-              Placements are calculated from the highest round results.
+              Draft placements are calculated from approved participation and round history. Publishing requires organizer confirmation.
             </p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -414,7 +433,7 @@ export default function EventResultsManager({
                   <div>
                     <div className="text-[10px] font-black uppercase text-[#52657d]">Certificate Status</div>
                     <div className="inline-flex items-center gap-1 text-xs font-black text-emerald-700">
-                      Issued <FaCheckCircle />
+                      {participant.certificateIssuedAt ? "Issued" : "Draft"} <FaCheckCircle />
                     </div>
                   </div>
                   <div>
@@ -438,7 +457,7 @@ export default function EventResultsManager({
           <div>
             <h3 className="text-lg font-black text-[#17120a]">Certificate Management</h3>
             <p className="mt-1 text-xs font-semibold text-[#52657d]">
-              Certificates are generated and shared automatically; downloads remain available here.
+              Draft certificate records can be reviewed before final certificates are issued.
             </p>
           </div>
           <button
@@ -468,7 +487,7 @@ export default function EventResultsManager({
                 !groupedIssuedResults.length ? (
                   <tr>
                     <td colSpan="5" className="px-6 py-10 text-center text-sm font-bold text-[#52657d]">
-                      Certificates are being prepared automatically.
+                      Prepare draft results to create certificate previews.
                     </td>
                   </tr>
                 ) : (
@@ -526,7 +545,7 @@ export default function EventResultsManager({
               ) : !issuedResults.length ? (
                 <tr>
                   <td colSpan="5" className="px-6 py-10 text-center text-sm font-bold text-[#52657d]">
-                    Certificates are being prepared automatically.
+                    Prepare draft results to create certificate previews.
                   </td>
                 </tr>
               ) : (
@@ -627,15 +646,17 @@ function CertificateActions({
       >
         <FaEye />
       </a>
-      <a
-        href={`/certificates/${targetId}?download=pdf&preview=1`}
-        target="_blank"
-        rel="noreferrer"
-        className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#f1f5f9] text-[#0a2f66] hover:bg-[#e6edf6]"
-        title="Download certificate"
-      >
-        <FaDownload />
-      </a>
+      {result.certificateIssuedAt && (
+        <a
+          href={`/certificates/${targetId}?download=pdf`}
+          target="_blank"
+          rel="noreferrer"
+          className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#f1f5f9] text-[#0a2f66] hover:bg-[#e6edf6]"
+          title="Download certificate"
+        >
+          <FaDownload />
+        </a>
+      )}
       <button
         type="button"
         onClick={() => onEdit(result)}

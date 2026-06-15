@@ -8,7 +8,7 @@ import SchoolOwnedEventsManager from "./SchoolOwnedEventsManager";
 
 const PLATFORM_TABS = [
   { id: "invitations", label: "Invitations" },
-  { id: "events", label: "Active Competitions" },
+  { id: "events", label: "Active / Live Competitions" },
   { id: "disapproved", label: "Disapproved" },
   { id: "completed", label: "Final Results" },
 ];
@@ -93,8 +93,8 @@ export default function SchoolEventWorkspace({ mode = "platform" }) {
           refreshKey={refreshKey}
           eventScope="PLATFORM"
           lifecycleFilter="ACTIVE"
-          title="Active Competitions"
-          description="Register participants and continue your school's competition management."
+          title="Active / Live Competitions"
+          description="See active platform competitions, including events currently running, and continue your school's management work."
           defaultFilter="approved"
           showFilters={false}
         />
@@ -137,7 +137,6 @@ export default function SchoolEventWorkspace({ mode = "platform" }) {
           <EventEditorForm
             teachers={teachers}
             ownerMode="school"
-            showFeaturedOnLanding={false}
             onEventCreated={() => {
               setRefreshKey((value) => value + 1);
               setActiveSection("hosted");

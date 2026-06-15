@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
+import { getActiveCertificateFilter } from "@/lib/certificates";
 import Achievement from "@/models/Achievement";
 import "@/models/Student";
 import "@/models/Event";
@@ -19,7 +20,7 @@ export async function GET() {
 
     const certificates = await Achievement.find({
       school: session.user.id,
-      certificateIssuedAt: { $ne: null },
+      ...getActiveCertificateFilter(),
     })
       .populate("parentAchievement", "certificateRecipientName teamName recipientType")
       .populate("captainStudent", "name grade")

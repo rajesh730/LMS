@@ -96,6 +96,35 @@ export async function GET(req) {
       },
     ]);
 
+    const eventsByLifecycle = await Event.aggregate([
+      {
+        $match: {
+          $or: [{ school: schoolId }, { ownerId: schoolId }],
+        },
+      },
+      {
+        $group: {
+          _id: "$lifecycleStatus",
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const eventsByScope = await Event.aggregate([
+      {
+        $match: {
+          $or: [{ school: schoolId }, { ownerId: schoolId }],
+          lifecycleStatus: { $ne: "ARCHIVED" },
+        },
+      },
+      {
+        $group: {
+          _id: "$eventScope",
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
     // Format status breakdown
     const statusBreakdown = {};
     studentsByStatus.forEach((item) => {
@@ -105,6 +134,16 @@ export async function GET(req) {
     const teacherStatusBreakdown = {};
     teachersByStatus.forEach((item) => {
       teacherStatusBreakdown[item._id || "UNKNOWN"] = item.count;
+    });
+
+    const eventLifecycleBreakdown = {};
+    eventsByLifecycle.forEach((item) => {
+      eventLifecycleBreakdown[item._id || "UNKNOWN"] = item.count;
+    });
+
+    const eventScopeBreakdown = {};
+    eventsByScope.forEach((item) => {
+      eventScopeBreakdown[item._id || "UNKNOWN"] = item.count;
     });
 
     const [activityLogs, recentStudents, recentTeachers, recentEvents] =
@@ -182,6 +221,11 @@ export async function GET(req) {
       teachers: {
         total: teachers,
         byStatus: teacherStatusBreakdown,
+      },
+      events: {
+        total: events,
+        byLifecycle: eventLifecycleBreakdown,
+        byScope: eventScopeBreakdown,
       },
       recentActivity,
     });

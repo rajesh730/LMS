@@ -11,7 +11,6 @@ import { buildInvitationLifecycle, recordLifecycleAudit } from "@/lib/lifecycle"
 import { publishWorkIndicatorsUpdate } from "@/lib/workIndicatorRealtime";
 import { publishEventRealtimeUpdate } from "@/lib/eventRealtime";
 import { ensureStudentEventNotification } from "@/lib/studentEventNotifications";
-import "@/models/ExternalOrganizer";
 
 export const dynamic = "force-dynamic";
 
@@ -209,12 +208,7 @@ export async function PUT(req, props) {
       .populate({
         path: "event",
         select:
-          "title description date eventType visibility registrationDeadline maxParticipants maxParticipantsPerSchool participationFormat minTeamSize maxTeamSize eligibleGrades eventScope lifecycleStatus status partnerBrandingEnabled partners",
-        populate: {
-          path: "partners.organizer",
-          select:
-            "organizationName slug logoUrl website verificationStatus profileVisibility",
-        },
+          "title description date eventType visibility registrationDeadline maxParticipants maxParticipantsPerSchool participationFormat minTeamSize maxTeamSize eligibleGrades eventScope lifecycleStatus status",
       })
       .lean();
 

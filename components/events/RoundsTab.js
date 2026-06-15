@@ -373,6 +373,7 @@ export default function RoundsTab({ event, onCompetitionClosed, onAddNotice }) {
         body: JSON.stringify({
           resultsPublished: true,
           publishPublicly: true,
+          confirmPublish: true,
         }),
       });
       const data = await res.json().catch(() => ({}));

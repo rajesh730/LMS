@@ -49,6 +49,23 @@ export async function PATCH(req, props) {
 
     const body = await req.json();
     const action = String(body.action || "save").toLowerCase();
+    const isPublishingAction = [
+      "publish",
+      "issue",
+      "send_to_school",
+      "publish_public",
+    ].includes(action);
+
+    if (isPublishingAction && body.confirmPublish !== true) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Certificate publishing requires explicit organizer confirmation.",
+        },
+        { status: 400 }
+      );
+    }
 
     if (body.certificateRecipientName !== undefined) {
       achievement.certificateRecipientName = String(
@@ -63,18 +80,18 @@ export async function PATCH(req, props) {
     if (action === "publish" || action === "issue" || action === "send_to_school") {
       achievement.certificateIssuedAt = new Date();
       achievement.certificateUrl = buildCertificatePath(achievement._id);
+      achievement.certificateState = "CERTIFICATE_ACTIVE";
       achievement.schoolSharedAt = new Date();
       achievement.isPublic = Boolean(event.publicResultsEnabled);
       event.resultsPublished = true;
-      if (event.lifecycleStatus === "ACTIVE") {
-        event.lifecycleStatus = "COMPLETED";
-      }
+      event.eventWorkflowStatus = "RESULTS_PUBLISHED";
       await event.save();
     }
 
     if (action === "draft") {
       achievement.certificateIssuedAt = null;
       achievement.certificateUrl = "";
+      achievement.certificateState = "CERTIFICATE_PREVIEW";
       achievement.schoolSharedAt = null;
       achievement.isPublic = false;
     }
@@ -84,12 +101,11 @@ export async function PATCH(req, props) {
         achievement.certificateIssuedAt = new Date();
         achievement.certificateUrl = buildCertificatePath(achievement._id);
       }
+      achievement.certificateState = "CERTIFICATE_ACTIVE";
       achievement.isPublic = true;
       event.resultsPublished = true;
       event.publicResultsEnabled = true;
-      if (event.lifecycleStatus === "ACTIVE") {
-        event.lifecycleStatus = "COMPLETED";
-      }
+      event.eventWorkflowStatus = "RESULTS_PUBLISHED";
       await event.save();
     }
 

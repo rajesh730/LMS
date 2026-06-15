@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import {
   FaCalendarAlt,
   FaBell,
+  FaCircle,
   FaClock,
   FaMapMarkerAlt,
   FaUsers,
@@ -45,16 +46,43 @@ function formatGradeList(event) {
   return grades.length ? grades.join(", ") : "All / not specified";
 }
 
+function getEventOwnershipLabel(event) {
+  return event?.eventScope === "SCHOOL" ? "School Event" : "Platform Event";
+}
+
+function isRunningEvent(event) {
+  const workflowStatus = String(event?.eventWorkflowStatus || "").toUpperCase();
+  return !event?.finalOutcomeReady && ["ROUND_ACTIVE", "RESULTS_DRAFT"].includes(workflowStatus);
+}
+
+function isActiveEvent(event) {
+  const lifecycleStatus = String(event?.lifecycleStatus || "ACTIVE").toUpperCase();
+  return lifecycleStatus === "ACTIVE" && !event?.finalOutcomeReady;
+}
+
+function getOperationalBadge(event) {
+  if (isRunningEvent(event)) {
+    return {
+      label: "Live Event",
+      className: "border-rose-200 bg-rose-50 text-rose-800",
+    };
+  }
+
+  if (isActiveEvent(event)) {
+    return {
+      label: "Active Event",
+      className: "border-blue-200 bg-blue-50 text-blue-800",
+    };
+  }
+
+  return null;
+}
+
 function EventDetailsModal({ event, onClose }) {
   if (!event) return null;
 
   const isTeamEvent = isTeamEventLike(event);
   const deadline = event.registrationDeadline || event.deadline;
-  const partners = Array.isArray(event.partners)
-    ? event.partners
-        .map((partner) => partner.displayName || partner.organizationName || partner.name)
-        .filter(Boolean)
-    : [];
 
   return (
     <div
@@ -68,7 +96,7 @@ function EventDetailsModal({ event, onClose }) {
         <div className="flex items-start justify-between gap-4 border-b border-[#e1e7f2] p-5">
           <div>
             <p className="text-xs font-black uppercase text-[#52657d]">
-              {event.eventScope === "PLATFORM" ? "Platform Competition" : "School Event"}
+              {getEventOwnershipLabel(event)}
             </p>
             <h2 className="mt-1 text-2xl font-black text-[#001233]">
               {event.title}
@@ -137,7 +165,7 @@ function EventDetailsModal({ event, onClose }) {
             </div>
           </div>
 
-          {(event.venue || event.prizeDetails || partners.length > 0) && (
+          {(event.venue || event.prizeDetails) && (
             <div className="grid gap-3 sm:grid-cols-2">
               {event.venue && (
                 <div className="rounded-xl border border-[#e1e7f2] p-4">
@@ -152,16 +180,6 @@ function EventDetailsModal({ event, onClose }) {
                   <p className="text-xs font-black uppercase text-[#52657d]">Prize</p>
                   <p className="mt-1 text-sm font-semibold text-[#17120a]">
                     {event.prizeDetails}
-                  </p>
-                </div>
-              )}
-              {partners.length > 0 && (
-                <div className="rounded-xl border border-[#e1e7f2] p-4 sm:col-span-2">
-                  <p className="text-xs font-black uppercase text-[#52657d]">
-                    Partner
-                  </p>
-                  <p className="mt-1 text-sm font-semibold text-[#17120a]">
-                    {partners.join(", ")}
                   </p>
                 </div>
               )}
@@ -406,6 +424,10 @@ export default function EventHub({
     return matchesSearch;
   });
 
+  const activeEvents = events.filter(isActiveEvent);
+  const runningEvents = events.filter(isRunningEvent);
+  const showActiveSummary = lifecycleFilter === "ACTIVE" && !completedView;
+
   const getStatusBadge = (status) => {
     if (!status) return null;
     const styles = {
@@ -470,6 +492,35 @@ export default function EventHub({
               title={feedback.title}
               message={feedback.message}
             />
+          </div>
+        )}
+
+        {showActiveSummary && (
+          <div className="mb-5 rounded-xl border border-[#d8e0f0] bg-[#fbfcff] p-4">
+            <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-center">
+              <div>
+                <h2 className="inline-flex items-center gap-2 text-sm font-black uppercase text-[#0a2f66]">
+                  <FaCircle className="text-[0.65rem] text-emerald-600" />
+                  Active / live competitions
+                </h2>
+                <p className="mt-1 text-sm font-semibold text-[#344f77]">
+                  {activeEvents.length} active competition
+                  {activeEvents.length === 1 ? "" : "s"}
+                  {runningEvents.length > 0
+                    ? `, including ${runningEvents.length} currently running`
+                    : ""}
+                  .
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2 md:justify-end">
+                <span className="inline-flex min-h-9 items-center rounded-full border border-blue-200 bg-blue-50 px-3 text-xs font-black text-blue-800">
+                  {activeEvents.length} Active
+                </span>
+                <span className="inline-flex min-h-9 items-center rounded-full border border-rose-200 bg-rose-50 px-3 text-xs font-black text-rose-800">
+                  {runningEvents.length} Live
+                </span>
+              </div>
+            </div>
           </div>
         )}
 
@@ -557,6 +608,7 @@ export default function EventHub({
                   ? "overview"
                   : "registrations";
                 const managementHref = `/school/events/${event._id}/manage?tab=${managementTab}`;
+                const operationalBadge = getOperationalBadge(event);
                 return (
               <div
                 key={event._id}
@@ -590,10 +642,15 @@ export default function EventHub({
                               : "border-[#bfd7f7] bg-[#f8fbff] text-[#0a2f66]"
                           }`}
                         >
-                          {event.eventScope === "PLATFORM"
-                            ? "Platform Competition"
-                            : "Internal Event"}
+                          {getEventOwnershipLabel(event)}
                         </span>
+                        {operationalBadge && (
+                          <span
+                            className={`inline-flex min-h-7 items-center rounded-full border px-2.5 text-[11px] font-bold ${operationalBadge.className}`}
+                          >
+                            {operationalBadge.label}
+                          </span>
+                        )}
                         {event.participationStatus &&
                           getStatusBadge(
                             isCompletedEvent && completedView

@@ -493,8 +493,8 @@ function SchoolDashboardContent() {
                 <PageHeader
                   icon={FaSchool}
                   eyebrow="School workspace"
-                  title="Dashboard"
-                  description="Use the left menu to manage students, teachers, events, notices, magazine writing, and your public profile."
+                  title="School Overview"
+                  description="Review your school's student, teacher, event, grade, and recent activity status from one place."
                 />
                 <div className="mt-5">
                   <DashboardOverview />

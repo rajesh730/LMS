@@ -31,16 +31,6 @@ function formatDate(value) {
   });
 }
 
-function getPartnerName(event) {
-  const primaryPartner = event?.partners?.find((partner) => partner.isPrimary);
-  const partner = primaryPartner || event?.partners?.[0];
-  return (
-    partner?.organizer?.organizationName ||
-    partner?.displayName ||
-    "Platform event"
-  );
-}
-
 function isRegistrationClosed(event) {
   if (!event) return true;
   if (event.date && isDatePast(event.date, { endOfDay: true })) return true;
@@ -62,7 +52,7 @@ export default function SchoolEventInvitations({
   onChanged,
   status = "PENDING",
   title = "Platform Event Notifications",
-  description = "Approve partner or platform events before your students can see or join them.",
+  description = "Approve platform events before your students can see or join them.",
   emptyTitle,
   emptyDescription,
 }) {
@@ -258,11 +248,6 @@ export default function SchoolEventInvitations({
                       <span className="rounded-full border border-[#d7cdbb] px-3 py-1 text-xs font-semibold text-[#0a2f66]">
                         {event.eventType || "EVENT"}
                       </span>
-                      {event.partnerBrandingEnabled && (
-                        <span className="rounded-full border border-[#bdefff] bg-[#e8fbff] px-3 py-1 text-xs font-semibold text-[#07576b]">
-                          Partner: {getPartnerName(event)}
-                        </span>
-                      )}
                       {hasParticipation && (
                         <span className="rounded-full border border-[#9ed8b5] bg-[#e8f8ef] px-3 py-1 text-xs font-semibold text-[#17643a]">
                           Team registered:{" "}

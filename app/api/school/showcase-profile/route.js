@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
+import { getActiveCertificateFilter } from "@/lib/certificates";
 import SchoolShowcaseProfile from "@/models/SchoolShowcaseProfile";
 import Event from "@/models/Event";
 import Achievement from "@/models/Achievement";
@@ -20,7 +21,7 @@ async function buildMetrics(schoolId) {
       Achievement.countDocuments({
         school: schoolId,
         isPublic: true,
-        certificateIssuedAt: { $ne: null },
+        ...getActiveCertificateFilter(),
       }),
     ]);
 

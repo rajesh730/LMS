@@ -12,6 +12,7 @@ import {
   FaUsers,
 } from "react-icons/fa";
 import connectDB from "@/lib/db";
+import { getActiveCertificateFilter } from "@/lib/certificates";
 import Achievement from "@/models/Achievement";
 import Event from "@/models/Event";
 import EventNotice from "@/models/EventNotice";
@@ -21,7 +22,6 @@ import PublicExplorePanel from "@/components/public/PublicExplorePanel";
 import PublicShareButton from "@/components/public/PublicShareButton";
 import PublicSiteNav from "@/components/public/PublicSiteNav";
 import { PublicPageShell } from "@/components/public/PublicLayout";
-import "@/models/ExternalOrganizer";
 import "@/models/Student";
 import "@/models/User";
 
@@ -239,10 +239,6 @@ async function getEventData(id) {
     lifecycleStatus: { $ne: "ARCHIVED" },
   })
     .populate("school", "schoolName schoolLocation")
-    .populate(
-      "partners.organizer",
-      "organizationName slug logoUrl website verificationStatus profileVisibility"
-    )
     .lean();
 
   if (!event) return null;
@@ -259,7 +255,7 @@ async function getEventData(id) {
       ? Achievement.find({
           event: id,
           isPublic: true,
-          certificateIssuedAt: { $ne: null },
+          ...getActiveCertificateFilter(),
         })
           .sort({ awardedAt: -1 })
           .populate("school", "schoolName")
@@ -336,14 +332,6 @@ export default async function PublicEventPage({ params }) {
     };
     return (order[a.placement] || 99) - (order[b.placement] || 99);
   });
-  const visiblePartners = event.partnerBrandingEnabled
-    ? (event.partners || []).filter(
-        (partner) =>
-          partner?.organizer?.profileVisibility === "PUBLIC" ||
-          partner?.displayName
-      )
-    : [];
-
   return (
     <PublicPageShell className="bg-[#f8f9fd]">
       <PublicSiteNav active="events" />
@@ -411,39 +399,6 @@ export default async function PublicEventPage({ params }) {
               />
             </div>
           </article>
-
-          {visiblePartners.length > 0 && (
-            <section className="rounded-xl border border-[#e6eaf7] bg-white p-5 shadow-sm">
-              <h2 className="text-base font-black text-[#10142f]">Event Partners</h2>
-              <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                {visiblePartners.map((partner) => {
-                  const name =
-                    partner.organizer?.organizationName ||
-                    partner.displayName ||
-                    "Approved partner";
-                  const href = partner.organizer?.slug
-                    ? `/partners/${partner.organizer.slug}`
-                    : null;
-                  const content = (
-                    <div className="rounded-lg border border-[#e6eaf7] bg-[#f8f9fd] p-4">
-                      <p className="font-black text-[#10142f]">{name}</p>
-                      <p className="mt-1 text-xs font-bold uppercase text-[#526071]">
-                        {label(partner.role)}
-                      </p>
-                    </div>
-                  );
-
-                  return href ? (
-                    <Link key={name} href={href} className="block">
-                      {content}
-                    </Link>
-                  ) : (
-                    <div key={name}>{content}</div>
-                  );
-                })}
-              </div>
-            </section>
-          )}
 
           <PublicEventNoticeList
             eventId={String(event._id)}

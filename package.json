@@ -9,6 +9,7 @@
     "lint": "eslint",
     "test": "jest --runInBand",
     "db:ensure-indexes": "node scripts/ensure-indexes.mjs",
+    "db:backfill-event-workflow": "node scripts/backfill-event-workflow-and-certificates.mjs",
     "db:remove-pulse-data": "node scripts/remove-pulse-data.mjs",
     "db:remove-support-ticket-data": "node scripts/remove-support-ticket-data.mjs"
   },

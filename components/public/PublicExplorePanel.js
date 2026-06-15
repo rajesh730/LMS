@@ -3,7 +3,6 @@
 import Link from "next/link";
 import {
   FaCalendarAlt,
-  FaHandshake,
   FaHome,
   FaSchool,
   FaTrophy,
@@ -14,7 +13,6 @@ export const PUBLIC_EXPLORE_ITEMS = [
   { label: "Winners", href: "/winners", key: "winners", icon: FaTrophy },
   { label: "Schools", href: "/schools", key: "schools", icon: FaSchool },
   { label: "Events", href: "/events", key: "events", icon: FaCalendarAlt },
-  { label: "Partners", href: "/partners", key: "partners", icon: FaHandshake },
 ];
 
 function SidebarLink({ item, active }) {

@@ -5,7 +5,6 @@ import dynamic from "next/dynamic";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import DashboardLayout from "@/components/DashboardLayout";
-import AdminPartnerWorkspace from "@/components/partners/AdminPartnerWorkspace";
 import CredentialsModal from "@/components/CredentialsModal";
 import NoticeManager from "@/components/NoticeManager";
 import SchoolPromotionManager from "@/components/admin/SchoolPromotionManager";
@@ -115,12 +114,21 @@ function AdminDashboardContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const rawTab = searchParams.get("tab") || "approvals";
-  const activeTab = ["judging", "results"].includes(rawTab) ? "events" : rawTab;
+  const requestedTab = searchParams.get("tab") || "approvals";
+  const rawTab = ["judging", "results"].includes(requestedTab)
+    ? "events"
+    : requestedTab;
+  const activeTab = [
+    "approvals",
+    "schools",
+    "events",
+    "notices",
+    "spotlight",
+  ].includes(rawTab)
+    ? rawTab
+    : "approvals";
   const [schools, setSchools] = useState([]);
   const [events, setEvents] = useState([]);
-  const [partners, setPartners] = useState([]);
-  const [proposals, setProposals] = useState([]);
   const [schoolSearch, setSchoolSearch] = useState("");
   const [schoolProvince, setSchoolProvince] = useState("All Provinces");
   const [schoolDistrict, setSchoolDistrict] = useState("All Districts");
@@ -171,16 +179,9 @@ function AdminDashboardContent() {
       const results = await Promise.all([
         fetchNamedResource("Schools", "/api/schools/list"),
         fetchNamedResource("Events", "/api/events?summary=1"),
-        fetchNamedResource("Partners", "/api/external-organizers"),
-        fetchNamedResource("Event proposals", "/api/event-proposals"),
       ]);
 
-      const [
-        schoolsResult,
-        eventsResult,
-        partnersResult,
-        proposalsResult,
-      ] = results;
+      const [schoolsResult, eventsResult] = results;
       const failed = results.filter((result) => !result.ok);
 
       if (schoolsResult.ok) {
@@ -188,17 +189,6 @@ function AdminDashboardContent() {
       }
       if (eventsResult.ok) {
         setEvents(eventsResult.data.events || []);
-      }
-      if (partnersResult.ok) {
-        setPartners(partnersResult.data.data || []);
-      }
-      if (proposalsResult.ok) {
-        const proposalData = proposalsResult.data.data || [];
-        setProposals(
-          proposalData.filter((proposal) =>
-            ["APPROVED", "CONVERTED_TO_EVENT"].includes(proposal.status)
-          )
-        );
       }
 
       if (failed.length > 0) {
@@ -503,7 +493,7 @@ function AdminDashboardContent() {
           <AlertBanner
             type={loadError ? "warning" : "info"}
             title={loadError ? "Some data could not load" : "Loading dashboard"}
-            message={loadError || "Loading schools, events, partners, and proposals..."}
+            message={loadError || "Loading schools and events..."}
           />
         </div>
       )}
@@ -768,10 +758,6 @@ function AdminDashboardContent() {
         </div>
       )}
 
-      {activeTab === "partners" && (
-        <AdminPartnerWorkspace onChanged={fetchData} />
-      )}
-
       {activeTab === "notices" && (
         <NoticeManager
           scopeMode="platform"
@@ -818,8 +804,6 @@ function AdminDashboardContent() {
 
               {eventWorkspaceTab === "create" && (
                 <SendEventForm
-                  partners={partners}
-                  proposals={proposals}
                   onEventCreated={() => {
                     fetchData();
                     setEventWorkspaceTab("manage");
@@ -970,8 +954,6 @@ function AdminDashboardContent() {
             </button>
             <div className="p-1">
               <SendEventForm
-                partners={partners}
-                proposals={proposals}
                 onEventCreated={() => {
                   fetchData();
                   setEditingEvent(null);

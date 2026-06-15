@@ -6,7 +6,6 @@ import Event from "@/models/Event";
 import EventNotice from "@/models/EventNotice";
 import Student from "@/models/Student";
 import ParticipationRequest from "@/models/ParticipationRequest";
-import EventProposal from "@/models/EventProposal";
 import EventSchoolInvitation from "@/models/EventSchoolInvitation";
 import {
   ensureSchoolInvitationsForPublishedEvents,
@@ -20,51 +19,12 @@ import { buildSchoolParticipationPresentation } from "@/lib/participationPresent
 import { isTeamEventLike, resolveParticipationFormat as resolveParticipationFormatFromRecord } from "@/lib/eventParticipationFormat";
 import { publishEventRealtimeUpdate } from "@/lib/eventRealtime";
 import { ensureStudentEventNotification } from "@/lib/studentEventNotifications";
-import "@/models/ExternalOrganizer";
+import {
+  getRegistrationWorkflowStatus,
+  normalizeEventWorkflowStatus,
+} from "@/lib/eventWorkflow";
 
 export const dynamic = "force-dynamic";
-
-const EVENT_PARTNER_ROLES = [
-  "ORGANIZER_PARTNER",
-  "CHALLENGE_PARTNER",
-  "SPONSOR",
-  "VENUE_PARTNER",
-  "MENTOR_PARTNER",
-  "MEDIA_PARTNER",
-  "PRESENTED_BY",
-  "OTHER",
-];
-
-function normalizeEventPartners(partners) {
-  if (!Array.isArray(partners)) return [];
-
-  return partners
-    .filter((partner) => partner?.organizer || partner?.displayName)
-    .map((partner, index) => ({
-      organizer: partner.organizer || null,
-      role: EVENT_PARTNER_ROLES.includes(partner.role)
-        ? partner.role
-        : "ORGANIZER_PARTNER",
-      displayName: partner.displayName || "",
-      logoUrl: partner.logoUrl || "",
-      website: partner.website || "",
-      isPrimary: index === 0 ? true : Boolean(partner.isPrimary),
-    }));
-}
-
-function buildEventPartnerFromProposal(proposal) {
-  const organizer = proposal?.organizer;
-  if (!organizer) return null;
-
-  return {
-    organizer: organizer._id || organizer,
-    role: proposal.proposedRoles?.[0] || "ORGANIZER_PARTNER",
-    displayName: organizer.organizationName || proposal.organizationName || "",
-    logoUrl: organizer.logoUrl || proposal.logoUrl || "",
-    website: organizer.website || proposal.website || "",
-    isPrimary: true,
-  };
-}
 
 function buildTeamKey(request) {
   const schoolId = String(request.school?._id || request.school || "");
@@ -138,14 +98,8 @@ export async function POST(req) {
       schoolId,
       eventScope,
       eventType,
-      visibility,
       registrationMode,
       participationFormat,
-      featuredOnLanding,
-      publicHighlightsEnabled,
-      partnerBrandingEnabled,
-      partners,
-      sourceProposal,
       registrationDeadline,
       maxParticipants,
       maxParticipantsPerSchool,
@@ -226,41 +180,13 @@ export async function POST(req) {
       }
     }
 
-    let resolvedVisibility = isSchoolOwnedEvent
-      ? "INVITED"
-      : visibility || "PUBLIC";
+    let resolvedVisibility = "PUBLIC";
     if (status !== "APPROVED" && resolvedVisibility === "PUBLIC") {
       resolvedVisibility = "INVITED";
     }
 
-    const canFeatureOnLanding =
-      session.user.role === "SUPER_ADMIN" &&
-      normalizedScope === "PLATFORM" &&
-      status === "APPROVED" &&
-      resolvedVisibility === "PUBLIC";
-
     const ownerId = normalizedScope === "SCHOOL" ? school : session.user.id;
     const ownerType = normalizedScope === "SCHOOL" ? "SCHOOL" : "PLATFORM";
-    let normalizedPartners =
-      session.user.role === "SUPER_ADMIN" ? normalizeEventPartners(partners) : [];
-    const normalizedSourceProposal =
-      session.user.role === "SUPER_ADMIN" ? sourceProposal || null : null;
-
-    if (normalizedSourceProposal) {
-      const proposal = await EventProposal.findById(normalizedSourceProposal)
-        .populate("organizer", "organizationName logoUrl website")
-        .lean();
-      const proposalPartner = buildEventPartnerFromProposal(proposal);
-      if (
-        proposalPartner &&
-        !normalizedPartners.some(
-          (partner) => String(partner.organizer) === String(proposalPartner.organizer)
-        )
-      ) {
-        normalizedPartners = [proposalPartner, ...normalizedPartners];
-      }
-    }
-
     const newEvent = await Event.create({
       title,
       description,
@@ -277,21 +203,8 @@ export async function POST(req) {
           ? "THROUGH_SCHOOL"
           : registrationMode || "THROUGH_SCHOOL",
       participationFormat: resolvedParticipationFormat,
-      featuredOnLanding: canFeatureOnLanding ? Boolean(featuredOnLanding) : false,
-      publicHighlightsEnabled:
-        isSchoolOwnedEvent
-          ? false
-          : status === "APPROVED"
-          ? publicHighlightsEnabled === undefined
-            ? true
-            : Boolean(publicHighlightsEnabled)
-          : false,
-      partnerBrandingEnabled:
-        session.user.role === "SUPER_ADMIN" &&
-        (Boolean(partnerBrandingEnabled) || Boolean(normalizedSourceProposal)) &&
-        normalizedPartners.length > 0,
-      partners: normalizedPartners,
-      sourceProposal: normalizedSourceProposal,
+      featuredOnLanding: false,
+      publicHighlightsEnabled: status === "APPROVED",
       registrationDeadline: registrationDeadline || null,
       maxParticipants: capacityValidation.totalStudentCapacity,
       maxParticipantsPerSchool: isSchoolOwnedEvent
@@ -316,13 +229,6 @@ export async function POST(req) {
           : [],
       status,
     });
-
-    if (normalizedSourceProposal) {
-      await EventProposal.findByIdAndUpdate(normalizedSourceProposal, {
-        linkedEvent: newEvent._id,
-        status: "CONVERTED_TO_EVENT",
-      });
-    }
 
     if (normalizedScope === "PLATFORM" && status === "APPROVED") {
       try {
@@ -461,21 +367,12 @@ export async function GET(req) {
         events = await Event.find(query)
           .sort({ createdAt: -1, _id: -1 })
           .populate("assignedMentors", "name subject roles")
-          .populate("sourceProposal", "eventTitle organizationName status")
-          .populate(
-            "partners.organizer",
-            "organizationName slug logoUrl website verificationStatus profileVisibility"
-          )
           .lean();
       } else {
         // For schools/teachers, just get basic data
         events = await Event.find(query)
           .sort({ createdAt: -1, _id: -1 })
           .populate("assignedMentors", "name subject roles")
-          .populate(
-            "partners.organizer",
-            "organizationName slug logoUrl website verificationStatus profileVisibility"
-          )
           .lean();
       }
     } catch (queryError) {
@@ -587,6 +484,20 @@ export async function GET(req) {
         eventObj.totalStudentCapacity = event.maxParticipants;
         eventObj.isPlatformEvent = event.eventScope === "PLATFORM";
         eventObj.isSchoolEvent = event.eventScope === "SCHOOL";
+        eventObj.eventOwnershipType =
+          event.eventOwnershipType ||
+          (event.eventScope === "SCHOOL"
+            ? "SCHOOL_EVENT"
+            : "PLATFORM_EVENT");
+        const storedWorkflowStatus = normalizeEventWorkflowStatus(
+          event.eventWorkflowStatus
+        );
+        eventObj.eventWorkflowStatus =
+          ["DRAFT", "OPEN_FOR_REGISTRATION", "REGISTRATION_CLOSED"].includes(
+            storedWorkflowStatus
+          )
+            ? getRegistrationWorkflowStatus(event)
+            : storedWorkflowStatus;
         if (session.user.role === "SCHOOL_ADMIN") {
           const invitation = schoolInvitationMap.get(String(event._id));
           eventObj.schoolInvitationStatus = invitation?.status || null;

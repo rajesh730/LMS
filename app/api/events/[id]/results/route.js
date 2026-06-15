@@ -387,6 +387,7 @@ function mergeAchievements(entries, achievements) {
       currentPlacement: achievement?.placement || entry.placement || "PARTICIPANT",
       certificateUrl: achievement?.certificateUrl || "",
       certificateCode: achievement?.certificateCode || "",
+      certificateState: achievement?.certificateState || "CERTIFICATE_PREVIEW",
       certificateRecipientName:
         achievement?.certificateRecipientName ||
         entry.teamName ||
@@ -422,6 +423,7 @@ function achievementsToParticipantEntries(achievements = []) {
     currentPlacement: achievement.placement || "PARTICIPANT",
     certificateUrl: achievement.certificateUrl || "",
     certificateCode: achievement.certificateCode || "",
+    certificateState: achievement.certificateState || "CERTIFICATE_PREVIEW",
     certificateRecipientName:
       achievement.certificateRecipientName ||
       achievement.teamName ||
@@ -517,6 +519,9 @@ async function ensureTeamMemberAchievements({ event, achievements }) {
         highestRoundReached: teamAchievement.highestRoundReached || 0,
         certificateRecipientName: member?.name || "Student",
         certificateCode: buildCertificateCode(memberAchievementId, now),
+        certificateState: teamAchievement.certificateIssuedAt
+          ? "CERTIFICATE_ACTIVE"
+          : "CERTIFICATE_PREVIEW",
         certificateIssuedAt: teamAchievement.certificateIssuedAt || null,
         schoolSharedAt: teamAchievement.schoolSharedAt || null,
         certificateUrl: teamAchievement.certificateIssuedAt
@@ -610,10 +615,12 @@ export async function GET(req, props) {
             title: event.title,
             date: event.date,
             eventType: event.eventType,
+            eventOwnershipType: event.eventOwnershipType,
             participationFormat: event.participationFormat || "INDIVIDUAL",
             eventScope: event.eventScope,
             visibility: event.visibility,
             lifecycleStatus: event.lifecycleStatus,
+            eventWorkflowStatus: event.eventWorkflowStatus,
             resultsPublished: Boolean(event.resultsPublished),
             school: event.school || null,
           },
@@ -686,11 +693,23 @@ async function upsertResults(req, props) {
     }
     const publishPublicly = Boolean(body.publishPublicly);
     const resultsPublished = Boolean(body.resultsPublished);
+    const confirmPublish = body.confirmPublish === true;
     const correctionReason = String(body.correctionReason || "").trim();
     const scorecardCriteria = sanitizeScorecardCriteria(
       body.scorecardCriteria ?? event.scorecardCriteria
     );
     const now = new Date();
+
+    if (resultsPublished && !confirmPublish) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Final results require explicit organizer confirmation before publishing.",
+        },
+        { status: 400 }
+      );
+    }
 
     if (event.resultsPublished && resultsPublished && !correctionReason) {
       return NextResponse.json(
@@ -780,7 +799,10 @@ async function upsertResults(req, props) {
             existingTeamAchievement?.certificateRecipientName ||
             entry.teamName ||
             entry.teamDisplayName,
-          certificateCode: teamCertificateCode,
+        certificateCode: teamCertificateCode,
+          certificateState: resultsPublished
+            ? "CERTIFICATE_ACTIVE"
+            : "CERTIFICATE_PREVIEW",
           certificateIssuedAt: teamCertificateIssuedAt,
           schoolSharedAt: resultsPublished ? now : null,
           certificateUrl: resultsPublished ? buildCertificatePath(teamAchievementId) : "",
@@ -827,6 +849,9 @@ async function upsertResults(req, props) {
               member.name ||
               "Student",
             certificateCode: memberCertificateCode,
+            certificateState: resultsPublished
+              ? "CERTIFICATE_ACTIVE"
+              : "CERTIFICATE_PREVIEW",
             certificateIssuedAt: memberCertificateIssuedAt,
             schoolSharedAt: resultsPublished ? now : null,
             certificateUrl: resultsPublished
@@ -870,6 +895,9 @@ async function upsertResults(req, props) {
             existingAchievement?.certificateRecipientName ||
             entry.studentName,
           certificateCode,
+          certificateState: resultsPublished
+            ? "CERTIFICATE_ACTIVE"
+            : "CERTIFICATE_PREVIEW",
           certificateIssuedAt,
           schoolSharedAt: resultsPublished ? now : null,
           certificateUrl: resultsPublished ? buildCertificatePath(achievementId) : "",
@@ -898,9 +926,9 @@ async function upsertResults(req, props) {
     event.scorecardCriteria = scorecardCriteria;
     event.publicResultsEnabled = publishPublicly;
     event.resultsPublished = resultsPublished;
-    if (resultsPublished && event.lifecycleStatus === "ACTIVE") {
-      event.lifecycleStatus = "COMPLETED";
-    }
+    event.eventWorkflowStatus = resultsPublished
+      ? "RESULTS_PUBLISHED"
+      : "RESULTS_DRAFT";
     await event.save();
 
     if (resultsPublished) {
@@ -936,6 +964,7 @@ async function upsertResults(req, props) {
         data: {
           achievementsCreated: nextAchievements.length,
           resultsPublished: event.resultsPublished,
+          draftPrepared: !event.resultsPublished,
           publishPublicly,
           scorecardCriteria,
         },

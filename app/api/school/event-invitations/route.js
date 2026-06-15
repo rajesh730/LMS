@@ -9,7 +9,6 @@ import ParticipationRequest from "@/models/ParticipationRequest";
 import { ensureSchoolInvitationsForPublishedEvents } from "@/lib/eventInvitations";
 import { buildInvitationLifecycle } from "@/lib/lifecycle";
 import { buildPagination, escapeRegex, parsePagination } from "@/lib/pagination";
-import "@/models/ExternalOrganizer";
 import "@/models/User";
 
 export const dynamic = "force-dynamic";
@@ -89,14 +88,7 @@ export async function GET(req) {
         .populate({
           path: "event",
           select:
-            "title description date eventType visibility registrationDeadline maxParticipants maxParticipantsPerSchool participationFormat minTeamSize maxTeamSize eligibleGrades eventScope lifecycleStatus status partnerBrandingEnabled partners",
-          populate: [
-            {
-              path: "partners.organizer",
-              select:
-                "organizationName slug logoUrl website verificationStatus profileVisibility",
-            },
-          ],
+            "title description date eventType visibility registrationDeadline maxParticipants maxParticipantsPerSchool participationFormat minTeamSize maxTeamSize eligibleGrades eventScope lifecycleStatus status",
         })
         .populate("decisionBy", "name schoolName email")
         .skip(skip)

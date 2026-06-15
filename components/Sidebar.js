@@ -21,7 +21,6 @@ import {
   FaBullseye,
   FaUsers,
   FaTimes,
-  FaHandshake,
 } from "react-icons/fa";
 import PravyoLogo from "@/components/brand/PravyoLogo";
 import WorkIndicatorBadge from "@/components/work-indicators/WorkIndicatorBadge";
@@ -30,7 +29,6 @@ import useWorkIndicators from "@/lib/useWorkIndicators";
 const HREF_INDICATOR_KEYS = {
   "/admin/dashboard?tab=approvals": "admin.approvals",
   "/admin/dashboard?tab=events": "admin.events",
-  "/admin/dashboard?tab=partners": "admin.partners",
   "/admin/feedback": "admin.feedback",
   "/admin/dashboard?tab=spotlight": "admin.spotlight",
   "/school/dashboard?tab=platform-events": "school.platformEvents",
@@ -131,7 +129,6 @@ export default function Sidebar({
     { name: "Approvals", href: "/admin/dashboard?tab=approvals", icon: FaCheckCircle },
     { name: "Schools", href: "/admin/dashboard?tab=schools", icon: FaSchool },
     { name: "Platform Events", href: "/admin/dashboard?tab=events", icon: FaCalendarAlt },
-    { name: "Partners", href: "/admin/dashboard?tab=partners", icon: FaHandshake },
     { name: "Notices", href: "/admin/dashboard?tab=notices", icon: FaBullhorn },
     { name: "School Spotlight", href: "/admin/dashboard?tab=spotlight", icon: FaBullseye },
     { name: "Diagnostics", href: "/admin/diagnostics", icon: FaHeartbeat },

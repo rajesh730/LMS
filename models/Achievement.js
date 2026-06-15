@@ -124,6 +124,11 @@ const AchievementSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    certificateState: {
+      type: String,
+      enum: ["CERTIFICATE_PREVIEW", "CERTIFICATE_ACTIVE"],
+      default: "CERTIFICATE_PREVIEW",
+    },
     scorecard: {
       type: [scorecardEntrySchema],
       default: [],
@@ -149,6 +154,12 @@ const AchievementSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+AchievementSchema.pre("validate", function () {
+  this.certificateState = this.certificateIssuedAt
+    ? "CERTIFICATE_ACTIVE"
+    : "CERTIFICATE_PREVIEW";
+});
 
 AchievementSchema.index({ school: 1, awardedAt: -1 });
 AchievementSchema.index({ student: 1, awardedAt: -1 });

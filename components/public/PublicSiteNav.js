@@ -5,7 +5,6 @@ import { useState, useEffect } from "react";
 import {
   FaBars,
   FaCalendarAlt,
-  FaHandshake,
   FaHome,
   FaSchool,
   FaSearch,
@@ -21,7 +20,6 @@ const NAV_ITEMS = [
   { label: "Events",   href: "/events",   key: "events",   icon: FaCalendarAlt },
   { label: "Winners",  href: "/winners",  key: "winners",  icon: FaTrophy },
   { label: "Writings", href: "/student-voices", key: "writings", icon: FaFeatherAlt },
-  { label: "Partners", href: "/partners", key: "partners", icon: FaHandshake },
 ];
 
 export default function PublicSiteNav({

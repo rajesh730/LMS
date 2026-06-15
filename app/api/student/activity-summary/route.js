@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
+import { getActiveCertificateFilter } from "@/lib/certificates";
 import Student from "@/models/Student";
 import Achievement from "@/models/Achievement";
 import ParticipationRequest from "@/models/ParticipationRequest";
@@ -48,7 +49,7 @@ export async function GET() {
       User.findById(student.school).select("schoolName schoolLocation").lean(),
       Achievement.find({
         student: student._id,
-        certificateIssuedAt: { $ne: null },
+        ...getActiveCertificateFilter(),
       })
         .populate("event", "title date eventScope")
         .sort({ awardedAt: -1, createdAt: -1 })

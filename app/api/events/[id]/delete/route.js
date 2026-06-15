@@ -33,6 +33,7 @@ export async function POST(req, props) {
     }
 
     event.lifecycleStatus = "ARCHIVED";
+    event.eventWorkflowStatus = "ARCHIVED";
     await event.save();
 
     if (session.user.role === "SUPER_ADMIN") {

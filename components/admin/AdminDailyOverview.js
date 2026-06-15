@@ -7,7 +7,6 @@ import {
   FaCalendarAlt,
   FaBullseye,
   FaCommentDots,
-  FaHandshake,
   FaSchool,
 } from "react-icons/fa";
 import DashboardFocusCard from "@/components/dashboard/DashboardFocusCard";
@@ -26,8 +25,6 @@ function formatDate(value) {
 export default function AdminDailyOverview({
   pendingSchools = [],
   activeEvents = [],
-  partners = [],
-  proposals = [],
 }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -136,7 +133,7 @@ export default function AdminDailyOverview({
           </div>
           <p className="max-w-xl text-sm leading-6 text-[#52657d]">
             A quick operational view for approvals, flagship events, notices,
-            partners, and school publishing activity.
+            feedback, and school publishing activity.
           </p>
         </div>
 
@@ -202,20 +199,6 @@ export default function AdminDailyOverview({
             actionLabel="Open spotlight"
             indicator={getIndicator("admin.spotlight")}
             tone="rose"
-          />
-
-          <DashboardFocusCard
-            href="/admin/dashboard?tab=partners"
-            icon={FaHandshake}
-            badge={`${partners.length} partners`}
-            title={
-              proposals.length > 0
-                ? `${proposals.length} proposal links ready`
-                : "Partner network"
-            }
-            description="Manage event partners, approved proposals, and partner spotlight visibility."
-            actionLabel="Open partners"
-            tone="cyan"
           />
         </div>
 

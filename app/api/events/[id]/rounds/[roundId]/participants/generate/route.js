@@ -111,6 +111,8 @@ export async function POST(req, props) {
     }));
 
     const result = await RoundParticipant.bulkWrite(operations);
+    event.eventWorkflowStatus = "ROUND_ACTIVE";
+    await event.save();
 
     return NextResponse.json({
       message: "Round participants generated",

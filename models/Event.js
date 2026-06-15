@@ -1,4 +1,9 @@
 import mongoose from "mongoose";
+import {
+  EVENT_WORKFLOW_STATUSES,
+  getRegistrationWorkflowStatus,
+  normalizeEventWorkflowStatus,
+} from "../lib/eventWorkflow.js";
 
 const scorecardCriterionSchema = new mongoose.Schema(
   {
@@ -51,6 +56,11 @@ const EventSchema = new mongoose.Schema(
       enum: ["ACTIVE", "COMPLETED", "ARCHIVED"],
       default: "ACTIVE",
     },
+    eventWorkflowStatus: {
+      type: String,
+      enum: EVENT_WORKFLOW_STATUSES,
+      default: "DRAFT",
+    },
     eventScope: {
       type: String,
       enum: ["SCHOOL", "PLATFORM"],
@@ -69,6 +79,13 @@ const EventSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       default: null,
+    },
+    eventOwnershipType: {
+      type: String,
+      enum: ["SCHOOL_EVENT", "PLATFORM_EVENT"],
+      default: function () {
+        return this?.eventScope === "SCHOOL" ? "SCHOOL_EVENT" : "PLATFORM_EVENT";
+      },
     },
     eventType: {
       type: String,
@@ -114,57 +131,6 @@ const EventSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-    partnerBrandingEnabled: {
-      type: Boolean,
-      default: false,
-    },
-    sourceProposal: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "EventProposal",
-      default: null,
-    },
-    partners: [
-      {
-        organizer: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "ExternalOrganizer",
-          default: null,
-        },
-        role: {
-          type: String,
-          enum: [
-            "ORGANIZER_PARTNER",
-            "CHALLENGE_PARTNER",
-            "SPONSOR",
-            "VENUE_PARTNER",
-            "MENTOR_PARTNER",
-            "MEDIA_PARTNER",
-            "PRESENTED_BY",
-            "OTHER",
-          ],
-          default: "ORGANIZER_PARTNER",
-        },
-        displayName: {
-          type: String,
-          default: "",
-          trim: true,
-        },
-        logoUrl: {
-          type: String,
-          default: "",
-          trim: true,
-        },
-        website: {
-          type: String,
-          default: "",
-          trim: true,
-        },
-        isPrimary: {
-          type: Boolean,
-          default: false,
-        },
-      },
-    ],
     resultsPublished: {
       type: Boolean,
       default: false,
@@ -200,6 +166,7 @@ const EventSchema = new mongoose.Schema(
       type: [String], // e.g. ["Class 9", "Class 10"]
       default: [], // empty = all grades
     },
+    // Legacy display cache only. ParticipationRequest is the source of truth.
     participants: [
       {
         school: {
@@ -257,6 +224,22 @@ EventSchema.pre("validate", function () {
     }
   }
 
+  this.eventOwnershipType =
+    this.eventScope === "SCHOOL" ? "SCHOOL_EVENT" : "PLATFORM_EVENT";
+
+  const currentWorkflowStatus = normalizeEventWorkflowStatus(
+    this.eventWorkflowStatus
+  );
+  if (this.lifecycleStatus === "ARCHIVED") {
+    this.eventWorkflowStatus = "ARCHIVED";
+  } else if (this.lifecycleStatus === "COMPLETED" && this.resultsPublished) {
+    this.eventWorkflowStatus = "COMPLETED";
+  } else if (this.resultsPublished) {
+    this.eventWorkflowStatus = "RESULTS_PUBLISHED";
+  } else if (!["ROUND_ACTIVE", "RESULTS_DRAFT"].includes(currentWorkflowStatus)) {
+    this.eventWorkflowStatus = getRegistrationWorkflowStatus(this);
+  }
+
   if (this.visibility === "PUBLIC" && this.status !== "APPROVED") {
     this.visibility = "INVITED";
   }
@@ -297,7 +280,8 @@ EventSchema.pre("validate", function () {
 });
 
 EventSchema.index({ eventScope: 1, visibility: 1, lifecycleStatus: 1, date: 1 });
-EventSchema.index({ "partners.organizer": 1, visibility: 1, lifecycleStatus: 1 });
+EventSchema.index({ eventOwnershipType: 1, lifecycleStatus: 1, date: 1 });
+EventSchema.index({ eventWorkflowStatus: 1, date: 1 });
 EventSchema.index({ eventScope: 1, status: 1, lifecycleStatus: 1, date: 1 });
 EventSchema.index({ school: 1, eventScope: 1, lifecycleStatus: 1, date: 1 });
 EventSchema.index({ createdBy: 1, eventScope: 1, lifecycleStatus: 1, createdAt: -1 });

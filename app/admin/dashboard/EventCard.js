@@ -12,8 +12,11 @@ import {
   FaTrophy,
   FaUsers,
 } from "react-icons/fa";
-import { getEventStage } from "@/lib/eventUiStatus";
 import { isTeamEventLike } from "@/lib/eventParticipationFormat";
+import {
+  formatEventWorkflowStatus,
+  getEventWorkflowStatus,
+} from "@/lib/eventWorkflow";
 
 function formatType(value) {
   return String(value || "EVENT").replaceAll("_", " ");
@@ -33,10 +36,7 @@ function isApprovedEvent(event) {
 }
 
 function getCurrentStageLabel(event) {
-  const state = String(event.lifecycleStatus || "ACTIVE").toUpperCase();
-  if (state === "ARCHIVED") return "Archived";
-  if (state === "COMPLETED" || event.resultsPublished) return "Completed";
-  return "Registration";
+  return formatEventWorkflowStatus(getEventWorkflowStatus(event));
 }
 
 function getEventUnitLabel(event) {
@@ -72,8 +72,8 @@ export default function EventCard({
   const isFinished =
     event.resultsPublished || eventState === "COMPLETED" || eventState === "ARCHIVED";
   const registered = getRegisteredCount(event);
-  const stage = getEventStage(event);
   const currentStage = getCurrentStageLabel(event);
+  const workflowStatus = getEventWorkflowStatus(event);
   const gradeSummary = formatGradeSummary(event.eligibleGrades || []);
   const gradeTitle =
     event.eligibleGrades?.length > 0 ? event.eligibleGrades.join(", ") : "All grades";
@@ -85,16 +85,22 @@ export default function EventCard({
     ["Approved", event.approvedEntryCount ?? 0, "Entries"],
     [
       "Results",
-      event.resultsPublished ? "Published" : "Pending",
-      event.resultsPublished ? "Ready" : "-",
+      workflowStatus === "RESULTS_PUBLISHED" ? "Published" : "Draft",
+      workflowStatus === "RESULTS_DRAFT"
+        ? "Review"
+        : workflowStatus === "RESULTS_PUBLISHED"
+        ? "Ready"
+        : "-",
     ],
   ];
 
   const steps = [
     {
       label: "Registration",
-      active: currentStage === "Registration",
-      complete: isApprovedEvent(event),
+      active: ["OPEN_FOR_REGISTRATION", "REGISTRATION_CLOSED"].includes(
+        workflowStatus
+      ),
+      complete: !["DRAFT", "OPEN_FOR_REGISTRATION"].includes(workflowStatus),
     },
     {
       label: "Review",
@@ -103,17 +109,19 @@ export default function EventCard({
     },
     {
       label: "Rounds",
-      active: false,
-      complete: isFinished,
+      active: workflowStatus === "ROUND_ACTIVE",
+      complete: ["RESULTS_DRAFT", "RESULTS_PUBLISHED", "COMPLETED"].includes(
+        workflowStatus
+      ),
     },
     {
       label: "Results",
-      active: !event.resultsPublished && isFinished,
-      complete: Boolean(event.resultsPublished),
+      active: workflowStatus === "RESULTS_DRAFT",
+      complete: workflowStatus === "RESULTS_PUBLISHED" || isFinished,
     },
     {
       label: "Completed",
-      active: eventState === "COMPLETED",
+      active: workflowStatus === "COMPLETED",
       complete: isFinished,
     },
   ];
@@ -183,7 +191,7 @@ export default function EventCard({
                 <FaUsers />
                 {registered} {getEventUnitLabel(event)}
               </span>
-              <span className="truncate">Stage: {stage.label}</span>
+              <span className="truncate">Workflow: {currentStage}</span>
             </div>
           </div>
         </div>

@@ -60,10 +60,6 @@ const PlatformSettingSchema = new mongoose.Schema(
         type: Boolean,
         default: true,
       },
-      allowPublicPartnerProfiles: {
-        type: Boolean,
-        default: true,
-      },
       allowSchoolShowcases: {
         type: Boolean,
         default: true,

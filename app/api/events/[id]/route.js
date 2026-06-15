@@ -3,55 +3,12 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import Event from "@/models/Event";
-import EventProposal from "@/models/EventProposal";
 import { syncEventSchoolInvitations } from "@/lib/eventInvitations";
 import { validateEventDates } from "@/lib/eventDates";
 import { validateEventCapacity } from "@/lib/eventCapacity";
 import { normalizeGradeValue } from "@/lib/schoolGrades";
 import { publishEventRealtimeUpdate } from "@/lib/eventRealtime";
-import "@/models/ExternalOrganizer";
-
-const EVENT_PARTNER_ROLES = [
-  "ORGANIZER_PARTNER",
-  "CHALLENGE_PARTNER",
-  "SPONSOR",
-  "VENUE_PARTNER",
-  "MENTOR_PARTNER",
-  "MEDIA_PARTNER",
-  "PRESENTED_BY",
-  "OTHER",
-];
-
-function normalizeEventPartners(partners) {
-  if (!Array.isArray(partners)) return [];
-
-  return partners
-    .filter((partner) => partner?.organizer || partner?.displayName)
-    .map((partner, index) => ({
-      organizer: partner.organizer || null,
-      role: EVENT_PARTNER_ROLES.includes(partner.role)
-        ? partner.role
-        : "ORGANIZER_PARTNER",
-      displayName: partner.displayName || "",
-      logoUrl: partner.logoUrl || "",
-      website: partner.website || "",
-      isPrimary: index === 0 ? true : Boolean(partner.isPrimary),
-    }));
-}
-
-function buildEventPartnerFromProposal(proposal) {
-  const organizer = proposal?.organizer;
-  if (!organizer) return null;
-
-  return {
-    organizer: organizer._id || organizer,
-    role: proposal.proposedRoles?.[0] || "ORGANIZER_PARTNER",
-    displayName: organizer.organizationName || proposal.organizationName || "",
-    logoUrl: organizer.logoUrl || proposal.logoUrl || "",
-    website: organizer.website || proposal.website || "",
-    isPrimary: true,
-  };
-}
+import { normalizeEventWorkflowStatus } from "@/lib/eventWorkflow";
 
 function normalizeParticipationFormat(value) {
   return value === "TEAM" ? "TEAM" : "INDIVIDUAL";
@@ -143,14 +100,8 @@ export async function PUT(req, props) {
       schoolId,
       eventScope,
       eventType,
-      visibility,
       registrationMode,
       participationFormat,
-      featuredOnLanding,
-      publicHighlightsEnabled,
-      partnerBrandingEnabled,
-      partners,
-      sourceProposal,
       resultsPublished,
       registrationDeadline,
       maxParticipants,
@@ -159,6 +110,7 @@ export async function PUT(req, props) {
       maxTeamSize,
       eligibleGrades,
       lifecycleStatus,
+      eventWorkflowStatus,
       assignedMentors,
     } = await req.json();
 
@@ -210,35 +162,7 @@ export async function PUT(req, props) {
       resolvedSchool = null;
     }
 
-    const resolvedVisibility = isSchoolOwnedEvent
-      ? "INVITED"
-      : visibility || event.visibility;
-    if (resolvedVisibility === "PUBLIC" && event.status !== "APPROVED") {
-      return NextResponse.json(
-        {
-          message:
-            "Only approved events can be public. Approve the event before publishing.",
-        },
-        { status: 400 }
-      );
-    }
-
-    if (
-      featuredOnLanding !== undefined &&
-      Boolean(featuredOnLanding) &&
-      (session.user.role !== "SUPER_ADMIN" ||
-        requestedScope !== "PLATFORM" ||
-        resolvedVisibility !== "PUBLIC" ||
-        event.status !== "APPROVED")
-    ) {
-      return NextResponse.json(
-        {
-          message:
-            "Featured events must be approved, platform-scoped, and public, and can only be managed by SUPER_ADMIN.",
-        },
-        { status: 400 }
-      );
-    }
+    const resolvedVisibility = event.status === "APPROVED" ? "PUBLIC" : "INVITED";
 
     if (resultsPublished !== undefined && Boolean(resultsPublished) && event.status !== "APPROVED") {
       return NextResponse.json(
@@ -301,47 +225,8 @@ export async function PUT(req, props) {
       resolvedParticipationFormat === "TEAM"
         ? "THROUGH_SCHOOL"
         : registrationMode || event.registrationMode;
-    if (featuredOnLanding !== undefined) {
-      event.featuredOnLanding = Boolean(featuredOnLanding);
-    }
-    if (publicHighlightsEnabled !== undefined) {
-      event.publicHighlightsEnabled = isSchoolOwnedEvent
-        ? false
-        : Boolean(publicHighlightsEnabled);
-      if (!event.publicHighlightsEnabled) {
-        event.featuredOnLanding = false;
-      }
-    }
-    if (session.user.role === "SUPER_ADMIN") {
-      if (Array.isArray(partners)) {
-        event.partners = normalizeEventPartners(partners);
-      }
-      if (sourceProposal !== undefined) {
-        event.sourceProposal = sourceProposal || null;
-      }
-      if (partnerBrandingEnabled !== undefined) {
-        event.partnerBrandingEnabled =
-          Boolean(partnerBrandingEnabled) && event.partners.length > 0;
-      }
-    }
-
-    if (session.user.role === "SUPER_ADMIN" && event.sourceProposal) {
-      const proposal = await EventProposal.findById(event.sourceProposal)
-        .populate("organizer", "organizationName logoUrl website")
-        .lean();
-      const proposalPartner = buildEventPartnerFromProposal(proposal);
-      if (
-        proposalPartner &&
-        !(event.partners || []).some(
-          (partner) => String(partner.organizer) === String(proposalPartner.organizer)
-        )
-      ) {
-        event.partners = [proposalPartner, ...(event.partners || [])];
-      }
-      if (proposalPartner && event.partners.length > 0) {
-        event.partnerBrandingEnabled = true;
-      }
-    }
+    event.featuredOnLanding = false;
+    event.publicHighlightsEnabled = event.status === "APPROVED";
     if (resultsPublished !== undefined) {
       event.resultsPublished = Boolean(resultsPublished);
     }
@@ -386,16 +271,23 @@ export async function PUT(req, props) {
     }
     if (lifecycleStatus) {
       event.lifecycleStatus = lifecycleStatus;
+      if (lifecycleStatus === "ARCHIVED") {
+        event.eventWorkflowStatus = "ARCHIVED";
+      } else if (lifecycleStatus === "COMPLETED") {
+        event.eventWorkflowStatus = "COMPLETED";
+      }
+    }
+    if (eventWorkflowStatus !== undefined) {
+      const nextWorkflowStatus = normalizeEventWorkflowStatus(eventWorkflowStatus);
+      if (nextWorkflowStatus === "ARCHIVED") {
+        event.lifecycleStatus = "ARCHIVED";
+      } else if (nextWorkflowStatus === "COMPLETED") {
+        event.lifecycleStatus = "COMPLETED";
+      }
+      event.eventWorkflowStatus = nextWorkflowStatus;
     }
 
     await event.save();
-
-    if (session.user.role === "SUPER_ADMIN" && event.sourceProposal) {
-      await EventProposal.findByIdAndUpdate(event.sourceProposal, {
-        linkedEvent: event._id,
-        status: "CONVERTED_TO_EVENT",
-      });
-    }
 
     if (session.user.role === "SUPER_ADMIN") {
       try {
@@ -449,7 +341,7 @@ export async function DELETE(req, props) {
 
     const archivedEvent = await Event.findByIdAndUpdate(
       id,
-      { lifecycleStatus: "ARCHIVED" },
+      { lifecycleStatus: "ARCHIVED", eventWorkflowStatus: "ARCHIVED" },
       { new: true }
     );
 

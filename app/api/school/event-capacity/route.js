@@ -3,7 +3,6 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import Event from "@/models/Event";
-import User from "@/models/User";
 import ParticipationRequest from "@/models/ParticipationRequest";
 
 export async function GET(req) {
@@ -19,33 +18,47 @@ export async function GET(req) {
 
     await connectDB();
 
-    // Get all events for this school (or global events)
     const events = await Event.find({
       $or: [
         { school: session.user.id },
         { school: null }, // Global events
       ],
     })
-      .populate("participants.school", "schoolName")
       .sort({ date: -1 })
       .lean();
 
-    // Calculate capacity for each event
-    const eventsWithCapacity = events.map((event) => {
-      // Calculate total enrolled students
-      const totalEnrolled =
-        event.participants?.reduce(
-          (sum, p) => sum + (p.students?.length || 0),
-          0
-        ) || 0;
+    const eventIds = events.map((event) => event._id);
+    const requests = await ParticipationRequest.find({
+      event: { $in: eventIds },
+      status: { $in: ["APPROVED", "ENROLLED"] },
+    })
+      .populate("school", "schoolName")
+      .select("event school student status")
+      .lean();
+    const requestsByEvent = new Map();
+    for (const request of requests) {
+      const eventId = String(request.event || "");
+      if (!eventId) continue;
+      if (!requestsByEvent.has(eventId)) requestsByEvent.set(eventId, []);
+      requestsByEvent.get(eventId).push(request);
+    }
 
-      // Calculate per-school capacity
-      const schoolCapacity =
-        event.participants?.map((p) => ({
-          schoolId: p.school?._id?.toString() || p.school?.toString(),
-          schoolName: p.school?.schoolName || "Unknown School",
-          enrolled: p.students?.length || 0,
-        })) || [];
+    const eventsWithCapacity = events.map((event) => {
+      const eventRequests = requestsByEvent.get(String(event._id)) || [];
+      const totalEnrolled = eventRequests.length;
+      const schoolMap = new Map();
+      for (const request of eventRequests) {
+        const schoolId = String(request.school?._id || request.school || "");
+        if (!schoolId) continue;
+        const current = schoolMap.get(schoolId) || {
+          schoolId,
+          schoolName: request.school?.schoolName || "Unknown School",
+          enrolled: 0,
+        };
+        current.enrolled += 1;
+        schoolMap.set(schoolId, current);
+      }
+      const schoolCapacity = Array.from(schoolMap.values());
 
       return {
         _id: event._id,

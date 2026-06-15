@@ -1,6 +1,7 @@
 import Link from "next/link";
 import connectDB from "@/lib/db";
 import Achievement from "@/models/Achievement";
+import { getActiveCertificateFilter } from "@/lib/certificates";
 import PublicExplorePanel from "@/components/public/PublicExplorePanel";
 import PublicSiteNav from "@/components/public/PublicSiteNav";
 import {
@@ -41,7 +42,7 @@ async function getWinners() {
 
   const achievements = await Achievement.find({
     isPublic: true,
-    certificateIssuedAt: { $ne: null },
+    ...getActiveCertificateFilter(),
   })
     .select("title placement level awardedAt certificateUrl certificateRecipientName")
     .sort({ awardedAt: -1, createdAt: -1 })

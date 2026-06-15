@@ -141,7 +141,7 @@ export default function StudentEventWorkspace() {
             eventScope="PLATFORM"
             filters={DISCOVERY_FILTERS}
             title="Platform Competitions"
-            description="Inter-school competitions organized by the platform or approved partners. Your school handles registration for participating students."
+            description="Inter-school competitions organized by the platform. Your school handles registration for participating students."
           />
         )}
 

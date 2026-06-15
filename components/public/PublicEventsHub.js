@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   FaArrowRight,
   FaCalendarAlt,
+  FaCircle,
   FaFlask,
   FaFutbol,
   FaLayerGroup,
@@ -37,6 +38,7 @@ const CATEGORY_FILTERS = [
 
 const VIEW_FILTERS = [
   ["ALL", "All Events"],
+  ["LIVE", "Active / Live"],
   ["UPCOMING", "Open & Upcoming"],
   ["RESULTS", "Results Published"],
   ["SCHOOL", "School Hosted"],
@@ -58,10 +60,16 @@ function getPreview(value = "", maxLength = 126) {
 }
 
 function getStatus(event) {
+  const workflowStatus = String(event.eventWorkflowStatus || "").toUpperCase();
+  const lifecycleStatus = String(event.lifecycleStatus || "ACTIVE").toUpperCase();
+  if (!event.resultsPublished && ["ROUND_ACTIVE", "RESULTS_DRAFT"].includes(workflowStatus)) {
+    return ["Live Event", "bg-rose-50 text-rose-800"];
+  }
   if (event.resultsPublished) return ["Results Published", "bg-amber-50 text-amber-800"];
   if (event.registrationDeadline && new Date(event.registrationDeadline).getTime() >= Date.now()) {
     return ["Registration Open", "bg-emerald-50 text-emerald-800"];
   }
+  if (lifecycleStatus === "ACTIVE") return ["Active Event", "bg-blue-50 text-blue-800"];
   if (event.date && new Date(event.date).getTime() >= Date.now()) {
     return ["Upcoming", "bg-blue-50 text-blue-800"];
   }
@@ -104,7 +112,7 @@ function FeaturedEvent({ event }) {
           Public events will appear here.
         </h1>
         <p className="mt-2 text-sm leading-6 text-[#52657d]">
-          Once schools or partners publish approved events, students can explore
+          Once schools publish approved events, students can explore
           details and results here.
         </p>
       </section>
@@ -140,7 +148,7 @@ function FeaturedEvent({ event }) {
             </span>
             <span className="inline-flex items-center gap-2">
               <FaMapMarkerAlt className="text-[#4326e8]" />
-              {event.schoolName || event.partnerName || "Pravyo"}
+              {event.schoolName || "Pravyo"}
             </span>
             <span className="hidden sm:inline-flex items-center gap-2">
               <FaUsers className="text-[#4326e8]" />
@@ -155,6 +163,57 @@ function FeaturedEvent({ event }) {
           View Details
           <FaArrowRight />
         </Link>
+      </div>
+    </section>
+  );
+}
+
+function LiveEventsStrip({ events = [], onViewAll }) {
+  if (!events.length) return null;
+
+  return (
+    <section className="rounded-xl border border-rose-100 bg-white p-4 shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="inline-flex items-center gap-2 text-sm font-black uppercase text-rose-800">
+            <FaCircle className="text-[0.65rem]" />
+            Active / live
+          </h2>
+          <p className="mt-1 text-xs font-semibold text-[#52657d]">
+            {events.length} event{events.length === 1 ? "" : "s"} currently active
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onViewAll}
+          className="inline-flex min-h-9 items-center rounded-lg border border-rose-100 px-3 text-xs font-black text-rose-800 transition hover:bg-rose-50"
+        >
+          View active events
+        </button>
+      </div>
+
+      <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        {events.slice(0, 3).map((event) => (
+          <Link
+            key={event.id}
+            href={event.href}
+            className="group rounded-lg border border-[#e6eaf7] bg-[#fffafa] p-3 transition hover:border-rose-200 hover:bg-white"
+          >
+            <div className="flex items-start gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-rose-50 text-rose-700">
+                <EventTypeIcon eventType={event.eventType} />
+              </span>
+              <div className="min-w-0">
+                <p className="line-clamp-1 text-sm font-black text-[#17120a] group-hover:text-rose-800">
+                  {event.title}
+                </p>
+                <p className="mt-1 line-clamp-1 text-xs font-semibold text-[#52657d]">
+                  {event.schoolName || "Pravyo"} - {formatDate(event.date)}
+                </p>
+              </div>
+            </div>
+          </Link>
+        ))}
       </div>
     </section>
   );
@@ -215,7 +274,7 @@ function EventRow({ event }) {
           </span>
           <span className="inline-flex items-center gap-1.5">
             <FaSchool className="text-[#4326e8]" />
-            {event.schoolName || event.partnerName || "Pravyo"}
+            {event.schoolName || "Pravyo"}
           </span>
           <span className="hidden sm:inline-flex items-center gap-1.5">
             <FaUsers className="text-[#4326e8]" />
@@ -269,6 +328,7 @@ export default function PublicEventsHub({ initialData }) {
     const map = new Map();
     [
       data.featuredEvent,
+      ...(data.liveEvents || []),
       ...data.upcomingEvents,
       ...data.resultsEvents,
       ...data.schoolEvents,
@@ -278,17 +338,34 @@ export default function PublicEventsHub({ initialData }) {
     return Array.from(map.values()).sort(
       (a, b) => new Date(a.date || 0) - new Date(b.date || 0)
     );
-  }, [data.featuredEvent, data.resultsEvents, data.schoolEvents, data.upcomingEvents]);
+  }, [data.featuredEvent, data.liveEvents, data.resultsEvents, data.schoolEvents, data.upcomingEvents]);
 
   const filteredEvents = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     return allEvents.filter((event) => {
-      if (activeView === "UPCOMING" && event.resultsPublished) return false;
+      const workflowStatus = String(event.eventWorkflowStatus || "").toUpperCase();
+      const lifecycleStatus = String(event.lifecycleStatus || "ACTIVE").toUpperCase();
+      const isLiveEvent =
+        !event.resultsPublished &&
+        (lifecycleStatus === "ACTIVE" ||
+          ["ROUND_ACTIVE", "RESULTS_DRAFT"].includes(workflowStatus));
+      if (activeView === "LIVE" && !isLiveEvent) return false;
+      if (
+        activeView === "UPCOMING" &&
+        (event.resultsPublished ||
+          !(
+            (event.registrationDeadline &&
+              new Date(event.registrationDeadline).getTime() >= Date.now()) ||
+            (event.date && new Date(event.date).getTime() >= Date.now())
+          ))
+      ) {
+        return false;
+      }
       if (activeView === "RESULTS" && !event.resultsPublished) return false;
       if (activeView === "SCHOOL" && event.eventScope !== "SCHOOL") return false;
       if (activeCategory !== "ALL" && event.eventType !== activeCategory) return false;
       if (!normalizedQuery) return true;
-      return `${event.title} ${event.description} ${event.schoolName} ${event.partnerName}`
+      return `${event.title} ${event.description} ${event.schoolName}`
         .toLowerCase()
         .includes(normalizedQuery);
     });
@@ -301,6 +378,11 @@ export default function PublicEventsHub({ initialData }) {
       <main className="min-w-0 space-y-5">
         <FeaturedEvent event={data.featuredEvent} />
 
+        <LiveEventsStrip
+          events={data.liveEvents || []}
+          onViewAll={() => setActiveView("LIVE")}
+        />
+
         <section className="rounded-xl border border-[#e6eaf7] bg-white p-4 shadow-sm">
           <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-center">
             <label className="relative block min-w-0">
@@ -308,7 +390,7 @@ export default function PublicEventsHub({ initialData }) {
               <input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search events, schools, partners..."
+                placeholder="Search events or schools..."
                 className="min-h-11 w-full rounded-lg border border-[#e6eaf7] bg-[#f8f9fd] pl-11 pr-4 text-sm font-semibold text-[#24314d] outline-none transition placeholder:text-[#8a9ab1] focus:border-[#4326e8] focus:bg-white focus:ring-4 focus:ring-[#4326e8]/10"
               />
             </label>

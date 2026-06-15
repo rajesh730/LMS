@@ -15,6 +15,8 @@ import {
 } from "@/lib/apiResponse";
 import { gradeListContains } from "@/lib/schoolGrades";
 
+const ACTIVE_REQUEST_STATUSES = ["APPROVED", "ENROLLED"];
+
 /**
  * POST /api/participation-requests/[id]/enroll
  * Final enrollment after approval - verifies all credentials and adds student to event
@@ -71,25 +73,13 @@ export async function POST(req, { params }) {
 
     // Validate max per school
     if (request.event.maxParticipantsPerSchool) {
-      // Count OTHER approved requests (not this one)
-      const otherApprovedCount = await ParticipationRequest.countDocuments({
+      const activeCountForSchool = await ParticipationRequest.countDocuments({
         event: request.event._id,
         school: request.school._id,
-        status: "APPROVED",
-        _id: { $ne: request._id }, // Exclude THIS request
+        status: { $in: ACTIVE_REQUEST_STATUSES },
       });
 
-      // Count enrolled students from this school in participants.students
-      const enrolledStudents =
-        request.event.participants?.find(
-          (p) => p.school?.toString() === request.school._id.toString()
-        )?.students?.length || 0;
-
-      // Total: other approved + already enrolled = must be < max
-      if (
-        otherApprovedCount + enrolledStudents >=
-        request.event.maxParticipantsPerSchool
-      ) {
+      if (activeCountForSchool > request.event.maxParticipantsPerSchool) {
         validationErrors.push(
           `School has reached max limit (${request.event.maxParticipantsPerSchool})`
         );
@@ -98,25 +88,12 @@ export async function POST(req, { params }) {
 
     // Validate global max
     if (request.event.maxParticipants) {
-      // Count other approved requests (not this one)
-      const otherApprovedCount = await ParticipationRequest.countDocuments({
+      const activeCount = await ParticipationRequest.countDocuments({
         event: request.event._id,
-        status: "APPROVED",
-        _id: { $ne: request._id },
+        status: { $in: ACTIVE_REQUEST_STATUSES },
       });
 
-      // Count total enrolled students across all schools
-      const totalEnrolledStudents =
-        request.event.participants?.reduce(
-          (sum, p) => sum + (p.students?.length || 0),
-          0
-        ) || 0;
-
-      // Total cannot exceed limit
-      if (
-        otherApprovedCount + totalEnrolledStudents >=
-        request.event.maxParticipants
-      ) {
+      if (activeCount > request.event.maxParticipants) {
         validationErrors.push(
           `Event has reached global limit (${request.event.maxParticipants})`
         );
@@ -128,7 +105,11 @@ export async function POST(req, { params }) {
       return validationError(`Cannot enroll: ${validationErrors.join(" | ")}`);
     }
 
-    // ===== ADD STUDENT TO EVENT PARTICIPANTS =====
+    request.status = "ENROLLED";
+    request.enrollmentConfirmedAt = new Date();
+    await request.save();
+
+    // ===== UPDATE LEGACY EVENT PARTICIPANTS CACHE =====
     // Find or create school participation record
     let schoolParticipant = request.event.participants.find(
       (p) => p.school?.toString() === request.school._id.toString()

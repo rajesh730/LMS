@@ -9,6 +9,10 @@ import {
   FaUsers,
 } from "react-icons/fa";
 import { getEventStage } from "@/lib/eventUiStatus";
+import {
+  formatEventWorkflowStatus,
+  getEventWorkflowStatus,
+} from "@/lib/eventWorkflow";
 
 export default function EventInfoHeader({ event, capacityInfo }) {
   const formatDate = (date, options = {}) => {
@@ -39,6 +43,7 @@ export default function EventInfoHeader({ event, capacityInfo }) {
       )
     : null;
   const stage = getEventStage(event, { capacityInfo });
+  const workflowStatus = getEventWorkflowStatus(event);
   const capacityPercent = Math.min(capacityInfo.percentage || 0, 100);
   const stageTone =
     stage.tone === "emerald" || event.resultsPublished
@@ -63,7 +68,7 @@ export default function EventInfoHeader({ event, capacityInfo }) {
                   {event.title}
                 </h1>
                 <span className="rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-black uppercase text-emerald-700">
-                  {String(event.lifecycleStatus || "ACTIVE").toLowerCase()}
+                  {formatEventWorkflowStatus(workflowStatus)}
                 </span>
               </div>
               <div className="mt-2 flex flex-wrap gap-2">

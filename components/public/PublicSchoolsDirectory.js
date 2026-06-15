@@ -194,7 +194,7 @@ export default function PublicSchoolsDirectory({ schools = [] }) {
                 Discover verified school profiles, events, and achievements.
               </h1>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-[#52657d]">
-                A clean public directory for students, parents, and partners to
+                A clean public directory for students and parents to
                 explore active schools on Pravyo.
               </p>
             </div>

@@ -11,6 +11,10 @@ import {
   getEventStage,
   isDatePast,
 } from "@/lib/eventUiStatus";
+import {
+  formatEventWorkflowStatus,
+  getEventWorkflowStatus,
+} from "@/lib/eventWorkflow";
 
 export default function EventOverviewTab({
   event,
@@ -33,6 +37,7 @@ export default function EventOverviewTab({
     ).size;
   };
   const stage = getEventStage(event, { capacityInfo, requests });
+  const workflowStatus = getEventWorkflowStatus(event);
   const pendingCount = countRequestUnits(requests.PENDING || []);
   const registrationClosed = isDatePast(event.registrationDeadline);
   const stageTone =
@@ -44,11 +49,12 @@ export default function EventOverviewTab({
       ? "border-rose-200 bg-rose-50 text-rose-800"
       : "border-blue-100 bg-blue-50 text-[#0a2f66]";
   const timeline = [
-    ["Registration Opened", event.createdAt || event.date, true],
-    ["Registration Closed", event.registrationDeadline, registrationClosed],
-    ["Event Date", event.date, isDatePast(event.date)],
-    ["Results Published", event.date, Boolean(event.resultsPublished)],
-    ["Certificates", null, Boolean(event.resultsPublished)],
+    ["Open For Registration", event.createdAt || event.date, !["DRAFT"].includes(workflowStatus)],
+    ["Registration Closed", event.registrationDeadline, !["DRAFT", "OPEN_FOR_REGISTRATION"].includes(workflowStatus)],
+    ["Round Active", event.date, ["ROUND_ACTIVE", "RESULTS_DRAFT", "RESULTS_PUBLISHED", "COMPLETED"].includes(workflowStatus)],
+    ["Results Draft", null, ["RESULTS_DRAFT", "RESULTS_PUBLISHED", "COMPLETED"].includes(workflowStatus)],
+    ["Results Published", null, ["RESULTS_PUBLISHED", "COMPLETED"].includes(workflowStatus)],
+    ["Completed", null, workflowStatus === "COMPLETED"],
   ];
   const detailItems = [
     ["Organized By", event.school?.schoolName || event.school?.name || "Orbit English School", FaSchool],
@@ -72,6 +78,9 @@ export default function EventOverviewTab({
               Current Stage
             </p>
             <h2 className="mt-1 text-xl font-black">{stage.label}</h2>
+            <p className="mt-1 text-xs font-black uppercase opacity-80">
+              Workflow: {formatEventWorkflowStatus(workflowStatus)}
+            </p>
             <p className="mt-2 text-sm opacity-90">{stage.nextAction}</p>
           </div>
           <div className="rounded-lg border border-current/20 bg-white/70 px-4 py-3 text-sm font-black">

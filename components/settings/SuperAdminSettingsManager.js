@@ -30,7 +30,6 @@ const defaultConfig = {
     schoolOnboardingMode: "APPROVAL_REQUIRED",
     eventPublishingMode: "SUPER_ADMIN_REVIEW",
     defaultPublicResults: true,
-    allowPublicPartnerProfiles: true,
     allowSchoolShowcases: true,
   },
   defaults: {
@@ -66,15 +65,6 @@ function getRiskWarnings(nextConfig, currentConfig) {
   ) {
     warnings.push(
       "Schools will no longer be able to publish showcase pages going forward."
-    );
-  }
-
-  if (
-    currentConfig.governance.allowPublicPartnerProfiles &&
-    !nextConfig.governance.allowPublicPartnerProfiles
-  ) {
-    warnings.push(
-      "Public partner portfolios will be disabled for future public exposure."
     );
   }
 
@@ -1010,22 +1000,6 @@ export default function SuperAdminSettingsManager() {
               />
               <p className="text-xs text-blue-300">
                 Scope: applies to newly created platform events only.
-              </p>
-              <ToggleField
-                checked={config.governance.allowPublicPartnerProfiles}
-                onChange={(value) =>
-                  updateSection(
-                    "governance",
-                    "allowPublicPartnerProfiles",
-                    value
-                  )
-                }
-                label="Allow public partner portfolios"
-                description="Controls whether approved partner profiles can be shown publicly across the platform."
-              />
-              <p className="text-xs text-blue-300">
-                Scope: affects public partner visibility going forward and may
-                hide public portfolio access.
               </p>
               <ToggleField
                 checked={config.governance.allowSchoolShowcases}

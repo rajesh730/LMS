@@ -4,7 +4,6 @@ import Event from "@/models/Event";
 import SchoolPromotion from "@/models/SchoolPromotion";
 import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
 import MagazineIssue from "@/models/MagazineIssue";
-import { getRotatingPartnerSpotlights } from "@/lib/partnerSpotlights";
 import { getActiveSchoolPromotions } from "@/lib/schoolPromotions";
 import { diversifyBySchool } from "@/lib/schoolDiversifiedFeed";
 import HomepageHeroCarousel from "@/components/public/HomepageHeroCarousel";
@@ -220,14 +219,12 @@ async function getHomepageData() {
   await connectDB();
 
   const [
-    partnerSpotlights,
     homeSpotlights,
     premiumSpotlightWritings,
     latestWritings,
     homeMagazineIssues,
     upcomingEvents,
   ] = await Promise.all([
-    getRotatingPartnerSpotlights(1),
     getActiveSchoolPromotions("HOME_SPOTLIGHT", 5, { randomize: true }),
     getPremiumSpotlightStudentWritings(),
     getLatestStudentWritings(),
@@ -245,7 +242,6 @@ async function getHomepageData() {
   );
 
   return {
-    partnerSpotlights,
     homeSpotlights,
     premiumSpotlightWritings,
     latestWritings: publicFeedItems,
@@ -372,7 +368,7 @@ function SectionTitle({ title, href = "/" }) {
   );
 }
 
-function RightColumn({ schools, partner, event }) {
+function RightColumn({ schools, event }) {
   return (
     <aside className="hidden space-y-4 lg:block">
       {/* Featured Schools card */}
@@ -435,24 +431,6 @@ function RightColumn({ schools, partner, event }) {
             >
               View Event
             </Link>
-          </div>
-        </section>
-      )}
-
-      {/* Partner card */}
-      {partner && (
-        <section className="rounded-2xl border border-[#edf0f7] bg-white p-5 shadow-sm">
-          <SectionTitle title="Featured Partner" href="/partners" />
-          <div className="flex items-start gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#fff0f0] text-lg font-bold text-[#c1262d]">
-              {String(partner.name || "P")[0]}
-            </div>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-[#111827]">{partner.name}</p>
-              <p className="mt-1 text-xs leading-5 text-[#667085]">
-                {getPreview(String(partner.description || ""), 80)}
-              </p>
-            </div>
           </div>
         </section>
       )}
@@ -612,7 +590,6 @@ function MobileVoiceFeed({ writings }) {
 
 export default async function Home() {
   const {
-    partnerSpotlights,
     homeSpotlights,
     premiumSpotlightWritings,
     latestWritings,
@@ -621,7 +598,6 @@ export default async function Home() {
 
   const feedItems = latestWritings;
   const activeEvent = upcomingEvents[0] || null;
-  const partner = partnerSpotlights[0] || null;
   const hasMainContent = feedItems.length > 0;
 
   return (
@@ -698,7 +674,6 @@ export default async function Home() {
 
             <RightColumn
               schools={homeSpotlights}
-              partner={partner}
               event={activeEvent}
             />
           </div>

@@ -64,6 +64,9 @@ export async function POST(req, props) {
       );
     }
 
+    event.eventWorkflowStatus = "ROUND_ACTIVE";
+    await event.save();
+
     return NextResponse.json({
       message: syncResult.createdRound
         ? "Round 1 created and approved participants were added automatically"

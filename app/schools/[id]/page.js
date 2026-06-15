@@ -6,6 +6,7 @@ import Teacher from "@/models/Teacher";
 import SchoolShowcaseProfile from "@/models/SchoolShowcaseProfile";
 import Event from "@/models/Event";
 import Achievement from "@/models/Achievement";
+import { getActiveCertificateFilter } from "@/lib/certificates";
 import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
 import MagazineIssue from "@/models/MagazineIssue";
 import PublicSiteNav from "@/components/public/PublicSiteNav";
@@ -143,7 +144,7 @@ async function getSchoolData(id) {
       Achievement.find({
         school: id,
         isPublic: true,
-        certificateIssuedAt: { $ne: null },
+        ...getActiveCertificateFilter(),
       })
         .sort({ awardedAt: -1 })
         .select(

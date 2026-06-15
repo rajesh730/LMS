@@ -6,10 +6,8 @@ import ActivityLog from "../models/ActivityLog.js";
 import AuditLog from "../models/AuditLog.js";
 import Event from "../models/Event.js";
 import EventNotice from "../models/EventNotice.js";
-import EventProposal from "../models/EventProposal.js";
 import EventRound from "../models/EventRound.js";
 import EventSchoolInvitation from "../models/EventSchoolInvitation.js";
-import ExternalOrganizer from "../models/ExternalOrganizer.js";
 import FAQ from "../models/FAQ.js";
 import Notice from "../models/Notice.js";
 import ParticipationRequest from "../models/ParticipationRequest.js";
@@ -33,10 +31,8 @@ const models = [
   AuditLog,
   Event,
   EventNotice,
-  EventProposal,
   EventRound,
   EventSchoolInvitation,
-  ExternalOrganizer,
   FAQ,
   Notice,
   ParticipationRequest,

@@ -12,7 +12,6 @@ function getTodayInputValue() {
 
 function buildInitialFormData(initialData, ownerMode) {
   const defaultScope = ownerMode === "school" ? "SCHOOL" : "PLATFORM";
-  const defaultVisibility = ownerMode === "school" ? "INVITED" : "PUBLIC";
   const resolvedParticipationFormat =
     initialData?.participationFormat === "TEAM" ||
     initialData?.minTeamSize ||
@@ -41,28 +40,10 @@ function buildInitialFormData(initialData, ownerMode) {
     eventScope: initialData?.eventScope || defaultScope,
     eventType:
       ownerMode === "school" ? "COMPETITION" : initialData?.eventType || "COMPETITION",
-    visibility:
-      ownerMode === "school" ? "INVITED" : initialData?.visibility || defaultVisibility,
+    visibility: "PUBLIC",
     registrationMode: "THROUGH_SCHOOL",
-    featuredOnLanding: Boolean(initialData?.featuredOnLanding),
-    publicHighlightsEnabled:
-      ownerMode === "school"
-        ? false
-        : initialData?.publicHighlightsEnabled === undefined
-        ? true
-        : Boolean(initialData?.publicHighlightsEnabled),
-    partnerBrandingEnabled: Boolean(initialData?.partnerBrandingEnabled),
-    sourceProposal:
-      initialData?.sourceProposal?._id || initialData?.sourceProposal || "",
-    partners: (initialData?.partners || []).map((partner) => ({
-      organizer: partner?.organizer?._id || partner?.organizer || "",
-      role: partner?.role || "ORGANIZER_PARTNER",
-      displayName:
-        partner?.displayName || partner?.organizer?.organizationName || "",
-      logoUrl: partner?.logoUrl || partner?.organizer?.logoUrl || "",
-      website: partner?.website || partner?.organizer?.website || "",
-      isPrimary: Boolean(partner?.isPrimary),
-    })),
+    featuredOnLanding: false,
+    publicHighlightsEnabled: true,
     assignedMentors:
       ownerMode === "school"
         ? []
@@ -72,14 +53,11 @@ function buildInitialFormData(initialData, ownerMode) {
 
 export default function EventEditorForm({
   teachers = [],
-  partners = [],
-  proposals = [],
   onEventCreated,
   initialData = null,
   onCancel,
   ownerMode = "platform",
   allowScopeSelection = null,
-  showFeaturedOnLanding = null,
 }) {
   const isEditing = Boolean(initialData);
   const resolvedOwnerMode = isEditing
@@ -88,8 +66,6 @@ export default function EventEditorForm({
       : "platform"
     : ownerMode;
   const canChooseScope = allowScopeSelection ?? isEditing;
-  const canFeatureOnLanding =
-    showFeaturedOnLanding ?? resolvedOwnerMode === "platform";
   const defaultScope = resolvedOwnerMode === "school" ? "SCHOOL" : "PLATFORM";
   const isSchoolOwnedFlow = resolvedOwnerMode === "school";
 
@@ -112,23 +88,6 @@ export default function EventEditorForm({
     "FESTIVAL",
     "OTHER",
   ];
-  const partnerRoles = [
-    "ORGANIZER_PARTNER",
-    "CHALLENGE_PARTNER",
-    "SPONSOR",
-    "VENUE_PARTNER",
-    "MENTOR_PARTNER",
-    "MEDIA_PARTNER",
-    "PRESENTED_BY",
-    "OTHER",
-  ];
-
-  const [partnerDraft, setPartnerDraft] = useState({
-    organizer: "",
-    role: "ORGANIZER_PARTNER",
-    isPrimary: false,
-  });
-
   useEffect(() => {
     setFormData(buildInitialFormData(initialData, resolvedOwnerMode));
   }, [initialData, resolvedOwnerMode]);
@@ -225,64 +184,6 @@ export default function EventEditorForm({
     });
   };
 
-  const handleAddPartner = () => {
-    const selectedPartner = partners.find(
-      (partner) => partner._id === partnerDraft.organizer
-    );
-
-    if (!selectedPartner) return;
-
-    setFormData((prev) => {
-      const withoutDuplicate = prev.partners.filter(
-        (partner) => partner.organizer !== selectedPartner._id
-      );
-      const nextPartner = {
-        organizer: selectedPartner._id,
-        role: partnerDraft.role,
-        displayName: selectedPartner.organizationName,
-        logoUrl: selectedPartner.logoUrl || "",
-        website: selectedPartner.website || "",
-        isPrimary: partnerDraft.isPrimary || withoutDuplicate.length === 0,
-      };
-
-      const nextPartners = [...withoutDuplicate, nextPartner].map(
-        (partner, index) => ({
-          ...partner,
-          isPrimary: nextPartner.isPrimary
-            ? partner.organizer === nextPartner.organizer
-            : index === 0,
-        })
-      );
-
-      return {
-        ...prev,
-        partners: nextPartners,
-        partnerBrandingEnabled: true,
-      };
-    });
-
-    setPartnerDraft({
-      organizer: "",
-      role: "ORGANIZER_PARTNER",
-      isPrimary: false,
-    });
-  };
-
-  const handleRemovePartner = (organizerId) => {
-    setFormData((prev) => {
-      const nextPartners = prev.partners
-        .filter((partner) => partner.organizer !== organizerId)
-        .map((partner, index) => ({ ...partner, isPrimary: index === 0 }));
-
-      return {
-        ...prev,
-        partners: nextPartners,
-        partnerBrandingEnabled:
-          nextPartners.length > 0 ? prev.partnerBrandingEnabled : false,
-      };
-    });
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setStatus("sending");
@@ -318,14 +219,10 @@ export default function EventEditorForm({
         ...formData,
         eventScope: canChooseScope ? formData.eventScope : defaultScope,
         eventType: isSchoolOwnedFlow ? "COMPETITION" : formData.eventType,
-        visibility: isSchoolOwnedFlow ? "INVITED" : formData.visibility,
+        visibility: "PUBLIC",
         registrationMode: "THROUGH_SCHOOL",
-        featuredOnLanding: canFeatureOnLanding
-          ? formData.featuredOnLanding
-          : false,
-        publicHighlightsEnabled: isSchoolOwnedFlow
-          ? false
-          : formData.publicHighlightsEnabled,
+        featuredOnLanding: false,
+        publicHighlightsEnabled: true,
         registrationDeadline: formData.registrationDeadline || null,
         maxParticipants: capacityValidation.totalStudentCapacity,
         maxParticipantsPerSchool: isSchoolOwnedFlow
@@ -340,12 +237,6 @@ export default function EventEditorForm({
             ? Number(formData.maxTeamSize)
             : null,
         assignedMentors: isSchoolOwnedFlow ? [] : formData.assignedMentors || [],
-        sourceProposal: formData.sourceProposal || null,
-        partnerBrandingEnabled:
-          resolvedOwnerMode === "platform" &&
-          formData.partnerBrandingEnabled &&
-          formData.partners.length > 0,
-        partners: resolvedOwnerMode === "platform" ? formData.partners : [],
       };
 
       const res = await fetch(url, {
@@ -378,12 +269,9 @@ export default function EventEditorForm({
       { id: "basic", label: "Basic Details" },
       { id: "audience", label: "Student Audience" },
       { id: "registration", label: "Registration Setup" },
-      ...(resolvedOwnerMode === "platform"
-        ? [{ id: "partners", label: "Partners & Publicity" }]
-        : []),
       { id: "review", label: "Review & Create" },
     ],
-    [resolvedOwnerMode]
+    []
   );
   const activeStepIndex = steps.findIndex((step) => step.id === activeStep);
   useEffect(() => {
@@ -413,8 +301,6 @@ export default function EventEditorForm({
     registration: isSchoolOwnedFlow
       ? "Teachers register students. Set only the deadline, total capacity, and team size if needed."
       : "Schools register on behalf of students. Set total capacity and optional per-school limits.",
-    partners:
-      "Use this when a platform event should show approved partner attribution.",
     review: "Confirm the summary. After creation, manage registration, notices, rounds, results, and certificates from the event page.",
   };
 
@@ -548,24 +434,6 @@ export default function EventEditorForm({
             </div>
 
             <div className="grid md:grid-cols-2 gap-4">
-              {!isSchoolOwnedFlow && (
-              <div>
-                <label className="block text-slate-300 mb-1 text-sm">
-                  Visibility
-                </label>
-                <select
-                  value={formData.visibility}
-                  onChange={(e) =>
-                    setFormData({ ...formData, visibility: e.target.value })
-                  }
-                  className="w-full bg-slate-800 text-white rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="PUBLIC">Public</option>
-                  <option value="INVITED">Invited</option>
-                  <option value="PRIVATE">Private</option>
-                </select>
-              </div>
-              )}
               {!isSchoolOwnedFlow && (
               <div>
                 <label className="block text-slate-300 mb-1 text-sm">
@@ -838,175 +706,6 @@ export default function EventEditorForm({
           </section>
         )}
 
-        {activeStep === "partners" && resolvedOwnerMode === "platform" && (
-          <section className="space-y-4 rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
-            <div>
-              <h3 className="text-lg font-semibold text-white">
-                Partners & Publicity
-              </h3>
-              <p className="mt-1 text-sm text-slate-400">
-                Configure public highlights, landing visibility, partners, and mentors.
-              </p>
-            </div>
-
-        {resolvedOwnerMode === "platform" && (
-        <div className={`grid gap-4 ${canFeatureOnLanding ? "md:grid-cols-2" : ""}`}>
-          {canFeatureOnLanding && (
-            <label className="flex items-center gap-3 p-3 rounded border border-slate-800 bg-slate-800/50">
-              <input
-                type="checkbox"
-                checked={formData.featuredOnLanding}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    featuredOnLanding: e.target.checked,
-                  })
-                }
-                className="rounded border-slate-600 bg-slate-700 text-blue-600"
-              />
-              <span className="text-sm text-slate-200">
-                Feature this event on the public landing page
-              </span>
-            </label>
-          )}
-          <label className="flex items-center gap-3 p-3 rounded border border-slate-800 bg-slate-800/50">
-            <input
-              type="checkbox"
-              checked={formData.publicHighlightsEnabled}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  publicHighlightsEnabled: e.target.checked,
-                })
-              }
-              className="rounded border-slate-600 bg-slate-700 text-blue-600"
-            />
-            <span className="text-sm text-slate-200">
-              Allow results and highlights to appear publicly
-            </span>
-          </label>
-        </div>
-        )}
-
-        {resolvedOwnerMode === "platform" && (
-          <div className="rounded-2xl border border-slate-800 bg-slate-950/50 p-4 space-y-4">
-            <div>
-              <h3 className="text-white font-semibold">Partner Branding</h3>
-              <p className="text-xs text-slate-500 mt-1">
-                Use this for approved company, academy, or sponsor-backed events.
-              </p>
-            </div>
-
-            {proposals.length > 0 && (
-              <div>
-                <label className="block text-slate-300 mb-1 text-sm">
-                  Source Proposal
-                </label>
-                <select
-                  value={formData.sourceProposal}
-                  onChange={(e) =>
-                    setFormData({ ...formData, sourceProposal: e.target.value })
-                  }
-                  className="w-full bg-slate-800 text-white rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">No proposal linked</option>
-                  {proposals.map((proposal) => (
-                    <option key={proposal._id} value={proposal._id}>
-                      {proposal.eventTitle} - {proposal.organizationName}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            <label className="flex items-center gap-3 p-3 rounded border border-slate-800 bg-slate-800/50">
-              <input
-                type="checkbox"
-                checked={formData.partnerBrandingEnabled}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    partnerBrandingEnabled: e.target.checked,
-                  })
-                }
-                disabled={formData.partners.length === 0}
-                className="rounded border-slate-600 bg-slate-700 text-blue-600 disabled:opacity-50"
-              />
-              <span className="text-sm text-slate-200">
-                Show partner branding on public event and partner portfolio pages
-              </span>
-            </label>
-
-            <div className="grid md:grid-cols-[1fr_220px_auto] gap-3">
-              <select
-                value={partnerDraft.organizer}
-                onChange={(e) =>
-                  setPartnerDraft({ ...partnerDraft, organizer: e.target.value })
-                }
-                className="bg-slate-800 text-white rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Select approved partner</option>
-                {partners.map((partner) => (
-                  <option key={partner._id} value={partner._id}>
-                    {partner.organizationName}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={partnerDraft.role}
-                onChange={(e) =>
-                  setPartnerDraft({ ...partnerDraft, role: e.target.value })
-                }
-                className="bg-slate-800 text-white rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                {partnerRoles.map((role) => (
-                  <option key={role} value={role}>
-                    {role.replaceAll("_", " ")}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="button"
-                onClick={handleAddPartner}
-                disabled={!partnerDraft.organizer}
-                className="bg-slate-700 hover:bg-slate-600 disabled:opacity-50 text-white rounded px-4 py-2"
-              >
-                Add Partner
-              </button>
-            </div>
-
-            {formData.partners.length > 0 && (
-              <div className="grid md:grid-cols-2 gap-2">
-                {formData.partners.map((partner) => (
-                  <div
-                    key={partner.organizer || partner.displayName}
-                    className="rounded-xl border border-slate-800 bg-slate-900/70 p-3 flex items-start justify-between gap-3"
-                  >
-                    <div>
-                      <p className="text-sm font-semibold text-white">
-                        {partner.displayName || "Partner"}
-                      </p>
-                      <p className="text-xs text-slate-400">
-                        {partner.role.replaceAll("_", " ")}
-                        {partner.isPrimary ? " - Primary" : ""}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleRemovePartner(partner.organizer)}
-                      className="text-xs text-red-300 hover:text-red-200"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-          </section>
-        )}
-
         {activeStep === "review" && (
           <section className="space-y-4 rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
             <div>
@@ -1033,7 +732,7 @@ export default function EventEditorForm({
                     ? "Group / team"
                     : "Individual students",
                 ],
-                ...(!isSchoolOwnedFlow ? [["Visibility", formData.visibility]] : []),
+                ["Visibility", "Public"],
                 ["Registration Method", "School registers students"],
                 ["Deadline", formData.registrationDeadline || "No deadline"],
                 ["Registration Grades", selectedGradesLabel],

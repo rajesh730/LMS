@@ -15,6 +15,8 @@ import {
 } from "@/lib/apiResponse";
 import { gradeListContains } from "@/lib/schoolGrades";
 
+const ACTIVE_REQUEST_STATUSES = ["APPROVED", "ENROLLED"];
+
 // GET: Fetch all participation requests for admin
 export async function GET(req) {
   try {
@@ -144,25 +146,14 @@ export async function PATCH(req) {
 
       // ===== VALIDATION 2: Max Participants Per School =====
       if (request.event.maxParticipantsPerSchool) {
-        // Count other approved requests from this school (NOT including this one)
-        const otherApprovedCount = await ParticipationRequest.countDocuments({
+        const otherActiveCount = await ParticipationRequest.countDocuments({
           event: request.event._id,
           school: request.school,
-          status: "APPROVED",
-          _id: { $ne: request._id }, // Exclude THIS request
+          status: { $in: ACTIVE_REQUEST_STATUSES },
+          _id: { $ne: request._id },
         });
 
-        // Count already enrolled students from this school in participants.students
-        const enrolledStudents =
-          request.event.participants?.find(
-            (p) => p.school?.toString() === request.school.toString()
-          )?.students?.length || 0;
-
-        // Total cannot exceed limit
-        if (
-          otherApprovedCount + enrolledStudents >=
-          request.event.maxParticipantsPerSchool
-        ) {
+        if (otherActiveCount + 1 > request.event.maxParticipantsPerSchool) {
           validationErrors.push(
             `School has reached max limit (${request.event.maxParticipantsPerSchool}) for this event`
           );
@@ -171,25 +162,13 @@ export async function PATCH(req) {
 
       // ===== VALIDATION 3: Global Max Participants =====
       if (request.event.maxParticipants) {
-        // Count other approved requests (NOT this one)
-        const otherApprovedCount = await ParticipationRequest.countDocuments({
+        const otherActiveCount = await ParticipationRequest.countDocuments({
           event: request.event._id,
-          status: "APPROVED",
+          status: { $in: ACTIVE_REQUEST_STATUSES },
           _id: { $ne: request._id },
         });
 
-        // Count total enrolled students across all schools
-        const totalEnrolledStudents =
-          request.event.participants?.reduce(
-            (sum, p) => sum + (p.students?.length || 0),
-            0
-          ) || 0;
-
-        // Total cannot exceed limit
-        if (
-          otherApprovedCount + totalEnrolledStudents >=
-          request.event.maxParticipants
-        ) {
+        if (otherActiveCount + 1 > request.event.maxParticipants) {
           validationErrors.push(
             `Event has reached global limit (${request.event.maxParticipants})`
           );
