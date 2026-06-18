@@ -39,10 +39,6 @@ const SchoolConfigSchema = new mongoose.Schema({
         type: [String],
         default: [],
     },
-    allowStudentGlobalWall: {
-        type: Boolean,
-        default: false,
-    },
 }, { timestamps: true });
 
 SchoolConfigSchema.pre("validate", function () {

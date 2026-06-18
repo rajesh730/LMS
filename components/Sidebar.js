@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import {
   FaChartPie,
   FaBullhorn,
@@ -31,7 +31,6 @@ const HREF_INDICATOR_KEYS = {
   "/admin/dashboard?tab=events": "admin.events",
   "/admin/feedback": "admin.feedback",
   "/admin/dashboard?tab=spotlight": "admin.spotlight",
-  "/school/dashboard?tab=platform-events": "school.platformEvents",
   "/school/dashboard?tab=school-events": "school.schoolEvents",
   "/school/dashboard?tab=student-notices": "school.studentNotices",
   "/school/dashboard?tab=notices": "school.receivedNotices",
@@ -42,9 +41,7 @@ const HREF_INDICATOR_KEYS = {
   "/student/magazine": "student.schoolMagazine",
 };
 
-const HREF_SEEN_SURFACES = {
-  "/school/dashboard?tab=platform-events": "school.platformEvents",
-};
+const HREF_SEEN_SURFACES = {};
 
 const SCHOOL_NAV_GROUPS = [
   {
@@ -53,7 +50,6 @@ const SCHOOL_NAV_GROUPS = [
       "Overview",
       "Students",
       "Teachers",
-      "Platform Events",
       "School Events",
       "Student Notices",
       "Received Notices",
@@ -96,7 +92,6 @@ export default function Sidebar({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const currentTab = searchParams?.get("tab");
-  const [studentGlobalWallEnabled, setStudentGlobalWallEnabled] = useState(false);
   const { getIndicator, markSurfaceSeen } = useWorkIndicators({
     enabled: Boolean(role && !isPending),
   });
@@ -106,24 +101,6 @@ export default function Sidebar({
       signOut({ callbackUrl: "/login" });
     }
   }, [session]);
-
-  useEffect(() => {
-    if (role !== "STUDENT" || isPending) return;
-    let cancelled = false;
-    async function loadStudentMagazineSettings() {
-      try {
-        const res = await fetch("/api/student/magazine", { cache: "no-store" });
-        const payload = await res.json().catch(() => ({}));
-        if (!cancelled) {
-          setStudentGlobalWallEnabled(Boolean(res.ok && payload.globalWallEnabled));
-        }
-      } catch {
-        if (!cancelled) setStudentGlobalWallEnabled(false);
-      }
-    }
-    void loadStudentMagazineSettings();
-    return () => { cancelled = true; };
-  }, [isPending, role]);
 
   const adminLinks = [
     { name: "Approvals", href: "/admin/dashboard?tab=approvals", icon: FaCheckCircle },
@@ -140,7 +117,6 @@ export default function Sidebar({
     { name: "Overview", href: "/school/dashboard", icon: FaChartPie },
     { name: "Students", href: "/school/dashboard?tab=students", icon: FaUsers },
     { name: "Teachers", href: "/school/dashboard?tab=teachers", icon: FaChalkboardTeacher },
-    { name: "Platform Events", href: "/school/dashboard?tab=platform-events", icon: FaCalendarAlt },
     { name: "School Events", href: "/school/dashboard?tab=school-events", icon: FaCalendarAlt },
     { name: "Student Notices", href: "/school/dashboard?tab=student-notices", icon: FaBell },
     { name: "Received Notices", href: "/school/dashboard?tab=notices", icon: FaBell },
@@ -161,11 +137,6 @@ export default function Sidebar({
     { name: "My Writing", href: "/student/writing", icon: FaFeatherAlt },
     { name: "School Wall", href: "/student/school-wall", icon: FaSchool },
     { name: "School Magazine", href: "/student/magazine", icon: FaBookOpen },
-    studentGlobalWallEnabled && {
-      name: "Global Wall",
-      href: "/student/global-wall",
-      icon: FaBookOpen,
-    },
     { name: "Feedback", href: "/student/feedback", icon: FaCommentDots },
   ].filter(Boolean);
 

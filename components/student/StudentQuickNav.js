@@ -6,7 +6,6 @@ import {
   FaBookOpen,
   FaCalendarAlt,
   FaFeatherAlt,
-  FaGlobe,
   FaSchool,
 } from "react-icons/fa";
 
@@ -22,12 +21,6 @@ const STUDENT_SHORTCUTS = [
     href: "/student/magazine",
     match: "/student/magazine",
     icon: FaBookOpen,
-  },
-  {
-    label: "Global Wall",
-    href: "/student/global-wall",
-    match: "/student/global-wall",
-    icon: FaGlobe,
   },
   {
     label: "My Writing",

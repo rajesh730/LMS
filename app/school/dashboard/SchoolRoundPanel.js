@@ -164,7 +164,6 @@ export default function SchoolRoundPanel({ eventId }) {
       )}
 
       {rounds.map((round) => {
-        const isOnline = round.mode === "ONLINE_SUBMISSION";
         const submissionClosed = isPast(round.submissionDeadline);
         return (
           <section
@@ -177,19 +176,11 @@ export default function SchoolRoundPanel({ eventId }) {
                   <span className="rounded-full bg-blue-500/15 px-3 py-1 text-xs font-bold text-blue-200">
                     Round {round.roundNumber}
                   </span>
-                  <span className="rounded-full bg-slate-700 px-3 py-1 text-xs text-slate-200">
-                    {label(round.mode)}
-                  </span>
                   <span className="rounded-full bg-emerald-500/15 px-3 py-1 text-xs text-emerald-200">
                     {label(round.status)}
                   </span>
                 </div>
                 <h4 className="text-lg font-bold text-white">{round.title}</h4>
-                {round.instructions && (
-                  <p className="mt-2 text-sm text-slate-300">
-                    {round.instructions}
-                  </p>
-                )}
               </div>
 
               <div className="space-y-1 text-sm text-slate-400">
@@ -207,17 +198,6 @@ export default function SchoolRoundPanel({ eventId }) {
                     {submissionClosed ? "Submission closed" : "Submit by"}{" "}
                     {formatDate(round.submissionDeadline)}
                   </div>
-                )}
-                {round.venue && <div>Venue: {round.venue}</div>}
-                {round.meetingLink && (
-                  <a
-                    href={round.meetingLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 text-blue-300 hover:text-blue-200"
-                  >
-                    Open link <FaExternalLinkAlt />
-                  </a>
                 )}
               </div>
             </div>

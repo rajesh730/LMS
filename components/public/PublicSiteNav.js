@@ -10,7 +10,6 @@ import {
   FaSearch,
   FaTimes,
   FaTrophy,
-  FaFeatherAlt,
 } from "react-icons/fa";
 import PravyoLogo from "@/components/brand/PravyoLogo";
 
@@ -19,7 +18,6 @@ const NAV_ITEMS = [
   { label: "Schools",  href: "/schools",  key: "schools",  icon: FaSchool },
   { label: "Events",   href: "/events",   key: "events",   icon: FaCalendarAlt },
   { label: "Winners",  href: "/winners",  key: "winners",  icon: FaTrophy },
-  { label: "Writings", href: "/student-voices", key: "writings", icon: FaFeatherAlt },
 ];
 
 export default function PublicSiteNav({
@@ -194,7 +192,7 @@ export default function PublicSiteNav({
                     onClick={() => setIsOpen(false)}
                     className={`flex min-h-11 items-center gap-3 rounded-xl px-4 text-sm font-semibold transition-all duration-150 ${
                       isActive
-                        ? "bg-[var(--brand-primary)] text-white shadow-sm"
+                        ? "public-nav-active bg-[var(--brand-primary)] text-white shadow-sm"
                         : "text-[var(--brand-ink)] hover:bg-white hover:text-[var(--brand-primary)]"
                     }`}
                   >

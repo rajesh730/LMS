@@ -4,7 +4,6 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import Student from "@/models/Student";
 import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
-import SchoolConfig from "@/models/SchoolConfig";
 import MagazineIssue from "@/models/MagazineIssue";
 import { serializeMagazineIssue } from "@/lib/magazineIssues";
 
@@ -47,7 +46,7 @@ export async function GET() {
       status: "PUBLISHED",
     }).distinct("_id");
 
-    const [articles, wallArticles, schoolConfig] = await Promise.all([
+    const [articles, wallArticles] = await Promise.all([
       SchoolMagazineArticle.find({
         school: student.school,
         isMagazinePublished: true,
@@ -68,9 +67,6 @@ export async function GET() {
         .populate("magazineIssue")
         .sort({ submittedAt: -1, updatedAt: -1 })
         .limit(100)
-        .lean(),
-      SchoolConfig.findOne({ school: student.school })
-        .select("allowStudentGlobalWall")
         .lean(),
     ]);
 
@@ -94,7 +90,6 @@ export async function GET() {
     return NextResponse.json({
       articles: articles.map(serializeArticle),
       wallArticles: wallArticles.map(serializeArticle),
-      globalWallEnabled: Boolean(schoolConfig?.allowStudentGlobalWall),
       student: {
         id: String(student._id),
         name: student.name,

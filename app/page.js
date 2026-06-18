@@ -307,7 +307,7 @@ function AuthorLine({ name, school, badge = "Published Writing", onBrand = false
   );
 }
 
-function FeedCard({ item, badge = "Published Writing", actions = true }) {
+function FeedCard({ item, badge = "Published Writing" }) {
   const voiceHref = item.href || item.schoolHref || "/student-voices";
 
   return (
@@ -322,7 +322,13 @@ function FeedCard({ item, badge = "Published Writing", actions = true }) {
         school={item.schoolName || "School"}
         badge={badge}
       />
-      <div className="mt-4 min-w-0">
+      {item.date && (
+        <div className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-[#9aa3b5]">
+          <FaRegCalendarAlt className="text-[10px]" />
+          {formatDate(item.date)}
+        </div>
+      )}
+      <div className="mt-3 min-w-0">
         <h2 className="text-lg font-bold leading-snug text-[#111827]">
           {item.title || "Published student writing"}
         </h2>
@@ -337,18 +343,6 @@ function FeedCard({ item, badge = "Published Writing", actions = true }) {
           <FaArrowRight className="text-xs" />
         </Link>
       </div>
-      {actions && (
-        <div className="mt-4 flex items-center justify-between border-t border-[#f0f2f7] pt-4">
-          <span className="text-xs font-medium text-[#9aa3b5]">{formatDate(item.date)}</span>
-          <Link
-            href={voiceHref}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--brand-border)] bg-[#f8f9fd] px-3 py-1.5 text-xs font-semibold text-[var(--brand-primary)] transition hover:border-[var(--brand-primary-border)] hover:bg-[var(--brand-primary-soft)]"
-          >
-            Open Article
-            <FaArrowRight className="text-[10px]" />
-          </Link>
-        </div>
-      )}
     </article>
   );
 }

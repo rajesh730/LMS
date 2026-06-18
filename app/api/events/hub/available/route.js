@@ -3,13 +3,13 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import dbConnect from "@/lib/db";
 import Event from "@/models/Event";
-import EventSchoolInvitation from "@/models/EventSchoolInvitation";
 import Student from "@/models/Student";
 import ParticipationRequest from "@/models/ParticipationRequest";
 import EventNotice from "@/models/EventNotice";
-import { isAfterEndOfDay, startOfToday } from "@/lib/eventDates";
+import { isAfterEndOfDay } from "@/lib/eventDates";
 import { buildEventPresentationState } from "@/lib/eventPresentation";
 import { isTeamEventLike } from "@/lib/eventParticipationFormat";
+import { getEquivalentGradeValues } from "@/lib/schoolGrades";
 
 /**
  * GET /api/events/hub/available
@@ -62,38 +62,13 @@ export async function GET(req) {
         }
       : {};
 
-    const approvedPlatformEventIds = student.school
-      ? await EventSchoolInvitation.find({
-          school: student.school,
-          status: "APPROVED",
-        }).distinct("event")
-      : [];
-    const requestedEventIds = await ParticipationRequest.find({
-      student: student._id,
-    }).distinct("event");
-
-    const activeUpcomingEvent = {
-      lifecycleStatus: "ACTIVE",
-      date: { $gte: startOfToday() },
-    };
-    // Students can discover every active event their school can access.
-    // eligibleGrades is enforced only when the school registers students.
+    const studentGradeValues = getEquivalentGradeValues(student.grade);
     const baseQuery = {
-      ...searchQuery,
       status: "APPROVED",
-      $or: [
-        { _id: { $in: requestedEventIds } },
-        {
-          ...activeUpcomingEvent,
-          eventScope: "SCHOOL",
-          school: student.school,
-        },
-        {
-          ...activeUpcomingEvent,
-          eventScope: "PLATFORM",
-          _id: { $in: approvedPlatformEventIds },
-        },
-      ],
+      eventScope: "SCHOOL",
+      school: student.school,
+      lifecycleStatus: { $ne: "ARCHIVED" },
+      ...(search ? searchQuery : {}),
     };
 
     const events = await Event.find(baseQuery)
@@ -148,8 +123,19 @@ export async function GET(req) {
     // Enhance events with participation status
     const enrichedEvents = events.map((event) => {
       const request = requestMap.get(event._id.toString());
+      const activeRequest =
+        request &&
+        ["PENDING", "APPROVED", "ENROLLED"].includes(
+          String(request.status || "").toUpperCase()
+        )
+          ? request
+          : null;
       const latestNotice = latestNoticeByEvent.get(event._id.toString());
       const eventRequests = requestsByEvent.get(String(event._id)) || [];
+      const gradeEligible =
+        !Array.isArray(event.eligibleGrades) ||
+        event.eligibleGrades.length === 0 ||
+        event.eligibleGrades.some((grade) => studentGradeValues.includes(String(grade || "").trim()));
       const participationCounts = getParticipationCounts(event, eventRequests);
       const schoolRequests = eventRequests.filter(
         (item) => String(item.school?._id || item.school || "") === String(student.school || "")
@@ -157,9 +143,11 @@ export async function GET(req) {
       const schoolParticipationCounts = getParticipationCounts(event, schoolRequests);
       const presentedEvent = {
         ...event,
-        userStatus: request ? request.status : null,
-        participationStatus: request ? request.status : null,
-        isParticipating: Boolean(request),
+        userStatus: activeRequest ? activeRequest.status : null,
+        participationStatus: activeRequest ? activeRequest.status : null,
+        previousParticipationStatus:
+          request && !activeRequest ? request.status : null,
+        isParticipating: Boolean(activeRequest),
         deadline: event.registrationDeadline,
         capacity: event.maxParticipants,
         enrolled: participationCounts.capacityUnits,
@@ -178,8 +166,16 @@ export async function GET(req) {
 
       return {
         ...presentedEvent,
-        canRequest: false,
-        registrationSupportMode: "SCHOOL_MANAGED",
+        canRequest: event.registrationMode === "DIRECT" && gradeEligible,
+        isGradeEligible: gradeEligible,
+        isEligible: gradeEligible,
+        ineligibilityReason: gradeEligible
+          ? null
+          : `This event is for ${event.eligibleGrades.join(", ")}.`,
+        registrationSupportMode:
+          event.registrationMode === "DIRECT" && gradeEligible
+            ? "STUDENT_DIRECT"
+            : "SCHOOL_MANAGED",
         capacityInfo: getCapacityInfo(event, eventRequests),
         daysUntilDeadline: event.registrationDeadline
           ? Math.ceil(
@@ -200,8 +196,8 @@ export async function GET(req) {
           ? noticeCountByEvent.get(event._id.toString()) || 1
           : 0,
         ...buildEventPresentationState(presentedEvent, {
-          participationStatus: request ? request.status : null,
-          studentCount: request ? schoolParticipationCounts.studentCount : 0,
+          participationStatus: activeRequest ? activeRequest.status : null,
+          studentCount: activeRequest ? schoolParticipationCounts.studentCount : 0,
         }),
       };
     });

@@ -17,14 +17,6 @@ import {
 } from "react-icons/fa";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
-const ROUND_STATUS_OPTIONS = [
-  "DRAFT",
-  "SCHEDULED",
-  "IN_PROGRESS",
-  "SHORTLIST_PUBLISHED",
-  "COMPLETED",
-];
-
 const NON_FINAL_STATUS_BUTTONS = [
   { value: "SELECTED", label: "Selected" },
   { value: "DISQUALIFIED", label: "Disqualified" },
@@ -43,10 +35,6 @@ const EMPTY_ROUND_FORM = {
   title: "",
   date: "",
   startTime: "",
-  venue: "",
-  meetingLink: "",
-  instructions: "",
-  status: "SCHEDULED",
   isFinal: false,
 };
 
@@ -71,10 +59,6 @@ function buildRoundForm(round) {
     title: round?.title || "",
     date: round?.date ? new Date(round.date).toISOString().split("T")[0] : "",
     startTime: round?.startTime || "",
-    venue: round?.venue || "",
-    meetingLink: round?.meetingLink || "",
-    instructions: round?.instructions || "",
-    status: round?.status || "SCHEDULED",
     isFinal: Boolean(round?.roundType === "FINAL" || round?.isFinal),
   };
 }
@@ -87,31 +71,52 @@ function getStatusPillClass(status, active = false) {
   if (status === "WINNER") {
     return active
       ? "border-amber-500 bg-amber-500 text-white"
-      : "border-amber-200 bg-amber-50 text-amber-700";
+      : "event-participant-selected-control round-status-not-attempted";
   }
   if (status === "RUNNER_UP") {
     return active
       ? "border-violet-600 bg-violet-600 text-white"
-      : "border-violet-200 bg-violet-50 text-violet-700";
+      : "event-participant-selected-control border-violet-600 bg-violet-600 text-white";
   }
   if (status === "FINALIST" || status === "SELECTED") {
     return active
-      ? "border-[#2f7fdb] bg-[#2f7fdb] text-white"
-      : "border-[#2f7fdb]/20 bg-[#2f7fdb]/10 text-[#1150a1]";
+      ? "round-status-selected border-emerald-600 bg-emerald-600 text-white"
+      : status === "SELECTED"
+      ? "event-participant-selected-control round-status-selected"
+      : "event-participant-selected-control border-[#1f4e79] bg-[#1f4e79] text-white";
   }
   if (status === "DISQUALIFIED") {
     return active
       ? "border-rose-600 bg-rose-600 text-white"
-      : "border-rose-200 bg-rose-50 text-rose-700";
+      : "event-participant-selected-control round-status-disqualified";
   }
   if (status === "NOT_ATTEMPTED") {
     return active
       ? "border-slate-600 bg-slate-600 text-white"
-      : "border-slate-200 bg-slate-100 text-slate-700";
+      : "event-participant-selected-control round-status-not-attempted";
   }
   return active
     ? "border-[#1c4a8d] bg-[#1c4a8d] text-white"
     : "border-[#d6e6fb] bg-[#f7fbff] text-[#33598f]";
+}
+
+function getStatusActionButtonClass(status, active = false) {
+  if (!active) {
+    return "border-[#d6e2ea] bg-white text-[#0a2f66] hover:bg-[#f8fbff]";
+  }
+  if (status === "SELECTED" || status === "WINNER") {
+    return "event-participant-selected-control round-action-bg-active round-status-selected";
+  }
+  if (status === "RUNNER_UP" || status === "FINALIST") {
+    return "event-participant-selected-control round-action-bg-active round-status-final";
+  }
+  if (status === "DISQUALIFIED") {
+    return "event-participant-selected-control round-action-bg-active round-status-disqualified";
+  }
+  if (status === "NOT_ATTEMPTED") {
+    return "event-participant-selected-control round-action-bg-active round-status-not-attempted";
+  }
+  return "event-participant-selected-control round-action-bg-active round-status-final";
 }
 
 function summarizeTeamRoundParticipant(participant) {
@@ -144,6 +149,7 @@ export default function RoundsTab({ event, onCompetitionClosed, onAddNotice }) {
   const [roundForm, setRoundForm] = useState(EMPTY_ROUND_FORM);
   const [busyKey, setBusyKey] = useState("");
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [openRoundMenuId, setOpenRoundMenuId] = useState("");
 
   const fetchRounds = useCallback(async () => {
     try {
@@ -170,6 +176,17 @@ export default function RoundsTab({ event, onCompetitionClosed, onAddNotice }) {
   useEffect(() => {
     fetchRounds();
   }, [fetchRounds]);
+
+  useEffect(() => {
+    if (!openRoundMenuId) return undefined;
+    const closeMenu = (event) => {
+      if (!event.target.closest("[data-round-action-menu]")) {
+        setOpenRoundMenuId("");
+      }
+    };
+    document.addEventListener("pointerdown", closeMenu);
+    return () => document.removeEventListener("pointerdown", closeMenu);
+  }, [openRoundMenuId]);
 
   const selectedRound =
     rounds.find((round) => round._id === selectedRoundId) || rounds[0] || null;
@@ -253,7 +270,6 @@ export default function RoundsTab({ event, onCompetitionClosed, onAddNotice }) {
       const payload = {
         ...roundForm,
         isFinal: Boolean(roundForm.isFinal),
-        mode: roundForm.meetingLink ? "LIVE_ONLINE" : "OFFLINE_VENUE",
       };
       const res = await fetch(url, {
         method,
@@ -427,7 +443,7 @@ export default function RoundsTab({ event, onCompetitionClosed, onAddNotice }) {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-[#e1e7f2] bg-white shadow-sm">
+      <div className="overflow-visible rounded-xl border border-[#e1e7f2] bg-white shadow-sm">
         <div className="flex flex-col gap-4 border-b border-[#e1e7f2] px-5 py-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h2 className="text-xl font-black text-[#17120a]">Rounds</h2>
@@ -439,15 +455,15 @@ export default function RoundsTab({ event, onCompetitionClosed, onAddNotice }) {
             <button
               type="button"
               onClick={openCreateRound}
-              className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-purple-700 px-4 text-sm font-black text-white hover:bg-purple-800"
+              className="event-participant-selected-control inline-flex min-h-10 items-center gap-2 rounded-xl bg-purple-700 px-4 text-sm font-black text-white hover:bg-purple-800"
             >
               <FaPlus />
-              Add Round
+              <span className="event-participant-selected-label">Add Round</span>
             </button>
           )}
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto md:overflow-visible">
           <table className="min-w-full text-left">
             <thead className="bg-[#f8fbff] text-[11px] uppercase tracking-wide text-[#52657d]">
               <tr>
@@ -550,24 +566,52 @@ export default function RoundsTab({ event, onCompetitionClosed, onAddNotice }) {
                           >
                             {isFinalRoundRecord(round) ? "Manage Final" : "View Details"}
                           </button>
-                          <button
-                            type="button"
-                            onClick={() => openEditRound(round)}
-                            disabled={competitionLocked}
-                            className="rounded-lg bg-[#f8fbff] p-2 text-[#0a2f66] hover:bg-[#edf4ff] disabled:opacity-50"
-                            title="Edit round"
-                          >
-                            <FaEllipsisH />
-                          </button>
-                          <button
-                            type="button"
-                            disabled={competitionLocked || busyKey === `delete-${round._id}`}
-                            onClick={() => setDeleteTarget(round)}
-                            className="rounded-lg bg-rose-50 p-2 text-rose-700 hover:bg-rose-100 disabled:opacity-50"
-                            title="Delete round"
-                          >
-                            <FaTrash />
-                          </button>
+                          <div className="relative" data-round-action-menu>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setOpenRoundMenuId((current) =>
+                                  current === String(round._id) ? "" : String(round._id)
+                                )
+                              }
+                              disabled={competitionLocked}
+                              className="rounded-lg bg-[#f8fbff] p-2 text-[#0a2f66] hover:bg-[#edf4ff] disabled:opacity-50"
+                              title="Round actions"
+                              aria-haspopup="menu"
+                              aria-expanded={openRoundMenuId === String(round._id)}
+                            >
+                              <FaEllipsisH />
+                            </button>
+                            {openRoundMenuId === String(round._id) && (
+                              <div className="absolute right-0 top-11 z-20 w-40 overflow-hidden rounded-lg border border-[#dbe5f4] bg-white py-1 shadow-lg">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setOpenRoundMenuId("");
+                                    openEditRound(round);
+                                  }}
+                                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-bold text-[#0a2f66] hover:bg-[#f8fbff]"
+                                  role="menuitem"
+                                >
+                                  <FaEdit />
+                                  Edit
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={busyKey === `delete-${round._id}`}
+                                  onClick={() => {
+                                    setOpenRoundMenuId("");
+                                    setDeleteTarget(round);
+                                  }}
+                                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-bold text-rose-700 hover:bg-rose-50 disabled:opacity-50"
+                                  role="menuitem"
+                                >
+                                  <FaTrash />
+                                  Delete
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </td>
                     </tr>
@@ -591,44 +635,44 @@ export default function RoundsTab({ event, onCompetitionClosed, onAddNotice }) {
                   {isFinalRound ? "Final Placement" : "Round Management"}
                 </span>
               </div>
-              <p className="mt-1 text-sm text-[#52657d]">
-                {selectedRound.instructions || "No round instructions added yet."}
-              </p>
               <p className="mt-2 text-xs font-bold text-[#52657d]">
-                Date: {formatDate(selectedRound.date)} | Venue:{" "}
-                {selectedRound.venue || "Not set"} | Status: {label(selectedRound.status)}
+                Date: {formatDate(selectedRound.date)}
               </p>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 lg:max-w-[720px]">
               <button
                 type="button"
                 onClick={() => setParticipantFilter("all")}
-                className={`inline-flex min-h-9 items-center gap-2 rounded-lg px-3 text-sm font-black ${
+                className={`inline-flex min-h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-black ${
                   participantFilter === "all"
-                    ? "bg-purple-700 text-white"
+                    ? "event-participant-selected-control bg-purple-700 text-white"
                     : "border border-purple-100 bg-white text-[#0a2f66]"
                 }`}
               >
                 <FaTrophy />
-                {isFinalRound ? "Final Round" : selectedRound.title}
+                <span className={participantFilter === "all" ? "event-participant-selected-label" : ""}>
+                  {isFinalRound ? "Final Round" : selectedRound.title}
+                </span>
               </button>
               <button
                 type="button"
                 onClick={() => setParticipantFilter("selected")}
-                className={`inline-flex min-h-9 items-center gap-2 rounded-lg px-3 text-sm font-black ${
+                className={`inline-flex min-h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-black ${
                   participantFilter === "selected"
-                    ? "bg-purple-700 text-white"
+                    ? "event-participant-selected-control bg-purple-700 text-white"
                     : "border border-purple-100 bg-white text-[#0a2f66]"
                 }`}
               >
                 <FaUsers />
-                Selected Participants ({selectedCount})
+                <span className={participantFilter === "selected" ? "event-participant-selected-label" : ""}>
+                  Selected ({selectedCount})
+                </span>
               </button>
               <button
                 type="button"
                 onClick={() => onAddNotice?.(selectedRound)}
                 disabled={competitionLocked}
-                className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-purple-100 bg-white px-3 text-sm font-black text-[#0a2f66] hover:bg-[#f8fbff] disabled:opacity-50"
+                className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-purple-100 bg-white px-3 text-sm font-black text-[#0a2f66] hover:bg-[#f8fbff] disabled:opacity-50"
               >
                 <FaBell />
                 Add Notice
@@ -637,7 +681,7 @@ export default function RoundsTab({ event, onCompetitionClosed, onAddNotice }) {
                 type="button"
                 onClick={() => openEditRound(selectedRound)}
                 disabled={competitionLocked}
-                className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-purple-100 bg-white px-3 text-sm font-black text-[#0a2f66] hover:bg-[#f8fbff] disabled:opacity-50"
+                className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-purple-100 bg-white px-3 text-sm font-black text-[#0a2f66] hover:bg-[#f8fbff] disabled:opacity-50"
               >
                 <FaEye />
                 Round Details
@@ -715,14 +759,13 @@ export default function RoundsTab({ event, onCompetitionClosed, onAddNotice }) {
                     {isTeamEvent ? "Members" : "Grade"}
                   </th>
                   <th className="px-4 py-3">Current Status</th>
-                  <th className="px-4 py-3">History</th>
                   <th className="px-4 py-3">Update Status</th>
                 </tr>
               </thead>
               <tbody>
                 {visibleParticipants.length === 0 ? (
                   <tr>
-                    <td colSpan="6" className="px-6 py-10 text-center text-[#52657d]">
+                    <td colSpan="5" className="px-6 py-10 text-center text-[#52657d]">
                       No {isTeamEvent ? "teams" : "participants"} in this view yet.
                     </td>
                   </tr>
@@ -795,41 +838,36 @@ export default function RoundsTab({ event, onCompetitionClosed, onAddNotice }) {
                             participant.status
                           )}`}
                         >
-                          {label(participant.status)}
+                          <span className="event-participant-selected-label">
+                            {label(participant.status)}
+                          </span>
                         </span>
                       </td>
-                      <td className="px-4 py-4 text-sm text-[#52657d]">
-                        {participant.sourceRoundNumber ? (
-                          <div>Moved from Round {participant.sourceRoundNumber}</div>
-                        ) : (
-                          <div>Entered in this round</div>
-                        )}
-                        {participant.advancedToRoundNumber ? (
-                          <div className="mt-1 text-xs text-emerald-600">
-                            Sent to Round {participant.advancedToRoundNumber}
-                          </div>
-                        ) : null}
-                      </td>
                       <td className="px-4 py-4">
-                        <div className="flex flex-wrap gap-2">
-                          {statusButtons.map((button) => (
-                            <button
-                              key={`${String(participant._id || participant.student?._id || participant.student)}-${button.value}`}
-                              type="button"
-                              disabled={
-                                competitionLocked ||
-                                busyKey ===
-                                  `participant-${participant.teamKey || participant._id}`
-                              }
-                              onClick={() => updateParticipantStatus(participant, button.value)}
-                              className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${getStatusPillClass(
-                                button.value,
-                                participant.status === button.value
-                              )}`}
-                            >
-                              {button.label}
-                            </button>
-                          ))}
+                        <div className="flex flex-nowrap gap-1.5 whitespace-nowrap">
+                          {statusButtons.map((button) => {
+                            const isActive = participant.status === button.value;
+                            return (
+                              <button
+                                key={`${String(participant._id || participant.student?._id || participant.student)}-${button.value}`}
+                                type="button"
+                                disabled={
+                                  competitionLocked ||
+                                  busyKey ===
+                                    `participant-${participant.teamKey || participant._id}`
+                                }
+                                onClick={() => updateParticipantStatus(participant, button.value)}
+                                className={`min-h-8 rounded-lg border px-2.5 py-1 text-[11px] font-semibold leading-tight ${getStatusActionButtonClass(
+                                  button.value,
+                                  isActive
+                                )}`}
+                              >
+                                <span className={isActive ? "event-participant-selected-label" : ""}>
+                                  {button.label}
+                                </span>
+                              </button>
+                            );
+                          })}
                         </div>
                       </td>
                     </tr>
@@ -852,11 +890,13 @@ export default function RoundsTab({ event, onCompetitionClosed, onAddNotice }) {
                       selectedCount === 0
                     }
                     onClick={() => moveSelected("next")}
-                    className="rounded-lg bg-purple-700 px-4 py-2.5 text-sm font-black text-white hover:bg-purple-800 disabled:opacity-50"
+                    className="event-participant-selected-control rounded-lg bg-purple-700 px-4 py-2.5 text-sm font-black text-white hover:bg-purple-800 disabled:opacity-50"
                   >
-                    Send to Next Round ({selectedCount}{" "}
-                    {isTeamEvent ? "team" : "entry"}
-                    {selectedCount === 1 ? "" : "s"})
+                    <span className="event-participant-selected-label">
+                      Send to Next Round ({selectedCount}{" "}
+                      {isTeamEvent ? "team" : "entry"}
+                      {selectedCount === 1 ? "" : "s"})
+                    </span>
                   </button>
                   <button
                     type="button"
@@ -867,11 +907,13 @@ export default function RoundsTab({ event, onCompetitionClosed, onAddNotice }) {
                       selectedCount === 0
                     }
                     onClick={() => moveSelected("final")}
-                    className="rounded-lg bg-[#0a2f66] px-4 py-2.5 text-sm font-black text-white hover:bg-[#1150a1] disabled:opacity-50"
+                    className="event-participant-selected-control rounded-lg bg-[#0a2f66] px-4 py-2.5 text-sm font-black text-white hover:bg-[#1150a1] disabled:opacity-50"
                   >
-                    Send to Final Round ({selectedCount}{" "}
-                    {isTeamEvent ? "team" : "entry"}
-                    {selectedCount === 1 ? "" : "s"})
+                    <span className="event-participant-selected-label">
+                      Send to Final Round ({selectedCount}{" "}
+                      {isTeamEvent ? "team" : "entry"}
+                      {selectedCount === 1 ? "" : "s"})
+                    </span>
                   </button>
                 </>
               )}
@@ -971,67 +1013,17 @@ export default function RoundsTab({ event, onCompetitionClosed, onAddNotice }) {
                   className="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-slate-900 outline-none focus:border-blue-500"
                 />
               </label>
-              <label>
-                <div className="mb-1 text-sm font-medium text-slate-700">Venue</div>
-                <input
-                  value={roundForm.venue}
-                  onChange={(e) =>
-                    setRoundForm((current) => ({ ...current, venue: e.target.value }))
-                  }
-                  className="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-slate-900 outline-none focus:border-blue-500"
-                />
-              </label>
-              <label>
-                <div className="mb-1 text-sm font-medium text-slate-700">Online Link</div>
-                <input
-                  value={roundForm.meetingLink}
-                  onChange={(e) =>
-                    setRoundForm((current) => ({
-                      ...current,
-                      meetingLink: e.target.value,
-                    }))
-                  }
-                  className="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-slate-900 outline-none focus:border-blue-500"
-                />
-              </label>
-              <label className="md:col-span-2">
-                <div className="mb-1 text-sm font-medium text-slate-700">Instructions</div>
-                <textarea
-                  value={roundForm.instructions}
-                  onChange={(e) =>
-                    setRoundForm((current) => ({
-                      ...current,
-                      instructions: e.target.value,
-                    }))
-                  }
-                  className="min-h-28 w-full rounded-xl border border-slate-300 px-3 py-2.5 text-slate-900 outline-none focus:border-blue-500"
-                />
-              </label>
-              <label>
-                <div className="mb-1 text-sm font-medium text-slate-700">Status</div>
-                <select
-                  value={roundForm.status}
-                  onChange={(e) =>
-                    setRoundForm((current) => ({ ...current, status: e.target.value }))
-                  }
-                  className="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-slate-900 outline-none focus:border-blue-500"
-                >
-                  {ROUND_STATUS_OPTIONS.map((status) => (
-                    <option key={status} value={status}>
-                      {label(status)}
-                    </option>
-                  ))}
-                </select>
-              </label>
             </div>
             <div className="mt-5 flex justify-end">
               <button
                 type="submit"
                 disabled={busyKey === "round-save"}
-                className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
+                className="event-participant-selected-control inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
               >
                 <FaSave />
-                {busyKey === "round-save" ? "Saving..." : "Save Round"}
+                <span className="event-participant-selected-label">
+                  {busyKey === "round-save" ? "Saving..." : "Save Round"}
+                </span>
               </button>
             </div>
           </form>

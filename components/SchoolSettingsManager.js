@@ -35,7 +35,6 @@ const defaultConfig = {
   totalGrades: 0,
   teacherRoles: [],
   grades: [],
-  allowStudentGlobalWall: false,
 };
 
 function StatCard({ label, value, description }) {
@@ -81,7 +80,6 @@ function getSanitizedConfig(config) {
     teacherRoles: (config.teacherRoles || [])
       .map((item) => String(item || "").trim())
       .filter(Boolean),
-    allowStudentGlobalWall: Boolean(config.allowStudentGlobalWall),
   };
 }
 
@@ -154,7 +152,6 @@ export default function SchoolSettingsManager() {
         totalGrades: stats.totalGrades || 0,
         teacherRoles: settingsConfig.teacherRoles || [],
         grades: settingsConfig.grades || [],
-        allowStudentGlobalWall: Boolean(settingsConfig.allowStudentGlobalWall),
       });
       setSavedConfig({
         schoolName: identity.schoolName || "",
@@ -174,7 +171,6 @@ export default function SchoolSettingsManager() {
         totalGrades: stats.totalGrades || 0,
         teacherRoles: settingsConfig.teacherRoles || [],
         grades: settingsConfig.grades || [],
-        allowStudentGlobalWall: Boolean(settingsConfig.allowStudentGlobalWall),
       });
       setIsDirty(false);
     } catch (error) {
@@ -337,7 +333,6 @@ export default function SchoolSettingsManager() {
           state: sanitizedConfig.state,
           pincode: sanitizedConfig.pincode,
           teacherRoles: sanitizedConfig.teacherRoles,
-          allowStudentGlobalWall: sanitizedConfig.allowStudentGlobalWall,
         },
       };
 
@@ -398,12 +393,6 @@ export default function SchoolSettingsManager() {
         JSON.stringify(sanitizedConfig.teacherRoles || [])
       ) {
         changedSections.push("Staff Defaults");
-      }
-      if (
-        Boolean(savedConfig.allowStudentGlobalWall) !==
-        Boolean(sanitizedConfig.allowStudentGlobalWall)
-      ) {
-        changedSections.push("Student Reading");
       }
 
       setConfig(sanitizedConfig);
@@ -834,31 +823,6 @@ export default function SchoolSettingsManager() {
                 No grade structure is available yet from registration data.
               </p>
             )}
-          </div>
-
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6">
-            <h2 className="mb-4 flex items-center gap-2 text-xl font-semibold text-white">
-              <FiBookOpen className="text-purple-300" />
-              Student Reading
-            </h2>
-            <label className="flex cursor-pointer items-start justify-between gap-4 rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
-              <span>
-                <span className="block text-sm font-semibold text-white">
-                  Allow Global Wall for students
-                </span>
-                <span className="mt-1 block text-xs leading-5 text-slate-400">
-                  Lets logged-in students read selected writing from other
-                  schools without showing school names.
-                </span>
-              </span>
-              <input
-                type="checkbox"
-                name="allowStudentGlobalWall"
-                checked={Boolean(config.allowStudentGlobalWall)}
-                onChange={handleChange}
-                className="mt-1 h-5 w-5 rounded border-slate-600 bg-slate-900 text-purple-600"
-              />
-            </label>
           </div>
 
           <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6">

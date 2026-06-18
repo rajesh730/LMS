@@ -3,11 +3,11 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import Event from "@/models/Event";
-import EventSchoolInvitation from "@/models/EventSchoolInvitation";
 import Student from "@/models/Student";
 import ParticipationRequest from "@/models/ParticipationRequest";
 import { buildEventPresentationState } from "@/lib/eventPresentation";
 import { isTeamEventLike } from "@/lib/eventParticipationFormat";
+import { getEquivalentGradeValues } from "@/lib/schoolGrades";
 
 /**
  * GET /api/student/eligible-events
@@ -42,21 +42,14 @@ export async function GET(req) {
       );
     }
 
-    const approvedPlatformEventIds = student.school
-      ? await EventSchoolInvitation.find({
-          school: student.school,
-          status: "APPROVED",
-        }).distinct("event")
-      : [];
-
-    // Get all APPROVED events (status-filtered by event creation role)
+    const studentGradeValues = getEquivalentGradeValues(student.grade);
+    // Student dashboard discovery lists all events owned by the student's school.
+    // Grade eligibility is returned as state so the UI can block registration without hiding the event.
     const events = await Event.find({
       status: "APPROVED",
       lifecycleStatus: "ACTIVE",
-      $or: [
-        { eventScope: "SCHOOL", school: student.school },
-        { eventScope: "PLATFORM", _id: { $in: approvedPlatformEventIds } },
-      ],
+      eventScope: "SCHOOL",
+      school: student.school,
     })
       .populate("participants.school", "schoolName _id")
       .populate("participants.students", "_id")
@@ -70,11 +63,17 @@ export async function GET(req) {
       .lean();
     const requestsByEvent = groupRequestsByEvent(activeRequests);
 
-    // Show all accessible events. eligibleGrades only affects registration.
+    // Show all accessible events. Grade eligibility is exposed per event.
     const eligibleEvents = events
       .map((event) => {
         const eventRequests = requestsByEvent.get(String(event._id)) || [];
         const capacityUnitCount = getCapacityUnitCount(event, eventRequests);
+        const gradeEligible =
+          !Array.isArray(event.eligibleGrades) ||
+          event.eligibleGrades.length === 0 ||
+          event.eligibleGrades.some((grade) =>
+            studentGradeValues.includes(String(grade || "").trim())
+          );
 
         // Check deadline
         const now = new Date();
@@ -125,7 +124,9 @@ export async function GET(req) {
 
         // Get ineligibility reason if not eligible
         let ineligibilityReason = null;
-        if (deadlinePassed) {
+        if (!gradeEligible) {
+          ineligibilityReason = `This event is for ${event.eligibleGrades.join(", ")}.`;
+        } else if (deadlinePassed) {
           ineligibilityReason = "Registration deadline has passed";
         } else if (isGloballyFull) {
           ineligibilityReason = "Event is full globally";
@@ -156,7 +157,8 @@ export async function GET(req) {
           deadlinePassed,
 
           // Eligibility Status
-          isEligible: true, // All returned events are eligible
+          isEligible: gradeEligible,
+          isGradeEligible: gradeEligible,
           ineligibilityReason,
 
           // For display purposes

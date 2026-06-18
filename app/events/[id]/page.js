@@ -57,6 +57,24 @@ function placementTone(value) {
   return "bg-slate-100 text-slate-700";
 }
 
+function serializeEventNotice(notice) {
+  return {
+    _id: String(notice._id),
+    event: notice.event ? String(notice.event) : null,
+    round: notice.round ? String(notice.round) : null,
+    title: notice.title || "",
+    message: notice.message || "",
+    type: notice.type || "GENERAL",
+    targetAudience: notice.targetAudience || "",
+    visibility: notice.visibility || "",
+    status: notice.status || "",
+    publishedAt: notice.publishedAt ? new Date(notice.publishedAt).toISOString() : null,
+    isDeleted: Boolean(notice.isDeleted),
+    createdAt: notice.createdAt ? new Date(notice.createdAt).toISOString() : null,
+    updatedAt: notice.updatedAt ? new Date(notice.updatedAt).toISOString() : null,
+  };
+}
+
 function FactItem({ icon: Icon, label: title, value }) {
   return (
     <div className="rounded-lg border border-[#e6eaf7] bg-[#f8f9fd] p-3 sm:p-4">
@@ -251,7 +269,9 @@ async function getEventData(id) {
       .populate("school", "schoolName schoolLocation")
       .select("school student teamName")
       .lean(),
-    event.resultsPublished
+    event.eventScope === "PLATFORM" &&
+    event.resultsPublished &&
+    event.publicResultsEnabled
       ? Achievement.find({
           event: id,
           isPublic: true,
@@ -286,7 +306,7 @@ async function getEventData(id) {
     participatingSchools: Array.from(schoolMap.values()),
     participantCount: studentSet.size || participationRequests.length,
     achievements,
-    eventNotices,
+    eventNotices: eventNotices.map(serializeEventNotice),
   };
 }
 
@@ -405,10 +425,12 @@ export default async function PublicEventPage({ params }) {
             initialNotices={eventNotices}
           />
 
-          <ResultsTable
-            achievements={sortedAchievements}
-            resultsPublished={event.resultsPublished}
-          />
+          {!isInternalEvent && (
+            <ResultsTable
+              achievements={sortedAchievements}
+              resultsPublished={event.resultsPublished && event.publicResultsEnabled}
+            />
+          )}
 
           <section className="hidden sm:block rounded-xl border border-[#e6eaf7] bg-white p-5 shadow-sm">
             <h2 className="inline-flex items-center gap-2 text-base font-black text-[#10142f]">

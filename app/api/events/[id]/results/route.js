@@ -691,7 +691,7 @@ async function upsertResults(req, props) {
         { status: 400 }
       );
     }
-    const publishPublicly = Boolean(body.publishPublicly);
+    const requestedPublishPublicly = Boolean(body.publishPublicly);
     const resultsPublished = Boolean(body.resultsPublished);
     const confirmPublish = body.confirmPublish === true;
     const correctionReason = String(body.correctionReason || "").trim();
@@ -699,6 +699,9 @@ async function upsertResults(req, props) {
       body.scorecardCriteria ?? event.scorecardCriteria
     );
     const now = new Date();
+    const publishPublicly =
+      String(event.eventScope || "").toUpperCase() === "PLATFORM" &&
+      requestedPublishPublicly;
 
     if (resultsPublished && !confirmPublish) {
       return NextResponse.json(

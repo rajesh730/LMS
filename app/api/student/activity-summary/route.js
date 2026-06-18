@@ -51,7 +51,7 @@ export async function GET() {
         student: student._id,
         ...getActiveCertificateFilter(),
       })
-        .populate("event", "title date eventScope")
+        .populate("event", "title date")
         .sort({ awardedAt: -1, createdAt: -1 })
         .lean(),
       ParticipationRequest.find({
@@ -112,7 +112,6 @@ export async function GET() {
                   id: String(achievement.event._id),
                   title: achievement.event.title,
                   date: achievement.event.date,
-                  eventScope: achievement.event.eventScope,
                 }
               : null,
           })),

@@ -10,10 +10,11 @@ import {
   FaCircle,
   FaEdit,
   FaFilter,
-  FaHistory,
   FaPlus,
   FaSearch,
+  FaTrash,
   FaTrophy,
+  FaUndo,
   FaUsers,
 } from "react-icons/fa";
 import { useSession } from "next-auth/react";
@@ -92,6 +93,8 @@ export default function SchoolOwnedEventsManager({
   const [statusMessage, setStatusMessage] = useState("");
   const [feedback, setFeedback] = useState(null);
   const [archiveTarget, setArchiveTarget] = useState(null);
+  const [clearTarget, setClearTarget] = useState(null);
+  const [clearAllRequested, setClearAllRequested] = useState(false);
 
   const loadEvents = useCallback(async ({ silent = false } = {}) => {
     try {
@@ -161,6 +164,9 @@ export default function SchoolOwnedEventsManager({
   );
 
   const eventMetrics = useMemo(() => {
+    const activeRecords = events.filter(
+      (event) => String(event.lifecycleStatus || "ACTIVE").toUpperCase() !== "ARCHIVED"
+    );
     const live = events.filter(
       (event) =>
         String(event.lifecycleStatus || "ACTIVE").toUpperCase() === "ACTIVE" &&
@@ -177,12 +183,14 @@ export default function SchoolOwnedEventsManager({
       registrationOpen: registrationOpen.length,
       completed: events.filter(
         (event) =>
-          String(event.lifecycleStatus || "").toUpperCase() === "COMPLETED" ||
-          event.resultsPublished
+          String(event.lifecycleStatus || "").toUpperCase() !== "ARCHIVED" &&
+          (String(event.lifecycleStatus || "").toUpperCase() === "COMPLETED" ||
+            event.resultsPublished)
       ).length,
       archived: events.filter(
         (event) => String(event.lifecycleStatus || "").toUpperCase() === "ARCHIVED"
       ).length,
+      activeRecords: activeRecords.length,
     };
   }, [events]);
 
@@ -191,7 +199,7 @@ export default function SchoolOwnedEventsManager({
     return events.filter((event) => {
       const state = String(event.lifecycleStatus || "ACTIVE").toUpperCase();
       const matchesStatus =
-        activeFilter === "ALL" ||
+        (activeFilter === "ALL" && state !== "ARCHIVED") ||
         (activeFilter === "ACTIVE" &&
           state === "ACTIVE" &&
           isApprovedEvent(event) &&
@@ -200,6 +208,7 @@ export default function SchoolOwnedEventsManager({
           isRegistrationOpen(event) &&
           getRegisteredCount(event) === 0) ||
         (activeFilter === "COMPLETED" &&
+          state !== "ARCHIVED" &&
           (state === "COMPLETED" || event.resultsPublished)) ||
         (activeFilter === "ARCHIVED" && state === "ARCHIVED");
       const matchesSearch =
@@ -220,37 +229,6 @@ export default function SchoolOwnedEventsManager({
       );
     });
   }, [activeFilter, events, gradeFilter, search, typeFilter, visibilityFilter]);
-
-  const handleStatusChange = async (eventId, lifecycleStatus) => {
-    try {
-      const res = await fetch(`/api/events/${eventId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lifecycleStatus }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.message || "Failed to update event status");
-      }
-
-      setStatusMessage(`Event moved to ${lifecycleStatus.toLowerCase()}.`);
-      setFeedback({
-        type: "success",
-        title: "Event updated",
-        message: `Event moved to ${lifecycleStatus.toLowerCase()}.`,
-      });
-      await loadEvents();
-      onChanged?.();
-    } catch (error) {
-      console.error("Failed to update school event status", error);
-      setFeedback({
-        type: "error",
-        title: "Event status was not updated",
-        message: error.message || "Failed to update event status.",
-      });
-    }
-  };
 
   const handleArchive = async () => {
     if (!archiveTarget) return;
@@ -281,6 +259,103 @@ export default function SchoolOwnedEventsManager({
         message: error.message || "Failed to archive event.",
       });
       setArchiveTarget(null);
+    }
+  };
+
+  const handleRestore = async (event) => {
+    try {
+      const res = await fetch(`/api/events/${event._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          lifecycleStatus: "ACTIVE",
+          eventWorkflowStatus: "OPEN_FOR_REGISTRATION",
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.message || "Failed to restore event");
+      }
+
+      setFeedback({
+        type: "success",
+        title: "Event restored",
+        message: `${event.title} is back in the active event list.`,
+      });
+      await loadEvents();
+      onChanged?.();
+    } catch (error) {
+      setFeedback({
+        type: "error",
+        title: "Event was not restored",
+        message: error.message || "Failed to restore event.",
+      });
+    }
+  };
+
+  const permanentlyDeleteEvent = async (event) => {
+    const res = await fetch(`/api/events/${event._id}/delete`, {
+      method: "DELETE",
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.message || "Failed to permanently delete event");
+    }
+  };
+
+  const handleClearOne = async () => {
+    if (!clearTarget) return;
+    try {
+      await permanentlyDeleteEvent(clearTarget);
+      setFeedback({
+        type: "success",
+        title: "Event permanently deleted",
+        message: `${clearTarget.title} was removed permanently.`,
+      });
+      setClearTarget(null);
+      await loadEvents();
+      onChanged?.();
+    } catch (error) {
+      setFeedback({
+        type: "error",
+        title: "Event was not deleted",
+        message: error.message || "Failed to permanently delete event.",
+      });
+      setClearTarget(null);
+    }
+  };
+
+  const archivedEvents = useMemo(
+    () =>
+      events.filter(
+        (event) => String(event.lifecycleStatus || "").toUpperCase() === "ARCHIVED"
+      ),
+    [events]
+  );
+
+  const handleClearAll = async () => {
+    try {
+      for (const event of archivedEvents) {
+        await permanentlyDeleteEvent(event);
+      }
+      setFeedback({
+        type: "success",
+        title: "Archived events cleared",
+        message: `${archivedEvents.length} archived event${
+          archivedEvents.length === 1 ? "" : "s"
+        } permanently deleted.`,
+      });
+      setClearAllRequested(false);
+      await loadEvents();
+      onChanged?.();
+    } catch (error) {
+      setFeedback({
+        type: "error",
+        title: "Archived events were not fully cleared",
+        message: error.message || "Failed to clear archived events.",
+      });
+      setClearAllRequested(false);
     }
   };
 
@@ -330,7 +405,7 @@ export default function SchoolOwnedEventsManager({
   const filterTabs = [
     ["ACTIVE", "Live Events", FaCircle, eventMetrics.live],
     ["REGISTRATION", "Registration Open", FaUsers, eventMetrics.registrationOpen],
-    ["ALL", "All Events", FaCalendarAlt, events.length],
+    ["ALL", "All Events", FaCalendarAlt, eventMetrics.activeRecords],
     ["COMPLETED", "Completed", FaCheckCircle, eventMetrics.completed],
     ["ARCHIVED", "Archived", FaArchive, eventMetrics.archived],
   ];
@@ -497,6 +572,27 @@ export default function SchoolOwnedEventsManager({
         </div>
 
         <div className="p-4">
+          {activeFilter === "ARCHIVED" && archivedEvents.length > 0 && (
+            <div className="mb-4 flex flex-col gap-3 rounded-xl border border-rose-100 bg-rose-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-black text-rose-900">
+                  Archived events
+                </p>
+                <p className="mt-1 text-xs font-semibold text-rose-700">
+                  Restore events to bring them back, or clear them permanently.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setClearAllRequested(true)}
+                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-rose-700 px-4 text-sm font-black text-white transition hover:bg-rose-800"
+              >
+                <FaTrash />
+                Clear all archived
+              </button>
+            </div>
+          )}
+
           {loading ? (
             <LoadingState
               title="Loading school events"
@@ -678,14 +774,24 @@ export default function SchoolOwnedEventsManager({
                                 Delete / Archive Event
                               </button>
                             ) : (event.lifecycleStatus || "ACTIVE") === "ARCHIVED" ? (
-                              <button
-                                type="button"
-                                onClick={() => handleStatusChange(event._id, "ACTIVE")}
-                                className="inline-flex min-h-9 items-center gap-2 rounded-xl bg-white px-4 text-xs font-black text-[#0a2f66] transition hover:bg-[#f8fbff]"
-                              >
-                                <FaHistory />
-                                Restore Event
-                              </button>
+                              <div className="flex flex-wrap gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => handleRestore(event)}
+                                  className="inline-flex min-h-9 items-center gap-2 rounded-xl bg-white px-4 text-xs font-black text-[#0a2f66] transition hover:bg-[#f8fbff]"
+                                >
+                                  <FaUndo />
+                                  Restore Event
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setClearTarget(event)}
+                                  className="inline-flex min-h-9 items-center gap-2 rounded-xl bg-rose-50 px-4 text-xs font-black text-rose-700 transition hover:bg-rose-100"
+                                >
+                                  <FaTrash />
+                                  Clear Permanently
+                                </button>
+                              </div>
                             ) : null}
                           </div>
                         </div>
@@ -760,6 +866,30 @@ export default function SchoolOwnedEventsManager({
         tone="danger"
         onClose={() => setArchiveTarget(null)}
         onConfirm={handleArchive}
+      />
+      <ConfirmDialog
+        open={Boolean(clearTarget)}
+        title="Permanently delete this event?"
+        message={
+          clearTarget
+            ? `${clearTarget.title} and its related registrations, rounds, notices, and certificates will be permanently deleted. This cannot be undone.`
+            : ""
+        }
+        confirmLabel="Delete permanently"
+        tone="danger"
+        onClose={() => setClearTarget(null)}
+        onConfirm={handleClearOne}
+      />
+      <ConfirmDialog
+        open={clearAllRequested}
+        title="Clear all archived events?"
+        message={`${archivedEvents.length} archived event${
+          archivedEvents.length === 1 ? "" : "s"
+        } will be permanently deleted with related registrations, rounds, notices, and certificates. This cannot be undone.`}
+        confirmLabel="Clear all permanently"
+        tone="danger"
+        onClose={() => setClearAllRequested(false)}
+        onConfirm={handleClearAll}
       />
     </div>
   );

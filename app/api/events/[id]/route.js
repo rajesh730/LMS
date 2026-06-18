@@ -224,7 +224,13 @@ export async function PUT(req, props) {
     event.registrationMode =
       resolvedParticipationFormat === "TEAM"
         ? "THROUGH_SCHOOL"
-        : registrationMode || event.registrationMode;
+        : !isSchoolOwnedEvent
+        ? "THROUGH_SCHOOL"
+        : registrationMode === "DIRECT"
+        ? "DIRECT"
+        : registrationMode === "THROUGH_SCHOOL"
+        ? "THROUGH_SCHOOL"
+        : event.registrationMode || "THROUGH_SCHOOL";
     event.featuredOnLanding = false;
     event.publicHighlightsEnabled = event.status === "APPROVED";
     if (resultsPublished !== undefined) {
@@ -270,6 +276,12 @@ export async function PUT(req, props) {
         requestedScope === "SCHOOL" ? [] : assignedMentors;
     }
     if (lifecycleStatus) {
+      if (lifecycleStatus === "ARCHIVED" && event.resultsPublished) {
+        return NextResponse.json(
+          { message: "Events cannot be archived after results are published." },
+          { status: 400 }
+        );
+      }
       event.lifecycleStatus = lifecycleStatus;
       if (lifecycleStatus === "ARCHIVED") {
         event.eventWorkflowStatus = "ARCHIVED";
@@ -337,6 +349,13 @@ export async function DELETE(req, props) {
 
     if (!canManageEvent(session, event)) {
       return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+    }
+
+    if (event.resultsPublished) {
+      return NextResponse.json(
+        { message: "Events cannot be archived after results are published." },
+        { status: 400 }
+      );
     }
 
     const archivedEvent = await Event.findByIdAndUpdate(

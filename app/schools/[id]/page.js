@@ -11,12 +11,12 @@ import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
 import MagazineIssue from "@/models/MagazineIssue";
 import PublicSiteNav from "@/components/public/PublicSiteNav";
 import PublicExplorePanel from "@/components/public/PublicExplorePanel";
+import PublicShareButton from "@/components/public/PublicShareButton";
 import ExpandableStoryText from "@/components/public/ExpandableStoryText";
 import { stripWritingMarkup } from "@/components/WritingContent";
 import { normalizeImageUrl } from "@/lib/imageUrls";
 import {
   FaArrowRight,
-  FaAward,
   FaBookOpen,
   FaCalendarAlt,
   FaCertificate,
@@ -28,7 +28,6 @@ import {
   FaMedal,
   FaPenNib,
   FaSchool,
-  FaShareAlt,
   FaStar,
   FaTrophy,
   FaTwitter,
@@ -151,6 +150,7 @@ async function getSchoolData(id) {
           "title placement level awardedAt totalScore scorePercentage certificateUrl certificateRecipientName recipientType teamName"
         )
         .populate("student", "name grade")
+        .populate("event", "eventScope publicResultsEnabled resultsPublished")
         .limit(6)
         .lean(),
       getSchoolHomeMagazines(id),
@@ -175,7 +175,12 @@ async function getSchoolData(id) {
     school,
     profile,
     events,
-    achievements,
+    achievements: achievements.filter(
+      (achievement) =>
+        achievement.event?.eventScope === "PLATFORM" &&
+        achievement.event?.publicResultsEnabled &&
+        achievement.event?.resultsPublished
+    ),
     magazines: homeMagazines,
     studentCount,
     teacherCount,
@@ -251,7 +256,7 @@ function HeroFallbackArt() {
 
 function MetricCard({ icon: Icon, label, value, href }) {
   const content = (
-    <div className="rounded-xl border border-[#e7dcc8] bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-purple-200 hover:shadow-md">
+    <div className="border border-[#e7dcc8] bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-purple-200 hover:shadow-md sm:rounded-xl">
       <div className="flex items-center gap-3">
         <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-50 text-purple-700">
           <Icon />
@@ -435,34 +440,6 @@ function AtGlance({ school, studentCount, teacherCount, grades }) {
   );
 }
 
-function ShowcaseTabs() {
-  const tabs = [
-    ["#overview", "Overview", FaSchool],
-    ["#story", "Story", FaBookOpen],
-    ["#events", "Events", FaCalendarAlt],
-    ["#achievements", "Achievements", FaTrophy],
-    ["#writings", "Magazines", FaBookOpen],
-    ["#glance", "Info", FaAward],
-  ];
-
-  return (
-    <nav className="sticky top-[4.5rem] z-30 overflow-x-auto rounded-2xl border border-[#d7cdbb] bg-white/95 p-2 shadow-lg shadow-slate-950/5 backdrop-blur-xl">
-      <div className="flex min-w-max gap-2">
-        {tabs.map(([href, label, Icon]) => (
-          <a
-            key={href}
-            href={href}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-black text-[#40516b] transition hover:bg-purple-50 hover:text-purple-700 focus:bg-purple-50 focus:text-purple-700"
-          >
-            <Icon className="text-purple-700" />
-            {label}
-          </a>
-        ))}
-      </div>
-    </nav>
-  );
-}
-
 export default async function PublicSchoolPage({ params }) {
   const resolvedParams = await params;
   const data = await getSchoolData(resolvedParams.id);
@@ -471,7 +448,7 @@ export default async function PublicSchoolPage({ params }) {
     return (
       <main className="min-h-screen bg-[#f5f1e8] pb-32 text-[#17120a] md:pb-0">
         <PublicSiteNav active="schools" />
-        <div className="mx-auto max-w-5xl p-8">
+        <div className="mx-auto max-w-5xl p-0 sm:p-8">
           <p className="rounded-xl border border-[#d7cdbb] bg-white p-6 text-[#52657d]">
             School not found.
           </p>
@@ -491,13 +468,12 @@ export default async function PublicSchoolPage({ params }) {
     grades,
   } = data;
   const metrics = profile?.highlightMetrics || {};
-  const highlights = profile?.publicHighlights || [];
   const coverImage = normalizeImageUrl(profile?.coverImageUrl);
   return (
     <main className="min-h-screen bg-[#f8f9fd] pb-24 text-[#17120a]">
       <PublicSiteNav active="schools" />
 
-      <div className="mx-auto grid max-w-[1500px] gap-5 px-4 py-5 sm:px-6 xl:grid-cols-[230px_minmax(0,1fr)]">
+      <div className="mx-auto grid max-w-[1500px] gap-5 px-0 py-5 sm:px-6 xl:grid-cols-[230px_minmax(0,1fr)]">
         <PublicExplorePanel active="schools" variant="school" />
 
         <div className="min-w-0 space-y-5">
@@ -514,24 +490,23 @@ export default async function PublicSchoolPage({ params }) {
             <span>{school.schoolName}</span>
           </div>
           <div className="flex gap-2">
-            <Link
+            <PublicShareButton
               href={`/schools/${school._id}`}
+              title={school.schoolName}
+              label="Share Profile"
               className="inline-flex items-center gap-2 rounded-lg border border-[#d7cdbb] bg-white px-3 py-2 text-[#0a2f66] transition hover:bg-[#f8fbff]"
-            >
-              <FaShareAlt />
-              Share Profile
-            </Link>
+            />
           </div>
         </div>
 
         <section
           id="overview"
-          className="scroll-mt-28 relative overflow-hidden rounded-2xl border border-[#d7cdbb] bg-white shadow-[0_18px_50px_rgba(10,47,102,0.08)]"
+          className="scroll-mt-28 relative left-1/2 w-screen -translate-x-1/2 overflow-hidden border border-[#d7cdbb] bg-white shadow-[0_18px_50px_rgba(10,47,102,0.08)] sm:left-auto sm:w-auto sm:translate-x-0 sm:rounded-2xl"
         >
           <div className="relative min-h-[360px]">
             <HeroFallbackArt />
             <div className="absolute inset-0 bg-gradient-to-r from-black/38 via-black/10 to-black/26" />
-            <div className="relative z-10 grid min-h-[360px] gap-6 p-6 md:p-8 lg:grid-cols-[1fr_320px] lg:items-end">
+            <div className="relative z-10 grid min-h-[360px] gap-6 p-6 md:p-8 lg:items-end">
               <div className="self-end rounded-2xl border border-white/20 bg-black/28 p-4 shadow-2xl backdrop-blur-sm md:p-5">
                 <div className="flex flex-wrap items-center gap-4">
                   <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-2xl border border-white/70 bg-white text-4xl font-black text-[#3120c9] shadow-xl">
@@ -588,40 +563,11 @@ export default async function PublicSchoolPage({ params }) {
                 </div>
               </div>
 
-              <aside className="self-end rounded-xl border border-white/70 bg-white p-5 shadow-xl">
-                <h2 className="inline-flex items-center gap-2 text-lg font-black text-[#17120a]">
-                  <FaAward className="text-purple-700" />
-                  Public Highlights
-                </h2>
-                <p className="mt-4 text-4xl font-black text-[#17120a]">
-                  {highlights.length}
-                </p>
-                <p className="mt-1 text-sm font-semibold text-[#52657d]">
-                  Highlights published
-                </p>
-                {highlights.length > 0 ? (
-                  <div className="mt-4 space-y-2">
-                    {highlights.slice(0, 2).map((highlight, index) => (
-                      <p
-                        key={`${highlight}-${index}`}
-                        className="rounded-lg bg-purple-50 px-3 py-2 text-sm leading-6 text-purple-900"
-                      >
-                        {highlight}
-                      </p>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="mt-4 text-sm leading-6 text-[#52657d]">
-                    Achievements, events, and moments to showcase this school
-                    will appear here.
-                  </p>
-                )}
-              </aside>
             </div>
           </div>
         </section>
 
-        <section className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        <section className="relative left-1/2 grid w-screen -translate-x-1/2 grid-cols-2 gap-4 sm:left-auto sm:w-auto sm:translate-x-0 md:grid-cols-4">
           <MetricCard
             icon={FaCalendarAlt}
             label="Events Hosted"
@@ -650,13 +596,11 @@ export default async function PublicSchoolPage({ params }) {
           </div>
         </section>
 
-        <ShowcaseTabs />
-
-        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_420px]">
+        <div className="relative left-1/2 grid w-screen -translate-x-1/2 gap-5 sm:left-auto sm:w-auto sm:translate-x-0 lg:grid-cols-[minmax(0,1fr)_420px]">
           <main className="space-y-5">
             <section
               id="story"
-              className="scroll-mt-28 rounded-2xl border border-[#e7dcc8] bg-white p-5 shadow-sm"
+              className="scroll-mt-28 border border-[#e7dcc8] bg-white p-5 shadow-sm sm:rounded-2xl"
             >
               <h2 className="inline-flex items-center gap-2 text-lg font-black text-[#17120a]">
                 <FaBookOpen className="text-purple-700" />
@@ -678,7 +622,7 @@ export default async function PublicSchoolPage({ params }) {
 
             <section
               id="achievements"
-              className="scroll-mt-28 rounded-2xl border border-[#e7dcc8] bg-white p-5 shadow-sm"
+              className="scroll-mt-28 border border-[#e7dcc8] bg-white p-5 shadow-sm sm:rounded-2xl"
             >
               <div className="flex items-center justify-between gap-3">
                 <h2 className="inline-flex items-center gap-2 text-lg font-black text-[#17120a]">
@@ -726,7 +670,7 @@ export default async function PublicSchoolPage({ params }) {
 
         <section
           id="writings"
-          className="pravyo-brand-surface scroll-mt-28 rounded-2xl border border-white/18 p-5 shadow-sm"
+          className="pravyo-brand-surface scroll-mt-28 relative left-1/2 w-screen -translate-x-1/2 border border-white/18 p-5 shadow-sm sm:left-auto sm:w-auto sm:translate-x-0 sm:rounded-2xl"
         >
           <div className="flex items-center justify-between gap-3">
             <h2 className="inline-flex items-center gap-2 text-lg font-black !text-white">
@@ -753,7 +697,7 @@ export default async function PublicSchoolPage({ params }) {
           )}
         </section>
 
-        <section className="pravyo-brand-surface relative overflow-hidden rounded-2xl p-5 shadow-lg">
+        <section className="pravyo-brand-surface relative left-1/2 w-screen -translate-x-1/2 overflow-hidden p-5 shadow-lg sm:left-auto sm:w-auto sm:translate-x-0 sm:rounded-2xl">
           <div className="absolute inset-0 bg-gradient-to-r from-black/18 via-transparent to-black/10" />
           <div className="relative z-10 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="flex items-start gap-4">
@@ -774,8 +718,8 @@ export default async function PublicSchoolPage({ params }) {
                   className="mt-1 text-sm font-semibold leading-6"
                   style={{ color: "rgba(255,255,255,0.9)" }}
                 >
-                  Public highlights, achievements, and events help more students
-                  discover your school story.
+                  Achievements, events, and magazines help more students discover
+                  your school story.
                 </p>
               </div>
             </div>

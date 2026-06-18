@@ -2,29 +2,18 @@
 
 import { useEffect, useState } from "react";
 import EventEditorForm from "./EventEditorForm";
-import EventHub from "./EventHub";
-import SchoolEventInvitations from "./SchoolEventInvitations";
 import SchoolOwnedEventsManager from "./SchoolOwnedEventsManager";
-
-const PLATFORM_TABS = [
-  { id: "invitations", label: "Invitations" },
-  { id: "events", label: "Active / Live Competitions" },
-  { id: "disapproved", label: "Disapproved" },
-  { id: "completed", label: "Final Results" },
-];
 
 const SCHOOL_TABS = [
   { id: "hosted", label: "My School Events" },
   { id: "create", label: "Create School Event" },
 ];
 
-export default function SchoolEventWorkspace({ mode = "platform" }) {
+export default function SchoolEventWorkspace() {
   const [teachers, setTeachers] = useState([]);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [activeSection, setActiveSection] = useState(
-    mode === "school" ? "hosted" : "invitations"
-  );
-  const tabs = mode === "school" ? SCHOOL_TABS : PLATFORM_TABS;
+  const [activeSection, setActiveSection] = useState("hosted");
+  const tabs = SCHOOL_TABS;
   const selectedSection = tabs.some((tab) => tab.id === activeSection)
     ? activeSection
     : tabs[0].id;
@@ -55,77 +44,7 @@ export default function SchoolEventWorkspace({ mode = "platform" }) {
 
   return (
     <div className="space-y-6">
-      {mode !== "school" && (
-        <div className="rounded-2xl border border-[#d8e0f0] bg-white p-2 shadow-[0_10px_26px_rgba(10,47,102,0.05)]">
-          <div className="flex flex-wrap gap-2">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveSection(tab.id)}
-                className={`min-h-11 rounded-xl px-5 text-sm font-black transition ${
-                  selectedSection === tab.id
-                    ? "bg-[#4326e8] text-white shadow-[0_10px_20px_rgba(67,38,232,0.18)]"
-                    : "text-[#4326e8] hover:bg-[#f8f6ff]"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {mode === "platform" && selectedSection === "invitations" && (
-        <SchoolEventInvitations
-          refreshKey={refreshKey}
-          status="PENDING"
-          title="Invitations"
-          description="Platform competitions waiting for your school decision."
-          emptyTitle="No invitations waiting right now."
-          emptyDescription="New platform competitions sent to your school will appear here."
-          onChanged={() => setRefreshKey((value) => value + 1)}
-        />
-      )}
-
-      {mode === "platform" && selectedSection === "events" && (
-        <EventHub
-          refreshKey={refreshKey}
-          eventScope="PLATFORM"
-          lifecycleFilter="ACTIVE"
-          title="Active / Live Competitions"
-          description="See active platform competitions, including events currently running, and continue your school's management work."
-          defaultFilter="approved"
-          showFilters={false}
-        />
-      )}
-
-      {mode === "platform" && selectedSection === "disapproved" && (
-        <SchoolEventInvitations
-          refreshKey={refreshKey}
-          status="DISAPPROVED"
-          title="Disapproved Invitations"
-          description="Platform competitions your school declined. Re-approve if this was a mistake."
-          emptyTitle="No disapproved invitations."
-          emptyDescription="Declined platform competitions will appear here for recovery."
-          onChanged={() => setRefreshKey((value) => value + 1)}
-        />
-      )}
-
-      {mode === "platform" && selectedSection === "completed" && (
-        <EventHub
-          refreshKey={refreshKey}
-          eventScope="PLATFORM"
-          lifecycleFilter="COMPLETED"
-          completedView
-          title="Final Results"
-          description="Review your school's completed competition results first, then open certificates or the public result page."
-          defaultFilter="completed"
-          showFilters={false}
-        />
-      )}
-
-      {mode === "school" && selectedSection === "create" && (
+      {selectedSection === "create" && (
         <div className="space-y-4">
           <button
             type="button"
@@ -145,7 +64,7 @@ export default function SchoolEventWorkspace({ mode = "platform" }) {
         </div>
       )}
 
-      {mode === "school" && selectedSection === "hosted" && (
+      {selectedSection === "hosted" && (
         <SchoolOwnedEventsManager
           teachers={teachers}
           refreshKey={refreshKey}

@@ -1133,6 +1133,7 @@ a.public-nav-active:focus {
   border: 1px solid rgba(180, 35, 24, 0.22) !important;
   box-shadow: 0 10px 22px rgba(180, 35, 24, 0.14) !important;
   color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
 }
 
 :is(button, a)[class~="bg-red-500"] *,
@@ -1140,6 +1141,7 @@ a.public-nav-active:focus {
 :is(button, a)[class~="bg-red-700"] *,
 .pravyo-btn-danger * {
   color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
 }
 
 :is(button, a)[class~="bg-red-500"]:not(:disabled):hover,
@@ -1724,6 +1726,15 @@ article[class*="rounded-2xl"][class*="border"]:hover,
 button:not(:disabled):hover,
 a[class*="rounded"]:hover {
   transform: none !important;
+}
+
+.event-participant-selected-control,
+.event-participant-selected-control *,
+button.event-participant-selected-control,
+button.event-participant-selected-control:hover,
+button.event-participant-selected-control:focus,
+button.event-participant-selected-control:disabled {
+  color: #ffffff !important;
 }
 
 .sidebar-header-band,
@@ -2939,4 +2950,47 @@ h6,
     border-radius: 0 !important;
   }
 
+}
+
+.event-participant-selected-control,
+.event-participant-selected-control *,
+.event-participant-selected-control .event-participant-selected-label,
+button.event-participant-selected-control,
+button.event-participant-selected-control:hover,
+button.event-participant-selected-control:focus,
+button.event-participant-selected-control:disabled {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+.round-status-selected,
+button.round-status-selected {
+  background: #15803d !important;
+  border-color: #15803d !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+.round-status-disqualified,
+button.round-status-disqualified {
+  background: #dc2626 !important;
+  border-color: #dc2626 !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+.round-status-not-attempted,
+button.round-status-not-attempted {
+  background: #f59e0b !important;
+  border-color: #f59e0b !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+.round-status-final,
+button.round-status-final {
+  background: #1f4e79 !important;
+  border-color: #1f4e79 !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
 }

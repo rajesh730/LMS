@@ -114,7 +114,9 @@ function SchoolDashboardContent() {
   useEffect(() => {
     if (tabParam) {
       setActiveTab(
-        ["judging", "events"].includes(tabParam) ? "platform-events" : tabParam
+        ["judging", "events", "platform-events"].includes(tabParam)
+          ? "school-events"
+          : tabParam
       );
     }
   }, [tabParam]);
@@ -521,10 +523,7 @@ function SchoolDashboardContent() {
             )}
             {activeTab === "settings" && <SchoolSettingsManager />}
 
-            {activeTab === "platform-events" && (
-              <SchoolEventWorkspace mode="platform" />
-            )}
-            {activeTab === "school-events" && <SchoolEventWorkspace mode="school" />}
+            {activeTab === "school-events" && <SchoolEventWorkspace />}
             {activeTab === "student-notices" && <StudentNoticeManager />}
             {activeTab === "notices" && <SchoolNoticeBoard />}
             {activeTab === "magazine" && <SchoolMagazineManager />}

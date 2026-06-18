@@ -110,21 +110,6 @@ export async function GET(req) {
       },
     ]);
 
-    const eventsByScope = await Event.aggregate([
-      {
-        $match: {
-          $or: [{ school: schoolId }, { ownerId: schoolId }],
-          lifecycleStatus: { $ne: "ARCHIVED" },
-        },
-      },
-      {
-        $group: {
-          _id: "$eventScope",
-          count: { $sum: 1 },
-        },
-      },
-    ]);
-
     // Format status breakdown
     const statusBreakdown = {};
     studentsByStatus.forEach((item) => {
@@ -139,11 +124,6 @@ export async function GET(req) {
     const eventLifecycleBreakdown = {};
     eventsByLifecycle.forEach((item) => {
       eventLifecycleBreakdown[item._id || "UNKNOWN"] = item.count;
-    });
-
-    const eventScopeBreakdown = {};
-    eventsByScope.forEach((item) => {
-      eventScopeBreakdown[item._id || "UNKNOWN"] = item.count;
     });
 
     const [activityLogs, recentStudents, recentTeachers, recentEvents] =
@@ -167,7 +147,7 @@ export async function GET(req) {
           $or: [{ school: schoolId }, { ownerId: schoolId }],
           lifecycleStatus: { $ne: "ARCHIVED" },
         })
-          .select("title eventScope lifecycleStatus date createdAt")
+          .select("title lifecycleStatus date createdAt")
           .sort({ createdAt: -1 })
           .limit(8)
           .lean(),
@@ -225,7 +205,6 @@ export async function GET(req) {
       events: {
         total: events,
         byLifecycle: eventLifecycleBreakdown,
-        byScope: eventScopeBreakdown,
       },
       recentActivity,
     });

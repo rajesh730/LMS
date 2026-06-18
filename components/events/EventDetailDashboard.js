@@ -152,8 +152,6 @@ export default function EventDetailDashboard() {
   const backHref =
     session?.user?.role === "SUPER_ADMIN"
       ? "/admin/dashboard?tab=events"
-      : event.eventScope === "PLATFORM"
-      ? "/school/dashboard?tab=platform-events"
       : "/school/dashboard?tab=school-events";
   const backLabel =
     session?.user?.role === "SUPER_ADMIN"

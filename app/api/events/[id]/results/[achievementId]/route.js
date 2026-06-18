@@ -49,6 +49,7 @@ export async function PATCH(req, props) {
 
     const body = await req.json();
     const action = String(body.action || "save").toLowerCase();
+    const isPlatformEvent = String(event.eventScope || "").toUpperCase() === "PLATFORM";
     const isPublishingAction = [
       "publish",
       "issue",
@@ -62,6 +63,16 @@ export async function PATCH(req, props) {
           success: false,
           message:
             "Certificate publishing requires explicit organizer confirmation.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (action === "publish_public" && !isPlatformEvent) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "School event results are only visible to the school and assigned students.",
         },
         { status: 400 }
       );
@@ -82,8 +93,11 @@ export async function PATCH(req, props) {
       achievement.certificateUrl = buildCertificatePath(achievement._id);
       achievement.certificateState = "CERTIFICATE_ACTIVE";
       achievement.schoolSharedAt = new Date();
-      achievement.isPublic = Boolean(event.publicResultsEnabled);
+      achievement.isPublic = isPlatformEvent && Boolean(event.publicResultsEnabled);
       event.resultsPublished = true;
+      if (!isPlatformEvent) {
+        event.publicResultsEnabled = false;
+      }
       event.eventWorkflowStatus = "RESULTS_PUBLISHED";
       await event.save();
     }

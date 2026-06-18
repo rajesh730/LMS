@@ -187,6 +187,14 @@ export async function POST(req) {
 
     const ownerId = normalizedScope === "SCHOOL" ? school : session.user.id;
     const ownerType = normalizedScope === "SCHOOL" ? "SCHOOL" : "PLATFORM";
+    const resolvedRegistrationMode =
+      resolvedParticipationFormat === "TEAM"
+        ? "THROUGH_SCHOOL"
+        : !isSchoolOwnedEvent
+        ? "THROUGH_SCHOOL"
+        : registrationMode === "DIRECT"
+        ? "DIRECT"
+        : "THROUGH_SCHOOL";
     const newEvent = await Event.create({
       title,
       description,
@@ -198,10 +206,7 @@ export async function POST(req) {
       ownerId,
       eventType: isSchoolOwnedEvent ? "COMPETITION" : eventType || "COMPETITION",
       visibility: resolvedVisibility,
-      registrationMode:
-        resolvedParticipationFormat === "TEAM"
-          ? "THROUGH_SCHOOL"
-          : registrationMode || "THROUGH_SCHOOL",
+      registrationMode: resolvedRegistrationMode,
       participationFormat: resolvedParticipationFormat,
       featuredOnLanding: false,
       publicHighlightsEnabled: status === "APPROVED",

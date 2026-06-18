@@ -24,6 +24,7 @@ import EventParticipationForm from "./EventParticipationForm";
 import { useSession } from "next-auth/react";
 import SchoolRoundPanel from "@/app/school/dashboard/SchoolRoundPanel";
 import EventCertificatesPanel from "./EventCertificatesPanel";
+import StudentEventCertificatesPanel from "./StudentEventCertificatesPanel";
 import EmptyState from "@/components/EmptyState";
 import LoadingState from "@/components/ui/LoadingState";
 import AlertBanner from "@/components/ui/AlertBanner";
@@ -58,6 +59,15 @@ function isRunningEvent(event) {
 function isActiveEvent(event) {
   const lifecycleStatus = String(event?.lifecycleStatus || "ACTIVE").toUpperCase();
   return lifecycleStatus === "ACTIVE" && !event?.finalOutcomeReady;
+}
+
+function isCompletedEvent(event) {
+  const lifecycleStatus = String(event?.lifecycleStatus || "ACTIVE").toUpperCase();
+  return (
+    Boolean(event?.finalOutcomeReady) ||
+    Boolean(event?.resultsPublished) ||
+    ["COMPLETED", "ARCHIVED"].includes(lifecycleStatus)
+  );
 }
 
 function getOperationalBadge(event) {
@@ -318,8 +328,10 @@ export default function EventHub({
     }
     const deadline = event.registrationDeadline || event.deadline;
     const lifecycleStatus = String(event.lifecycleStatus || "ACTIVE").toUpperCase();
+    const workflowStatus = String(event.eventWorkflowStatus || "").toUpperCase();
     return (
       ["COMPLETED", "ARCHIVED"].includes(lifecycleStatus) ||
+      ["ROUND_ACTIVE", "RESULTS_DRAFT", "RESULTS_PUBLISHED", "COMPLETED", "ARCHIVED"].includes(workflowStatus) ||
       Boolean(deadline && isDatePast(deadline, { endOfDay: true }))
     );
   };
@@ -353,13 +365,75 @@ export default function EventHub({
     } registered`;
   };
 
+  const isRegistrationOpenEvent = (event) =>
+    !isCompletedEvent(event) &&
+    !isRunningEvent(event) &&
+    !isRegistrationClosed(event);
+
+  const canStudentEnroll = (event) =>
+    isStudentView &&
+    event.registrationMode === "DIRECT" &&
+    event.isGradeEligible !== false &&
+    !event.participationStatus &&
+    !isTeamEventLike(event) &&
+    !isRegistrationClosed(event);
+
+  const handleStudentEnroll = async (eventId) => {
+    const event = events.find((item) => item._id === eventId);
+    if (!event || !canStudentEnroll(event)) {
+      setFeedback({
+        type: "warning",
+        title: "Enrollment unavailable",
+        message:
+          event?.isGradeEligible === false
+            ? "This event is not available for your grade."
+            : "Enrollment is not open for this event.",
+      });
+      return;
+    }
+
+    try {
+      setFeedback(null);
+      const res = await fetch(`/api/events/${eventId}/participate`, {
+        method: "POST",
+      });
+
+      if (res.ok) {
+        setFeedback({
+          type: "success",
+          title: "Enrollment complete",
+          message:
+            "You have been added to your school's participant list for this event.",
+        });
+        await fetchEvents();
+        setExpandedEventId(eventId);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setFeedback({
+          type: "error",
+          title: "Enrollment failed",
+          message: data.error || data.message || "Failed to enroll.",
+        });
+      }
+    } catch (error) {
+      console.error("Error enrolling:", error);
+      setFeedback({
+        type: "error",
+        title: "Enrollment failed",
+        message: "An error occurred.",
+      });
+    }
+  };
+
   const handleWithdraw = async (eventId) => {
     const event = events.find((item) => item._id === eventId);
     if (event && isRegistrationClosed(event)) {
       setFeedback({
         type: "warning",
         title: "Registration is locked",
-        message: "Registration is closed, so this team can no longer be withdrawn.",
+        message: isStudentView
+          ? "You cannot withdraw after the deadline has passed or the event has started."
+          : "Registration is closed, so this team can no longer be withdrawn.",
       });
       return;
     }
@@ -374,7 +448,9 @@ export default function EventHub({
         setFeedback({
           type: "success",
           title: "Registration withdrawn",
-          message: "Your school registration was withdrawn from this event.",
+          message: isStudentView
+            ? "You have withdrawn from this event."
+            : "Your school registration was withdrawn from this event.",
         });
         setWithdrawTarget(null);
         fetchEvents();
@@ -408,7 +484,10 @@ export default function EventHub({
       event.schoolInvitationStatus === "APPROVED";
 
     if (filterStatus === "all") return matchesSearch;
-    if (filterStatus === "completed") return matchesSearch;
+    if (filterStatus === "live") return matchesSearch && isRunningEvent(event);
+    if (filterStatus === "registration-open")
+      return matchesSearch && isRegistrationOpenEvent(event);
+    if (filterStatus === "completed") return matchesSearch && isCompletedEvent(event);
     if (filterStatus === "participated")
       return matchesSearch && (event.participationStatus || schoolApprovedEvent);
     if (filterStatus === "pending")
@@ -434,12 +513,16 @@ export default function EventHub({
       PENDING: "bg-[#fff7e6] text-[#7a4d00] border-[#f4d28a]",
       APPROVED: "bg-[#e8f8ef] text-[#17643a] border-[#9ed8b5]",
       REJECTED: "bg-rose-50 text-rose-800 border-rose-200",
+      WITHDRAWN: "bg-slate-100 text-slate-700 border-slate-200",
+      ENROLLED: "bg-[#e8f8ef] text-[#17643a] border-[#9ed8b5]",
       COMPLETED: "bg-[#eaf2ff] text-[#0a2f66] border-[#bfd7f7]",
     };
     const icons = {
       PENDING: <FaClock2 className="inline mr-2" />,
       APPROVED: <FaCheckCircle className="inline mr-2" />,
       REJECTED: <FaTimesCircle className="inline mr-2" />,
+      WITHDRAWN: <FaTimesCircle className="inline mr-2" />,
+      ENROLLED: <FaCheckCircle className="inline mr-2" />,
       COMPLETED: <FaCheckCircle className="inline mr-2" />,
     };
     return (
@@ -548,19 +631,23 @@ export default function EventHub({
 
           {showFilters && (
             <div className="flex gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:pb-0">
-              {filters.map((filter) => (
-                <button
-                  key={filter.id}
-                  onClick={() => setFilterStatus(filter.id)}
-                  className={`min-h-10 shrink-0 rounded-lg px-4 text-sm font-bold transition-all ${
-                    filterStatus === filter.id
-                      ? "bg-[#4326e8] text-white shadow-[0_10px_20px_rgba(67,38,232,0.18)]"
-                      : "border border-[#d8e0f0] bg-white text-[#3116be] hover:border-[#4326e8] hover:bg-[#f4f1ff]"
-                  }`}
-                >
-                  {filter.label}
-                </button>
-              ))}
+              {filters.map((filter) => {
+                const FilterIcon = filter.icon;
+                return (
+                  <button
+                    key={filter.id}
+                    onClick={() => setFilterStatus(filter.id)}
+                    className={`inline-flex min-h-10 shrink-0 items-center gap-2 rounded-lg px-4 text-sm font-bold transition-all ${
+                      filterStatus === filter.id
+                        ? "bg-[#4326e8] text-white shadow-[0_10px_20px_rgba(67,38,232,0.18)]"
+                        : "border border-[#d8e0f0] bg-white text-[#3116be] hover:border-[#4326e8] hover:bg-[#f4f1ff]"
+                    }`}
+                  >
+                    {FilterIcon && <FilterIcon />}
+                    {filter.label}
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>
@@ -602,6 +689,9 @@ export default function EventHub({
                   !event.participationStatus;
                 const useManagementPage =
                   isSchoolView && event.eventScope === "PLATFORM";
+                const gradeBlocked =
+                  isStudentView && event.isGradeEligible === false;
+                const studentCanEnroll = canStudentEnroll(event);
                 const managementTab = completedView
                   ? "results"
                   : event.participationStatus
@@ -649,6 +739,11 @@ export default function EventHub({
                             className={`inline-flex min-h-7 items-center rounded-full border px-2.5 text-[11px] font-bold ${operationalBadge.className}`}
                           >
                             {operationalBadge.label}
+                          </span>
+                        )}
+                        {gradeBlocked && (
+                          <span className="inline-flex min-h-7 items-center rounded-full border border-amber-200 bg-amber-50 px-2.5 text-[11px] font-bold text-amber-800">
+                            Not for your grade
                           </span>
                         )}
                         {event.participationStatus &&
@@ -744,7 +839,7 @@ export default function EventHub({
 
                     {/* Right: Expand Button & Status */}
                     <div className="flex flex-col gap-3 xl:items-end">
-                      {!useManagementPage && (
+                      {!useManagementPage && !isStudentView && (
                         <button
                           type="button"
                           onClick={(eventClick) => {
@@ -782,7 +877,25 @@ export default function EventHub({
                               Open Result
                             </Link>
                           )}
-                           {event.visibility === "PUBLIC" && !completedView && !useManagementPage && (
+                          {isStudentView && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setExpandedEventId(
+                                  expandedEventId === event._id
+                                    ? null
+                                    : event._id
+                                );
+                              }}
+                              className="event-details-action inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#e2e8f0] bg-white px-3 text-sm font-bold text-[#3116be] transition hover:border-[#4326e8] hover:bg-[#f4f1ff]"
+                              title="View your event status"
+                            >
+                              <FaEye />
+                              View Status
+                            </button>
+                          )}
+                          {event.visibility === "PUBLIC" && !completedView && !useManagementPage && !isStudentView && (
                             <button
                               type="button"
                               onClick={(e) => {
@@ -796,6 +909,27 @@ export default function EventHub({
                               View Details
                             </button>
                           )}
+                          {isStudentView &&
+                            ["PENDING", "APPROVED", "ENROLLED"].includes(
+                              String(event.participationStatus || "").toUpperCase()
+                            ) && (
+                              <button
+                                disabled={registrationLocked}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setWithdrawTarget(event);
+                                }}
+                                className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-rose-300 bg-rose-50 px-3 text-sm font-bold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-[#52657d]"
+                                title={
+                                  registrationLocked
+                                    ? "Withdrawal is locked after the deadline or event start"
+                                    : "Withdraw from this event"
+                                }
+                              >
+                                <FaTrash />
+                                Withdraw
+                              </button>
+                            )}
                           {isSchoolView && !completedView && (
                             <>
                               <button
@@ -881,7 +1015,7 @@ export default function EventHub({
                         </div>
                       ) : (
                         <div className="event-action-group flex w-full flex-wrap justify-end gap-2">
-                          {event.visibility === "PUBLIC" && !useManagementPage && (
+                          {event.visibility === "PUBLIC" && !useManagementPage && !isStudentView && (
                             <button
                               type="button"
                               onClick={(e) => {
@@ -894,7 +1028,19 @@ export default function EventHub({
                               View Details
                             </button>
                           )}
-                          {registrationLocked || needsSchoolApproval ? (
+                          {studentCanEnroll ? (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleStudentEnroll(event._id);
+                              }}
+                              className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-[#0a2f66] px-3 text-sm font-bold text-white shadow-md transition hover:bg-[#123f7d] whitespace-nowrap"
+                            >
+                              <FaCheckCircle />
+                              Enroll
+                            </button>
+                          ) : registrationLocked || needsSchoolApproval ? (
                             <button
                               type="button"
                               disabled
@@ -906,27 +1052,27 @@ export default function EventHub({
                                 : "Registration Locked"}
                             </button>
                           ) : (
-                            <Link
-                              href={useManagementPage ? managementHref : "#"}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (!useManagementPage) {
-                                  e.preventDefault();
-                                  setExpandedEventId(event._id);
-                                }
-                              }}
-                              className={`inline-flex min-h-10 items-center rounded-lg px-3 text-sm font-bold transition whitespace-nowrap ${
-                                registrationLocked || needsSchoolApproval
-                                  ? "cursor-not-allowed bg-slate-100 text-[#52657d]"
-                                  : "cursor-pointer bg-[#4326e8] text-white shadow-md hover:bg-[#3217d3]"
-                              }`}
-                            >
-                              {isStudentView
-                                ? "View Event"
-                                : isTeamEvent
-                                ? "Register Groups"
-                                : "Register Participants"}
-                            </Link>
+                            !isStudentView && (
+                              <Link
+                                href={useManagementPage ? managementHref : "#"}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (!useManagementPage) {
+                                    e.preventDefault();
+                                    setExpandedEventId(event._id);
+                                  }
+                                }}
+                                className={`inline-flex min-h-10 items-center rounded-lg px-3 text-sm font-bold transition whitespace-nowrap ${
+                                  registrationLocked || needsSchoolApproval
+                                    ? "cursor-not-allowed bg-slate-100 text-[#52657d]"
+                                    : "cursor-pointer bg-[#4326e8] text-white shadow-md hover:bg-[#3217d3]"
+                                }`}
+                              >
+                                {isTeamEvent
+                                  ? "Register Groups"
+                                  : "Register Participants"}
+                              </Link>
+                            )
                           )}
                         </div>
                       )}
@@ -990,6 +1136,8 @@ export default function EventHub({
                           {isStudentView
                             ? event.participationStatus
                               ? "Registration Status"
+                              : event.registrationMode === "DIRECT"
+                              ? "Student Enrollment"
                               : "School Registration"
                             : event.participationStatus
                             ? isTeamEvent
@@ -1000,17 +1148,51 @@ export default function EventHub({
                             : "Register Participants"}
                         </h4>
                         {isStudentView ? (
-                          <div className="space-y-3 rounded-xl border border-[#d7cdbb] bg-[#f8fbff] p-4 text-sm text-[#27344a]">
-                            <p className="font-semibold text-[#17120a]">
-                              Registration is managed by your school.
-                            </p>
-                            <p>
-                              Teachers or school admins collect student names and submit the final registration for this event.
-                            </p>
-                            <p>
-                              You can still follow event notices, selected status, rounds, results, and certificates from your dashboard.
-                            </p>
-                          </div>
+                          gradeBlocked ? (
+                            <div className="space-y-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                              <p className="font-semibold">
+                                Registration is not available for your grade.
+                              </p>
+                              <p>
+                                {event.ineligibilityReason ||
+                                  "Your school limited this event to specific grades."}
+                              </p>
+                              <p>
+                                You can still view event details and follow published notices or results that apply to your school.
+                              </p>
+                            </div>
+                          ) : event.registrationMode === "DIRECT" ? (
+                            <div className="space-y-3 rounded-xl border border-[#bfd7f7] bg-[#f8fbff] p-4 text-sm text-[#27344a]">
+                              <p className="font-semibold text-[#17120a]">
+                                Eligible students can enroll themselves.
+                              </p>
+                              <p>
+                                Enrolling adds you to the school participant list. Your school can still edit the final list before registration closes.
+                              </p>
+                              {studentCanEnroll && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleStudentEnroll(event._id)}
+                                  className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-[#0a2f66] px-4 text-sm font-bold text-white shadow-md transition hover:bg-[#123f7d]"
+                                >
+                                  <FaCheckCircle />
+                                  Enroll
+                                </button>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="space-y-3 rounded-xl border border-[#d7cdbb] bg-[#f8fbff] p-4 text-sm text-[#27344a]">
+                              <p className="font-semibold text-[#17120a]">
+                                Registration is managed by your school.
+                              </p>
+                              <p>
+                                Teachers or school admins collect student names and submit the final registration for this event.
+                              </p>
+                              <p>
+                                You can still follow event notices, selected status, rounds, results, and certificates from your dashboard.
+                              </p>
+                            </div>
+                          )
                         ) : (
                           <EventParticipationForm
                             event={event}
@@ -1105,10 +1287,16 @@ export default function EventHub({
                           </div>
                           <div className="event-status-tag rounded-lg border border-[#d7cdbb] bg-[#f8fbff] px-4 py-3">
                             <div className="text-xs uppercase tracking-wide text-[#52657d]">
-                              Public Result
+                              Result Access
                             </div>
                             <div className="mt-1 text-sm font-semibold text-[#17120a]">
-                              {event.isPublicResultAvailable ? "Available" : "Not public yet"}
+                              {event.eventScope === "SCHOOL"
+                                ? event.resultsPublished
+                                  ? "School & student only"
+                                  : "Not published yet"
+                                : event.isPublicResultAvailable
+                                ? "Public"
+                                : "Not public yet"}
                             </div>
                           </div>
                         </div>
@@ -1123,6 +1311,7 @@ export default function EventHub({
                             </button>
                           </div>
                         )}
+                        <StudentEventCertificatesPanel eventId={event._id} />
                       </div>
                     )}
                   </div>
@@ -1137,9 +1326,13 @@ export default function EventHub({
 
       <ConfirmDialog
         open={Boolean(withdrawTarget)}
-        title="Withdraw from this event?"
-        message="This will remove the registered students or teams for your school while registration is still open."
-        confirmLabel="Withdraw registration"
+        title={isStudentView ? "Withdraw from this event?" : "Withdraw from this event?"}
+        message={
+          isStudentView
+            ? "This will withdraw your own registration while registration is still open."
+            : "This will remove the registered students or teams for your school while registration is still open."
+        }
+        confirmLabel={isStudentView ? "Withdraw" : "Withdraw registration"}
         tone="danger"
         onClose={() => setWithdrawTarget(null)}
         onConfirm={() => {

@@ -216,6 +216,7 @@ EventSchema.pre("validate", function () {
     }
     this.ownerType = "SCHOOL";
     this.ownerId = this.school;
+    this.publicResultsEnabled = false;
   } else {
     this.school = null;
     this.ownerType = "PLATFORM";

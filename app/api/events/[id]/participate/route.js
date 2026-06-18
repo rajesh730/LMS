@@ -435,23 +435,150 @@ export async function POST(req, { params }) {
     // CASE 1: STUDENT SELF-REGISTRATION
     // ==========================================
     if (session.user.role === "STUDENT") {
-      return errorResponse(
-        403,
-        "Student self-registration is disabled in phase 1. Please contact your teacher or school admin for registration."
+      if (event.registrationMode !== "DIRECT") {
+        return errorResponse(
+          403,
+          "This event is registered by the school. Please contact your teacher or school admin."
+        );
+      }
+
+      if (normalizeParticipationFormat(event) === "TEAM") {
+        return errorResponse(
+          400,
+          "Team events must be registered by the school."
+        );
+      }
+
+      const student = await Student.findOne(studentLookupQuery(session));
+      if (!student) {
+        return errorResponse(404, "Student not found");
+      }
+
+      const schoolId = student.school || session.user.schoolId;
+      if (!schoolId) {
+        return errorResponse(400, "Student school information not found");
+      }
+
+      if (
+        event.eventScope === "SCHOOL" &&
+        String(event.school || "") !== String(schoolId)
+      ) {
+        return errorResponse(403, "This event is not available to your school.");
+      }
+
+      if (event.eligibleGrades && event.eligibleGrades.length > 0) {
+        if (!gradeListContains(event.eligibleGrades, student.grade)) {
+          return errorResponse(
+            403,
+            `This event is for ${event.eligibleGrades.join(", ")}.`
+          );
+        }
+      }
+
+      const existingRequest = await ParticipationRequest.findOne({
+        student: student._id,
+        event: eventId,
+        school: schoolId,
+      });
+
+      if (
+        existingRequest &&
+        ACTIVE_PARTICIPATION_REQUEST_STATUSES.includes(existingRequest.status)
+      ) {
+        return successResponse(200, "You are already enrolled in this event.", {
+          status: existingRequest.status,
+        });
+      }
+
+      if (event.maxParticipantsPerSchool) {
+        const existingSchoolCount = await ParticipationRequest.countDocuments({
+          event: eventId,
+          school: schoolId,
+          status: { $in: ACTIVE_PARTICIPATION_REQUEST_STATUSES },
+        });
+
+        if (existingSchoolCount >= event.maxParticipantsPerSchool) {
+          return errorResponse(
+            400,
+            `Your school has reached the limit of ${event.maxParticipantsPerSchool} students for this event.`
+          );
+        }
+      }
+
+      if (event.maxParticipants) {
+        const existingGlobalCount = await ParticipationRequest.countDocuments({
+          event: eventId,
+          status: { $in: ACTIVE_PARTICIPATION_REQUEST_STATUSES },
+        });
+
+        if (existingGlobalCount >= event.maxParticipants) {
+          return errorResponse(
+            400,
+            `This event has reached its limit of ${event.maxParticipants} students.`
+          );
+        }
+      }
+
+      const now = new Date();
+      const schoolContactInfo = await resolveSchoolContactInfo(schoolId);
+
+      if (existingRequest) {
+        existingRequest.status = "APPROVED";
+        existingRequest.requestedAt = now;
+        existingRequest.approvedAt = now;
+        existingRequest.approvedBy = null;
+        existingRequest.enrollmentConfirmedAt = now;
+        existingRequest.studentNotifiedAt = now;
+        existingRequest.rejectedAt = null;
+        existingRequest.rejectionReason = null;
+        existingRequest.contactPerson =
+          schoolContactInfo.contactPerson || undefined;
+        existingRequest.contactPhone = schoolContactInfo.contactPhone || undefined;
+        await existingRequest.save();
+      } else {
+        await ParticipationRequest.create({
+          student: student._id,
+          event: eventId,
+          school: schoolId,
+          status: "APPROVED",
+          requestedAt: now,
+          approvedAt: now,
+          enrollmentConfirmedAt: now,
+          studentNotifiedAt: now,
+          contactPerson: schoolContactInfo.contactPerson || undefined,
+          contactPhone: schoolContactInfo.contactPhone || undefined,
+        });
+      }
+
+      const updatedRequests = await ParticipationRequest.find({
+        event: eventId,
+        school: schoolId,
+        status: { $in: ACTIVE_PARTICIPATION_REQUEST_STATUSES },
+      }).select(
+        "status contactPerson contactPhone teamName captainStudent notes student requestedAt approvedAt enrollmentConfirmedAt"
       );
+      applySchoolParticipationProjection(event, schoolId, updatedRequests);
+      await event.save();
+      await syncApprovedRequestsToRoundOne({
+        eventId,
+        createdBy: session.user.id,
+      });
+
+      publishEventRealtimeUpdate("participation-updated", {
+        event,
+        schoolId,
+        studentId: student._id,
+      });
+
+      return successResponse(200, "You are enrolled in this event.", {
+        status: "APPROVED",
+      });
     }
 
     // ==========================================
     // CASE 2: SCHOOL ADMIN BULK REGISTRATION
     // ==========================================
     if (session.user.role === "SCHOOL_ADMIN") {
-      if (event.registrationMode !== "THROUGH_SCHOOL") {
-        return errorResponse(
-          403,
-          "This event uses direct student registration. School team management is not available here."
-        );
-      }
-
       const body = await req.json();
       const normalizedTeams = normalizeTeamPayload(body.teams);
       // Allow both naming conventions
@@ -661,7 +788,25 @@ export async function POST(req, { params }) {
               existingRequest.status === "ENROLLED"
             ) {
               approvedStudentIds.push(studentId);
+              continue;
             }
+            existingRequest.status = "APPROVED";
+            existingRequest.requestedAt = now;
+            existingRequest.approvedAt = now;
+            existingRequest.approvedBy = session.user.id;
+            existingRequest.enrollmentConfirmedAt = now;
+            existingRequest.studentNotifiedAt = now;
+            existingRequest.rejectedAt = null;
+            existingRequest.rejectionReason = null;
+            existingRequest.contactPerson =
+              schoolContactInfo.contactPerson || undefined;
+            existingRequest.contactPhone =
+              schoolContactInfo.contactPhone || undefined;
+            existingRequest.teamName = teamName || undefined;
+            existingRequest.captainStudent = captainStudentId || undefined;
+            await existingRequest.save();
+            approvedStudentIds.push(studentId);
+            successCount++;
             continue;
           }
 
@@ -827,13 +972,6 @@ export async function DELETE(req, { params }) {
 
     // CASE 1: SCHOOL ADMIN WITHDRAWAL (ALL)
     if (session.user.role === "SCHOOL_ADMIN") {
-      if (event.registrationMode !== "THROUGH_SCHOOL") {
-        return errorResponse(
-          403,
-          "This event uses direct student registration. School-wide withdrawal is not available here."
-        );
-      }
-
       const schoolId = session.user.id;
 
       const result = await ParticipationRequest.deleteMany({
@@ -872,34 +1010,53 @@ export async function DELETE(req, { params }) {
       return errorResponse(404, "Student not found");
     }
 
-    if (event.registrationMode !== "DIRECT") {
-      return errorResponse(
-        403,
-        "This event is managed through the school. Please contact your school admin for registration changes."
-      );
-    }
-
     // Get school from student's record
     const schoolId = student.school || session.user.schoolId;
     if (!schoolId) {
       return errorResponse(400, "Student school information not found");
     }
 
-    // Find and delete request (only if PENDING or REJECTED)
+    // Find and withdraw the student's own active request.
     const request = await ParticipationRequest.findOne({
       student: student._id,
       event: eventId,
       school: schoolId,
-      status: { $in: ["PENDING", "REJECTED"] },
+      status: { $in: ["PENDING", "APPROVED", "ENROLLED"] },
     });
 
     if (!request) {
-      return errorResponse(404, "No pending request found to withdraw");
+      return errorResponse(404, "No active request found to withdraw");
     }
 
-    await ParticipationRequest.deleteOne({ _id: request._id });
+    request.status = "WITHDRAWN";
+    request.studentNotifiedAt = new Date();
+    await request.save();
 
-    return successResponse(200, "Participation request withdrawn", null);
+    const remainingActiveRequests = await ParticipationRequest.find({
+      event: eventId,
+      school: schoolId,
+      status: { $in: ACTIVE_PARTICIPATION_REQUEST_STATUSES },
+    })
+      .select("student contactPerson contactPhone expectedStudents notes teamName captainStudent")
+      .lean();
+
+    applySchoolParticipationProjection(event, schoolId, remainingActiveRequests);
+    await event.save();
+
+    await removeStudentsFromCompetition({
+      eventId,
+      studentIds: [student._id],
+    });
+
+    publishEventRealtimeUpdate("participation-withdrawn", {
+      event,
+      schoolId,
+      studentId: student._id,
+    });
+
+    return successResponse(200, "Participation request withdrawn", {
+      status: "WITHDRAWN",
+    });
   } catch (error) {
     console.error("DELETE /api/events/[id]/participate error:", error);
     return internalServerError("Internal server error");
@@ -944,13 +1101,6 @@ export async function PUT(req, { params }) {
       ? studentIds.map((id) => String(id))
       : [];
     const schoolContactInfo = await resolveSchoolContactInfo(schoolId);
-
-    if (event.registrationMode !== "THROUGH_SCHOOL") {
-      return errorResponse(
-        403,
-        "This event uses direct student registration. School team updates are not available here."
-      );
-    }
 
     const lockMessage = getRegistrationLockMessage(event, "update participation");
     if (lockMessage) {

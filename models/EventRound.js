@@ -37,7 +37,7 @@ const EventRoundSchema = new mongoose.Schema(
     mode: {
       type: String,
       enum: ["ONLINE_SUBMISSION", "OFFLINE_VENUE", "LIVE_ONLINE"],
-      default: "ONLINE_SUBMISSION",
+      default: "OFFLINE_VENUE",
     },
     date: {
       type: Date,
@@ -53,24 +53,9 @@ const EventRoundSchema = new mongoose.Schema(
       default: "",
       trim: true,
     },
-    venue: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-    meetingLink: {
-      type: String,
-      default: "",
-      trim: true,
-    },
     submissionDeadline: {
       type: Date,
       default: null,
-    },
-    instructions: {
-      type: String,
-      default: "",
-      trim: true,
     },
     status: {
       type: String,

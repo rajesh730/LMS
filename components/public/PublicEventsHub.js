@@ -41,7 +41,6 @@ const VIEW_FILTERS = [
   ["LIVE", "Active / Live"],
   ["UPCOMING", "Open & Upcoming"],
   ["RESULTS", "Results Published"],
-  ["SCHOOL", "School Hosted"],
 ];
 
 function formatDate(value) {
@@ -65,7 +64,11 @@ function getStatus(event) {
   if (!event.resultsPublished && ["ROUND_ACTIVE", "RESULTS_DRAFT"].includes(workflowStatus)) {
     return ["Live Event", "bg-rose-50 text-rose-800"];
   }
-  if (event.resultsPublished) return ["Results Published", "bg-amber-50 text-amber-800"];
+  if (
+    event.eventScope === "PLATFORM" &&
+    event.resultsPublished &&
+    event.publicResultsEnabled
+  ) return ["Results Published", "bg-amber-50 text-amber-800"];
   if (event.registrationDeadline && new Date(event.registrationDeadline).getTime() >= Date.now()) {
     return ["Registration Open", "bg-emerald-50 text-emerald-800"];
   }
@@ -242,6 +245,10 @@ function CategoryTabs({ activeCategory, setActiveCategory }) {
 }
 
 function EventRow({ event }) {
+  const hasPublicResults =
+    event.eventScope === "PLATFORM" &&
+    event.resultsPublished &&
+    event.publicResultsEnabled;
   const [status, statusClass] = getStatus(event);
 
   return (
@@ -286,7 +293,7 @@ function EventRow({ event }) {
         <FaArrowRight className="text-xs text-[#4326e8] group-hover:translate-x-0.5 transition-transform" />
       </div>
       <span className="hidden sm:inline-flex min-h-10 items-center justify-center gap-2 self-center rounded-lg border border-[#e6eaf7] px-4 text-sm font-black text-[#4326e8] transition group-hover:bg-[#f4f1ff]">
-        {event.resultsPublished ? "View Results" : "View Details"}
+        {hasPublicResults ? "View Results" : "View Details"}
         <FaArrowRight />
       </span>
     </Link>
@@ -361,8 +368,14 @@ export default function PublicEventsHub({ initialData }) {
       ) {
         return false;
       }
-      if (activeView === "RESULTS" && !event.resultsPublished) return false;
-      if (activeView === "SCHOOL" && event.eventScope !== "SCHOOL") return false;
+      if (
+        activeView === "RESULTS" &&
+        !(
+          event.eventScope === "PLATFORM" &&
+          event.resultsPublished &&
+          event.publicResultsEnabled
+        )
+      ) return false;
       if (activeCategory !== "ALL" && event.eventType !== activeCategory) return false;
       if (!normalizedQuery) return true;
       return `${event.title} ${event.description} ${event.schoolName}`

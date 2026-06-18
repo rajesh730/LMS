@@ -10,7 +10,6 @@ import {
   FaImage,
   FaLink,
   FaLock,
-  FaPlus,
   FaSave,
   FaSpinner,
   FaStar,
@@ -27,7 +26,6 @@ const EMPTY_FORM = {
   websiteUrl: "",
   visibility: "PRIVATE",
   featuredEvents: [],
-  publicHighlights: [""],
 };
 
 function eventId(event) {
@@ -38,16 +36,8 @@ function eventLabel(event) {
   return event?.eventType || event?.type || "COMPETITION";
 }
 
-function visibleHighlights(profile) {
-  return (profile.publicHighlights || []).filter((item) => item.trim());
-}
-
 function wordCount(value) {
   return String(value || "").trim().split(/\s+/).filter(Boolean).length;
-}
-
-function normalizeHighlights(highlights = []) {
-  return highlights.map((item) => String(item || "").trim()).filter(Boolean);
 }
 
 function MetricRow({ label, value, icon: Icon }) {
@@ -104,10 +94,6 @@ export default function ShowcaseProfileManager() {
           featuredEvents: (nextProfile.featuredEvents || []).map((item) =>
             typeof item === "string" ? item : item._id || item.id
           ),
-          publicHighlights:
-            nextProfile.publicHighlights?.length > 0
-              ? nextProfile.publicHighlights
-              : [""],
           school:
             typeof nextProfile.school === "string"
               ? nextProfile.school
@@ -131,29 +117,6 @@ export default function ShowcaseProfileManager() {
 
     loadData();
   }, []);
-
-  const updateHighlight = (index, value) => {
-    setProfile((prev) => {
-      const next = [...(prev.publicHighlights || [""])];
-      next[index] = value;
-      return { ...prev, publicHighlights: next };
-    });
-  };
-
-  const addHighlight = () => {
-    setProfile((prev) => ({
-      ...prev,
-      publicHighlights: [...(prev.publicHighlights || []), ""],
-    }));
-  };
-
-  const removeHighlight = (index) => {
-    setProfile((prev) => {
-      const next = [...(prev.publicHighlights || [])];
-      next.splice(index, 1);
-      return { ...prev, publicHighlights: next.length ? next : [""] };
-    });
-  };
 
   const toggleSelection = (key, id) => {
     setProfile((prev) => {
@@ -188,7 +151,6 @@ export default function ShowcaseProfileManager() {
         websiteUrl: profile.websiteUrl,
         visibility: profile.visibility,
         featuredEvents: profile.featuredEvents,
-        publicHighlights: normalizeHighlights(profile.publicHighlights),
       };
 
       const res = await fetch("/api/school/showcase-profile", {
@@ -231,7 +193,6 @@ export default function ShowcaseProfileManager() {
   const tagline = profile.tagline || "Inspiring minds. Building futures.";
   const logoImage = normalizeImageUrl(profile.coverImageUrl);
   const metrics = profile.highlightMetrics || {};
-  const highlights = visibleHighlights(profile);
   const displayedEvents = showAllEvents ? eventOptions : eventOptions.slice(0, 8);
 
   return (
@@ -456,53 +417,6 @@ export default function ShowcaseProfileManager() {
             )}
           </section>
 
-          <section className="rounded-lg border border-[#e1e7f2] bg-white p-5 shadow-sm">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <div>
-                <h2 className="flex items-center gap-2 text-sm font-black text-[#17120a]">
-                  <FaStar className="text-purple-700" />
-                  Public Highlights
-                </h2>
-                <p className="mt-1 text-xs font-semibold text-[#52657d]">
-                  Add key achievements or strengths to highlight on your public profile.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={addHighlight}
-                className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-purple-200 bg-white px-3 text-xs font-black text-purple-700 hover:bg-purple-50"
-              >
-                <FaPlus />
-                Add Highlight
-              </button>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              {(profile.publicHighlights || [""]).map((highlight, index) => (
-                <span
-                  key={`highlight-${index}`}
-                  className="inline-flex items-center gap-2 rounded-lg bg-purple-50 px-3 py-2"
-                >
-                  <input
-                    type="text"
-                    value={highlight}
-                    onChange={(e) => updateHighlight(index, e.target.value)}
-                    className="w-44 bg-transparent text-xs font-black text-purple-800 outline-none"
-                    placeholder="Top achievement..."
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removeHighlight(index)}
-                    className="text-xs font-black text-purple-700"
-                    title="Remove highlight"
-                  >
-                    x
-                  </button>
-                </span>
-              ))}
-            </div>
-          </section>
-
           {error && <p className="text-sm font-bold text-rose-600">{error}</p>}
           {savedMessage && <p className="text-sm font-bold text-emerald-700">{savedMessage}</p>}
         </main>
@@ -529,19 +443,6 @@ export default function ShowcaseProfileManager() {
                     </p>
                   </div>
                 </div>
-                {highlights.length > 0 && (
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {highlights.slice(0, 3).map((highlight, index) => (
-                      <span
-                        key={`preview-highlight-${index}`}
-                        className="rounded-full bg-purple-50 px-2.5 py-1 text-[10px] font-black text-purple-700"
-                      >
-                        {highlight}
-                      </span>
-                    ))}
-                  </div>
-                )}
-
                 <div className="mt-4 grid grid-cols-4 gap-2 text-center">
                   {[
                     ["Events", FaCalendarAlt],

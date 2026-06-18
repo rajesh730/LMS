@@ -5,7 +5,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   FaBell,
   FaCalendarCheck,
-  FaClipboardCheck,
   FaFeatherAlt,
   FaBullhorn,
 } from "react-icons/fa";
@@ -26,12 +25,10 @@ export default function SchoolDailyOverview() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [submissions, setSubmissions] = useState([]);
-  const [invitations, setInvitations] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [events, setEvents] = useState([]);
   const [totals, setTotals] = useState({
     submissions: 0,
-    invitations: 0,
     notifications: 0,
   });
 
@@ -45,14 +42,10 @@ export default function SchoolDailyOverview() {
 
         const [
           submissionsRes,
-          invitationsRes,
           notificationsRes,
           eventsRes,
         ] = await Promise.all([
           fetch("/api/school/magazine-submissions?status=POSTED&limit=5", {
-            cache: "no-store",
-          }),
-          fetch("/api/school/event-invitations?status=PENDING&limit=5", {
             cache: "no-store",
           }),
           fetch("/api/school/notifications?limit=5", { cache: "no-store" }),
@@ -61,12 +54,10 @@ export default function SchoolDailyOverview() {
 
         const [
           submissionsPayload,
-          invitationsPayload,
           notificationsPayload,
           eventsPayload,
         ] = await Promise.all([
           submissionsRes.json().catch(() => ({})),
-          invitationsRes.json().catch(() => ({})),
           notificationsRes.json().catch(() => ({})),
           eventsRes.json().catch(() => ({})),
         ]);
@@ -74,11 +65,6 @@ export default function SchoolDailyOverview() {
         setSubmissions(
           submissionsRes.ok && Array.isArray(submissionsPayload.submissions)
             ? submissionsPayload.submissions
-            : []
-        );
-        setInvitations(
-          invitationsRes.ok && Array.isArray(invitationsPayload.invitations)
-            ? invitationsPayload.invitations
             : []
         );
         setNotifications(
@@ -96,10 +82,6 @@ export default function SchoolDailyOverview() {
             submissionsPayload.pagination?.totalItems ??
             submissionsPayload.submissions?.length ??
             0,
-          invitations:
-            invitationsPayload.pagination?.totalItems ??
-            invitationsPayload.invitations?.length ??
-            0,
           notifications:
             notificationsPayload.pagination?.totalItems ??
             notificationsPayload.notifications?.length ??
@@ -108,7 +90,6 @@ export default function SchoolDailyOverview() {
 
         const failedSources = [
           !submissionsRes.ok && "school wall posts",
-          !invitationsRes.ok && "event invitations",
           !notificationsRes.ok && "notifications",
           !eventsRes.ok && "events",
         ].filter(Boolean);
@@ -208,18 +189,6 @@ export default function SchoolDailyOverview() {
             }
             actionLabel="Open wall"
             tone="violet"
-          />
-
-          <DashboardFocusCard
-            href="/school/dashboard?tab=platform-events"
-            icon={FaClipboardCheck}
-            badge={`${totals.invitations} invites`}
-            title={
-              invitations[0]?.event?.title || "No platform invitations pending"
-            }
-            description="Approve platform events before your students can see or join them."
-            actionLabel="Check invitations"
-            tone="emerald"
           />
 
           <DashboardFocusCard

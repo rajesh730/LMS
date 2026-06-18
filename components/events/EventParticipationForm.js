@@ -54,6 +54,12 @@ function validateTeamDraft(team, { minTeamSize = 0, maxTeamSize = 0 } = {}) {
   };
 }
 
+const STUDENT_STATUS_FILTERS = [
+  { id: "all", label: "All" },
+  { id: "UNREGISTERED", label: "Unregistered" },
+  { id: "REGISTERED", label: "Registered" },
+];
+
 const EventParticipationForm = memo(function EventParticipationForm({
   event,
   onSuccess,
@@ -245,7 +251,7 @@ const EventParticipationForm = memo(function EventParticipationForm({
   const participationMap = new Map(
     interestedStudents
       .filter((r) => r.student?._id)
-      .map((r) => [r.student._id, r])
+      .map((r) => [String(r.student._id), r])
   );
 
   const hasExistingParticipation = interestedStudents.some((request) =>
@@ -254,7 +260,8 @@ const EventParticipationForm = memo(function EventParticipationForm({
 
   const filteredStudents = students
     .filter((student) => {
-      const request = participationMap.get(student._id);
+      const request = participationMap.get(String(student._id));
+      const requestStatus = String(request?.status || "").toUpperCase();
 
       const matchesSearch = student.name
         .toLowerCase()
@@ -281,8 +288,7 @@ const EventParticipationForm = memo(function EventParticipationForm({
         (interestedFilter === "UNREGISTERED" && !request) ||
         (interestedFilter === "REGISTERED" &&
           request &&
-          ["PENDING", "APPROVED"].includes(request.status)) ||
-        (request && request.status === interestedFilter);
+          ["PENDING", "APPROVED", "ENROLLED"].includes(requestStatus));
 
       return matchesSearch && matchesGrade && matchesStatus;
     })
@@ -782,23 +788,23 @@ const EventParticipationForm = memo(function EventParticipationForm({
             </div>
 
             <div className="mb-3 flex flex-wrap gap-2">
-              {[
-                { id: "all", label: "All" },
-                { id: "UNREGISTERED", label: "Unregistered" },
-                { id: "REGISTERED", label: "Registered" },
-                { id: "REJECTED", label: "Rejected" },
-              ].map((filter) => (
+              {STUDENT_STATUS_FILTERS.map((filter) => (
                 <button
                   key={filter.id}
                   type="button"
                   onClick={() => setInterestedFilter(filter.id)}
                   className={`rounded-lg px-3 py-1.5 text-xs font-black transition ${
                     interestedFilter === filter.id
-                      ? "bg-purple-700 text-white"
+                      ? "event-participant-selected-control bg-purple-700 text-white"
                       : "border border-[#dbe5f4] bg-white text-[#0a2f66] hover:bg-[#f8fbff]"
                   }`}
+                  style={
+                    interestedFilter === filter.id ? { color: "#ffffff" } : undefined
+                  }
                 >
-                  {filter.label}
+                  <span className="event-participant-selected-label">
+                    {filter.label}
+                  </span>
                 </button>
               ))}
             </div>
@@ -976,17 +982,20 @@ const EventParticipationForm = memo(function EventParticipationForm({
                 : formData.selectedStudents.length === 0) ||
               isEventLocked
             }
-            className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-purple-700 px-5 text-sm font-black text-white transition hover:bg-purple-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+            className="event-participant-selected-control inline-flex min-h-10 items-center gap-2 rounded-xl bg-purple-700 px-5 text-sm font-black text-white transition hover:bg-purple-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+            style={{ color: "#ffffff" }}
           >
             <FaCheck />
-            {isEditing
-              ? isTeamEvent
-                ? "Update Teams"
-                : "Update Participants"
-              : isTeamEvent
-              ? "Submit Teams"
-              : "Submit Students"}{" "}
-            ({selectedParticipantCount})
+            <span className="event-participant-selected-label">
+              {isEditing
+                ? isTeamEvent
+                  ? "Update Teams"
+                  : "Update Participants"
+                : isTeamEvent
+                ? "Submit Teams"
+                : "Submit Students"}{" "}
+              ({selectedParticipantCount})
+            </span>
           </button>
         </div>
       </form>
@@ -1450,23 +1459,23 @@ const EventParticipationForm = memo(function EventParticipationForm({
           <div className="mb-6 space-y-3">
             {/* Status Filter Tabs */}
             <div className="flex flex-wrap gap-2">
-              {[
-                { id: "all", label: "All" },
-                { id: "UNREGISTERED", label: "Unregistered" },
-                { id: "REGISTERED", label: "Registered" },
-                { id: "REJECTED", label: "Rejected" },
-              ].map((filter) => (
+              {STUDENT_STATUS_FILTERS.map((filter) => (
                 <button
                   key={filter.id}
                   type="button"
                   onClick={() => setInterestedFilter(filter.id)}
                   className={`px-3 py-1 text-sm rounded-lg font-medium transition-colors ${
                     interestedFilter === filter.id
-                      ? "bg-emerald-600 text-white"
+                      ? "event-participant-selected-control bg-emerald-600 text-white"
                       : "bg-slate-800 text-slate-300 hover:bg-slate-700"
                   }`}
+                  style={
+                    interestedFilter === filter.id ? { color: "#ffffff" } : undefined
+                  }
                 >
-                  {filter.label}
+                  <span className="event-participant-selected-label">
+                    {filter.label}
+                  </span>
                 </button>
               ))}
             </div>
@@ -1696,19 +1705,22 @@ const EventParticipationForm = memo(function EventParticipationForm({
               : formData.selectedStudents.length === 0) ||
             isEventLocked
           }
-          className="px-8 py-3 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-lg font-bold transition-colors flex items-center gap-2"
+          className="event-participant-selected-control px-8 py-3 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-lg font-bold transition-colors flex items-center gap-2"
+          style={{ color: "#ffffff" }}
         >
           <FaCheck />{" "}
-          {session?.user?.role === "STUDENT"
-            ? "Confirm Participation"
-            : isEditing
-            ? isTeamEvent
-              ? "Update Teams"
-              : "Update Participants"
-            : isTeamEvent
-            ? "Submit Teams"
-            : "Submit Students"}{" "}
-          ({selectedParticipantCount})
+          <span className="event-participant-selected-label">
+            {session?.user?.role === "STUDENT"
+              ? "Confirm Participation"
+              : isEditing
+              ? isTeamEvent
+                ? "Update Teams"
+                : "Update Participants"
+              : isTeamEvent
+              ? "Submit Teams"
+              : "Submit Students"}{" "}
+            ({selectedParticipantCount})
+          </span>
         </button>
       </div>
     </form>

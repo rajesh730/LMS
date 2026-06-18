@@ -18,33 +18,15 @@ import {
 import "@/models/Student";
 import "@/models/User";
 
-const ROUND_MODES = ["ONLINE_SUBMISSION", "OFFLINE_VENUE", "LIVE_ONLINE"];
-const ROUND_STATUSES = [
-  "DRAFT",
-  "SCHEDULED",
-  "OPEN_FOR_SUBMISSION",
-  "IN_PROGRESS",
-  "JUDGING",
-  "SHORTLIST_PUBLISHED",
-  "COMPLETED",
-  "POSTPONED",
-  "CANCELLED",
-];
-
 function cleanRoundPayload(body) {
   return {
     title: String(body.title || "").trim(),
     isFinal: Boolean(body.isFinal),
     description: String(body.description || "").trim(),
-    mode: ROUND_MODES.includes(body.mode) ? body.mode : "ONLINE_SUBMISSION",
     date: body.date || null,
     startTime: String(body.startTime || "").trim(),
     endTime: String(body.endTime || "").trim(),
-    venue: String(body.venue || "").trim(),
-    meetingLink: String(body.meetingLink || "").trim(),
     submissionDeadline: body.submissionDeadline || null,
-    instructions: String(body.instructions || "").trim(),
-    status: ROUND_STATUSES.includes(body.status) ? body.status : "DRAFT",
   };
 }
 
@@ -195,15 +177,10 @@ export async function POST(req, props) {
 
     Object.assign(round, {
       roundType: payload.isFinal ? "FINAL" : "REGULAR",
-      mode: payload.mode,
       date: payload.date || null,
       startTime: payload.startTime,
       endTime: payload.endTime,
-      venue: payload.venue,
-      meetingLink: payload.meetingLink,
       submissionDeadline: payload.submissionDeadline || null,
-      instructions: payload.instructions,
-      status: payload.status,
     });
     await round.save();
     event.eventWorkflowStatus = "ROUND_ACTIVE";

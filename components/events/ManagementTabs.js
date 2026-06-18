@@ -12,7 +12,6 @@ import {
   FaListUl,
   FaUsers,
 } from "react-icons/fa";
-import UnifiedApprovalManager from "./UnifiedApprovalManager";
 import RoundsTab from "./RoundsTab";
 import EventOverviewTab from "./EventOverviewTab";
 import EventResultsManager from "@/components/EventResultsManager";
@@ -111,20 +110,38 @@ export default function ManagementTabs({
         <div className="flex overflow-x-auto border-b border-[#e1e7f2] bg-white px-2">
           {availableTabs.map((tab) => {
             const Icon = tab.icon;
+            const isSelected = selectedTab === tab.id;
+            const hasCount = tab.count !== null;
+            const hasParticipants = Number(tab.count || 0) > 0;
             return (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`relative inline-flex min-h-11 shrink-0 items-center gap-2 px-3 text-[13px] font-black transition sm:px-4 ${
-                  selectedTab === tab.id
-                    ? "text-purple-700 after:absolute after:bottom-0 after:left-0 after:h-[3px] after:w-full after:rounded-full after:bg-purple-700"
-                    : "text-[#0a2f66] hover:bg-[#f8fbff] hover:text-purple-700"
+                className={`relative inline-flex min-h-12 shrink-0 items-center gap-2 rounded-t-lg px-3 text-[13px] font-black transition sm:px-4 ${
+                  isSelected
+                    ? "bg-[#eef4f8] text-[#1f4e79] after:absolute after:bottom-0 after:left-2 after:right-2 after:h-[3px] after:rounded-full after:bg-[#1f4e79]"
+                    : "text-[#0a2f66] hover:bg-[#f8fbff] hover:text-[#1f4e79]"
                 }`}
               >
-                <Icon />
+                <span
+                  className={`inline-flex h-7 w-7 items-center justify-center rounded-lg text-xs transition ${
+                    isSelected
+                      ? "bg-white text-[#1f4e79] shadow-sm"
+                      : "bg-[#f3f7fb] text-[#1f4e79]"
+                  }`}
+                >
+                  <Icon />
+                </span>
                 {tab.label}
-                {tab.count !== null && (
-                  <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-black text-white/90">
+                {hasCount && (
+                  <span
+                    className={`inline-flex min-w-6 items-center justify-center rounded-full border px-2 py-0.5 text-[10px] font-black ${
+                      hasParticipants
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                        : "border-[#d6e2ea] bg-white text-[#1f4e79]"
+                    }`}
+                    title={`${tab.count} participant${tab.count === 1 ? "" : "s"}`}
+                  >
                     {tab.count}
                   </span>
                 )}
@@ -169,25 +186,6 @@ export default function ManagementTabs({
                 </div>
               )}
 
-              <div className="rounded-xl border border-[#e1e7f2] bg-white p-4 shadow-sm">
-                <div className="mb-4 border-b border-[#e1e7f2] pb-3">
-                  <h2 className="text-lg font-black text-[#17120a]">
-                    {isSuperAdminPlatformManager
-                      ? "Platform Participant Management"
-                      : "Registration Records"}
-                  </h2>
-                  <p className="mt-1 text-sm text-[#52657d]">
-                    {isSuperAdminPlatformManager
-                      ? "Review school registrations, approve participants, and send approved entries into Round 1."
-                      : "Review submitted students, approval state, and registration history."}
-                  </p>
-                </div>
-                <UnifiedApprovalManager
-                  requests={allRequests}
-                  event={event}
-                  onDataChange={onDataChange}
-                />
-              </div>
             </div>
           )}
 

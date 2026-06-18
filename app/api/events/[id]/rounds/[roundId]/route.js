@@ -10,19 +10,6 @@ import Achievement from "@/models/Achievement";
 import { getManageableEventOrResponse } from "@/lib/eventRoundAccess";
 import { getLatestRound } from "@/lib/competitionFlow";
 
-const ROUND_MODES = ["ONLINE_SUBMISSION", "OFFLINE_VENUE", "LIVE_ONLINE"];
-const ROUND_STATUSES = [
-  "DRAFT",
-  "SCHEDULED",
-  "OPEN_FOR_SUBMISSION",
-  "IN_PROGRESS",
-  "JUDGING",
-  "SHORTLIST_PUBLISHED",
-  "COMPLETED",
-  "POSTPONED",
-  "CANCELLED",
-];
-
 function cleanRoundPayload(body) {
   const payload = {};
   if (body.title !== undefined) payload.title = String(body.title).trim();
@@ -30,26 +17,13 @@ function cleanRoundPayload(body) {
   if (body.description !== undefined) {
     payload.description = String(body.description).trim();
   }
-  if (body.mode !== undefined && ROUND_MODES.includes(body.mode)) {
-    payload.mode = body.mode;
-  }
   if (body.date !== undefined) payload.date = body.date || null;
   if (body.startTime !== undefined) {
     payload.startTime = String(body.startTime).trim();
   }
   if (body.endTime !== undefined) payload.endTime = String(body.endTime).trim();
-  if (body.venue !== undefined) payload.venue = String(body.venue).trim();
-  if (body.meetingLink !== undefined) {
-    payload.meetingLink = String(body.meetingLink).trim();
-  }
   if (body.submissionDeadline !== undefined) {
     payload.submissionDeadline = body.submissionDeadline || null;
-  }
-  if (body.instructions !== undefined) {
-    payload.instructions = String(body.instructions).trim();
-  }
-  if (body.status !== undefined && ROUND_STATUSES.includes(body.status)) {
-    payload.status = body.status;
   }
   return payload;
 }

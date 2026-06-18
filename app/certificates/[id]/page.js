@@ -129,96 +129,57 @@ function buildCertificateLogos({ ownershipType, schoolName, schoolLogoUrl, desig
   return [schoolLogo, pravyoLogo];
 }
 
-const CERTIFICATE_DESIGNS = {
-  classic: {
-    label: "Classic",
-    title: "Certificate of Recognition",
-    page: "bg-[#f5f2ea] text-[#231b12]",
-    sheet:
-      "rounded-[1.4rem] border-[8px] border-[#b8892f] bg-[#fffdf8] shadow-[0_22px_70px_rgba(58,39,12,0.16)]",
-    frame:
-      "rounded-[1rem] border border-[#d8b45f] px-8 py-9 md:px-12 bg-[linear-gradient(180deg,#fffdf8,#fffaf0)]",
-    eyebrow: "text-[#8a641b]",
-    subcopy: "text-[#6d604c]",
-    recipient: "text-[#2a1f14]",
-    recipientMeta: "text-[#6d604c]",
-    accent: "text-[#8a641b]",
-    statement: "rounded-xl border border-[#ead9a8] bg-[#fffaf0] px-6 py-5 text-center",
-    metaCard: "rounded-xl border border-[#ead9a8] bg-white p-4",
-    logoMark: "rounded-2xl border border-[#e1d4a4] bg-[#fffaf0]",
-    brandLogoBox: "rounded-2xl border border-[#e1d4a4] bg-white",
-    logoInitial: "text-[#8a641b]",
-    logoCaption: "text-[#6d604c]",
-    score: "rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-4 print:hidden",
-    team: "rounded-xl border border-[#ead9a8] bg-[#fffaf0] px-5 py-4 print:hidden",
-    footerRule: "border-[#ead9a8]",
-  },
-  modern: {
-    label: "Modern",
-    title: "Achievement Certificate",
-    page: "bg-[#eef4f8] text-[#111827]",
-    sheet:
-      "rounded-xl border border-[#d6e2ea] bg-white shadow-[0_22px_70px_rgba(17,24,39,0.12)]",
-    frame:
-      "rounded-lg border-0 px-8 py-9 md:px-12 bg-[linear-gradient(135deg,#ffffff_0%,#ffffff_56%,#f3f8fb_100%)]",
-    eyebrow: "text-[#1f4e79]",
-    subcopy: "text-[#5f6b7a]",
-    recipient: "text-[#111827]",
-    recipientMeta: "text-[#5f6b7a]",
-    accent: "text-[#1f4e79]",
-    statement: "rounded-lg border border-[#dfe5eb] bg-[#f8fbff] px-6 py-5 text-center",
-    metaCard: "rounded-lg border border-[#dfe5eb] bg-white p-4",
-    logoMark: "rounded-lg border border-[#dfe5eb] bg-[#f8fbff]",
-    brandLogoBox: "rounded-lg border border-[#dfe5eb] bg-white",
-    logoInitial: "text-[#1f4e79]",
-    logoCaption: "text-[#5f6b7a]",
-    score: "rounded-lg border border-[#cfe8dc] bg-[#f1fbf6] px-5 py-4 print:hidden",
-    team: "rounded-lg border border-[#d6e2ea] bg-[#f8fbff] px-5 py-4 print:hidden",
-    footerRule: "border-[#dfe5eb]",
-  },
-  best: {
-    label: "Best",
-    title: "Certificate of Achievement",
-    page: "bg-[#f5f7fb] text-[#10142f]",
-    sheet:
-      "rounded-[1.25rem] border-[6px] border-[#1f4e79] bg-white shadow-[0_24px_72px_rgba(16,20,47,0.16)]",
-    frame:
-      "rounded-[0.85rem] border border-[#c9a64a] px-8 py-9 md:px-12 bg-[linear-gradient(135deg,#ffffff_0%,#ffffff_58%,#f8fbff_100%)]",
-    eyebrow: "text-[#1f4e79]",
-    subcopy: "text-[#526071]",
-    recipient: "text-[#10142f]",
-    recipientMeta: "text-[#526071]",
-    accent: "text-[#9b6b13]",
-    statement: "rounded-xl border border-[#d9e3ef] bg-[#f8fbff] px-6 py-5 text-center shadow-sm",
-    metaCard: "rounded-xl border border-[#e6eaf7] bg-white p-4 shadow-sm",
-    logoMark: "rounded-xl border border-[#d9e3ef] bg-[#f8fbff]",
-    brandLogoBox: "rounded-xl border border-[#d9e3ef] bg-white",
-    logoInitial: "text-[#1f4e79]",
-    logoCaption: "text-[#526071]",
-    score: "rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-4 print:hidden",
-    team: "rounded-xl border border-[#d6e6fb] bg-[#f7fbff] px-5 py-4 print:hidden",
-    footerRule: "border-[#d9e3ef]",
-  },
+function canViewCertificate({ achievement, session, isPreviewMode }) {
+  const ownershipType = resolveEventOwnership(achievement.event);
+  if (ownershipType !== "SCHOOL_EVENT") return true;
+
+  const role = session?.user?.role;
+  const userId = String(session?.user?.id || "");
+  const userSchoolId = String(session?.user?.schoolId || session?.user?.id || "");
+  const certificateSchoolId = String(
+    achievement.school?._id || achievement.school || ""
+  );
+  const certificateStudentId = String(
+    achievement.student?._id || achievement.student || ""
+  );
+
+  if (role === "SUPER_ADMIN") return true;
+  if (role === "SCHOOL_ADMIN") return userSchoolId === certificateSchoolId;
+  if (role === "TEACHER") return String(session?.user?.schoolId || "") === certificateSchoolId;
+  if (role === "STUDENT") return userId === certificateStudentId;
+
+  return false;
+}
+
+const CERTIFICATE_DESIGN = {
+  title: "Certificate of Achievement",
+  page: "bg-[#f5f7fb] text-[#10142f]",
+  sheet:
+    "rounded-[1.25rem] border-[6px] border-[#1f4e79] bg-white shadow-[0_24px_72px_rgba(16,20,47,0.16)]",
+  frame:
+    "rounded-[0.85rem] border border-[#c9a64a] px-8 py-9 md:px-12 bg-[linear-gradient(135deg,#ffffff_0%,#ffffff_58%,#f8fbff_100%)]",
+  eyebrow: "text-[#1f4e79]",
+  subcopy: "text-[#526071]",
+  recipient: "text-[#10142f]",
+  recipientMeta: "text-[#526071]",
+  accent: "text-[#9b6b13]",
+  statement: "rounded-xl border border-[#d9e3ef] bg-[#f8fbff] px-6 py-5 text-center shadow-sm",
+  metaCard: "rounded-xl border border-[#e6eaf7] bg-white p-4 shadow-sm",
+  logoMark: "rounded-xl border border-[#d9e3ef] bg-[#f8fbff]",
+  brandLogoBox: "rounded-xl border border-[#d9e3ef] bg-white",
+  logoInitial: "text-[#1f4e79]",
+  logoCaption: "text-[#526071]",
+  score: "rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-4 print:hidden",
+  team: "rounded-xl border border-[#d6e6fb] bg-[#f7fbff] px-5 py-4 print:hidden",
+  footerRule: "border-[#d9e3ef]",
 };
-
-function resolveCertificateDesign(value) {
-  const key = String(value || "best").toLowerCase();
-  return CERTIFICATE_DESIGNS[key] ? key : "best";
-}
-
-function buildDesignHref(id, designKey, { isPreviewMode }) {
-  const params = new URLSearchParams({ design: designKey });
-  if (isPreviewMode) params.set("preview", "1");
-  return `/certificates/${id}?${params.toString()}`;
-}
 
 export default async function CertificatePage({ params, searchParams }) {
   const resolvedParams = await params;
   const resolvedSearchParams = await searchParams;
   const achievement = await getCertificate(resolvedParams.id);
   const isPreviewMode = resolvedSearchParams?.preview === "1";
-  const designKey = resolveCertificateDesign(resolvedSearchParams?.design);
-  const design = CERTIFICATE_DESIGNS[designKey];
+  const design = CERTIFICATE_DESIGN;
   const session = await getServerSession(authOptions);
   const canPreviewCertificate = ["SUPER_ADMIN", "SCHOOL_ADMIN", "TEACHER"].includes(
     session?.user?.role
@@ -232,6 +193,10 @@ export default async function CertificatePage({ params, searchParams }) {
     (!certificateActive &&
       (!isPreviewMode || !canPreviewCertificate))
   ) {
+    notFound();
+  }
+
+  if (!canViewCertificate({ achievement, session, isPreviewMode })) {
     notFound();
   }
 
@@ -274,21 +239,6 @@ export default async function CertificatePage({ params, searchParams }) {
             Back to platform
           </Link>
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex rounded-lg border border-[#d9e3ef] bg-white p-1 shadow-sm">
-              {Object.entries(CERTIFICATE_DESIGNS).map(([key, option]) => (
-                <Link
-                  key={key}
-                  href={buildDesignHref(resolvedParams.id, key, { isPreviewMode })}
-                  className={`rounded-md px-3 py-1.5 text-xs font-black transition ${
-                    designKey === key
-                      ? "bg-[#1f4e79] text-white"
-                      : "text-[#526071] hover:bg-[#f8fbff] hover:text-[#1f4e79]"
-                  }`}
-                >
-                  {option.label}
-                </Link>
-              ))}
-            </div>
             <CertificatePrintActions autoPrint={autoPrint} />
             {eventHref && (
               <Link
@@ -302,12 +252,7 @@ export default async function CertificatePage({ params, searchParams }) {
         </div>
 
         <section className={`certificate-sheet relative overflow-hidden print:shadow-none ${design.sheet}`}>
-          {designKey === "best" && (
-            <div className="pointer-events-none absolute inset-x-0 top-0 h-2 bg-[#c9a64a]" />
-          )}
-          {designKey === "modern" && (
-            <div className="pointer-events-none absolute left-0 top-0 h-full w-2 bg-[#1f4e79]" />
-          )}
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-2 bg-[#c9a64a]" />
           <div className={`certificate-frame relative ${design.frame}`}>
             <div className="text-center">
               <p className={`text-xs font-bold uppercase ${design.eyebrow}`}>

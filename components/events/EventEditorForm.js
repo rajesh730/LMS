@@ -41,7 +41,10 @@ function buildInitialFormData(initialData, ownerMode) {
     eventType:
       ownerMode === "school" ? "COMPETITION" : initialData?.eventType || "COMPETITION",
     visibility: "PUBLIC",
-    registrationMode: "THROUGH_SCHOOL",
+    registrationMode:
+      resolvedParticipationFormat === "TEAM"
+        ? "THROUGH_SCHOOL"
+        : initialData?.registrationMode || "THROUGH_SCHOOL",
     featuredOnLanding: false,
     publicHighlightsEnabled: true,
     assignedMentors:
@@ -215,12 +218,22 @@ export default function EventEditorForm({
       const url = initialData ? `/api/events/${initialData._id}` : "/api/events";
       const method = initialData ? "PUT" : "POST";
 
+      const resolvedPayloadScope = canChooseScope ? formData.eventScope : defaultScope;
+      const resolvedRegistrationMode =
+        formData.participationFormat === "TEAM"
+          ? "THROUGH_SCHOOL"
+          : resolvedPayloadScope !== "SCHOOL"
+          ? "THROUGH_SCHOOL"
+          : formData.registrationMode === "DIRECT"
+          ? "DIRECT"
+          : "THROUGH_SCHOOL";
+
       const payload = {
         ...formData,
-        eventScope: canChooseScope ? formData.eventScope : defaultScope,
+        eventScope: resolvedPayloadScope,
         eventType: isSchoolOwnedFlow ? "COMPETITION" : formData.eventType,
         visibility: "PUBLIC",
-        registrationMode: "THROUGH_SCHOOL",
+        registrationMode: resolvedRegistrationMode,
         featuredOnLanding: false,
         publicHighlightsEnabled: true,
         registrationDeadline: formData.registrationDeadline || null,
@@ -442,7 +455,14 @@ export default function EventEditorForm({
                 <select
                   value={formData.eventScope}
                   onChange={(e) =>
-                    setFormData({ ...formData, eventScope: e.target.value })
+                    setFormData((prev) => ({
+                      ...prev,
+                      eventScope: e.target.value,
+                      registrationMode:
+                        e.target.value === "SCHOOL"
+                          ? prev.registrationMode
+                          : "THROUGH_SCHOOL",
+                    }))
                   }
                   disabled={!canChooseScope}
                   className="w-full bg-slate-800 text-white rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-70"
@@ -579,11 +599,41 @@ export default function EventEditorForm({
             <label className="block text-slate-300 mb-1 text-sm">
               Registration Method
             </label>
-            <div className="w-full rounded border border-slate-700 bg-slate-800 p-2 text-white">
-              School registers students
+            <div className="w-full rounded border border-slate-700 bg-slate-800 p-3 text-white">
+              <div className="font-medium">
+                {formData.registrationMode === "DIRECT"
+                  ? "Students can enroll themselves"
+                  : "School registers students"}
+              </div>
+              <label className="mt-3 flex cursor-pointer items-start gap-2 text-sm text-slate-200">
+                <input
+                  type="checkbox"
+                  checked={formData.registrationMode === "DIRECT"}
+                  disabled={
+                    formData.participationFormat === "TEAM" ||
+                    formData.eventScope !== "SCHOOL"
+                  }
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      registrationMode: e.target.checked
+                        ? "DIRECT"
+                        : "THROUGH_SCHOOL",
+                    }))
+                  }
+                  className="mt-0.5 rounded border-slate-600 bg-slate-700 text-blue-600 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
+                />
+                <span>Let eligible students register themselves</span>
+              </label>
             </div>
             <p className="mt-1 text-xs text-slate-500">
-              Teachers or school admins collect names and register students from the school dashboard.
+              {formData.eventScope !== "SCHOOL"
+                ? "Platform events stay school-managed so schools control their official participant lists."
+                : formData.participationFormat === "TEAM"
+                ? "Team events are school-managed so the school controls the final group list."
+                : formData.registrationMode === "DIRECT"
+                ? "Eligible students will see Enroll in their dashboard. The school can still edit the participant list."
+                : "Teachers or school admins collect names and register students from the school dashboard."}
             </p>
           </div>
           <div>

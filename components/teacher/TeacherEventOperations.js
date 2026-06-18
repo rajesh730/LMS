@@ -46,7 +46,7 @@ function nextRoundAction(round) {
   const stats = roundStats(round);
   if (stats.total === 0) return "Generate participants for this round.";
   if (round.mode === "ONLINE_SUBMISSION" && stats.submitted === 0) {
-    return "Share instructions and watch for submissions.";
+    return "Watch for submissions.";
   }
   if (["OPEN_FOR_SUBMISSION", "IN_PROGRESS", "JUDGING"].includes(round.status)) {
     return "Review submissions or attendance and mark selected students.";

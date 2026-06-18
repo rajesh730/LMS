@@ -1,12 +1,10 @@
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import DashboardLayout from "@/components/DashboardLayout";
-import StudentSchoolMagazine from "@/components/student/StudentSchoolMagazine";
 
 export const metadata = {
-  title: "Global Wall",
-  description: "Read student writing shared beyond your school",
+  title: "School Wall",
+  description: "Read student writing shared by your school",
 };
 
 export default async function StudentGlobalWallPage() {
@@ -20,11 +18,5 @@ export default async function StudentGlobalWallPage() {
     redirect("/");
   }
 
-  return (
-    <DashboardLayout>
-      <div className="max-w-7xl mx-auto">
-        <StudentSchoolMagazine initialView="global" lockedView />
-      </div>
-    </DashboardLayout>
-  );
+  redirect("/student/school-wall");
 }

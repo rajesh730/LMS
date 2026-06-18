@@ -392,12 +392,12 @@ export default function StudentSchoolMagazine({
   const [student, setStudent] = useState(null);
   const [articles, setArticles] = useState([]);
   const [wallArticles, setWallArticles] = useState([]);
-  const [globalArticles, setGlobalArticles] = useState([]);
-  const [globalWallEnabled, setGlobalWallEnabled] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [activeCategory, setActiveCategory] = useState("ALL");
-  const [activeView, setActiveView] = useState(initialView);
+  const [activeView, setActiveView] = useState(
+    initialView === "global" ? "school-wall" : initialView
+  );
   const [activeMagazineMonth, setActiveMagazineMonth] = useState("");
   const [activeMagazineIssueId, setActiveMagazineIssueId] = useState("");
 
@@ -422,21 +422,6 @@ export default function StudentSchoolMagazine({
         setStudent(payload.student || null);
         setArticles(nextArticles);
         setWallArticles(nextWallArticles);
-        setGlobalWallEnabled(Boolean(payload.globalWallEnabled));
-
-        if (payload.globalWallEnabled) {
-          const globalRes = await fetch("/api/student/global-wall", {
-            cache: "no-store",
-          });
-          const globalPayload = await globalRes.json().catch(() => ({}));
-          setGlobalArticles(
-            globalRes.ok && Array.isArray(globalPayload.articles)
-              ? globalPayload.articles
-              : []
-          );
-        } else {
-          setGlobalArticles([]);
-        }
       } catch (loadError) {
         setError(loadError.message || "Failed to load school magazine");
       } finally {
@@ -518,11 +503,8 @@ export default function StudentSchoolMagazine({
     if (activeView === "magazine") {
       return selectedMagazineIssue?.articles || [];
     }
-    if (activeView === "global") {
-      return globalArticles;
-    }
     return wallArticles;
-  }, [activeView, globalArticles, selectedMagazineIssue, wallArticles]);
+  }, [activeView, selectedMagazineIssue, wallArticles]);
 
   const categoryCounts = useMemo(() => {
     const counts = { ALL: activeArticles.length };
@@ -591,17 +573,7 @@ export default function StudentSchoolMagazine({
     );
   }
 
-  if (activeView === "global" && !globalWallEnabled) {
-    return (
-      <EmptyState
-        icon={FaBookOpen}
-        title="Global Wall is not enabled"
-        description="Your school controls whether students can view the global writing wall."
-      />
-    );
-  }
-
-  if (articles.length === 0 && wallArticles.length === 0 && globalArticles.length === 0) {
+  if (articles.length === 0 && wallArticles.length === 0) {
     return (
       <EmptyState
         icon={FaFeatherAlt}
@@ -700,8 +672,6 @@ export default function StudentSchoolMagazine({
                 <h2 className="text-lg font-bold text-[#17120a]">
                   {activeView === "magazine"
                     ? "School Magazine"
-                    : activeView === "global"
-                    ? "Global Wall"
                     : "School Wall"}
                 </h2>
                 <div className="mt-1 h-1 w-16 rounded-full bg-purple-500" />
@@ -718,9 +688,6 @@ export default function StudentSchoolMagazine({
                 {[
                   ["school-wall", "School Wall", wallArticles.length],
                   ["magazine", "School Magazine", articles.length],
-                  ...(globalWallEnabled
-                    ? [["global", "Global Wall", globalArticles.length]]
-                    : []),
                 ].map(([view, label, count]) => (
                   <button
                     key={view}
@@ -797,17 +764,13 @@ export default function StudentSchoolMagazine({
               />
             ) : (
               <>
-                {activeView === "school-wall" || activeView === "global" ? (
+                {activeView === "school-wall" ? (
                   <div className="student-wall-list mt-4 space-y-3 sm:mt-5 sm:space-y-4">
                     {filteredArticles.map((article) => (
                       <SchoolWallCard
                         key={article.id}
                         article={article}
-                        href={
-                          activeView === "global"
-                            ? `/student/global-wall/${article.id}`
-                            : `/student/school-wall/${article.id}`
-                        }
+                        href={`/student/school-wall/${article.id}`}
                       />
                     ))}
                   </div>
@@ -817,7 +780,6 @@ export default function StudentSchoolMagazine({
                       <ArticleCard
                         key={article.id}
                         article={article}
-                        disableLink={activeView === "global"}
                       />
                     ))}
                   </div>

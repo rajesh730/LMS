@@ -108,7 +108,6 @@ export default function DashboardOverview() {
     const studentStatus = stats?.students?.byStatus || {};
     const teacherStatus = stats?.teachers?.byStatus || {};
     const eventLifecycle = stats?.events?.byLifecycle || {};
-    const eventScope = stats?.events?.byScope || {};
     const totalStudents = stats?.students?.total || 0;
     const totalTeachers = stats?.teachers?.total || 0;
     const totalEvents = stats?.events?.total || 0;
@@ -135,8 +134,6 @@ export default function DashboardOverview() {
       activeEvents,
       completedEvents: getCount(eventLifecycle, "COMPLETED"),
       archivedEvents: getCount(eventLifecycle, "ARCHIVED"),
-      schoolEvents: getCount(eventScope, "SCHOOL"),
-      platformEvents: getCount(eventScope, "PLATFORM"),
       gradeCount,
       studentHealth,
       teacherHealth,
@@ -256,8 +253,7 @@ export default function DashboardOverview() {
             {[
               ["Student Health", `${summary.studentHealth}%`],
               ["Teacher Coverage", `${summary.teacherHealth}%`],
-              ["School Events", summary.schoolEvents],
-              ["Platform Events", summary.platformEvents],
+              ["Active Events", summary.activeEvents],
               ["Archived Events", summary.archivedEvents],
               ["Active Grades", summary.gradeCount],
             ].map(([label, value]) => (

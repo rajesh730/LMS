@@ -49,10 +49,17 @@ async function getWinners() {
     .limit(40)
     .populate("student", "name grade")
     .populate("school", "schoolName")
-    .populate("event", "title")
+    .populate("event", "title eventScope publicResultsEnabled resultsPublished")
     .lean();
 
-  return achievements.map((achievement) => ({
+  return achievements
+    .filter(
+      (achievement) =>
+        achievement.event?.eventScope === "PLATFORM" &&
+        achievement.event?.publicResultsEnabled &&
+        achievement.event?.resultsPublished
+    )
+    .map((achievement) => ({
     id: String(achievement._id),
     studentName:
       achievement.certificateRecipientName ||
