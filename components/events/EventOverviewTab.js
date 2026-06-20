@@ -13,6 +13,7 @@ import {
 } from "@/lib/eventUiStatus";
 import {
   formatEventWorkflowStatus,
+  getEventNextActionLabel,
   getEventWorkflowStatus,
 } from "@/lib/eventWorkflow";
 
@@ -38,6 +39,7 @@ export default function EventOverviewTab({
   };
   const stage = getEventStage(event, { capacityInfo, requests });
   const workflowStatus = getEventWorkflowStatus(event);
+  const nextAction = getEventNextActionLabel(event);
   const pendingCount = countRequestUnits(requests.PENDING || []);
   const registrationClosed = isDatePast(event.registrationDeadline);
   const stageTone =
@@ -49,15 +51,15 @@ export default function EventOverviewTab({
       ? "border-rose-200 bg-rose-50 text-rose-800"
       : "border-blue-100 bg-blue-50 text-[#0a2f66]";
   const timeline = [
-    ["Open For Registration", event.createdAt || event.date, !["DRAFT"].includes(workflowStatus)],
+    ["Registration Open", event.createdAt || event.date, !["DRAFT"].includes(workflowStatus)],
     ["Registration Closed", event.registrationDeadline, !["DRAFT", "OPEN_FOR_REGISTRATION"].includes(workflowStatus)],
-    ["Round Active", event.date, ["ROUND_ACTIVE", "RESULTS_DRAFT", "RESULTS_PUBLISHED", "COMPLETED"].includes(workflowStatus)],
-    ["Results Draft", null, ["RESULTS_DRAFT", "RESULTS_PUBLISHED", "COMPLETED"].includes(workflowStatus)],
+    ["Rounds Running", event.date, ["ROUND_ACTIVE", "RESULTS_DRAFT", "RESULTS_PUBLISHED", "COMPLETED"].includes(workflowStatus)],
+    ["Results Review", null, ["RESULTS_DRAFT", "RESULTS_PUBLISHED", "COMPLETED"].includes(workflowStatus)],
     ["Results Published", null, ["RESULTS_PUBLISHED", "COMPLETED"].includes(workflowStatus)],
     ["Completed", null, workflowStatus === "COMPLETED"],
   ];
   const detailItems = [
-    ["Organized By", event.school?.schoolName || event.school?.name || "Orbit English School", FaSchool],
+    ["Organized By", event.school?.schoolName || event.school?.name || "Pravyo", FaSchool],
     ["Event Type", String(event.eventType || "Competition").replaceAll("_", " "), FaTrophy],
     [
       "Visibility",
@@ -75,13 +77,13 @@ export default function EventOverviewTab({
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
             <p className="text-xs font-black uppercase tracking-normal">
-              Current Stage
+              Event Status
             </p>
             <h2 className="mt-1 text-xl font-black">{stage.label}</h2>
             <p className="mt-1 text-xs font-black uppercase opacity-80">
-              Workflow: {formatEventWorkflowStatus(workflowStatus)}
+              Status: {formatEventWorkflowStatus(workflowStatus)}
             </p>
-            <p className="mt-2 text-sm opacity-90">{stage.nextAction}</p>
+            <p className="mt-2 text-sm opacity-90">{nextAction}</p>
           </div>
           <div className="rounded-lg border border-current/20 bg-white/70 px-4 py-3 text-sm font-black">
             Deadline: {formatShortDate(event.registrationDeadline)}
@@ -120,12 +122,16 @@ export default function EventOverviewTab({
                     <div className="flex items-center justify-between gap-4">
                       <p className="font-black text-[#17120a]">{label}</p>
                       <p className="text-xs font-bold text-[#75869b]">
-                        {date ? formatShortDate(date) : "Pending"}
+                        {date ? formatShortDate(date) : complete ? "Done" : "Pending"}
                       </p>
                     </div>
                     {label === "Registration Closed" && (
                       <p className="mt-1 text-xs text-[#52657d]">
-                        {registrationClosed ? "Closed" : "Still accepting entries"}
+                        {complete
+                          ? "Closed"
+                          : registrationClosed
+                          ? "Closed"
+                          : "Still accepting entries"}
                       </p>
                     )}
                   </div>

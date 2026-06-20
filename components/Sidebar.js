@@ -5,25 +5,13 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import { useEffect } from "react";
 import {
-  FaChartPie,
-  FaBullhorn,
-  FaBell,
-  FaBookOpen,
-  FaCalendarAlt,
-  FaCog,
-  FaCheckCircle,
-  FaFeatherAlt,
-  FaHeartbeat,
   FaSignOutAlt,
   FaSchool,
-  FaChalkboardTeacher,
-  FaCommentDots,
-  FaBullseye,
-  FaUsers,
   FaTimes,
 } from "react-icons/fa";
 import PravyoLogo from "@/components/brand/PravyoLogo";
-import WorkIndicatorBadge from "@/components/work-indicators/WorkIndicatorBadge";
+import NavItemLink from "@/components/navigation/NavItemLink";
+import { getRoleNavigationLinks } from "@/components/navigation/appNavigation";
 import useWorkIndicators from "@/lib/useWorkIndicators";
 
 const HREF_INDICATOR_KEYS = {
@@ -102,49 +90,7 @@ export default function Sidebar({
     }
   }, [session]);
 
-  const adminLinks = [
-    { name: "Approvals", href: "/admin/dashboard?tab=approvals", icon: FaCheckCircle },
-    { name: "Schools", href: "/admin/dashboard?tab=schools", icon: FaSchool },
-    { name: "Platform Events", href: "/admin/dashboard?tab=events", icon: FaCalendarAlt },
-    { name: "Notices", href: "/admin/dashboard?tab=notices", icon: FaBullhorn },
-    { name: "School Spotlight", href: "/admin/dashboard?tab=spotlight", icon: FaBullseye },
-    { name: "Diagnostics", href: "/admin/diagnostics", icon: FaHeartbeat },
-    { name: "Feedback", href: "/admin/feedback", icon: FaCommentDots },
-    { name: "Settings", href: "/admin/settings", icon: FaCog },
-  ];
-
-  const schoolLinks = [
-    { name: "Overview", href: "/school/dashboard", icon: FaChartPie },
-    { name: "Students", href: "/school/dashboard?tab=students", icon: FaUsers },
-    { name: "Teachers", href: "/school/dashboard?tab=teachers", icon: FaChalkboardTeacher },
-    { name: "School Events", href: "/school/dashboard?tab=school-events", icon: FaCalendarAlt },
-    { name: "Student Notices", href: "/school/dashboard?tab=student-notices", icon: FaBell },
-    { name: "Received Notices", href: "/school/dashboard?tab=notices", icon: FaBell },
-    { name: "Publishing Desk", href: "/school/dashboard?tab=magazine", icon: FaBookOpen },
-    { name: "Public Profile", href: "/school/dashboard?tab=showcase", icon: FaSchool },
-    { name: "Feedback", href: "/school/dashboard?tab=feedback", icon: FaCommentDots },
-    { name: "Settings", href: "/school/dashboard?tab=settings", icon: FaCog },
-  ];
-
-  const teacherLinks = [
-    { name: "Mentor Workspace", href: "/teacher/dashboard", icon: FaChalkboardTeacher },
-  ];
-
-  const studentLinks = [
-    { name: "My Activity", href: "/student/dashboard", icon: FaSchool },
-    { name: "Events", href: "/student/events", icon: FaCalendarAlt },
-    { name: "Notices", href: "/student/notices", icon: FaBell },
-    { name: "My Writing", href: "/student/writing", icon: FaFeatherAlt },
-    { name: "School Wall", href: "/student/school-wall", icon: FaSchool },
-    { name: "School Magazine", href: "/student/magazine", icon: FaBookOpen },
-    { name: "Feedback", href: "/student/feedback", icon: FaCommentDots },
-  ].filter(Boolean);
-
-  let links = [];
-  if (role === "SUPER_ADMIN") links = adminLinks;
-  else if (role === "SCHOOL_ADMIN") links = schoolLinks;
-  else if (role === "TEACHER") links = teacherLinks;
-  else if (role === "STUDENT") links = studentLinks;
+  let links = getRoleNavigationLinks(role);
 
   if (isPending) {
     links = [];
@@ -211,39 +157,19 @@ export default function Sidebar({
                 const indicator = getIndicator(HREF_INDICATOR_KEYS[link.href]);
 
                 return (
-                  <Link
+                  <NavItemLink
                     key={link.href}
                     href={link.href}
+                    label={link.name}
+                    icon={Icon}
+                    active={isActive}
+                    indicator={indicator}
                     onClick={() => {
                       const seenSurface = HREF_SEEN_SURFACES[link.href];
                       if (seenSurface) void markSurfaceSeen(seenSurface);
                       onNavigate?.();
                     }}
-                    aria-current={isActive ? "page" : undefined}
-                    className={`group flex min-h-[2.625rem] items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold transition-all duration-150 ${
-                      isActive
-                        ? "pravyo-sidebar-active bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]"
-                        : "text-[#3d4a5c] hover:bg-[var(--brand-primary-soft)]/70 hover:text-[var(--brand-primary)]"
-                    }`}
-                  >
-                    <span
-                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-all duration-150 ${
-                        isActive
-                          ? "bg-[var(--brand-primary)] text-white shadow-sm"
-                          : "bg-[#f0eeff] text-[var(--brand-muted)] group-hover:bg-[var(--brand-primary-soft)] group-hover:text-[var(--brand-primary)]"
-                      }`}
-                    >
-                      <Icon className="pravyo-sidebar-icon text-xs" />
-                    </span>
-                    <span className="pravyo-sidebar-label min-w-0 flex-1 truncate leading-tight">
-                      {link.name}
-                    </span>
-                    <WorkIndicatorBadge
-                      count={indicator.count}
-                      tone={indicator.tone}
-                      compact
-                    />
-                  </Link>
+                  />
                 );
               })}
             </div>

@@ -105,7 +105,7 @@ export default function AdminDailyOverview({
     return (
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {[0, 1, 2, 3].map((item) => (
-          <div key={item} className="h-44 animate-pulse rounded-lg border border-[#d7cdbb] bg-white" />
+          <div key={item} className="h-44 animate-pulse rounded-lg border border-[#e6eaf7] bg-white" />
         ))}
       </section>
     );
@@ -121,7 +121,7 @@ export default function AdminDailyOverview({
         />
       )}
 
-      <div className="rounded-xl border border-[#d7cdbb] bg-[#f8fbff]/90 p-5 shadow-sm sm:p-6">
+      <div className="rounded-xl border border-[#e6eaf7] bg-[#f8fbff]/90 p-5 shadow-sm sm:p-6">
         <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-normal text-[#52657d]">
@@ -211,7 +211,7 @@ export default function AdminDailyOverview({
           </Link>
           <Link
             href="/admin/dashboard?tab=notices"
-            className="inline-flex items-center gap-2 rounded-lg border border-[#d7cdbb] bg-white px-3 py-2 font-semibold text-[#0a2f66] transition hover:bg-[#eaf2ff]"
+            className="inline-flex items-center gap-2 rounded-lg border border-[#e6eaf7] bg-white px-3 py-2 font-semibold text-[#0a2f66] transition hover:bg-[#eaf2ff]"
           >
             Publish platform notice
           </Link>

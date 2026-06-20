@@ -2,144 +2,21 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import {
-  FaArrowLeft,
-  FaBookOpen,
-  FaCalendarAlt,
-  FaClock,
-  FaFeatherAlt,
-  FaLayerGroup,
-  FaPenNib,
-  FaStar,
-  FaUser,
-} from "react-icons/fa";
+import { FaArrowLeft } from "react-icons/fa";
 import AlertBanner from "@/components/ui/AlertBanner";
 import LoadingState from "@/components/ui/LoadingState";
-import WritingContent, { stripWritingMarkup } from "@/components/WritingContent";
+import MagazineArticleCard, {
+  getCategoryMeta,
+} from "@/components/student/MagazineArticleCard";
+import MagazineArticleDetail from "@/components/student/MagazineArticleDetail";
 import useRealtimeChannel from "@/lib/useRealtimeChannel";
-import { normalizeWritingCategory } from "@/lib/writingCategories";
-
-const CATEGORY_META = {
-  BLOG_ARTICLE: {
-    label: "Blog Article",
-    accent: "text-indigo-700",
-    chip: "border-indigo-200 bg-indigo-50 text-indigo-700",
-    art: "from-indigo-100 via-white to-sky-100",
-    icon: FaBookOpen,
-  },
-  POEM: {
-    label: "Poem",
-    accent: "text-fuchsia-700",
-    chip: "border-fuchsia-200 bg-fuchsia-50 text-fuchsia-700",
-    art: "from-fuchsia-100 via-white to-violet-100",
-    icon: FaFeatherAlt,
-  },
-  RESEARCH: {
-    label: "Research",
-    accent: "text-emerald-700",
-    chip: "border-emerald-200 bg-emerald-50 text-emerald-700",
-    art: "from-emerald-100 via-white to-cyan-100",
-    icon: FaLayerGroup,
-  },
-  OPINION: {
-    label: "Opinion",
-    accent: "text-amber-700",
-    chip: "border-amber-200 bg-amber-50 text-amber-700",
-    art: "from-amber-100 via-white to-yellow-100",
-    icon: FaStar,
-  },
-  CREATIVE_WRITING: {
-    label: "Creative Writing",
-    accent: "text-purple-700",
-    chip: "border-purple-200 bg-purple-50 text-purple-700",
-    art: "from-purple-100 via-white to-pink-100",
-    icon: FaPenNib,
-  },
-};
-
-function normalizeCategory(value) {
-  return normalizeWritingCategory(value);
-}
-
-function getCategoryMeta(value) {
-  return CATEGORY_META[normalizeCategory(value)];
-}
-
-function formatDate(value) {
-  if (!value) return "";
-  return new Date(value).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
-function getReadTime(content = "") {
-  const words = String(content || "").trim().split(/\s+/).filter(Boolean).length;
-  return Math.max(1, Math.ceil(words / 180));
-}
-
-function getPreview(content = "", maxLength = 90) {
-  const text = stripWritingMarkup(content).replace(/\s+/g, " ").trim();
-  if (text.length <= maxLength) return text;
-  return `${text.slice(0, maxLength).trim()}...`;
-}
-
-function MagazineArt({ category }) {
-  const meta = getCategoryMeta(category);
-  const Icon = meta.icon;
-
-  return (
-    <div
-      className="pravyo-brand-panel relative min-h-72 overflow-hidden rounded-2xl border p-8"
-    >
-      <div className="absolute left-10 top-10 h-32 w-44 rotate-[-8deg] rounded-lg border border-white/80 bg-white/75 shadow-xl" />
-      <div className="absolute left-32 top-16 h-32 w-44 rotate-[8deg] rounded-lg border border-white/80 bg-white/75 shadow-xl" />
-      <div className="absolute bottom-12 right-16 h-1.5 w-48 rotate-[-18deg] rounded-full bg-white/35" />
-      <div className="absolute bottom-20 right-24 h-1.5 w-32 rotate-[-18deg] rounded-full bg-white/35" />
-      <Icon className="absolute right-10 top-10 text-7xl text-white/82" />
-      <FaPenNib className="absolute bottom-12 left-12 text-5xl text-white/72" />
-      <span className="absolute bottom-8 right-8 rounded-full bg-white/85 px-4 py-2 text-sm font-bold text-[#17120a] shadow-sm">
-        {meta.label}
-      </span>
-    </div>
-  );
-}
-
-function ArticleMeta({ article }) {
-  const publishedDate = formatDate(article.publishedAt);
-
-  return (
-    <div className="student-magazine-article-meta mt-4 flex flex-wrap items-center gap-4 text-sm text-[#52657d]">
-      <span className="inline-flex items-center gap-2">
-        <FaUser className="text-[#75869b]" />
-        {article.authorStudent?.name || "Student"}
-      </span>
-      {publishedDate && (
-        <span className="inline-flex items-center gap-2">
-          <FaCalendarAlt className="text-[#75869b]" />
-          {publishedDate}
-        </span>
-      )}
-      <span className="inline-flex items-center gap-2">
-        <FaClock className="text-[#75869b]" />
-        {getReadTime(article.content)} min read
-      </span>
-      {article.magazineIssue?.title && (
-        <span className="inline-flex items-center gap-2">
-          <FaBookOpen className="text-[#75869b]" />
-          {article.magazineIssue.title}
-        </span>
-      )}
-    </div>
-  );
-}
 
 export default function StudentMagazineArticleReader({
   articleId,
   apiBasePath = "/api/student/magazine",
   backHref = "/student/magazine",
   backLabel = "Back to magazine",
+  issueHrefPrefix = "/student/magazine/issues/",
   relatedHrefPrefix = "/student/magazine/",
   relatedTitle = "",
 }) {
@@ -209,7 +86,7 @@ export default function StudentMagazineArticleReader({
 
   const meta = getCategoryMeta(article.category);
   const issueBackHref = article.magazineIssue?.id
-    ? `/student/magazine/issues/${article.magazineIssue.id}`
+    ? `${issueHrefPrefix}${article.magazineIssue.id}`
     : backHref;
 
   return (
@@ -222,41 +99,7 @@ export default function StudentMagazineArticleReader({
         {article.magazineIssue?.id ? "Back" : backLabel}
       </Link>
 
-      <article className="student-magazine-article-card overflow-hidden rounded-2xl border border-[#d7cdbb] bg-white shadow-[0_18px_50px_rgba(10,47,102,0.08)]">
-        <div className="student-magazine-article-head grid gap-6 p-5 md:p-8 xl:grid-cols-[1fr_0.72fr]">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <span
-                className={`inline-flex rounded-full border px-3 py-1 text-xs font-bold ${meta.chip}`}
-              >
-                {meta.label}
-              </span>
-            </div>
-
-            <h1 className="student-reader-title mt-5 max-w-4xl text-4xl font-bold leading-tight text-[#17120a] md:text-5xl">
-              {article.title}
-            </h1>
-            <ArticleMeta article={article} />
-            {student && (
-              <p className="mobile-accessory-info mt-3 text-sm text-[#52657d] sm:block">
-                Reading as {student.name} - {student.grade} - Roll{" "}
-                {student.rollNumber || "-"}
-              </p>
-            )}
-          </div>
-
-          <div className="mobile-accessory-info sm:block">
-            <MagazineArt category={article.category} />
-          </div>
-        </div>
-
-        <div className="student-magazine-article-body border-t border-[#d7cdbb] bg-[#fffdf8] px-5 py-8 md:px-10">
-          <WritingContent
-            content={article.content}
-            className="mx-auto max-w-3xl space-y-4 text-base leading-8 text-[#27344a] md:text-lg"
-          />
-        </div>
-      </article>
+      <MagazineArticleDetail article={article} student={student} />
 
       {relatedArticles.length > 0 && (
         <section className="student-magazine-related rounded-xl border border-[#d7cdbb] bg-white p-5 shadow-sm">
@@ -264,28 +107,14 @@ export default function StudentMagazineArticleReader({
             {relatedTitle || `More ${meta.label} Articles`}
           </h2>
           <div className="mt-4 grid gap-4 md:grid-cols-3">
-            {relatedArticles.map((related) => {
-              const relatedMeta = getCategoryMeta(related.category);
-              return (
-                <Link
-                  key={related.id}
-                  href={`${relatedHrefPrefix}${related.id}`}
-                  className="rounded-lg border border-[#d7cdbb] bg-[#f8fbff] p-4 transition hover:-translate-y-0.5 hover:border-purple-200 hover:bg-white hover:shadow-md"
-                >
-                  <span
-                    className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-bold ${relatedMeta.chip}`}
-                  >
-                    {relatedMeta.label}
-                  </span>
-                  <h3 className="mt-3 line-clamp-2 font-bold text-[#17120a]">
-                    {related.title}
-                  </h3>
-                  <p className="mt-2 line-clamp-2 text-sm leading-6 text-[#52657d]">
-                    {getPreview(related.content)}
-                  </p>
-                </Link>
-              );
-            })}
+            {relatedArticles.map((related) => (
+              <MagazineArticleCard
+                key={related.id}
+                article={related}
+                href={`${relatedHrefPrefix}${related.id}`}
+                compact
+              />
+            ))}
           </div>
         </section>
       )}

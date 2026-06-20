@@ -48,9 +48,9 @@ function getSchoolDistrict(school) {
   return school.district || parseSchoolLocation(school.location).district;
 }
 
-function getCampaignState(campaign) {
-  if (!campaign) return "OFF";
-  return campaign.status;
+function getSpotlightState(spotlight) {
+  if (!spotlight) return "OFF";
+  return spotlight.status;
 }
 
 function buildPromotionIndex(promotions, placement) {
@@ -139,7 +139,7 @@ export default function SchoolPromotionManager() {
     const needle = query.trim().toLowerCase();
     return schools.filter((school) => {
       const promotion = promotionBySchool.get(school.id);
-      const spotlightState = getCampaignState(promotion);
+      const spotlightState = getSpotlightState(promotion);
       const searchable = [
         school.name,
         school.principalName,
@@ -224,7 +224,7 @@ export default function SchoolPromotionManager() {
         icon={FaBullhorn}
         eyebrow="School recognition"
         title="School Spotlight"
-        description="Control spotlight visibility for every school from one list."
+        description="Feature schools in public spotlight areas. This is free while the platform is in pilot."
       />
 
       {error && (
@@ -338,7 +338,7 @@ export default function SchoolPromotionManager() {
               <tbody>
                 {visibleSchools.map((school) => {
                   const promotion = promotionBySchool.get(school.id);
-                  const state = getCampaignState(promotion);
+                  const state = getSpotlightState(promotion);
                   const priority = promotion?.priority || "STANDARD";
                   const isActive = state === "ACTIVE";
                   const isBusy = busyId.startsWith(school.id);
@@ -385,7 +385,7 @@ export default function SchoolPromotionManager() {
                           }`}
                         >
                           <FaStar />
-                          {priority === "PREMIUM" ? "Premium" : "Standard"}
+                          {priority === "PREMIUM" ? "High rotation" : "Normal rotation"}
                         </button>
                       </td>
                       <td className="p-4 text-xs font-bold text-[#52657d]">

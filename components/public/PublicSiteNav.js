@@ -4,21 +4,11 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import {
   FaBars,
-  FaCalendarAlt,
-  FaHome,
-  FaSchool,
   FaSearch,
   FaTimes,
-  FaTrophy,
 } from "react-icons/fa";
 import PravyoLogo from "@/components/brand/PravyoLogo";
-
-const NAV_ITEMS = [
-  { label: "Home",     href: "/",        key: "home",     icon: FaHome },
-  { label: "Schools",  href: "/schools",  key: "schools",  icon: FaSchool },
-  { label: "Events",   href: "/events",   key: "events",   icon: FaCalendarAlt },
-  { label: "Winners",  href: "/winners",  key: "winners",  icon: FaTrophy },
-];
+import { PUBLIC_NAV_LINKS } from "@/components/navigation/appNavigation";
 
 export default function PublicSiteNav({
   active = "home",
@@ -83,7 +73,7 @@ export default function PublicSiteNav({
             aria-label="Main navigation"
             className="hidden items-center gap-0.5 md:flex"
           >
-            {NAV_ITEMS.map((item) => {
+            {PUBLIC_NAV_LINKS.map((item) => {
               const isActive = active === item.key;
               return (
                 <Link
@@ -182,7 +172,7 @@ export default function PublicSiteNav({
           >
             {/* Nav links grid */}
             <div className="grid gap-1 rounded-2xl border border-[var(--brand-border)] bg-[#f8f9fd] p-2">
-              {NAV_ITEMS.map((item) => {
+              {PUBLIC_NAV_LINKS.map((item) => {
                 const Icon = item.icon;
                 const isActive = active === item.key;
                 return (

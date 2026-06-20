@@ -11,7 +11,10 @@ import HomeScrollMemory from "@/components/public/HomeScrollMemory";
 import PublicExplorePanel from "@/components/public/PublicExplorePanel";
 import PublicSiteNav from "@/components/public/PublicSiteNav";
 import SchoolLogoMark from "@/components/public/SchoolLogoMark";
-import { stripWritingMarkup } from "@/components/WritingContent";
+import {
+  getWritingPreviewText,
+  WritingPreview,
+} from "@/components/WritingContent";
 import {
   FaArrowRight,
   FaCalendarAlt,
@@ -35,10 +38,9 @@ function formatDate(value) {
 }
 
 function getPreview(value = "", maxLength = 120) {
-  const text = stripWritingMarkup(value).replace(/\s+/g, " ").trim();
+  const text = getWritingPreviewText(value, maxLength, { preserveFormatting: false });
   if (!text) return "";
-  if (text.length <= maxLength) return text;
-  return `${text.slice(0, maxLength).trim()}...`;
+  return text;
 }
 
 function getInitials(value = "P") {
@@ -147,32 +149,31 @@ async function getHomeMagazineIssues() {
     .filter(Boolean);
 }
 
-async function getPremiumSpotlightStudentWritings() {
-  const premiumPromotions = await SchoolPromotion.find({
+async function getHighRotationSpotlightStudentWritings() {
+  const highRotationPromotions = await SchoolPromotion.find({
     placement: "HOME_SPOTLIGHT",
     status: "ACTIVE",
-    paymentStatus: "PAID",
     priority: "PREMIUM",
   })
     .select("school")
     .lean();
 
-  const premiumSchoolIds = [
+  const highRotationSchoolIds = [
     ...new Set(
-      premiumPromotions
+      highRotationPromotions
         .map((promotion) => promotion.school)
         .filter(Boolean)
         .map((schoolId) => String(schoolId))
     ),
   ];
 
-  if (premiumSchoolIds.length === 0) return [];
+  if (highRotationSchoolIds.length === 0) return [];
 
   const articles = await SchoolMagazineArticle.find({
     status: "APPROVED",
     isPublished: true,
     isDeleted: { $ne: true },
-    school: { $in: premiumSchoolIds },
+    school: { $in: highRotationSchoolIds },
   })
     .select("title content category publishedAt updatedAt")
     .sort({ publishedAt: -1, updatedAt: -1 })
@@ -220,13 +221,13 @@ async function getHomepageData() {
 
   const [
     homeSpotlights,
-    premiumSpotlightWritings,
+    spotlightStories,
     latestWritings,
     homeMagazineIssues,
     upcomingEvents,
   ] = await Promise.all([
     getActiveSchoolPromotions("HOME_SPOTLIGHT", 5, { randomize: true }),
-    getPremiumSpotlightStudentWritings(),
+    getHighRotationSpotlightStudentWritings(),
     getLatestStudentWritings(),
     getHomeMagazineIssues(),
     getUpcomingEvents(),
@@ -243,7 +244,7 @@ async function getHomepageData() {
 
   return {
     homeSpotlights,
-    premiumSpotlightWritings,
+    spotlightStories,
     latestWritings: publicFeedItems,
     upcomingEvents,
   };
@@ -332,9 +333,11 @@ function FeedCard({ item, badge = "Published Writing" }) {
         <h2 className="text-lg font-bold leading-snug text-[#111827]">
           {item.title || "Published student writing"}
         </h2>
-        <p className="mt-2 line-clamp-4 text-sm leading-6 text-[#4b5565]">
-          {getPreview(item.content, 280)}
-        </p>
+        <WritingPreview
+          content={item.content}
+          maxLength={280}
+          className="mt-2 line-clamp-4 text-sm leading-5 text-[#4b5565]"
+        />
         <Link
           href={voiceHref}
           className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--brand-primary)] transition hover:gap-2.5"
@@ -585,7 +588,7 @@ function MobileVoiceFeed({ writings }) {
 export default async function Home() {
   const {
     homeSpotlights,
-    premiumSpotlightWritings,
+    spotlightStories,
     latestWritings,
     upcomingEvents,
   } = await getHomepageData();
@@ -605,7 +608,7 @@ export default async function Home() {
         <div className="min-w-0">
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
             <div className="min-w-0 space-y-5">
-              <HomepageHeroCarousel stories={premiumSpotlightWritings} />
+              <HomepageHeroCarousel stories={spotlightStories} />
 
               <div className="hidden space-y-5 md:block">
                 {feedItems.map((item) => (

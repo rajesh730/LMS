@@ -8,9 +8,9 @@ import {
   FaEllipsisH,
   FaEye,
   FaLayerGroup,
-  FaLock,
   FaPlus,
   FaSave,
+  FaSearch,
   FaTrash,
   FaTrophy,
   FaUsers,
@@ -25,7 +25,8 @@ const NON_FINAL_STATUS_BUTTONS = [
 
 const FINAL_STATUS_BUTTONS = [
   { value: "WINNER", label: "Winner" },
-  { value: "RUNNER_UP", label: "Runner Up" },
+  { value: "RUNNER_UP", label: "1st Runner Up" },
+  { value: "THIRD_PLACE", label: "2nd Runner Up" },
   { value: "FINALIST", label: "Finalist" },
   { value: "DISQUALIFIED", label: "Disqualified" },
   { value: "NOT_ATTEMPTED", label: "Not Attempted" },
@@ -39,7 +40,8 @@ const EMPTY_ROUND_FORM = {
 };
 
 function label(value) {
-  if (value === "RUNNER_UP") return "Runner Up";
+  if (value === "RUNNER_UP") return "1st Runner Up";
+  if (value === "THIRD_PLACE") return "2nd Runner Up";
   if (value === "NOT_ATTEMPTED") return "Not Attempted";
   if (value === "SHORTLIST_PUBLISHED") return "Shortlist Published";
   return String(value || "").replaceAll("_", " ");
@@ -73,7 +75,7 @@ function getStatusPillClass(status, active = false) {
       ? "border-amber-500 bg-amber-500 text-white"
       : "event-participant-selected-control round-status-not-attempted";
   }
-  if (status === "RUNNER_UP") {
+  if (status === "RUNNER_UP" || status === "THIRD_PLACE") {
     return active
       ? "border-violet-600 bg-violet-600 text-white"
       : "event-participant-selected-control border-violet-600 bg-violet-600 text-white";
@@ -107,7 +109,7 @@ function getStatusActionButtonClass(status, active = false) {
   if (status === "SELECTED" || status === "WINNER") {
     return "event-participant-selected-control round-action-bg-active round-status-selected";
   }
-  if (status === "RUNNER_UP" || status === "FINALIST") {
+  if (status === "RUNNER_UP" || status === "THIRD_PLACE" || status === "FINALIST") {
     return "event-participant-selected-control round-action-bg-active round-status-final";
   }
   if (status === "DISQUALIFIED") {
@@ -132,7 +134,7 @@ function summarizeTeamRoundParticipant(participant) {
   };
 }
 
-export default function RoundsTab({ event, onCompetitionClosed, onAddNotice }) {
+export default function RoundsTab({ event, readOnly = false, onCompetitionClosed, onAddNotice }) {
   const eventId = event.id || event._id;
   const isTeamEvent =
     String(event?.participationFormat || "INDIVIDUAL").toUpperCase() === "TEAM";
@@ -144,6 +146,8 @@ export default function RoundsTab({ event, onCompetitionClosed, onAddNotice }) {
   const [message, setMessage] = useState("");
   const [selectedRoundId, setSelectedRoundId] = useState("");
   const [participantFilter, setParticipantFilter] = useState("all");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [gradeFilter, setGradeFilter] = useState("all");
   const [roundModalOpen, setRoundModalOpen] = useState(false);
   const [editingRoundId, setEditingRoundId] = useState("");
   const [roundForm, setRoundForm] = useState(EMPTY_ROUND_FORM);
@@ -202,7 +206,9 @@ export default function RoundsTab({ event, onCompetitionClosed, onAddNotice }) {
   ).length;
   const certificateCount = event?.resultsPublished
     ? rounds.flatMap((round) => round.participants || []).filter((participant) =>
-        ["WINNER", "RUNNER_UP", "FINALIST", "SELECTED"].includes(participant.status)
+        ["WINNER", "RUNNER_UP", "THIRD_PLACE", "FINALIST", "SELECTED"].includes(
+          participant.status
+        )
       ).length
     : 0;
 
@@ -214,20 +220,62 @@ export default function RoundsTab({ event, onCompetitionClosed, onAddNotice }) {
     [selectedRound]
   );
 
+  const gradeOptions = useMemo(() => {
+    if (isTeamEvent) return [];
+    const grades = new Set();
+    (selectedRound?.participants || []).forEach((participant) => {
+      const grade = participant.student?.grade;
+      if (grade) grades.add(String(grade));
+    });
+    return Array.from(grades).sort((a, b) => {
+      const numA = parseInt(a, 10);
+      const numB = parseInt(b, 10);
+      if (!Number.isNaN(numA) && !Number.isNaN(numB)) return numA - numB;
+      return a.localeCompare(b);
+    });
+  }, [isTeamEvent, selectedRound]);
+
   const visibleParticipants = useMemo(() => {
-    const participants = selectedRound?.participants || [];
+    let participants = selectedRound?.participants || [];
     if (participantFilter === "selected") {
-      return participants.filter((participant) => participant.status === "SELECTED");
+      participants = participants.filter(
+        (participant) => participant.status === "SELECTED"
+      );
+    }
+    if (!isTeamEvent && gradeFilter !== "all") {
+      participants = participants.filter(
+        (participant) => String(participant.student?.grade || "") === gradeFilter
+      );
+    }
+    const term = searchTerm.trim().toLowerCase();
+    if (term) {
+      participants = participants.filter((participant) => {
+        const name = isTeamEvent
+          ? participant.teamName || ""
+          : participant.student?.name || "";
+        const schoolName =
+          participant.school?.schoolName || participant.school?.name || "";
+        return (
+          name.toLowerCase().includes(term) ||
+          schoolName.toLowerCase().includes(term)
+        );
+      });
     }
     return participants;
-  }, [participantFilter, selectedRound]);
+  }, [participantFilter, selectedRound, isTeamEvent, gradeFilter, searchTerm]);
 
   const roundMetrics = useMemo(() => {
     const participants = selectedRound?.participants || [];
     const completedParticipants = participants.filter((participant) =>
-      ["WINNER", "RUNNER_UP", "FINALIST", "SELECTED", "DISQUALIFIED", "NOT_ATTEMPTED"].includes(
-        participant.status
-      )
+      [
+        "WINNER",
+        "RUNNER_UP",
+        "THIRD_PLACE",
+        "FINALIST",
+        "SELECTED",
+        "DISQUALIFIED",
+        "NOT_ATTEMPTED",
+      ].includes(participant.status)
     );
 
     return {
@@ -238,6 +286,9 @@ export default function RoundsTab({ event, onCompetitionClosed, onAddNotice }) {
         .length,
       runnerUps: participants.filter((participant) => participant.status === "RUNNER_UP")
         .length,
+      thirdPlaces: participants.filter(
+        (participant) => participant.status === "THIRD_PLACE"
+      ).length,
       finalists: participants.filter((participant) => participant.status === "FINALIST")
         .length,
       completed: completedParticipants.length,
@@ -379,24 +430,29 @@ export default function RoundsTab({ event, onCompetitionClosed, onAddNotice }) {
     }
   };
 
-  const closeCompetition = async () => {
+  const finalizeResults = async () => {
     if (!selectedRound) return;
     try {
       setBusyKey(`close-${selectedRound._id}`);
+      // Prepare a results draft (certificate previews) instead of publishing
+      // directly. Publishing — which issues certificates and notifies students —
+      // happens as a deliberate second step in the Results & Certificates tab.
       const res = await fetch(`/api/events/${eventId}/results`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          resultsPublished: true,
-          publishPublicly: true,
-          confirmPublish: true,
+          resultsPublished: false,
+          publishPublicly: false,
+          confirmPublish: false,
         }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(data.message || "Failed to publish result.");
+        throw new Error(data.message || "Failed to prepare results.");
       }
-      setMessage("Result published. Results and certificates are now generated.");
+      setMessage(
+        "Results draft prepared. Review the placements and publish them in the Results & Certificates tab."
+      );
       await onCompetitionClosed?.();
     } catch (error) {
       setMessage(error.message);
@@ -448,10 +504,12 @@ export default function RoundsTab({ event, onCompetitionClosed, onAddNotice }) {
           <div>
             <h2 className="text-xl font-black text-[#17120a]">Rounds</h2>
             <p className="mt-1 text-sm text-[#52657d]">
-              Manage each round and update outcomes. Selected entries can move forward.
+              {readOnly
+                ? "View each round and its outcomes."
+                : "Manage each round and update outcomes. Selected entries can move forward."}
             </p>
           </div>
-          {!competitionLocked && (
+          {!competitionLocked && !readOnly && (
             <button
               type="button"
               onClick={openCreateRound}
@@ -564,8 +622,13 @@ export default function RoundsTab({ event, onCompetitionClosed, onAddNotice }) {
                             onClick={() => setSelectedRoundId(String(round._id))}
                             className="rounded-lg border border-[#dbe5f4] bg-white px-3 py-2 text-xs font-black text-[#0a2f66] hover:bg-[#f8fbff]"
                           >
-                            {isFinalRoundRecord(round) ? "Manage Final" : "View Details"}
+                            {isFinalRoundRecord(round)
+                              ? readOnly
+                                ? "View Final"
+                                : "Manage Final"
+                              : "View Details"}
                           </button>
+                          {!readOnly && (
                           <div className="relative" data-round-action-menu>
                             <button
                               type="button"
@@ -612,6 +675,7 @@ export default function RoundsTab({ event, onCompetitionClosed, onAddNotice }) {
                               </div>
                             )}
                           </div>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -668,6 +732,7 @@ export default function RoundsTab({ event, onCompetitionClosed, onAddNotice }) {
                   Selected ({selectedCount})
                 </span>
               </button>
+              {!readOnly && (
               <button
                 type="button"
                 onClick={() => onAddNotice?.(selectedRound)}
@@ -677,6 +742,8 @@ export default function RoundsTab({ event, onCompetitionClosed, onAddNotice }) {
                 <FaBell />
                 Add Notice
               </button>
+              )}
+              {!readOnly && (
               <button
                 type="button"
                 onClick={() => openEditRound(selectedRound)}
@@ -686,6 +753,7 @@ export default function RoundsTab({ event, onCompetitionClosed, onAddNotice }) {
                 <FaEye />
                 Round Details
               </button>
+              )}
             </div>
           </div>
 
@@ -709,7 +777,10 @@ export default function RoundsTab({ event, onCompetitionClosed, onAddNotice }) {
               </div>
               <div className="mt-2 text-3xl font-black text-emerald-900">
                 {isFinalRound
-                  ? roundMetrics.winners + roundMetrics.runnerUps + roundMetrics.finalists
+                  ? roundMetrics.winners +
+                    roundMetrics.runnerUps +
+                    roundMetrics.thirdPlaces +
+                    roundMetrics.finalists
                   : roundMetrics.selected}
               </div>
               <p className="mt-2 text-sm text-emerald-700">
@@ -741,10 +812,52 @@ export default function RoundsTab({ event, onCompetitionClosed, onAddNotice }) {
               </div>
               <p className="mt-2 text-sm text-amber-700">
                 {isFinalRound
-                  ? `Mark ${isTeamEvent ? "team" : "participant"} outcomes here, then close the competition.`
+                  ? `Mark ${isTeamEvent ? "team" : "participant"} outcomes here, then finalize to review and publish results.`
                   : `Select ${isTeamEvent ? "teams" : "participants"} and send them to the next round or final.`}
               </p>
             </div>
+          </div>
+
+          <div className="flex flex-col gap-3 border-b border-purple-100 px-5 py-4 sm:flex-row sm:items-center">
+            <div className="relative flex-1">
+              <FaSearch className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[#94a3b8]" />
+              <input
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder={
+                  isTeamEvent
+                    ? "Search by team or school name..."
+                    : "Search by student or school name..."
+                }
+                className="w-full rounded-lg border border-[#dbe5f4] bg-white py-2 pl-9 pr-3 text-sm font-bold text-[#0a2f66] outline-none focus:border-purple-400"
+              />
+            </div>
+            {!isTeamEvent && gradeOptions.length > 0 && (
+              <select
+                value={gradeFilter}
+                onChange={(e) => setGradeFilter(e.target.value)}
+                className="rounded-lg border border-[#dbe5f4] bg-white px-3 py-2 text-sm font-bold text-[#0a2f66] outline-none focus:border-purple-400 sm:w-48"
+              >
+                <option value="all">All Grades</option>
+                {gradeOptions.map((grade) => (
+                  <option key={grade} value={grade}>
+                    {/^\d+$/.test(grade) ? `Grade ${grade}` : grade}
+                  </option>
+                ))}
+              </select>
+            )}
+            {(searchTerm || gradeFilter !== "all") && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchTerm("");
+                  setGradeFilter("all");
+                }}
+                className="rounded-lg border border-[#dbe5f4] bg-white px-3 py-2 text-sm font-black text-[#0a2f66] hover:bg-[#f8fbff]"
+              >
+                Clear
+              </button>
+            )}
           </div>
 
           <div className="overflow-x-auto">
@@ -759,13 +872,13 @@ export default function RoundsTab({ event, onCompetitionClosed, onAddNotice }) {
                     {isTeamEvent ? "Members" : "Grade"}
                   </th>
                   <th className="px-4 py-3">Current Status</th>
-                  <th className="px-4 py-3">Update Status</th>
+                  {!readOnly && <th className="px-4 py-3">Update Status</th>}
                 </tr>
               </thead>
               <tbody>
                 {visibleParticipants.length === 0 ? (
                   <tr>
-                    <td colSpan="5" className="px-6 py-10 text-center text-[#52657d]">
+                    <td colSpan={readOnly ? "4" : "5"} className="px-6 py-10 text-center text-[#52657d]">
                       No {isTeamEvent ? "teams" : "participants"} in this view yet.
                     </td>
                   </tr>
@@ -843,6 +956,7 @@ export default function RoundsTab({ event, onCompetitionClosed, onAddNotice }) {
                           </span>
                         </span>
                       </td>
+                      {!readOnly && (
                       <td className="px-4 py-4">
                         <div className="flex flex-nowrap gap-1.5 whitespace-nowrap">
                           {statusButtons.map((button) => {
@@ -870,6 +984,7 @@ export default function RoundsTab({ event, onCompetitionClosed, onAddNotice }) {
                           })}
                         </div>
                       </td>
+                      )}
                     </tr>
                   ))
                 )}
@@ -877,6 +992,7 @@ export default function RoundsTab({ event, onCompetitionClosed, onAddNotice }) {
             </table>
           </div>
 
+          {!readOnly && (
           <div className="border-t border-[#e1e7f2] px-5 py-4">
             <div className="flex flex-wrap justify-end gap-3">
               {!isFinalRound && (
@@ -925,20 +1041,25 @@ export default function RoundsTab({ event, onCompetitionClosed, onAddNotice }) {
                     !isLatestRound ||
                     busyKey === `close-${selectedRound._id}`
                   }
-                  onClick={closeCompetition}
-                  className="inline-flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm font-black text-rose-700 hover:bg-rose-100 disabled:opacity-50"
+                  onClick={finalizeResults}
+                  className="event-participant-selected-control inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-black text-white hover:bg-emerald-700 disabled:opacity-50"
                 >
-                  <FaLock />
-                  Publish Result
+                  <FaCheckCircle />
+                  <span className="event-participant-selected-label">
+                    {busyKey === `close-${selectedRound._id}`
+                      ? "Preparing..."
+                      : "Finalize & Review Results"}
+                  </span>
                 </button>
               )}
               {!isLatestRound && (
                 <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm text-slate-600">
-                  Only the latest round can send {isTeamEvent ? "teams" : "students"} forward or close the competition.
+                  Only the latest round can send {isTeamEvent ? "teams" : "students"} forward or finalize results.
                 </div>
               )}
             </div>
           </div>
+          )}
         </div>
       )}
 

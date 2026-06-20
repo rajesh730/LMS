@@ -3,17 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { FaCertificate, FaDownload, FaExternalLinkAlt } from "react-icons/fa";
-
-function formatLabel(value) {
-  if (value === "RUNNER_UP") return "Runner Up";
-  if (value === "THIRD_PLACE") return "Third Place";
-  return String(value || "").replaceAll("_", " ");
-}
-
-function formatDate(value) {
-  if (!value) return "";
-  return new Date(value).toLocaleDateString();
-}
+import { formatPlacement as formatLabel, formatDate } from "@/lib/displayFormat";
 
 export default function StudentEventCertificatesPanel({ eventId }) {
   const [certificates, setCertificates] = useState([]);

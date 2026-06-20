@@ -65,7 +65,7 @@ function noticeIconClass(type = "") {
   return "bg-purple-50 text-purple-700";
 }
 
-export default function EventNoticeManager({ eventId, eventTitle = "Event" }) {
+export default function EventNoticeManager({ eventId, eventTitle = "Event", readOnly = false }) {
   const [notices, setNotices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -241,19 +241,22 @@ export default function EventNoticeManager({ eventId, eventTitle = "Event" }) {
             <div>
               <h2 className="text-2xl font-black text-[#17120a]">Event Notices</h2>
               <p className="mt-1 max-w-2xl text-sm leading-6 text-[#52657d]">
-                Create and manage notices for this event. Notices are shown on
-                the public event page and the matching school dashboard card.
+                {readOnly
+                  ? "Notices and updates posted by the organizer for this event."
+                  : "Create and manage notices for this event. Notices are shown on the public event page and the matching school dashboard card."}
               </p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={showForm ? () => setShowForm(false) : openCreate}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-purple-700 px-5 text-sm font-black text-white shadow-sm transition hover:bg-purple-800"
-          >
-            <FaPlus />
-            {showForm ? "Close" : "Create Notice"}
-          </button>
+          {!readOnly && (
+            <button
+              type="button"
+              onClick={showForm ? () => setShowForm(false) : openCreate}
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-purple-700 px-5 text-sm font-black text-white shadow-sm transition hover:bg-purple-800"
+            >
+              <FaPlus />
+              {showForm ? "Close" : "Create Notice"}
+            </button>
+          )}
         </div>
 
         {statusMessage && (
@@ -568,6 +571,7 @@ export default function EventNoticeManager({ eventId, eventTitle = "Event" }) {
                       <FaEye />
                       Preview
                     </button>
+                    {!readOnly && (
                     <button
                       type="button"
                       onClick={() => openEdit(notice)}
@@ -576,6 +580,8 @@ export default function EventNoticeManager({ eventId, eventTitle = "Event" }) {
                       <FaEdit />
                       Edit
                     </button>
+                    )}
+                    {!readOnly && (
                     <button
                       type="button"
                       onClick={() =>
@@ -588,7 +594,8 @@ export default function EventNoticeManager({ eventId, eventTitle = "Event" }) {
                       <FaEllipsisH />
                       More
                     </button>
-                    {openMenuId === notice._id && (
+                    )}
+                    {!readOnly && openMenuId === notice._id && (
                       <div className="absolute right-0 top-10 z-10 w-44 rounded-xl border border-[#e1e7f2] bg-white p-2 shadow-[0_16px_36px_rgba(10,47,102,0.16)]">
                         <button
                           type="button"

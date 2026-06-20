@@ -1,39 +1,9 @@
 "use client";
 
-import Link from "next/link";
-import {
-  FaCalendarAlt,
-  FaHome,
-  FaSchool,
-  FaTrophy,
-} from "react-icons/fa";
+import { PUBLIC_NAV_LINKS } from "@/components/navigation/appNavigation";
+import NavItemLink from "@/components/navigation/NavItemLink";
 
-export const PUBLIC_EXPLORE_ITEMS = [
-  { label: "Home", href: "/", key: "home", icon: FaHome },
-  { label: "Winners", href: "/winners", key: "winners", icon: FaTrophy },
-  { label: "Schools", href: "/schools", key: "schools", icon: FaSchool },
-  { label: "Events", href: "/events", key: "events", icon: FaCalendarAlt },
-];
-
-function SidebarLink({ item, active }) {
-  const Icon = item.icon;
-  const isActive = active === item.key;
-
-  return (
-    <Link
-      href={item.href}
-      aria-current={isActive ? "page" : undefined}
-      className={`flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm font-black transition ${
-        isActive
-          ? "public-nav-active bg-[#4326e8] text-white"
-          : "text-[#17213a] hover:bg-[#f4f1ff] hover:text-[#4326e8]"
-      }`}
-    >
-      <Icon className={isActive ? "text-white" : "text-[#526071]"} />
-      <span className="min-w-0 flex-1 truncate">{item.label}</span>
-    </Link>
-  );
-}
+export const PUBLIC_EXPLORE_ITEMS = PUBLIC_NAV_LINKS;
 
 export function PublicSidebarGroup({
   title = "Explore",
@@ -47,7 +17,14 @@ export function PublicSidebarGroup({
       </p>
       <nav className="space-y-1">
         {items.map((item) => (
-          <SidebarLink key={item.key} item={item} active={active} />
+          <NavItemLink
+            key={item.key}
+            href={item.href}
+            label={item.label}
+            icon={item.icon}
+            active={active === item.key}
+            className="font-black"
+          />
         ))}
       </nav>
     </section>

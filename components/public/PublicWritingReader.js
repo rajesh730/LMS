@@ -106,10 +106,20 @@ export default function PublicWritingReader({
                 </Link>
 
                 <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm font-bold text-[#526071]">
-                  <span className="inline-flex items-center gap-2">
-                    <FaUser className="text-[#4326e8]" />
-                    {author.name || "Student"}
-                  </span>
+                  {author.id ? (
+                    <Link
+                      href={`/students/${author.id}`}
+                      className="inline-flex items-center gap-2 hover:text-[#4326e8]"
+                    >
+                      <FaUser className="text-[#4326e8]" />
+                      {author.name || "Student"}
+                    </Link>
+                  ) : (
+                    <span className="inline-flex items-center gap-2">
+                      <FaUser className="text-[#4326e8]" />
+                      {author.name || "Student"}
+                    </span>
+                  )}
                   <span className="inline-flex items-center gap-2">
                     <FaCalendarAlt className="text-[#4326e8]" />
                     {formatDate(article.publishedAt)}
@@ -124,7 +134,7 @@ export default function PublicWritingReader({
 
             <WritingContent
               content={article.content}
-              className="public-reader-content mx-auto mt-10 max-w-3xl space-y-4 text-lg leading-9 text-[#27344a]"
+              className="public-reader-content mx-auto mt-10 max-w-3xl text-lg leading-7 text-[#27344a]"
             />
 
             <div className="mt-10 flex flex-col gap-3 border-t border-[#edf0f7] pt-5 sm:flex-row sm:items-center sm:justify-between">

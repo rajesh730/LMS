@@ -11,7 +11,6 @@ import {
   errorResponse,
   internalServerError,
 } from "@/lib/apiResponse";
-import { isAfterEndOfDay, isBeforeToday } from "@/lib/eventDates";
 import { gradeListContains } from "@/lib/schoolGrades";
 import {
   removeStudentsFromCompetition,
@@ -23,38 +22,7 @@ import {
   buildSchoolParticipationPresentation,
 } from "@/lib/participationPresentation";
 import { publishEventRealtimeUpdate } from "@/lib/eventRealtime";
-import { canAcceptRegistrations } from "@/lib/eventWorkflow";
-
-function getRegistrationLockMessage(event, action = "change participation") {
-  const lifecycleStatus = String(event.lifecycleStatus || "ACTIVE").toUpperCase();
-  const workflowStatus = String(event.eventWorkflowStatus || "").toUpperCase();
-
-  if (lifecycleStatus === "ARCHIVED") {
-    return "This event is archived. Registration changes are locked.";
-  }
-
-  if (lifecycleStatus === "COMPLETED") {
-    return "This event is completed. Registration changes are locked.";
-  }
-
-  if (!canAcceptRegistrations(event)) {
-    return `Cannot ${action}. Event workflow is ${workflowStatus || "not open for registration"}.`;
-  }
-
-  if (isBeforeToday(event.date)) {
-    return `Cannot ${action} for a past event.`;
-  }
-
-  if (event.registrationDeadline) {
-    if (isAfterEndOfDay(event.registrationDeadline)) {
-      return `Registration deadline has passed (${new Date(
-        event.registrationDeadline
-      ).toLocaleDateString()})`;
-    }
-  }
-
-  return "";
-}
+import { getRegistrationLockMessage } from "@/lib/eventWorkflow";
 
 function normalizeParticipationFormat(event) {
   if (

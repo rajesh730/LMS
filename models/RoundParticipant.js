@@ -6,6 +6,7 @@ export const ROUND_PARTICIPANT_STATUSES = [
   "NOT_ATTEMPTED",
   "WINNER",
   "RUNNER_UP",
+  "THIRD_PLACE",
   "FINALIST",
 ];
 

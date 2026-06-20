@@ -1262,14 +1262,14 @@ a[aria-disabled="true"] {
 
 @media print {
   @page {
-    size: A4 landscape;
+    size: A4 portrait;
     margin: 0;
   }
 
   html,
   body {
-    width: 297mm;
-    min-height: 210mm;
+    width: 210mm;
+    min-height: 297mm;
     overflow: hidden;
     background: #ffffff !important;
   }
@@ -1278,25 +1278,21 @@ a[aria-disabled="true"] {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 297mm;
-    height: 210mm;
+    width: 210mm;
+    height: 297mm;
     overflow: hidden;
   }
 
   .certificate-sheet {
-    width: 277mm;
-    height: 190mm;
+    width: 196mm;
+    height: 283mm;
     overflow: hidden;
-    border-width: 6px !important;
+    border-width: 3px !important;
   }
 
   .certificate-frame {
     height: 100%;
-    padding: 8mm 12mm !important;
-  }
-
-  .certificate-meta-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    padding: 12mm 14mm !important;
   }
 }
 

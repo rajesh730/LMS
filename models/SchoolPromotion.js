@@ -40,26 +40,6 @@ const SchoolPromotionSchema = new Schema(
       default: "STANDARD",
       index: true,
     },
-    paymentStatus: {
-      type: String,
-      enum: ["PENDING", "PAID", "REFUNDED"],
-      default: "PENDING",
-      index: true,
-    },
-    paidAmount: {
-      type: Number,
-      default: 0,
-      min: 0,
-    },
-    paymentReference: {
-      type: String,
-      trim: true,
-      default: "",
-    },
-    paidAt: {
-      type: Date,
-      default: null,
-    },
     startsAt: {
       type: Date,
       required: true,
@@ -106,7 +86,6 @@ const SchoolPromotionSchema = new Schema(
 SchoolPromotionSchema.index({
   placement: 1,
   status: 1,
-  paymentStatus: 1,
   startsAt: 1,
   endsAt: 1,
   lastShownAt: 1,

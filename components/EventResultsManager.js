@@ -11,11 +11,14 @@ import {
   FaMedal,
   FaSearch,
   FaTrophy,
+  FaUndo,
   FaUsers,
 } from "react-icons/fa";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 function formatStatus(value) {
-  if (value === "RUNNER_UP") return "Runner Up";
+  if (value === "RUNNER_UP") return "1st Runner Up";
+  if (value === "THIRD_PLACE") return "2nd Runner Up";
   if (value === "NOT_ATTEMPTED") return "Not Attempted";
   return String(value || "").replaceAll("_", " ");
 }
@@ -23,6 +26,7 @@ function formatStatus(value) {
 function statusTone(status) {
   if (status === "WINNER") return "border-amber-200 bg-amber-50 text-amber-800";
   if (status === "RUNNER_UP") return "border-slate-200 bg-slate-100 text-slate-700";
+  if (status === "THIRD_PLACE") return "border-orange-200 bg-orange-50 text-orange-700";
   if (status === "FINALIST" || status === "SELECTED") {
     return "border-blue-200 bg-blue-50 text-blue-700";
   }
@@ -32,7 +36,7 @@ function statusTone(status) {
 
 function placementIcon(status, index) {
   if (status === "WINNER") return <FaTrophy />;
-  if (status === "RUNNER_UP") return <FaMedal />;
+  if (status === "RUNNER_UP" || status === "THIRD_PLACE") return <FaMedal />;
   if (status === "FINALIST" || status === "SELECTED") return <FaAward />;
   return index + 1;
 }
@@ -42,6 +46,7 @@ export default function EventResultsManager({
   description = "Review final statuses and publish certificates.",
   fixedEventId = "",
   embedded = false,
+  readOnly = false,
 }) {
   const [detail, setDetail] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -53,6 +58,8 @@ export default function EventResultsManager({
   const [expandedTeams, setExpandedTeams] = useState({});
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [searchTerm, setSearchTerm] = useState("");
+  const [publishPublicly, setPublishPublicly] = useState(false);
+  const [reopenOpen, setReopenOpen] = useState(false);
 
   const eventId = fixedEventId;
 
@@ -85,15 +92,25 @@ export default function EventResultsManager({
   const isTeamEvent =
     String(detail?.event?.participationFormat || "INDIVIDUAL").toUpperCase() ===
     "TEAM";
+  const isPlatformEvent =
+    String(detail?.event?.eventScope || "").toUpperCase() === "PLATFORM";
   const resultsPublished = Boolean(detail?.event?.resultsPublished);
 
-  const saveResults = useCallback(async ({ publish = false } = {}) => {
+  // Mirror the event's current public-visibility setting whenever results load,
+  // so the organizer's "make public" choice starts from the saved state.
+  useEffect(() => {
+    setPublishPublicly(Boolean(detail?.publishPublicly));
+  }, [detail?.publishPublicly]);
+
+  const saveResults = useCallback(async ({ publish = false, reopen = false } = {}) => {
     if (!eventId || participants.length === 0) return;
     try {
       setSaving(true);
       setMessage(
         publish
           ? "Publishing final results and issuing certificates..."
+          : reopen
+          ? "Reopening results for correction..."
           : "Preparing draft results and certificate previews..."
       );
       setError("");
@@ -102,7 +119,7 @@ export default function EventResultsManager({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           resultsPublished: publish,
-          publishPublicly: false,
+          publishPublicly: publish && isPlatformEvent ? publishPublicly : false,
           confirmPublish: publish,
         }),
       });
@@ -113,6 +130,8 @@ export default function EventResultsManager({
       setMessage(
         publish
           ? "Final results published and certificates issued."
+          : reopen
+          ? "Results reopened. Fix the placements in the Rounds tab, then publish again."
           : "Draft results and certificate previews are ready for review."
       );
       await loadDetail();
@@ -122,7 +141,7 @@ export default function EventResultsManager({
     } finally {
       setSaving(false);
     }
-  }, [eventId, loadDetail, participants.length]);
+  }, [eventId, loadDetail, participants.length, isPlatformEvent, publishPublicly]);
 
   const resultSummary = useMemo(() => {
     const source = participants;
@@ -131,6 +150,9 @@ export default function EventResultsManager({
         .length,
       runnerUpCount: source.filter(
         (participant) => participant.finalStatus === "RUNNER_UP"
+      ).length,
+      thirdPlaceCount: source.filter(
+        (participant) => participant.finalStatus === "THIRD_PLACE"
       ).length,
       finalistCount: source.filter(
         (participant) =>
@@ -223,26 +245,25 @@ export default function EventResultsManager({
   };
 
   const bulkDownloadCertificates = () => {
-    const certificateLinks = issuedResults
+    const certificateIds = issuedResults
       .filter((result) => result.certificateIssuedAt)
       .map((result) => {
         const targetId = result.resultId || result._id;
-        return targetId ? `/certificates/${targetId}?download=pdf` : "";
+        return targetId ? String(targetId) : "";
       })
       .filter(Boolean);
 
-    if (!certificateLinks.length) {
+    if (!certificateIds.length) {
       setError("No certificate PDFs are ready for bulk download yet.");
       return;
     }
 
-    certificateLinks.forEach((link, index) => {
-      window.setTimeout(() => {
-        window.open(link, "_blank", "noopener,noreferrer");
-      }, index * 250);
+    const params = new URLSearchParams({
+      ids: certificateIds.join(","),
+      download: "pdf",
     });
-
-    setMessage("Opened active certificate PDF downloads in new tabs.");
+    window.open(`/certificates/bulk?${params.toString()}`, "_blank", "noopener,noreferrer");
+    setMessage("Opened one bulk certificate print file. Use Save as PDF in the print dialog.");
   };
 
   const toggleTeamExpansion = (teamId) => {
@@ -255,14 +276,16 @@ export default function EventResultsManager({
   const statusFilters = [
     ["ALL", "All Status", participants.length],
     ["WINNER", "Winner", resultSummary.winnerCount],
-    ["RUNNER_UP", "Runner Up", resultSummary.runnerUpCount],
+    ["RUNNER_UP", "1st Runner Up", resultSummary.runnerUpCount],
+    ["THIRD_PLACE", "2nd Runner Up", resultSummary.thirdPlaceCount],
     ["FINALIST", "Finalists", resultSummary.finalistCount],
     ["DISQUALIFIED", "Disqualified", participants.filter((p) => p.finalStatus === "DISQUALIFIED").length],
   ];
 
   const statCards = [
     ["Winner", resultSummary.winnerCount, FaTrophy, "border-amber-200 bg-amber-50 text-amber-700"],
-    ["Runner Up", resultSummary.runnerUpCount, FaAward, "border-blue-200 bg-blue-50 text-blue-700"],
+    ["1st Runner Up", resultSummary.runnerUpCount, FaAward, "border-blue-200 bg-blue-50 text-blue-700"],
+    ["2nd Runner Up", resultSummary.thirdPlaceCount, FaMedal, "border-orange-200 bg-orange-50 text-orange-700"],
     ["Finalists", resultSummary.finalistCount, FaMedal, "border-sky-200 bg-sky-50 text-sky-700"],
     ["Participants", resultSummary.participantCount, FaUsers, "border-emerald-200 bg-emerald-50 text-emerald-700"],
     ["Certificates Issued", resultSummary.certificateCount, FaCertificate, "border-purple-200 bg-purple-50 text-purple-700"],
@@ -291,29 +314,41 @@ export default function EventResultsManager({
               </p>
               <div className="mt-3 flex flex-wrap gap-3 text-[11px] font-bold text-[#52657d]">
                 <span>{detail?.event?.date ? new Date(detail.event.date).toLocaleDateString() : "Event date"}</span>
-                <span>{participants.length} / {participants.length || 0} enrolled</span>
+                <span>
+                  {resultSummary.certificateCount} / {participants.length}{" "}
+                  certificate{participants.length === 1 ? "" : "s"} issued
+                </span>
                 <span className="inline-flex items-center gap-1 text-emerald-700">
                   <FaCheckCircle />
                   {saving
                     ? "Saving"
                     : resultsPublished
                     ? "Published"
-                    : issuedResults.length > 0
-                    ? "Draft ready"
-                    : "Draft pending"}
+                    : "Ready to publish"}
                 </span>
               </div>
             </div>
           </div>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <button
-              type="button"
-              disabled={saving || loading || participants.length === 0 || resultsPublished}
-              onClick={() => saveResults({ publish: false })}
-              className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#dbe5f4] bg-white px-4 text-xs font-black text-[#0a2f66] hover:bg-[#f8fbff] disabled:opacity-50"
-            >
-              Prepare Draft
-            </button>
+          {!readOnly && (
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            {isPlatformEvent && !resultsPublished && (
+              <label
+                className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-bold ${
+                  embedded
+                    ? "border-[#dbe5f4] bg-white text-[#0a2f66]"
+                    : "border-[#1c4a8d] bg-[#081b39]/60 text-[#cddfff]"
+                }`}
+                title="When enabled, these results and certificates appear on the public event page."
+              >
+                <input
+                  type="checkbox"
+                  checked={publishPublicly}
+                  disabled={saving || loading}
+                  onChange={(e) => setPublishPublicly(e.target.checked)}
+                />
+                Make results public
+              </label>
+            )}
             <button
               type="button"
               disabled={saving || loading || participants.length === 0 || resultsPublished}
@@ -322,8 +357,31 @@ export default function EventResultsManager({
             >
               Publish Final Results
             </button>
+            {resultsPublished && (
+              <button
+                type="button"
+                disabled={saving || loading}
+                onClick={() => setReopenOpen(true)}
+                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-4 text-xs font-black text-amber-800 hover:bg-amber-100 disabled:opacity-50"
+              >
+                <FaUndo />
+                Reopen for Correction
+              </button>
+            )}
           </div>
+          )}
         </div>
+        <p className={`mt-3 text-xs font-semibold ${embedded ? "text-[#52657d]" : "text-[#cddfff]"}`}>
+          {readOnly
+            ? resultsPublished
+              ? "Final results are published. You can view the placements and download your certificate below."
+              : "Results have not been published yet. Final placements and certificates will appear here once your school publishes them."
+            : participants.length === 0
+            ? "No participants are enrolled yet. Register students and run the rounds before publishing results."
+            : resultsPublished
+            ? "Results are published and certificates issued — students and schools can view them. Made a mistake? Use Reopen for Correction to safely edit placements and republish."
+            : "Review the placements below, then Publish Final Results to issue certificates. Nothing is issued until you publish."}
+        </p>
         {message && <div className="mt-4 text-sm font-semibold text-[#1150a1]">{message}</div>}
         {error && <div className="mt-4 text-sm font-semibold text-[#d97706]">{error}</div>}
       </section>
@@ -516,6 +574,7 @@ export default function EventResultsManager({
                             onToggleMembers={() => toggleTeamExpansion(String(team._id))}
                             memberCount={members.length}
                             expanded={expandedTeams[String(team._id)]}
+                            canEdit={!readOnly}
                           />
                         </td>
                       </tr>
@@ -535,7 +594,7 @@ export default function EventResultsManager({
                               {member.certificateIssuedAt ? "Issued" : "Preparing"}
                             </td>
                             <td className="px-4 py-4">
-                              <CertificateActions result={member} onEdit={openCertificateEditor} />
+                              <CertificateActions result={member} onEdit={openCertificateEditor} canEdit={!readOnly} />
                             </td>
                           </tr>
                         ))}
@@ -567,7 +626,7 @@ export default function EventResultsManager({
                       {result.certificateIssuedAt ? "Issued" : "Preparing"}
                     </td>
                     <td className="px-4 py-4">
-                      <CertificateActions result={result} onEdit={openCertificateEditor} />
+                      <CertificateActions result={result} onEdit={openCertificateEditor} canEdit={!readOnly} />
                     </td>
                   </tr>
                 ))
@@ -613,6 +672,20 @@ export default function EventResultsManager({
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={reopenOpen}
+        title="Reopen results for correction?"
+        message="Issued certificates will be temporarily withdrawn and results return to draft. Fix the placements in the Rounds tab, then publish again to re-issue corrected certificates."
+        confirmLabel="Reopen for correction"
+        tone="danger"
+        busy={saving}
+        onClose={() => setReopenOpen(false)}
+        onConfirm={() => {
+          setReopenOpen(false);
+          saveResults({ reopen: true });
+        }}
+      />
     </div>
   );
 }
@@ -623,6 +696,7 @@ function CertificateActions({
   onToggleMembers,
   memberCount = 0,
   expanded = false,
+  canEdit = true,
 }) {
   const targetId = result.resultId || result._id;
 
@@ -657,14 +731,16 @@ function CertificateActions({
           <FaDownload />
         </a>
       )}
-      <button
-        type="button"
-        onClick={() => onEdit(result)}
-        className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#f1f5f9] text-[#0a2f66] hover:bg-[#e6edf6]"
-        title="Edit certificate name"
-      >
-        <FaEllipsisH />
-      </button>
+      {canEdit && (
+        <button
+          type="button"
+          onClick={() => onEdit(result)}
+          className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#f1f5f9] text-[#0a2f66] hover:bg-[#e6edf6]"
+          title="Edit certificate name"
+        >
+          <FaEllipsisH />
+        </button>
+      )}
     </div>
   );
 }

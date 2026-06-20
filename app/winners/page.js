@@ -2,6 +2,7 @@ import Link from "next/link";
 import connectDB from "@/lib/db";
 import Achievement from "@/models/Achievement";
 import { getActiveCertificateFilter } from "@/lib/certificates";
+import { formatPlacement } from "@/lib/displayFormat";
 import PublicExplorePanel from "@/components/public/PublicExplorePanel";
 import PublicSiteNav from "@/components/public/PublicSiteNav";
 import {
@@ -31,10 +32,6 @@ function formatDate(value) {
     day: "numeric",
     year: "numeric",
   }).format(new Date(value));
-}
-
-function formatPlacement(value) {
-  return String(value || "Winner").replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
 async function getWinners() {

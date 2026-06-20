@@ -17,6 +17,7 @@ import EventOverviewTab from "./EventOverviewTab";
 import EventResultsManager from "@/components/EventResultsManager";
 import EventNoticeManager from "./EventNoticeManager";
 import EventParticipationForm from "./EventParticipationForm";
+import StudentEventCertificatesPanel from "./StudentEventCertificatesPanel";
 
 export default function ManagementTabs({
   requests,
@@ -30,14 +31,16 @@ export default function ManagementTabs({
   onEdit,
   onArchive,
 }) {
-  // Combine all requests into a single array
+  // Enrolled participants only — registration enrolls students directly, so the
+  // roster is just who is in the event (no pending/approved/rejected review).
   const allRequests = [
-    ...requests.PENDING,
-    ...requests.APPROVED,
-    ...requests.REJECTED,
+    ...(requests.APPROVED || []),
     ...(requests.ENROLLED || []),
   ];
   const isPlatformCompetition = event.eventScope === "PLATFORM";
+  // Students open this same dashboard read-only — they can view every tab but
+  // edit nothing, and never see the Register Students tab.
+  const isReadOnly = currentUserRole === "STUDENT";
   const isSuperAdminPlatformManager =
     currentUserRole === "SUPER_ADMIN" && isPlatformCompetition;
   const canControlEventOperations =
@@ -47,7 +50,6 @@ export default function ManagementTabs({
     ["COMPLETED", "ARCHIVED"].includes(
       String(event.lifecycleStatus || "ACTIVE").toUpperCase()
     );
-
   const availableTabs = [
     {
       id: "overview",
@@ -55,9 +57,9 @@ export default function ManagementTabs({
       count: null,
       icon: FaClipboardList,
     },
-    {
+    !isSuperAdminPlatformManager && !isReadOnly && {
       id: "registrations",
-      label: "Participants",
+      label: "Register Students",
       count: allRequests.length,
       icon: FaUsers,
     },
@@ -85,23 +87,20 @@ export default function ManagementTabs({
     ? normalizedTab
     : "overview";
   const completedRounds = event.resultsPublished ? "1/1" : "0/1";
+  // Only genuinely unique actions live here — navigation between sections is the
+  // job of the tab bar above, so we don't duplicate those as buttons.
   const quickActions = [
-    canControlEventOperations &&
+    !isReadOnly &&
+      canControlEventOperations &&
       !isCompletedEvent && { label: "Edit Event", icon: FaEdit, onClick: onEdit },
-    canControlEventOperations && { label: "Event Notices", icon: FaBell, onClick: () => setActiveTab("notices") },
-    {
-      label: "Manage Participants",
-      icon: FaUsers,
-      onClick: () => setActiveTab("registrations"),
-    },
-    canControlEventOperations && { label: "View Rounds", icon: FaLayerGroup, onClick: () => setActiveTab("rounds") },
-    {
-      label: "Results & Certificates",
-      icon: FaCertificate,
-      onClick: () => setActiveTab("results"),
-    },
-    canControlEventOperations &&
-      !isCompletedEvent && { label: "Archive Event", icon: FaArchive, onClick: onArchive, danger: true },
+    !isReadOnly &&
+      canControlEventOperations &&
+      !isCompletedEvent && {
+        label: "Archive Event",
+        icon: FaArchive,
+        onClick: onArchive,
+        danger: true,
+      },
   ].filter((action) => action && typeof action.onClick === "function");
 
   return (
@@ -185,13 +184,13 @@ export default function ManagementTabs({
                   />
                 </div>
               )}
-
             </div>
           )}
 
           {selectedTab === "rounds" && (
             <RoundsTab
               event={event}
+              readOnly={isReadOnly}
               onAddNotice={() => setActiveTab("notices")}
               onCompetitionClosed={async () => {
                 await onDataChange?.();
@@ -204,23 +203,30 @@ export default function ManagementTabs({
             <EventNoticeManager
               eventId={event.id || event._id}
               eventTitle={event.title}
+              readOnly={isReadOnly}
             />
           )}
 
           {selectedTab === "results" && (
-            <EventResultsManager
-              fixedEventId={event.id || event._id}
-              embedded
-              title="Event Results & Certificates"
-              description="Review draft placements and publish final school-issued digital certificates after confirmation."
-            />
+            isReadOnly ? (
+              <StudentEventCertificatesPanel eventId={event.id || event._id} />
+            ) : (
+              <EventResultsManager
+                fixedEventId={event.id || event._id}
+                embedded
+                readOnly={isReadOnly}
+                title="Event Results & Certificates"
+                description="Review the final placements and publish school-issued digital certificates."
+              />
+            )
           )}
         </div>
       </div>
 
       <aside className="space-y-3">
+        {quickActions.length > 0 && (
         <div className="rounded-xl border border-[#e1e7f2] bg-white p-3 shadow-sm">
-          <h3 className="mb-3 text-sm font-black text-[#17120a]">Quick Actions</h3>
+          <h3 className="mb-3 text-sm font-black text-[#17120a]">Event Actions</h3>
           <div className="space-y-1.5">
             {quickActions.map((action) => {
               const Icon = action.icon;
@@ -243,6 +249,7 @@ export default function ManagementTabs({
             })}
           </div>
         </div>
+        )}
 
         <div className="rounded-xl border border-[#e1e7f2] bg-white p-3 shadow-sm">
           <h3 className="mb-3 text-sm font-black text-[#17120a]">At a Glance</h3>

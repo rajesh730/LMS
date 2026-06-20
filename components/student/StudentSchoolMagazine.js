@@ -23,7 +23,11 @@ import AlertBanner from "@/components/ui/AlertBanner";
 import EmptyState from "@/components/EmptyState";
 import LoadingState from "@/components/ui/LoadingState";
 import StudentQuickNav from "@/components/student/StudentQuickNav";
-import { stripWritingMarkup } from "@/components/WritingContent";
+import {
+  getWritingPreviewText,
+  stripWritingMarkup,
+  WritingPreview,
+} from "@/components/WritingContent";
 import useRealtimeChannel from "@/lib/useRealtimeChannel";
 import useWorkIndicators from "@/lib/useWorkIndicators";
 import { normalizeWritingCategory } from "@/lib/writingCategories";
@@ -99,10 +103,8 @@ function formatMonthMagazineTitle(issue, issueNumber) {
   return `${monthName} Magazine ${issueNumber}`;
 }
 
-function getPreview(content = "", maxLength = 120) {
-  const text = stripWritingMarkup(content).replace(/\s+/g, " ").trim();
-  if (text.length <= maxLength) return text;
-  return `${text.slice(0, maxLength).trim()}...`;
+function getPreview(content = "", maxLength = 120, options = {}) {
+  return getWritingPreviewText(content, maxLength, options);
 }
 
 function getReadTime(content = "") {
@@ -249,9 +251,11 @@ function SchoolWallCard({ article, href }) {
         <h3 className="student-wall-card-title text-lg font-bold leading-tight text-[#111827] sm:text-xl">
           {article.title || "Student writing"}
         </h3>
-        <p className="mt-2 line-clamp-4 text-sm leading-6 text-[#4b5565]">
-          {getPreview(article.content, 280)}
-        </p>
+        <WritingPreview
+          content={article.content}
+          maxLength={280}
+          className="mt-2 line-clamp-5 text-sm leading-5 text-[#4b5565]"
+        />
         <Link
           href={articleHref}
           className="mt-3 inline-flex text-sm font-black text-[#4326e8]"
@@ -583,6 +587,15 @@ export default function StudentSchoolMagazine({
     );
   }
 
+  const isMagazineView = activeView === "magazine";
+  const heroTitle = isMagazineView ? "School Magazine" : "School Wall";
+  const heroSubtitle = isMagazineView
+    ? "Curated school magazine issues"
+    : "Student writing feed";
+  const heroDescription = isMagazineView
+    ? "Read your school's curated magazine issues, published by the school."
+    : "Read writing posted by students across your school community.";
+
   return (
     <div className="student-reading-mobile-shell space-y-4 text-[#27344a] sm:space-y-6">
       <StudentQuickNav className="sm:hidden" />
@@ -595,9 +608,9 @@ export default function StudentSchoolMagazine({
               </span>
               <div>
                 <h1 className="text-2xl font-bold text-[#17120a]">
-                  School Magazine
+                  {heroTitle}
                 </h1>
-                <p className="text-sm text-[#52657d]">School Reading Room</p>
+                <p className="text-sm text-[#52657d]">{heroSubtitle}</p>
               </div>
             </div>
 
@@ -611,8 +624,7 @@ export default function StudentSchoolMagazine({
                 <span className="text-purple-600">creativity</span>
               </h2>
               <p className="mt-4 max-w-xl text-sm leading-6 text-[#52657d] md:text-base">
-                Read inspiring articles written by students of your school
-                community.
+                {heroDescription}
               </p>
             </div>
 
@@ -657,7 +669,7 @@ export default function StudentSchoolMagazine({
                   ? `${student.grade || "Grade"} - Roll ${
                       student.rollNumber || "-"
                     }`
-                  : "School community magazine"}
+                  : "School community reading room"}
               </p>
             </div>
           </div>
@@ -802,8 +814,10 @@ export default function StudentSchoolMagazine({
                   {selectedArticle.title}
                 </h3>
                 <ArticleMeta article={selectedArticle} />
-                <p className="mt-3 line-clamp-4 text-sm leading-6 text-[#52657d]">
-                  {getPreview(selectedArticle.content, 240)}
+                <p className="mt-3 line-clamp-4 whitespace-pre-wrap text-sm leading-5 text-[#52657d]">
+                  {getPreview(selectedArticle.content, 240, {
+                    preserveFormatting: activeView === "school-wall",
+                  })}
                 </p>
                 <Link
                   href={selectedArticleHref}

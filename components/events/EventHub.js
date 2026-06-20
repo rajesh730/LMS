@@ -30,11 +30,17 @@ import LoadingState from "@/components/ui/LoadingState";
 import AlertBanner from "@/components/ui/AlertBanner";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import useRealtimeChannel from "@/lib/useRealtimeChannel";
-import { getEventStage, getStageClasses, isDatePast } from "@/lib/eventUiStatus";
+import {
+  formatEventDate as formatSharedEventDate,
+  getEventStage,
+  getStageClasses,
+  isDatePast,
+} from "@/lib/eventUiStatus";
 import { isTeamEventLike } from "@/lib/eventParticipationFormat";
 
 function formatEventDate(value, options = {}) {
   if (!value) return "Not set";
+  if (options.year !== false) return formatSharedEventDate(value, "Not set");
   return new Date(value).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
@@ -73,14 +79,14 @@ function isCompletedEvent(event) {
 function getOperationalBadge(event) {
   if (isRunningEvent(event)) {
     return {
-      label: "Live Event",
+      label: "Live",
       className: "border-rose-200 bg-rose-50 text-rose-800",
     };
   }
 
   if (isActiveEvent(event)) {
     return {
-      label: "Active Event",
+      label: "Active",
       className: "border-blue-200 bg-blue-50 text-blue-800",
     };
   }
@@ -330,6 +336,8 @@ export default function EventHub({
     const lifecycleStatus = String(event.lifecycleStatus || "ACTIVE").toUpperCase();
     const workflowStatus = String(event.eventWorkflowStatus || "").toUpperCase();
     return (
+      Boolean(event.resultsPublished) ||
+      Boolean(event.finalOutcomeReady) ||
       ["COMPLETED", "ARCHIVED"].includes(lifecycleStatus) ||
       ["ROUND_ACTIVE", "RESULTS_DRAFT", "RESULTS_PUBLISHED", "COMPLETED", "ARCHIVED"].includes(workflowStatus) ||
       Boolean(deadline && isDatePast(deadline, { endOfDay: true }))
@@ -680,7 +688,9 @@ export default function EventHub({
                 const stage = getEventStage(event);
                 const isTeamEvent = isTeamEventLike(event);
                 const showSchoolMetric = event.eventScope === "PLATFORM";
-                const isCompletedEvent = Boolean(event.finalOutcomeReady);
+                const eventIsCompleted = isCompletedEvent(event);
+                const hasPublishedResult =
+                  Boolean(event.finalOutcomeReady) || Boolean(event.resultsPublished);
                 const registrationLocked = isRegistrationClosed(event);
                 const needsSchoolApproval =
                   isSchoolView &&
@@ -718,7 +728,7 @@ export default function EventHub({
                   role="button"
                   tabIndex={0}
                 >
-                  <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_280px]">
+                  <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_220px]">
                     {/* Left: Event Info */}
                     <div className="min-w-0">
                       <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -748,7 +758,7 @@ export default function EventHub({
                         )}
                         {event.participationStatus &&
                           getStatusBadge(
-                            isCompletedEvent && completedView
+                            eventIsCompleted && completedView
                               ? "COMPLETED"
                               : event.participationStatus
                           )}
@@ -757,7 +767,7 @@ export default function EventHub({
                             School approval needed
                           </span>
                         )}
-                        {event.participationStatus && (
+                        {event.participationStatus && !isStudentView && (
                           <span className="inline-flex min-h-7 items-center rounded-full border border-[#d8e0f0] bg-[#f8fbff] px-2.5 text-[11px] font-bold text-[#27344a]">
                             {getRegisteredSummary(event)}
                           </span>
@@ -819,13 +829,13 @@ export default function EventHub({
                       <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs font-semibold text-[#334155]">
                         <span className="inline-flex items-center gap-1.5">
                           <FaCalendarAlt className="text-[#4326e8]" />
-                          {new Date(event.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                          {formatEventDate(event.date)}
                         </span>
                         <span className="inline-flex items-center gap-1.5">
                           <FaMapMarkerAlt className="text-[#4326e8]" />
                           {String(event.eventMode || event.mode || "Online").replaceAll("_", " ")}
                         </span>
-                        {event.participationStatus && (
+                        {event.participationStatus && !isStudentView && (
                           <span className="inline-flex items-center gap-1.5">
                             <FaUsers className="text-[#4326e8]" />
                             {getRegisteredSummary(event)}
@@ -838,7 +848,7 @@ export default function EventHub({
                     </div>
 
                     {/* Right: Expand Button & Status */}
-                    <div className="flex flex-col gap-3 xl:items-end">
+                    <div className="flex flex-col gap-2 xl:items-end">
                       {!useManagementPage && !isStudentView && (
                         <button
                           type="button"
@@ -878,22 +888,19 @@ export default function EventHub({
                             </Link>
                           )}
                           {isStudentView && (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setExpandedEventId(
-                                  expandedEventId === event._id
-                                    ? null
-                                    : event._id
-                                );
-                              }}
-                              className="event-details-action inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#e2e8f0] bg-white px-3 text-sm font-bold text-[#3116be] transition hover:border-[#4326e8] hover:bg-[#f4f1ff]"
-                              title="View your event status"
+                            <Link
+                              href={`/student/events/${event._id}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className={`event-details-action inline-flex min-h-10 items-center gap-2 rounded-lg px-3 text-sm font-bold transition ${
+                                hasPublishedResult
+                                  ? "bg-[#0a2f66] text-white shadow-sm hover:bg-[#123f7d]"
+                                  : "border border-[#d8e0f0] bg-white text-[#0a2f66] hover:border-[#b9c9eb] hover:bg-[#f8fbff]"
+                              }`}
+                              title="View full event details"
                             >
                               <FaEye />
-                              View Status
-                            </button>
+                              {hasPublishedResult ? "View Result" : "View Event"}
+                            </Link>
                           )}
                           {event.visibility === "PUBLIC" && !completedView && !useManagementPage && !isStudentView && (
                             <button
@@ -910,6 +917,8 @@ export default function EventHub({
                             </button>
                           )}
                           {isStudentView &&
+                            !eventIsCompleted &&
+                            !registrationLocked &&
                             ["PENDING", "APPROVED", "ENROLLED"].includes(
                               String(event.participationStatus || "").toUpperCase()
                             ) && (
@@ -1000,16 +1009,16 @@ export default function EventHub({
                                   : "View Results & Certificates"}
                               </Link>
                             )}
-                            {isStudentView && event.visibility === "PUBLIC" && event.finalOutcomeReady && (
+                            {!isStudentView && event.visibility === "PUBLIC" && hasPublishedResult && (
                               <Link
                                 href={`/events/${event._id}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 onClick={(e) => e.stopPropagation()}
-                                className="inline-flex min-h-10 items-center rounded-lg bg-[#4326e8] px-3 text-sm font-bold text-white shadow-md transition hover:bg-[#3217d3]"
+                                className="inline-flex min-h-10 items-center rounded-lg border border-[#d8e0f0] bg-white px-3 text-sm font-bold text-[#0a2f66] transition hover:bg-[#f8fbff]"
                                 title="View published result"
                               >
-                                View Result
+                                Public Result
                               </Link>
                             )}
                         </div>
@@ -1040,6 +1049,16 @@ export default function EventHub({
                               <FaCheckCircle />
                               Enroll
                             </button>
+                          ) : isStudentView ? (
+                            <Link
+                              href={`/student/events/${event._id}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#d8e0f0] bg-white px-3 text-sm font-bold text-[#0a2f66] transition hover:border-[#b9c9eb] hover:bg-[#f8fbff] whitespace-nowrap"
+                              title="View event details"
+                            >
+                              <FaEye />
+                              View Event
+                            </Link>
                           ) : registrationLocked || needsSchoolApproval ? (
                             <button
                               type="button"
@@ -1069,7 +1088,7 @@ export default function EventHub({
                                 }`}
                               >
                                 {isTeamEvent
-                                  ? "Register Groups"
+                                  ? "Register Teams"
                                   : "Register Participants"}
                               </Link>
                             )
@@ -1081,7 +1100,7 @@ export default function EventHub({
                 </div>
 
                 {/* Expanded Section - Participation Form */}
-                {expandedEventId === event._id && !needsSchoolApproval && !useManagementPage && (
+                {expandedEventId === event._id && !needsSchoolApproval && !useManagementPage && !isStudentView && (
                   <div className="event-expanded-panel space-y-4 border-t border-[#e2e8f0] bg-[#f8fafc] p-5">
                     {/* Stage Banner */}
                     <div className={`event-stage-banner max-w-3xl rounded-lg border px-3 py-2.5 text-sm ${getStageClasses(stage.tone)}`}>
@@ -1096,7 +1115,7 @@ export default function EventHub({
                         <FaCalendarAlt className="text-[#4326e8]" />
                         <div>
                           <p className="text-[10px] font-bold uppercase text-[#475569]">Date</p>
-                          <p className="text-sm font-bold text-[#1e293b]">{new Date(event.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</p>
+                          <p className="text-sm font-bold text-[#1e293b]">{formatEventDate(event.date)}</p>
                         </div>
                       </div>
                       {/* Deadline */}
@@ -1105,7 +1124,7 @@ export default function EventHub({
                         <div>
                           <p className="text-[10px] font-bold uppercase text-[#475569]">Deadline</p>
                           <p className={`text-sm font-bold ${event.deadline && isDatePast(event.deadline, { endOfDay: true }) ? "text-rose-700" : "text-emerald-700"}`}>
-                            {event.deadline ? new Date(event.deadline).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "No deadline"}
+                            {event.deadline ? formatEventDate(event.deadline, { year: false }) : "No deadline"}
                           </p>
                         </div>
                       </div>
@@ -1144,7 +1163,7 @@ export default function EventHub({
                               ? "Group Registration"
                               : "Participant Registration"
                             : isTeamEvent
-                            ? "Register Groups"
+                            ? "Register Teams"
                             : "Register Participants"}
                         </h4>
                         {isStudentView ? (

@@ -6,6 +6,7 @@ import { getActiveCertificateFilter } from "@/lib/certificates";
 import Student from "@/models/Student";
 import Achievement from "@/models/Achievement";
 import ParticipationRequest from "@/models/ParticipationRequest";
+import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
 import User from "@/models/User";
 
 function buildStudentLookup(session) {
@@ -45,22 +46,43 @@ export async function GET() {
       );
     }
 
-    const [school, achievements, participationRequests] = await Promise.all([
-      User.findById(student.school).select("schoolName schoolLocation").lean(),
-      Achievement.find({
-        student: student._id,
-        ...getActiveCertificateFilter(),
-      })
-        .populate("event", "title date")
-        .sort({ awardedAt: -1, createdAt: -1 })
-        .lean(),
-      ParticipationRequest.find({
-        student: student._id,
-        status: { $in: ["APPROVED", "ENROLLED"] },
-      })
-        .select("event status approvedAt enrollmentConfirmedAt requestedAt")
-        .lean(),
-    ]);
+    const [school, achievements, participationRequests, publicWritingsCount] =
+      await Promise.all([
+        User.findById(student.school).select("schoolName schoolLocation").lean(),
+        Achievement.find({
+          student: student._id,
+          ...getActiveCertificateFilter(),
+        })
+          .populate(
+            "event",
+            "title date eventScope publicResultsEnabled resultsPublished"
+          )
+          .sort({ awardedAt: -1, createdAt: -1 })
+          .lean(),
+        ParticipationRequest.find({
+          student: student._id,
+          status: { $in: ["APPROVED", "ENROLLED"] },
+        })
+          .select("event status approvedAt enrollmentConfirmedAt requestedAt")
+          .lean(),
+        SchoolMagazineArticle.countDocuments({
+          authorStudent: student._id,
+          status: "APPROVED",
+          isPublished: true,
+          isDeleted: { $ne: true },
+        }),
+      ]);
+
+    // Mirrors the public portfolio gate at /students/[id]: a profile is public
+    // only if there is at least one publicly-published achievement or writing.
+    const publicAchievementsCount = achievements.filter(
+      (achievement) =>
+        achievement.event?.eventScope === "PLATFORM" &&
+        achievement.event?.publicResultsEnabled &&
+        achievement.event?.resultsPublished
+    ).length;
+    const publicProfileAvailable =
+      publicAchievementsCount > 0 || publicWritingsCount > 0;
 
     const winsCount = achievements.filter((achievement) =>
       ["WINNER", "RUNNER_UP", "THIRD_PLACE"].includes(
@@ -88,6 +110,7 @@ export async function GET() {
             schoolName: school?.schoolName || "School",
             schoolLocation: school?.schoolLocation || "",
           },
+          publicProfileAvailable,
           metrics: {
             achievementsCount: achievements.length,
             winsCount,
@@ -105,6 +128,9 @@ export async function GET() {
             level: achievement.level,
             awardedAt: achievement.awardedAt,
             certificateUrl: achievement.certificateUrl || "",
+            certificateCode: achievement.certificateCode || "",
+            certificateIssuedAt: achievement.certificateIssuedAt || null,
+            recipientName: achievement.certificateRecipientName || "",
             scorePercentage: achievement.scorePercentage || 0,
             totalScore: achievement.totalScore || 0,
             event: achievement.event

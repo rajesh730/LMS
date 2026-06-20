@@ -283,7 +283,7 @@ export async function GET(req) {
     const [totalStudents, students] = await Promise.all([
       Student.countDocuments(query),
       Student.find(query)
-        .select("-password -visiblePassword -parentAccessPin")
+        .select("-password -visiblePassword")
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)

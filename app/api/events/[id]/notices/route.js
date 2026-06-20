@@ -3,7 +3,10 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import dbConnect from "@/lib/db";
 import EventNotice from "@/models/EventNotice";
-import { getManageableEventOrResponse } from "@/lib/eventRoundAccess";
+import {
+  getManageableEventOrResponse,
+  getViewableEventOrResponse,
+} from "@/lib/eventRoundAccess";
 import { publishRealtimeEvent } from "@/lib/realtimeBus";
 import { publishEventRealtimeUpdate } from "@/lib/eventRealtime";
 
@@ -36,14 +39,16 @@ export async function GET(req, props) {
     const session = await getServerSession(authOptions);
     if (
       !session ||
-      !["SUPER_ADMIN", "SCHOOL_ADMIN", "TEACHER"].includes(session.user.role)
+      !["SUPER_ADMIN", "SCHOOL_ADMIN", "TEACHER", "STUDENT"].includes(
+        session.user.role
+      )
     ) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
     await dbConnect();
     const params = await props.params;
-    const access = await getManageableEventOrResponse(params.id, session);
+    const access = await getViewableEventOrResponse(params.id, session);
     if (access.error) {
       return NextResponse.json(
         { message: access.error.message },
@@ -55,6 +60,8 @@ export async function GET(req, props) {
       event: params.id,
       round: null,
       isDeleted: { $ne: true },
+      // Read-only viewers (students) only see published notices, not drafts.
+      ...(access.canManage ? {} : { status: "PUBLISHED" }),
     })
       .sort({ publishedAt: -1, createdAt: -1 })
       .lean();

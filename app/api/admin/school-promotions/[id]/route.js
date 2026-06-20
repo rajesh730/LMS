@@ -39,10 +39,6 @@ function serializePromotion(promotion) {
     placement: promotion.placement,
     status: promotion.status,
     priority: promotion.priority,
-    paymentStatus: promotion.paymentStatus || "PENDING",
-    paidAmount: promotion.paidAmount || 0,
-    paymentReference: promotion.paymentReference || "",
-    paidAt: promotion.paidAt,
     startsAt: promotion.startsAt,
     endsAt: promotion.endsAt,
     destinationUrl: promotion.destinationUrl || "",
@@ -55,37 +51,23 @@ function serializePromotion(promotion) {
   };
 }
 
-function getDate(value, boundary = "start") {
-  if (!value) return null;
-  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    const suffix =
-      boundary === "end" ? "T23:59:59.999" : "T00:00:00.000";
-    const dateOnly = new Date(`${value}${suffix}`);
-    return Number.isNaN(dateOnly.getTime()) ? null : dateOnly;
-  }
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? null : date;
-}
-
 function validatePayload(body) {
   const school = String(body.school || "").trim();
   const placement = String(body.placement || "").toUpperCase();
   const status = String(body.status || "DRAFT").toUpperCase();
   const priority = String(body.priority || "STANDARD").toUpperCase();
-  const paymentStatus = "PAID";
   const startsAt = getDefaultStartDate();
   const endsAt = getDefaultEndDate();
-  const paidAmount = 0;
 
   if (!school) return { error: "School is required" };
   if (!PROMOTION_PLACEMENTS.includes(placement)) {
     return { error: "Invalid spotlight placement" };
   }
   if (!PROMOTION_STATUSES.includes(status)) {
-    return { error: "Invalid campaign status" };
+    return { error: "Invalid spotlight status" };
   }
   if (!PROMOTION_PRIORITIES.includes(priority)) {
-    return { error: "Invalid campaign priority" };
+    return { error: "Invalid spotlight rotation" };
   }
   if (endsAt <= startsAt) {
     return { error: "End date must be after the start date" };
@@ -97,10 +79,6 @@ function validatePayload(body) {
       placement,
       status,
       priority,
-      paymentStatus,
-      paidAmount,
-      paymentReference: "",
-      paidAt: paymentStatus === "PAID" ? getDate(body.paidAt) || new Date() : null,
       startsAt,
       endsAt,
       title: "",
@@ -131,7 +109,7 @@ export async function PATCH(request, props) {
 
     if (!promotion) {
       return NextResponse.json(
-        { message: "School spotlight campaign not found" },
+        { message: "School spotlight not found" },
         { status: 404 }
       );
     }
@@ -165,13 +143,13 @@ export async function PATCH(request, props) {
     await promotion.populate("school", "schoolName schoolLocation email");
 
     return NextResponse.json({
-      message: "School spotlight campaign updated",
+      message: "School spotlight updated",
       promotion: serializePromotion(promotion),
     });
   } catch (error) {
     console.error("PATCH /api/admin/school-promotions/[id] error:", error);
     return NextResponse.json(
-      { message: "Failed to update school spotlight campaign" },
+      { message: "Failed to update school spotlight" },
       { status: 500 }
     );
   }

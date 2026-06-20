@@ -38,7 +38,9 @@ export default function StudentNotificationCenter() {
     realtimeChannel: "student-notifications",
     enableRealtimeToast: true,
     toastMessageBuilder: (notification) =>
-      notification.noticeType === "MAGAZINE"
+      notification.noticeType === "ACHIEVEMENT"
+        ? `🎉 ${notification.title}`
+        : notification.noticeType === "MAGAZINE"
         ? `Magazine update: ${notification.title}`
         : notification.noticeType === "EVENT"
         ? `New event notice: ${notification.title}`

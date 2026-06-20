@@ -15,6 +15,7 @@ import {
 import { isTeamEventLike } from "@/lib/eventParticipationFormat";
 import {
   formatEventWorkflowStatus,
+  getEventNextActionLabel,
   getEventWorkflowStatus,
 } from "@/lib/eventWorkflow";
 
@@ -74,6 +75,7 @@ export default function EventCard({
   const registered = getRegisteredCount(event);
   const currentStage = getCurrentStageLabel(event);
   const workflowStatus = getEventWorkflowStatus(event);
+  const nextAction = getEventNextActionLabel(event);
   const gradeSummary = formatGradeSummary(event.eligibleGrades || []);
   const gradeTitle =
     event.eligibleGrades?.length > 0 ? event.eligibleGrades.join(", ") : "All grades";
@@ -191,7 +193,7 @@ export default function EventCard({
                 <FaUsers />
                 {registered} {getEventUnitLabel(event)}
               </span>
-              <span className="truncate">Workflow: {currentStage}</span>
+              <span className="truncate">Next: {nextAction}</span>
             </div>
           </div>
         </div>

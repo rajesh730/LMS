@@ -1493,7 +1493,7 @@ export default function StudentWritingWorkspace() {
             <article className="mx-5 mb-8 mt-5 rounded-xl border border-[#d7cdbb] bg-[#fffdf8] p-5 md:mx-8 md:p-7">
               <WritingContent
                 content={readingWriting.content}
-                className="space-y-4 text-base leading-8 text-[#27344a] md:text-lg"
+                className="text-base leading-7 text-[#27344a] md:text-lg"
               />
             </article>
 

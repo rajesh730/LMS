@@ -3,6 +3,7 @@
 export function getNotificationTypeLabel(noticeType, { detailed = false } = {}) {
   if (noticeType === "EVENT") return detailed ? "Event Notice" : "Event";
   if (noticeType === "MAGAZINE") return detailed ? "Magazine Notice" : "Magazine";
+  if (noticeType === "ACHIEVEMENT") return detailed ? "Achievement" : "Achievement";
   if (noticeType === "GENERAL") return detailed ? "Platform Notice" : "Platform";
   return detailed ? "School Notice" : "School";
 }

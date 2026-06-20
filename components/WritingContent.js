@@ -35,20 +35,31 @@ export function stripWritingMarkup(content = "") {
     .replace(/_([^_]+)_/g, "$1");
 }
 
-export default function WritingContent({ content = "", className = "" }) {
-  const lines = String(content || "").split("\n");
+export function getWritingPreviewText(content = "", maxLength = 160, options = {}) {
+  const text = options.preserveFormatting
+    ? stripWritingMarkup(content).replace(/\r\n/g, "\n").trim()
+    : stripWritingMarkup(content).replace(/\s+/g, " ").trim();
+  if (text.length <= maxLength) return text;
+  return `${text.slice(0, maxLength).trimEnd()}...`;
+}
 
+export function WritingPreview({
+  content = "",
+  maxLength = 160,
+  preserveFormatting = true,
+  className = "",
+}) {
   return (
-    <div className={className}>
-      {lines.map((line, index) =>
-        line.trim() ? (
-          <p key={`${line}-${index}`}>
-            <InlineWritingText text={line} />
-          </p>
-        ) : (
-          <div key={`space-${index}`} className="h-4" />
-        )
-      )}
+    <p className={`whitespace-pre-wrap ${className}`}>
+      {getWritingPreviewText(content, maxLength, { preserveFormatting })}
+    </p>
+  );
+}
+
+export default function WritingContent({ content = "", className = "" }) {
+  return (
+    <div className={`whitespace-pre-wrap ${className}`}>
+      <InlineWritingText text={String(content || "").replace(/\r\n/g, "\n")} />
     </div>
   );
 }

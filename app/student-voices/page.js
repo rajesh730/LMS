@@ -3,7 +3,7 @@ import connectDB from "@/lib/db";
 import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
 import PublicExplorePanel from "@/components/public/PublicExplorePanel";
 import PublicSiteNav from "@/components/public/PublicSiteNav";
-import { stripWritingMarkup } from "@/components/WritingContent";
+import { WritingPreview } from "@/components/WritingContent";
 import { diversifyBySchool } from "@/lib/schoolDiversifiedFeed";
 import {
   FaArrowRight,
@@ -31,12 +31,6 @@ function formatDate(value) {
     day: "numeric",
     year: "numeric",
   }).format(new Date(value));
-}
-
-function getPreview(value = "", maxLength = 160) {
-  const text = stripWritingMarkup(value).replace(/\s+/g, " ").trim();
-  if (text.length <= maxLength) return text;
-  return `${text.slice(0, maxLength).trim()}...`;
 }
 
 function getCategory(value) {
@@ -76,6 +70,7 @@ async function getStudentVoices() {
     category: article.category,
     date: article.publishedAt || article.updatedAt,
     author: article.authorStudent?.name || "Student",
+    authorId: article.authorStudent?._id ? String(article.authorStudent._id) : "",
     grade: article.authorStudent?.grade || "",
     schoolName: article.school?.schoolName || "School",
     schoolHref: article.school?._id ? `/schools/${article.school._id}` : "/schools",
@@ -102,9 +97,18 @@ function VoiceCard({ article, featured = false }) {
           {getInitials(article.author)}
         </span>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-black text-[#10142f]">
-            {article.author}
-          </p>
+          {article.authorId ? (
+            <Link
+              href={`/students/${article.authorId}`}
+              className="block truncate text-sm font-black text-[#10142f] hover:text-[#4326e8]"
+            >
+              {article.author}
+            </Link>
+          ) : (
+            <p className="truncate text-sm font-black text-[#10142f]">
+              {article.author}
+            </p>
+          )}
           <Link
             href={article.schoolHref}
             className="mt-1 inline-flex items-center gap-1 text-xs font-bold text-[#526071] hover:text-[#4326e8]"
@@ -121,9 +125,11 @@ function VoiceCard({ article, featured = false }) {
       <h2 className={`${featured ? "mt-6 text-3xl" : "mt-4 text-xl"} font-black leading-tight text-[#10142f]`}>
         {article.title}
       </h2>
-      <p className={`${featured ? "mt-4 text-base" : "mt-2 text-sm"} leading-7 text-[#46536b]`}>
-        {getPreview(article.content, featured ? 280 : 150)}
-      </p>
+      <WritingPreview
+        content={article.content}
+        maxLength={featured ? 280 : 150}
+        className={`${featured ? "mt-4 text-base" : "mt-2 text-sm"} line-clamp-4 leading-6 text-[#46536b]`}
+      />
 
       <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-[#f0f2f8] pt-4 text-xs font-bold text-[#526071]">
         <span className="inline-flex items-center gap-2">

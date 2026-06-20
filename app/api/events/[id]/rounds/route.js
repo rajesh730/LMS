@@ -6,7 +6,10 @@ import EventRound from "@/models/EventRound";
 import RoundParticipant from "@/models/RoundParticipant";
 import RoundSubmission from "@/models/RoundSubmission";
 import ParticipationRequest from "@/models/ParticipationRequest";
-import { getManageableEventOrResponse } from "@/lib/eventRoundAccess";
+import {
+  getManageableEventOrResponse,
+  getViewableEventOrResponse,
+} from "@/lib/eventRoundAccess";
 import {
   buildRoundParticipantEntries,
   ensureRoundForEvent,
@@ -39,7 +42,7 @@ export async function GET(req, props) {
 
     await dbConnect();
     const params = await props.params;
-    const access = await getManageableEventOrResponse(params.id, session);
+    const access = await getViewableEventOrResponse(params.id, session);
     if (access.error) {
       return NextResponse.json(
         { message: access.error.message },
@@ -47,10 +50,11 @@ export async function GET(req, props) {
       );
     }
     const event = access.event;
+    const canManage = access.canManage;
 
     const rounds = await getOrderedRounds(params.id);
     const roundIds = rounds.map((round) => round._id);
-    const [participants, submissions] = await Promise.all([
+    const [participants, submissions, activeRequests] = await Promise.all([
       RoundParticipant.find({ round: { $in: roundIds } })
         .populate("student", "name grade rollNumber platformStudentId")
         .populate("captainStudent", "name grade")
@@ -60,11 +64,46 @@ export async function GET(req, props) {
       RoundSubmission.find({ event: params.id, round: { $in: roundIds } })
         .sort({ submittedAt: -1 })
         .lean(),
+      ParticipationRequest.find({
+        event: params.id,
+        status: { $in: ["APPROVED", "ENROLLED"] },
+      })
+        .select("student")
+        .lean(),
     ]);
+
+    // Round 1 is derived from the approved/enrolled roster, so it must mirror it
+    // exactly. Historically, round entries were never pruned when a participant
+    // was later removed, leaving the round showing the full roster instead of
+    // the live participants. Heal that here: drop any round-1 entry whose
+    // student is no longer an active participant, both from the response and
+    // (best effort) from storage so every count stays consistent.
+    const roundOne = rounds.find((round) => Number(round.roundNumber) === 1);
+    let cleanedParticipants = participants;
+    if (roundOne) {
+      const activeStudentIds = new Set(
+        activeRequests.map((request) => String(request.student))
+      );
+      const orphanIds = [];
+      cleanedParticipants = participants.filter((participant) => {
+        if (String(participant.round) !== String(roundOne._id)) return true;
+        const studentId = String(participant.student?._id || participant.student);
+        if (activeStudentIds.has(studentId)) return true;
+        orphanIds.push(participant._id);
+        return false;
+      });
+      // Only managers trigger the storage cleanup; read-only viewers (students)
+      // still get the filtered response but never mutate data on a GET.
+      if (orphanIds.length > 0 && canManage) {
+        RoundParticipant.deleteMany({ _id: { $in: orphanIds } }).catch((error) =>
+          console.error("Round 1 orphan cleanup failed:", error)
+        );
+      }
+    }
 
     const participantsByRound = new Map();
     roundIds.forEach((roundId) => {
-      const roundParticipants = participants.filter(
+      const roundParticipants = cleanedParticipants.filter(
         (participant) => String(participant.round) === String(roundId)
       );
       participantsByRound.set(

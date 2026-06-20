@@ -5,6 +5,7 @@ import dbConnect from "@/lib/db";
 import Event from "@/models/Event";
 import Student from "@/models/Student";
 import ParticipationRequest from "@/models/ParticipationRequest";
+import { getRegistrationLockMessage } from "@/lib/eventWorkflow";
 
 /**
  * DELETE /api/events/[id]/withdraw
@@ -57,6 +58,13 @@ export async function DELETE(req, { params }) {
 
     if (!event) {
       return NextResponse.json({ message: "Event not found" }, { status: 404 });
+    }
+
+    // Block withdrawal once the competition has started or the deadline has
+    // passed — the participant list is frozen at that point.
+    const lockMessage = getRegistrationLockMessage(event, "withdraw");
+    if (lockMessage) {
+      return NextResponse.json({ message: lockMessage }, { status: 400 });
     }
 
     const now = new Date();

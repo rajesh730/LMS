@@ -27,6 +27,7 @@ import useRealtimeChannel from "@/lib/useRealtimeChannel";
 import { isTeamEventLike } from "@/lib/eventParticipationFormat";
 import {
   formatEventWorkflowStatus,
+  getEventNextActionLabel,
   getEventWorkflowStatus,
 } from "@/lib/eventWorkflow";
 
@@ -72,6 +73,16 @@ function isRegistrationOpen(event) {
 
 function getCurrentStageLabel(event) {
   return formatEventWorkflowStatus(getEventWorkflowStatus(event));
+}
+
+function isLiveEvent(event) {
+  const state = String(event.lifecycleStatus || "ACTIVE").toUpperCase();
+  const workflowStatus = getEventWorkflowStatus(event);
+  return (
+    state === "ACTIVE" &&
+    isApprovedEvent(event) &&
+    ["REGISTRATION_CLOSED", "ROUND_ACTIVE", "RESULTS_DRAFT"].includes(workflowStatus)
+  );
 }
 
 export default function SchoolOwnedEventsManager({
@@ -168,15 +179,10 @@ export default function SchoolOwnedEventsManager({
       (event) => String(event.lifecycleStatus || "ACTIVE").toUpperCase() !== "ARCHIVED"
     );
     const live = events.filter(
-      (event) =>
-        String(event.lifecycleStatus || "ACTIVE").toUpperCase() === "ACTIVE" &&
-        isApprovedEvent(event) &&
-        getRegisteredCount(event) > 0
+      (event) => isLiveEvent(event)
     );
     const registrationOpen = events.filter(
-      (event) =>
-        isRegistrationOpen(event) &&
-        getRegisteredCount(event) === 0
+      (event) => isRegistrationOpen(event)
     );
     return {
       live: live.length,
@@ -201,9 +207,7 @@ export default function SchoolOwnedEventsManager({
       const matchesStatus =
         (activeFilter === "ALL" && state !== "ARCHIVED") ||
         (activeFilter === "ACTIVE" &&
-          state === "ACTIVE" &&
-          isApprovedEvent(event) &&
-          getRegisteredCount(event) > 0) ||
+          isLiveEvent(event)) ||
         (activeFilter === "REGISTRATION" &&
           isRegistrationOpen(event) &&
           getRegisteredCount(event) === 0) ||
@@ -362,9 +366,9 @@ export default function SchoolOwnedEventsManager({
   const metricCards = [
     {
       key: "ACTIVE",
-      label: "Live Events",
+      label: "Live",
       value: eventMetrics.live,
-      note: "Currently running",
+      note: "Rounds or results in progress",
       icon: FaCalendarAlt,
       tone: "purple",
     },
@@ -372,7 +376,7 @@ export default function SchoolOwnedEventsManager({
       key: "REGISTRATION",
       label: "Registration Open",
       value: eventMetrics.registrationOpen,
-      note: "Accepting students",
+      note: "Accepting entries",
       icon: FaUsers,
       tone: "emerald",
     },
@@ -380,7 +384,7 @@ export default function SchoolOwnedEventsManager({
       key: "COMPLETED",
       label: "Completed",
       value: eventMetrics.completed,
-      note: "This academic year",
+      note: "Results/certificates ready",
       icon: FaCheckCircle,
       tone: "blue",
     },
@@ -403,7 +407,7 @@ export default function SchoolOwnedEventsManager({
   };
 
   const filterTabs = [
-    ["ACTIVE", "Live Events", FaCircle, eventMetrics.live],
+    ["ACTIVE", "Live", FaCircle, eventMetrics.live],
     ["REGISTRATION", "Registration Open", FaUsers, eventMetrics.registrationOpen],
     ["ALL", "All Events", FaCalendarAlt, eventMetrics.activeRecords],
     ["COMPLETED", "Completed", FaCheckCircle, eventMetrics.completed],
@@ -624,10 +628,11 @@ export default function SchoolOwnedEventsManager({
                   event.resultsPublished ||
                   eventState === "COMPLETED" ||
                   eventState === "ARCHIVED";
+                const nextAction = getEventNextActionLabel(event);
                 const rowStats = [
                   ["Registrations", registered, getEventUnitLabel(event)],
                   ["Schools", event.schoolCount || 1, "School"],
-                  ["Current", currentStage, isFinished ? "Finished" : "Live"],
+                  ["Status", currentStage, isFinished ? "Finished" : "Needs action"],
                   [
                     "Results",
                     workflowStatus === "RESULTS_PUBLISHED" ? "Published" : "Draft",
@@ -663,7 +668,7 @@ export default function SchoolOwnedEventsManager({
                     ].includes(workflowStatus),
                   },
                   {
-                    label: "Results Draft",
+                    label: "Results Review",
                     active: workflowStatus === "RESULTS_DRAFT",
                     complete: ["RESULTS_PUBLISHED", "COMPLETED"].includes(
                       workflowStatus
@@ -724,7 +729,7 @@ export default function SchoolOwnedEventsManager({
                               {registered}
                               {capacity ? `/${capacity}` : ""} {getEventUnitLabel(event)}
                             </span>
-                            <span className="truncate">Workflow: {currentStage}</span>
+                            <span className="truncate">Next: {nextAction}</span>
                           </div>
                         </div>
                       </div>

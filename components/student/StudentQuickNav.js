@@ -2,39 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  FaBookOpen,
-  FaCalendarAlt,
-  FaFeatherAlt,
-  FaSchool,
-} from "react-icons/fa";
-
-const STUDENT_SHORTCUTS = [
-  {
-    label: "School Wall",
-    href: "/student/school-wall",
-    match: "/student/school-wall",
-    icon: FaSchool,
-  },
-  {
-    label: "Magazine",
-    href: "/student/magazine",
-    match: "/student/magazine",
-    icon: FaBookOpen,
-  },
-  {
-    label: "My Writing",
-    href: "/student/writing",
-    match: "/student/writing",
-    icon: FaFeatherAlt,
-  },
-  {
-    label: "Events",
-    href: "/student/events",
-    match: "/student/events",
-    icon: FaCalendarAlt,
-  },
-];
+import { STUDENT_QUICK_NAV_LINKS } from "@/components/student/studentNavigation";
 
 export default function StudentQuickNav({ className = "" }) {
   const pathname = usePathname() || "";
@@ -44,7 +12,7 @@ export default function StudentQuickNav({ className = "" }) {
       className={`student-quick-nav ${className}`}
       aria-label="Student quick navigation"
     >
-      {STUDENT_SHORTCUTS.map((item) => {
+      {STUDENT_QUICK_NAV_LINKS.map((item) => {
         const Icon = item.icon;
         const active = pathname.startsWith(item.match);
         return (

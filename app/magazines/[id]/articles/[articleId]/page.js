@@ -5,7 +5,7 @@ import MagazineIssue from "@/models/MagazineIssue";
 import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
 import SchoolShowcaseProfile from "@/models/SchoolShowcaseProfile";
 import PublicSiteNav from "@/components/public/PublicSiteNav";
-import PublicWritingReader from "@/components/public/PublicWritingReader";
+import StudentMagazineArticleReader from "@/components/student/StudentMagazineArticleReader";
 import "@/models/Student";
 import "@/models/User";
 
@@ -140,14 +140,16 @@ export default async function PublicMagazineArticlePage({ params }) {
   return (
     <main className="min-h-screen bg-[#f8f9fd] text-[#17120a]">
       <PublicSiteNav active="schools" />
-      <PublicWritingReader
-        article={data.article}
-        relatedArticles={data.relatedArticles}
-        backHref={`/magazines/${data.issue.id}`}
-        backLabel="Back to magazine"
-        currentHref={`/magazines/${data.issue.id}/articles/${data.article.id}`}
-        relatedHrefPrefix={`/magazines/${data.issue.id}/articles/`}
-      />
+      <div className="mx-auto max-w-7xl px-4 py-6 md:px-6">
+        <StudentMagazineArticleReader
+          articleId={data.article.id}
+          apiBasePath={`/api/public/magazines/${data.issue.id}/articles`}
+          backHref={`/magazines/${data.issue.id}`}
+          backLabel="Back to magazine"
+          issueHrefPrefix="/magazines/"
+          relatedHrefPrefix={`/magazines/${data.issue.id}/articles/`}
+        />
+      </div>
     </main>
   );
 }

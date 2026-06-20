@@ -7,6 +7,7 @@ import EventSchoolInvitation from "@/models/EventSchoolInvitation";
 import ParticipationRequest from "@/models/ParticipationRequest";
 import Student from "@/models/Student";
 import { buildParticipationLifecycle } from "@/lib/lifecycle";
+import { getStudentViewerForEvent } from "@/lib/eventRoundAccess";
 
 function isTeamEvent(event) {
   return String(event?.participationFormat || "INDIVIDUAL").toUpperCase() === "TEAM";
@@ -82,12 +83,23 @@ export async function GET(req, context) {
       return NextResponse.json({ message: "Event not found" }, { status: 404 });
     }
 
+    // Students may read visible events for their own school, or events they are
+    // enrolled in. Mutations live in other routes that still require manage access.
+    const viewerStudent = await getStudentViewerForEvent(event, session);
+    const isReadOnlyViewer = Boolean(viewerStudent);
+
     const schoolScopeId =
       session.user.role === "SCHOOL_ADMIN" && event.eventScope === "PLATFORM"
         ? session.user.schoolId || session.user.id
+        : viewerStudent
+        ? String(viewerStudent.school || "")
         : null;
 
-    if (schoolScopeId) {
+    if (isReadOnlyViewer) {
+      // Student read access was verified against enrollment or same-school visibility.
+    } else if (session.user.role === "STUDENT") {
+      return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+    } else if (schoolScopeId) {
       const [approvedInvitation, existingParticipation] = await Promise.all([
         EventSchoolInvitation.exists({
           event: eventId,

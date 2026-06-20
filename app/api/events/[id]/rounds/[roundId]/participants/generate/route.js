@@ -111,6 +111,25 @@ export async function POST(req, props) {
     }));
 
     const result = await RoundParticipant.bulkWrite(operations);
+
+    // Round 1 is derived directly from the approved/enrolled request roster, so
+    // it must stay in sync with it. Drop any round-1 entries whose student is no
+    // longer an eligible source participant (e.g. a request that was later
+    // rejected or withdrawn) — otherwise the round keeps stale rows and its
+    // count drifts away from the live participant list.
+    let removed = 0;
+    if (round.roundNumber === 1) {
+      const eligibleStudentIds = sourceParticipants.map((participant) =>
+        String(participant.student)
+      );
+      const cleanup = await RoundParticipant.deleteMany({
+        event: params.id,
+        round: round._id,
+        student: { $nin: eligibleStudentIds },
+      });
+      removed = cleanup.deletedCount || 0;
+    }
+
     event.eventWorkflowStatus = "ROUND_ACTIVE";
     await event.save();
 
@@ -118,6 +137,7 @@ export async function POST(req, props) {
       message: "Round participants generated",
       created: result.upsertedCount || 0,
       matched: result.matchedCount || 0,
+      removed,
     });
   } catch (error) {
     console.error("Generate Round Participants Error:", error);

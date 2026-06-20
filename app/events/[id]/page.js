@@ -4,21 +4,21 @@ import {
   FaArrowRight,
   FaCalendarAlt,
   FaClipboardList,
-  FaExternalLinkAlt,
   FaMapMarkerAlt,
   FaRegCalendarAlt,
   FaSchool,
-  FaTrophy,
   FaUsers,
 } from "react-icons/fa";
 import connectDB from "@/lib/db";
 import { getActiveCertificateFilter } from "@/lib/certificates";
+import { formatEventDate } from "@/lib/eventUiStatus";
 import Achievement from "@/models/Achievement";
 import Event from "@/models/Event";
 import EventNotice from "@/models/EventNotice";
 import ParticipationRequest from "@/models/ParticipationRequest";
 import PublicEventNoticeList from "@/components/events/PublicEventNoticeList";
 import PublicExplorePanel from "@/components/public/PublicExplorePanel";
+import PublicResultsTable from "@/components/public/PublicResultsTable";
 import PublicShareButton from "@/components/public/PublicShareButton";
 import PublicSiteNav from "@/components/public/PublicSiteNav";
 import { PublicPageShell } from "@/components/public/PublicLayout";
@@ -32,29 +32,6 @@ function label(value) {
     .replaceAll("_", " ")
     .toLowerCase()
     .replace(/\b\w/g, (char) => char.toUpperCase());
-}
-
-function formatDate(value) {
-  if (!value) return "Date to be announced";
-  return new Intl.DateTimeFormat("en", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(new Date(value));
-}
-
-function formatPlacement(value) {
-  if (value === "RUNNER_UP") return "Runner Up";
-  return label(value);
-}
-
-function placementTone(value) {
-  const placement = String(value || "").toUpperCase();
-  if (placement === "WINNER") return "bg-amber-50 text-amber-800";
-  if (placement === "RUNNER_UP") return "bg-blue-50 text-blue-800";
-  if (placement === "PARTICIPANT") return "bg-emerald-50 text-emerald-800";
-  if (placement === "FINALIST") return "bg-purple-50 text-purple-800";
-  return "bg-slate-100 text-slate-700";
 }
 
 function serializeEventNotice(notice) {
@@ -75,9 +52,9 @@ function serializeEventNotice(notice) {
   };
 }
 
-function FactItem({ icon: Icon, label: title, value }) {
+function FactItem({ icon: Icon, label: title, value, className = "" }) {
   return (
-    <div className="rounded-lg border border-[#e6eaf7] bg-[#f8f9fd] p-3 sm:p-4">
+    <div className={`rounded-lg border border-[#e6eaf7] bg-[#f8f9fd] p-3 sm:p-4 ${className}`}>
       <div className="flex items-center gap-2 sm:gap-3">
         <span className="flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-lg bg-[#f4f1ff] text-[#4326e8] text-sm sm:text-base">
           <Icon />
@@ -92,158 +69,6 @@ function FactItem({ icon: Icon, label: title, value }) {
         </span>
       </div>
     </div>
-  );
-}
-
-function ResultsTable({ achievements, resultsPublished }) {
-  return (
-    <section id="results" className="rounded-xl border border-[#e6eaf7] bg-white p-5 shadow-sm">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="inline-flex items-center gap-2 text-base font-black text-[#10142f]">
-          <FaTrophy className="text-[#d98b00]" />
-          Results
-        </h2>
-        {achievements.length > 0 && (
-          <span className="rounded-full bg-[#f4f1ff] px-3 py-1 text-xs font-black text-[#4326e8]">
-            {achievements.length} published
-          </span>
-        )}
-      </div>
-
-      {!resultsPublished ? (
-        <p className="mt-4 rounded-lg bg-[#f8f9fd] p-4 text-sm font-semibold text-[#526071]">
-          Results are not published yet.
-        </p>
-      ) : achievements.length === 0 ? (
-        <p className="mt-4 rounded-lg bg-[#f8f9fd] p-4 text-sm font-semibold text-[#526071]">
-          No public result records are available yet.
-        </p>
-      ) : (
-        <>
-          {/* Desktop Table View */}
-          <div className="hidden sm:block mt-4 overflow-x-auto rounded-lg border border-[#e6eaf7]">
-            <table className="min-w-full text-left text-sm">
-              <thead className="bg-[#f8f9fd] text-[#526071]">
-                <tr>
-                  <th className="px-4 py-3 font-black">Student</th>
-                  <th className="px-4 py-3 font-black">School</th>
-                  <th className="px-4 py-3 font-black">Placement</th>
-                  <th className="px-4 py-3 font-black">Certificate</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#e6eaf7]">
-                {achievements.map((achievement) => {
-                  const studentName =
-                    achievement.certificateRecipientName ||
-                    achievement.student?.name ||
-                    "Student";
-
-                  return (
-                    <tr key={String(achievement._id)}>
-                      <td className="px-4 py-3 font-bold text-[#10142f]">
-                        {studentName}
-                      </td>
-                      <td className="px-4 py-3">
-                        {achievement.school?._id ? (
-                          <Link
-                            href={`/schools/${achievement.school._id}`}
-                            className="font-semibold text-[#0a2f66] hover:text-[#4326e8]"
-                          >
-                            {achievement.school.schoolName || "School"}
-                          </Link>
-                        ) : (
-                          <span className="text-[#526071]">School</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`rounded-full px-2.5 py-1 text-[10px] font-black ${placementTone(
-                            achievement.placement
-                          )}`}
-                        >
-                          {formatPlacement(achievement.placement)}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        {achievement.certificateUrl ? (
-                          <a
-                            href={achievement.certificateUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex items-center gap-1 whitespace-nowrap text-xs font-black text-[#4326e8]"
-                          >
-                            View certificate
-                            <FaExternalLinkAlt />
-                          </a>
-                        ) : (
-                          <span className="text-[#8a9ab1]">Not public</span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Mobile Card-based View */}
-          <div className="block sm:hidden mt-4 space-y-3">
-            {achievements.map((achievement) => {
-              const studentName =
-                achievement.certificateRecipientName ||
-                achievement.student?.name ||
-                "Student";
-
-              return (
-                <div
-                  key={String(achievement._id)}
-                  className="rounded-xl border border-[#e6eaf7] p-4 bg-[#f8f9fd] shadow-sm flex flex-col gap-2.5"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-bold text-[#10142f] text-sm truncate">
-                      {studentName}
-                    </span>
-                    <span
-                      className={`shrink-0 rounded-full px-2.5 py-1 text-[9px] font-black uppercase ${placementTone(
-                        achievement.placement
-                      )}`}
-                    >
-                      {formatPlacement(achievement.placement)}
-                    </span>
-                  </div>
-                  <div className="text-xs text-[#526071] flex items-center gap-1.5">
-                    <FaSchool className="text-[#4326e8] shrink-0" />
-                    {achievement.school?._id ? (
-                      <Link
-                        href={`/schools/${achievement.school._id}`}
-                        className="font-semibold text-[#0a2f66] hover:text-[#4326e8] truncate"
-                      >
-                        {achievement.school.schoolName || "School"}
-                      </Link>
-                    ) : (
-                      <span className="truncate">School</span>
-                    )}
-                  </div>
-                  {achievement.certificateUrl && (
-                    <div className="mt-1.5 pt-2 border-t border-[#e6eaf7] flex justify-end">
-                      <a
-                        href={achievement.certificateUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-1.5 text-xs font-black text-[#4326e8]"
-                      >
-                        View certificate
-                        <FaExternalLinkAlt className="text-[10px]" />
-                      </a>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </>
-      )}
-    </section>
   );
 }
 
@@ -341,17 +166,29 @@ export default async function PublicEventPage({ params }) {
     ? event.school?.schoolName || "School"
     : "Pravyo";
   const location = event.school?.schoolLocation || "Online Event";
-  const sortedAchievements = [...achievements].sort((a, b) => {
-    const order = {
-      WINNER: 1,
-      RUNNER_UP: 2,
-      FINALIST: 3,
-      THIRD_PLACE: 4,
-      SPECIAL_MENTION: 5,
-      PARTICIPANT: 6,
-    };
-    return (order[a.placement] || 99) - (order[b.placement] || 99);
-  });
+  const sortedAchievements = [...achievements]
+    .sort((a, b) => {
+      const order = {
+        WINNER: 1,
+        RUNNER_UP: 2,
+        FINALIST: 3,
+        THIRD_PLACE: 4,
+        SPECIAL_MENTION: 5,
+        PARTICIPANT: 6,
+      };
+      return (order[a.placement] || 99) - (order[b.placement] || 99);
+    })
+    .map((achievement) => ({
+      _id: String(achievement._id),
+      studentName:
+        achievement.certificateRecipientName ||
+        achievement.student?.name ||
+        "Student",
+      schoolId: achievement.school?._id ? String(achievement.school._id) : null,
+      schoolName: achievement.school?.schoolName || "School",
+      placement: achievement.placement || "",
+      certificateUrl: achievement.certificateUrl || "",
+    }));
   return (
     <PublicPageShell className="bg-[#f8f9fd]">
       <PublicSiteNav active="events" />
@@ -395,9 +232,9 @@ export default async function PublicEventPage({ params }) {
             </div>
 
             <div className="mt-8 grid grid-cols-2 gap-3 md:grid-cols-2 xl:grid-cols-4">
-              <FactItem icon={FaCalendarAlt} label="Event Date" value={formatDate(event.date)} />
+              <FactItem icon={FaCalendarAlt} label="Event Date" value={formatEventDate(event.date)} />
               <FactItem icon={FaMapMarkerAlt} label="Location" value={location} />
-              <FactItem icon={FaRegCalendarAlt} label="Deadline" value={event.registrationDeadline ? formatDate(event.registrationDeadline) : "No deadline"} className="hidden sm:block" />
+              <FactItem icon={FaRegCalendarAlt} label="Deadline" value={event.registrationDeadline ? formatEventDate(event.registrationDeadline) : "No deadline"} className="hidden sm:block" />
               <FactItem icon={FaUsers} label="Organizer" value={organizer} className="hidden sm:block" />
             </div>
 
@@ -426,9 +263,11 @@ export default async function PublicEventPage({ params }) {
           />
 
           {!isInternalEvent && (
-            <ResultsTable
+            <PublicResultsTable
               achievements={sortedAchievements}
-              resultsPublished={event.resultsPublished && event.publicResultsEnabled}
+              resultsPublished={Boolean(
+                event.resultsPublished && event.publicResultsEnabled
+              )}
             />
           )}
 

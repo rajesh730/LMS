@@ -15,6 +15,7 @@ import PublicShareButton from "@/components/public/PublicShareButton";
 import ExpandableStoryText from "@/components/public/ExpandableStoryText";
 import { stripWritingMarkup } from "@/components/WritingContent";
 import { normalizeImageUrl } from "@/lib/imageUrls";
+import { formatPlacement } from "@/lib/displayFormat";
 import {
   FaArrowRight,
   FaBookOpen,
@@ -55,10 +56,6 @@ function getPreview(value = "", maxLength = 120) {
 function getReadTime(content = "") {
   const words = String(content || "").trim().split(/\s+/).filter(Boolean).length;
   return Math.max(1, Math.ceil(words / 180));
-}
-
-function formatPlacement(value) {
-  return String(value || "PARTICIPANT").replaceAll("_", " ");
 }
 
 function getCategoryLabel(value) {
@@ -327,7 +324,16 @@ function AchievementCard({ achievement }) {
             {formatPlacement(achievement.placement)}
           </span>
           <h3 className="mt-2 line-clamp-2 text-sm font-black text-[#17120a]">
-            {recipient}
+            {achievement.recipientType !== "TEAM" && achievement.student?._id ? (
+              <Link
+                href={`/students/${achievement.student._id}`}
+                className="hover:text-purple-700"
+              >
+                {recipient}
+              </Link>
+            ) : (
+              recipient
+            )}
           </h3>
           <p className="mt-1 line-clamp-1 text-xs font-semibold text-[#52657d]">
             {achievement.title}

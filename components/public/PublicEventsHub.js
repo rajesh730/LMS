@@ -21,6 +21,11 @@ import {
 } from "react-icons/fa";
 import useRealtimeChannel from "@/lib/useRealtimeChannel";
 import {
+  EVENT_STATUS_FILTERS,
+  formatEventDate,
+  getEventPublicStatus,
+} from "@/lib/eventUiStatus";
+import {
   PUBLIC_EXPLORE_ITEMS,
   PublicSidebarGroup,
 } from "@/components/public/PublicExplorePanel";
@@ -37,46 +42,16 @@ const CATEGORY_FILTERS = [
 ];
 
 const VIEW_FILTERS = [
-  ["ALL", "All Events"],
-  ["LIVE", "Active / Live"],
-  ["UPCOMING", "Open & Upcoming"],
-  ["RESULTS", "Results Published"],
+  ["all", "All Events"],
+  ...EVENT_STATUS_FILTERS.filter((filter) => filter.id !== "all").map(
+    (filter) => [filter.id, filter.label]
+  ),
 ];
-
-function formatDate(value) {
-  if (!value) return "Date to be announced";
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(new Date(value));
-}
 
 function getPreview(value = "", maxLength = 126) {
   const text = String(value || "").replace(/\s+/g, " ").trim();
   if (text.length <= maxLength) return text;
   return `${text.slice(0, maxLength).trim()}...`;
-}
-
-function getStatus(event) {
-  const workflowStatus = String(event.eventWorkflowStatus || "").toUpperCase();
-  const lifecycleStatus = String(event.lifecycleStatus || "ACTIVE").toUpperCase();
-  if (!event.resultsPublished && ["ROUND_ACTIVE", "RESULTS_DRAFT"].includes(workflowStatus)) {
-    return ["Live Event", "bg-rose-50 text-rose-800"];
-  }
-  if (
-    event.eventScope === "PLATFORM" &&
-    event.resultsPublished &&
-    event.publicResultsEnabled
-  ) return ["Results Published", "bg-amber-50 text-amber-800"];
-  if (event.registrationDeadline && new Date(event.registrationDeadline).getTime() >= Date.now()) {
-    return ["Registration Open", "bg-emerald-50 text-emerald-800"];
-  }
-  if (lifecycleStatus === "ACTIVE") return ["Active Event", "bg-blue-50 text-blue-800"];
-  if (event.date && new Date(event.date).getTime() >= Date.now()) {
-    return ["Upcoming", "bg-blue-50 text-blue-800"];
-  }
-  return ["Completed", "bg-slate-100 text-slate-700"];
 }
 
 function EventTypeIcon({ eventType = "", className = "" }) {
@@ -122,7 +97,7 @@ function FeaturedEvent({ event }) {
     );
   }
 
-  const [status, statusClass] = getStatus(event);
+  const status = getEventPublicStatus(event);
   return (
     <section className="rounded-xl border border-[#e6eaf7] bg-white p-5 shadow-sm">
       <div className="grid gap-5 lg:grid-cols-[92px_minmax(0,1fr)_auto] lg:items-center">
@@ -134,8 +109,8 @@ function FeaturedEvent({ event }) {
             <span className="rounded-full bg-[#f4f1ff] px-3 py-1 text-[10px] font-black uppercase text-[#4326e8]">
               Featured Event
             </span>
-            <span className={`rounded-full px-3 py-1 text-[10px] font-black uppercase ${statusClass}`}>
-              {status}
+            <span className={`rounded-full px-3 py-1 text-[10px] font-black uppercase ${status.className}`}>
+              {status.label}
             </span>
           </div>
           <h1 className="mt-3 break-words text-2xl font-black leading-tight text-[#17120a] md:text-4xl">
@@ -147,7 +122,7 @@ function FeaturedEvent({ event }) {
           <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-xs font-bold text-[#52657d]">
             <span className="inline-flex items-center gap-2">
               <FaCalendarAlt className="text-[#4326e8]" />
-              {formatDate(event.date)}
+              {formatEventDate(event.date)}
             </span>
             <span className="inline-flex items-center gap-2">
               <FaMapMarkerAlt className="text-[#4326e8]" />
@@ -211,7 +186,7 @@ function LiveEventsStrip({ events = [], onViewAll }) {
                   {event.title}
                 </p>
                 <p className="mt-1 line-clamp-1 text-xs font-semibold text-[#52657d]">
-                  {event.schoolName || "Pravyo"} - {formatDate(event.date)}
+                  {event.schoolName || "Pravyo"} - {formatEventDate(event.date)}
                 </p>
               </div>
             </div>
@@ -249,7 +224,7 @@ function EventRow({ event }) {
     event.eventScope === "PLATFORM" &&
     event.resultsPublished &&
     event.publicResultsEnabled;
-  const [status, statusClass] = getStatus(event);
+  const status = getEventPublicStatus(event);
 
   return (
     <Link
@@ -261,8 +236,8 @@ function EventRow({ event }) {
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap gap-2">
-          <span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase ${statusClass}`}>
-            {status}
+          <span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase ${status.className}`}>
+            {status.label}
           </span>
           <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-black uppercase text-slate-700">
             {event.eventType}
@@ -277,7 +252,7 @@ function EventRow({ event }) {
         <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs font-semibold text-[#52657d]">
           <span className="inline-flex items-center gap-1.5">
             <FaCalendarAlt className="text-[#4326e8]" />
-            {formatDate(event.date)}
+            {formatEventDate(event.date)}
           </span>
           <span className="inline-flex items-center gap-1.5">
             <FaSchool className="text-[#4326e8]" />
@@ -302,7 +277,7 @@ function EventRow({ event }) {
 
 export default function PublicEventsHub({ initialData }) {
   const [data, setData] = useState(initialData);
-  const [activeView, setActiveView] = useState("ALL");
+  const [activeView, setActiveView] = useState("all");
   const [activeCategory, setActiveCategory] = useState("ALL");
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
@@ -350,32 +325,8 @@ export default function PublicEventsHub({ initialData }) {
   const filteredEvents = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     return allEvents.filter((event) => {
-      const workflowStatus = String(event.eventWorkflowStatus || "").toUpperCase();
-      const lifecycleStatus = String(event.lifecycleStatus || "ACTIVE").toUpperCase();
-      const isLiveEvent =
-        !event.resultsPublished &&
-        (lifecycleStatus === "ACTIVE" ||
-          ["ROUND_ACTIVE", "RESULTS_DRAFT"].includes(workflowStatus));
-      if (activeView === "LIVE" && !isLiveEvent) return false;
-      if (
-        activeView === "UPCOMING" &&
-        (event.resultsPublished ||
-          !(
-            (event.registrationDeadline &&
-              new Date(event.registrationDeadline).getTime() >= Date.now()) ||
-            (event.date && new Date(event.date).getTime() >= Date.now())
-          ))
-      ) {
-        return false;
-      }
-      if (
-        activeView === "RESULTS" &&
-        !(
-          event.eventScope === "PLATFORM" &&
-          event.resultsPublished &&
-          event.publicResultsEnabled
-        )
-      ) return false;
+      const status = getEventPublicStatus(event);
+      if (activeView !== "all" && status.key !== activeView) return false;
       if (activeCategory !== "ALL" && event.eventType !== activeCategory) return false;
       if (!normalizedQuery) return true;
       return `${event.title} ${event.description} ${event.schoolName}`
@@ -393,7 +344,7 @@ export default function PublicEventsHub({ initialData }) {
 
         <LiveEventsStrip
           events={data.liveEvents || []}
-          onViewAll={() => setActiveView("LIVE")}
+          onViewAll={() => setActiveView("live")}
         />
 
         <section className="rounded-xl border border-[#e6eaf7] bg-white p-4 shadow-sm">

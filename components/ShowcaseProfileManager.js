@@ -189,7 +189,7 @@ export default function ShowcaseProfileManager() {
     );
   }
 
-  const schoolName = profile.schoolName || "Orbit English School";
+  const schoolName = profile.schoolName || "Your School";
   const tagline = profile.tagline || "Inspiring minds. Building futures.";
   const logoImage = normalizeImageUrl(profile.coverImageUrl);
   const metrics = profile.highlightMetrics || {};

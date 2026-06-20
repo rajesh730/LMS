@@ -5,70 +5,14 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   FaArrowLeft,
   FaBookOpen,
-  FaCalendarAlt,
-  FaClock,
   FaFeatherAlt,
-  FaLayerGroup,
-  FaPenNib,
-  FaStar,
-  FaUser,
 } from "react-icons/fa";
 import AlertBanner from "@/components/ui/AlertBanner";
 import LoadingState from "@/components/ui/LoadingState";
-import { stripWritingMarkup } from "@/components/WritingContent";
-import { normalizeWritingCategory } from "@/lib/writingCategories";
-
-const CATEGORY_META = {
-  BLOG_ARTICLE: {
-    label: "Blog Article",
-    chip: "border-indigo-200 bg-indigo-50 text-indigo-700",
-    icon: FaBookOpen,
-  },
-  POEM: {
-    label: "Poem",
-    chip: "border-fuchsia-200 bg-fuchsia-50 text-fuchsia-700",
-    icon: FaFeatherAlt,
-  },
-  RESEARCH: {
-    label: "Research",
-    chip: "border-emerald-200 bg-emerald-50 text-emerald-700",
-    icon: FaLayerGroup,
-  },
-  OPINION: {
-    label: "Opinion",
-    chip: "border-amber-200 bg-amber-50 text-amber-700",
-    icon: FaStar,
-  },
-  CREATIVE_WRITING: {
-    label: "Creative Writing",
-    chip: "border-purple-200 bg-purple-50 text-purple-700",
-    icon: FaPenNib,
-  },
-};
-
-function getCategoryMeta(value) {
-  return CATEGORY_META[normalizeWritingCategory(value)] || CATEGORY_META.BLOG_ARTICLE;
-}
-
-function formatDate(value) {
-  if (!value) return "";
-  return new Date(value).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
-function getReadTime(content = "") {
-  const words = String(content || "").trim().split(/\s+/).filter(Boolean).length;
-  return Math.max(1, Math.ceil(words / 180));
-}
-
-function getPreview(content = "", maxLength = 180) {
-  const text = stripWritingMarkup(content).replace(/\s+/g, " ").trim();
-  if (text.length <= maxLength) return text;
-  return `${text.slice(0, maxLength).trim()}...`;
-}
+import MagazineArticleCard, {
+  formatMagazineDate,
+  getCategoryMeta,
+} from "@/components/student/MagazineArticleCard";
 
 function IssueCoverArt({ issue, articles }) {
   return (
@@ -96,60 +40,11 @@ function IssueCoverArt({ issue, articles }) {
             {articles.length} {articles.length === 1 ? "writing" : "writings"}
           </span>
           <span className="rounded-full bg-white/18 px-3 py-1.5 text-white">
-            {formatDate(issue.publishedAt || issue.weekStart)}
+            {formatMagazineDate(issue.publishedAt || issue.weekStart)}
           </span>
         </div>
       </div>
     </div>
-  );
-}
-
-function ArticleMeta({ article }) {
-  return (
-    <div className="mt-3 flex flex-wrap items-center gap-3 text-xs font-bold text-[#607089]">
-      <span className="inline-flex items-center gap-1.5">
-        <FaUser />
-        {article.authorStudent?.name || "Student"}
-      </span>
-      <span className="inline-flex items-center gap-1.5">
-        <FaCalendarAlt />
-        {formatDate(article.publishedAt)}
-      </span>
-      <span className="inline-flex items-center gap-1.5">
-        <FaClock />
-        {getReadTime(article.content)} min read
-      </span>
-    </div>
-  );
-}
-
-function ArticleCard({ article, index, href }) {
-  const meta = getCategoryMeta(article.category);
-
-  return (
-    <Link
-      href={href}
-      className="student-issue-article-card group rounded-xl border border-[#d7cdbb] bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-purple-300 hover:bg-white hover:shadow-lg"
-    >
-      <div className="flex items-start justify-between gap-3">
-        <span className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-black ${meta.chip}`}>
-          {meta.label}
-        </span>
-        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-100 text-xs font-black text-purple-700">
-          {index + 1}
-        </span>
-      </div>
-      <h3 className="mt-4 line-clamp-2 text-xl font-black leading-snug text-[#17120a] group-hover:text-purple-700">
-        {article.title}
-      </h3>
-      <p className="student-issue-article-preview mt-3 line-clamp-4 text-sm leading-6 text-[#52657d]">
-        {getPreview(article.content, 240)}
-      </p>
-      <ArticleMeta article={article} />
-      <span className="mt-5 inline-flex text-sm font-black text-purple-700">
-        Read full writing
-      </span>
-    </Link>
   );
 }
 
@@ -284,7 +179,7 @@ export default function StudentMagazineIssueReader({
 
       <section className="student-issue-writing-list grid gap-4 md:grid-cols-2">
         {articles.map((article, index) => (
-          <ArticleCard
+          <MagazineArticleCard
             key={article.id}
             article={article}
             index={index}

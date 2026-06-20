@@ -1,19 +1,11 @@
 "use client";
 
 import { useCallback, useEffect } from "react";
-import { FaCalendarAlt, FaCheckCircle, FaCircle, FaUsers } from "react-icons/fa";
-import EventHub from "@/components/events/EventHub";
+import StudentEventsManager from "@/components/events/StudentEventsManager";
 import StudentQuickNav from "@/components/student/StudentQuickNav";
 import StudentNotificationCenter from "@/components/student/StudentNotificationCenter";
 import useWorkIndicators from "@/lib/useWorkIndicators";
 import useRealtimeChannel from "@/lib/useRealtimeChannel";
-
-const STUDENT_EVENT_FILTERS = [
-  { id: "live", label: "Live Events", icon: FaCircle },
-  { id: "registration-open", label: "Registration Open", icon: FaUsers },
-  { id: "all", label: "All Events", icon: FaCalendarAlt },
-  { id: "completed", label: "Completed", icon: FaCheckCircle },
-];
 
 export default function StudentEventWorkspace() {
   const { loadIndicators } = useWorkIndicators();
@@ -65,12 +57,12 @@ export default function StudentEventWorkspace() {
   );
 
   return (
-    <div className="student-events-mobile-shell space-y-6 text-slate-200">
+    <div className="student-events-mobile-shell space-y-6 text-[#10142f]">
         <StudentQuickNav className="sm:hidden" />
         <div className="student-events-intro flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-4xl font-bold text-white">Student Events</h1>
-            <p className="mt-2 text-slate-400">
+            <h1 className="text-4xl font-bold text-[#10142f]">Student Events</h1>
+            <p className="mt-2 text-[#526071]">
               See what you are registered for, discover upcoming events, and
               follow notices, rounds, results, and certificates from one clear place.
             </p>
@@ -78,13 +70,7 @@ export default function StudentEventWorkspace() {
           <StudentNotificationCenter />
         </div>
 
-        <EventHub
-          eventScope="SCHOOL"
-          defaultFilter="all"
-          filters={STUDENT_EVENT_FILTERS}
-          title="School Events"
-          description="All school events are shown. Events outside your grade stay visible, but registration is not available for your account."
-        />
+        <StudentEventsManager />
     </div>
   );
 }

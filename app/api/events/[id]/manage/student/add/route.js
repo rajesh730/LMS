@@ -6,6 +6,7 @@ import Event from "@/models/Event";
 import Student from "@/models/Student";
 import ParticipationRequest from "@/models/ParticipationRequest";
 import { syncApprovedRequestsToRoundOne } from "@/lib/competitionFlow";
+import { getRegistrationLockMessage } from "@/lib/eventWorkflow";
 
 /**
  * POST /api/events/[id]/manage/student/add
@@ -41,6 +42,13 @@ export async function POST(req, { params }) {
 
     if (!event) {
       return NextResponse.json({ message: "Event not found" }, { status: 404 });
+    }
+
+    // Block new enrollments once the competition has started or the deadline
+    // has passed — the participant list must be frozen at that point.
+    const lockMessage = getRegistrationLockMessage(event, "add students");
+    if (lockMessage) {
+      return NextResponse.json({ message: lockMessage }, { status: 400 });
     }
 
     // Get students with school info

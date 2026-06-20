@@ -10,7 +10,7 @@ import {
 } from "react-icons/fa";
 import { useSession } from "next-auth/react";
 import { gradeListContains, normalizeGradeValue } from "@/lib/schoolGrades";
-import { isDatePast } from "@/lib/eventUiStatus";
+import { formatEventDate, isDatePast } from "@/lib/eventUiStatus";
 import { isTeamEventLike } from "@/lib/eventParticipationFormat";
 import AlertBanner from "@/components/ui/AlertBanner";
 
@@ -350,12 +350,12 @@ const EventParticipationForm = memo(function EventParticipationForm({
     ? "Draft"
     : "Not started";
   const registrationStateTone = isEventLocked
-    ? "border-amber-500/30 bg-amber-500/10 text-amber-100"
+    ? "border-amber-200 bg-amber-50 text-amber-700"
     : hasExistingParticipation
-    ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-100"
+    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
     : draftedTeams.length > 0 || formData.selectedStudents.length > 0
-    ? "border-blue-500/30 bg-blue-500/10 text-blue-100"
-    : "border-slate-700 bg-slate-900/70 text-slate-200";
+    ? "border-blue-200 bg-blue-50 text-[#1d4ed8]"
+    : "border-[#dbe5f4] bg-white text-[#17120a]";
   const canSubmitTeamRegistration =
     !isEventLocked &&
     isTeamEvent &&
@@ -779,10 +779,10 @@ const EventParticipationForm = memo(function EventParticipationForm({
               <div>
                 <h3 className="flex items-center gap-2 text-sm font-black text-[#17120a]">
                   <FaUsers className="text-[#0a2f66]" />
-                  Student Management
+                  Participant Roster
                 </h3>
                 <p className="mt-1 text-xs font-bold text-[#52657d]">
-                  Manage participation for your students.
+                  Select eligible students and review their registration state.
                 </p>
               </div>
             </div>
@@ -905,7 +905,7 @@ const EventParticipationForm = memo(function EventParticipationForm({
                             isSelected
                               ? "bg-purple-50"
                               : isAssignedElsewhere
-                              ? "cursor-not-allowed bg-slate-50 opacity-70"
+                              ? "cursor-not-allowed bg-[#f8fbff] opacity-70"
                               : "hover:bg-[#f8fbff]"
                           }`}
                         >
@@ -982,7 +982,7 @@ const EventParticipationForm = memo(function EventParticipationForm({
                 : formData.selectedStudents.length === 0) ||
               isEventLocked
             }
-            className="event-participant-selected-control inline-flex min-h-10 items-center gap-2 rounded-xl bg-purple-700 px-5 text-sm font-black text-white transition hover:bg-purple-800 disabled:cursor-not-allowed disabled:bg-slate-400"
+            className="event-participant-selected-control inline-flex min-h-10 items-center gap-2 rounded-xl bg-purple-700 px-5 text-sm font-black text-white transition hover:bg-purple-800 disabled:cursor-not-allowed disabled:bg-[#94a3b8]"
             style={{ color: "#ffffff" }}
           >
             <FaCheck />
@@ -1004,13 +1004,13 @@ const EventParticipationForm = memo(function EventParticipationForm({
 
   return (
     <form onSubmit={handleSubmit}>
-      <h2 className="text-3xl font-bold text-white mb-8">
+      <h2 className="text-3xl font-bold text-[#17120a] mb-8">
         {session?.user?.role === "STUDENT"
           ? "Join Event:"
           : isEditing
           ? "Update Participation:"
           : "Register Students:"}{" "}
-        <span className="text-emerald-400">{event.title}</span>
+        <span className="text-emerald-700">{event.title}</span>
       </h2>
 
       {feedback && (
@@ -1024,18 +1024,18 @@ const EventParticipationForm = memo(function EventParticipationForm({
       )}
 
       {session?.user?.role === "SCHOOL_ADMIN" && (
-        <div className="mb-6 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-5">
+        <div className="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.25em] text-emerald-200/80">
+              <p className="text-xs font-bold uppercase tracking-[0.25em] text-emerald-700">
                 School-managed registration
               </p>
-              <h3 className="mt-2 text-xl font-bold text-white">
+              <h3 className="mt-2 text-xl font-bold text-[#17120a]">
                 {isTeamEvent
                   ? "Create teams, choose members, then submit the roster."
                   : "Select students, then submit them as participants."}
               </h3>
-              <p className="mt-1 text-sm text-slate-300">
+              <p className="mt-1 text-sm text-[#526071]">
                 Students can see the event, but Phase 1 registration is handled by the school.
               </p>
             </div>
@@ -1047,13 +1047,13 @@ const EventParticipationForm = memo(function EventParticipationForm({
       )}
 
       {session?.user?.role === "SCHOOL_ADMIN" && isTeamEvent && (
-        <div className="mb-6 rounded-2xl border border-slate-700 bg-slate-900/70 p-5">
+        <div className="mb-6 rounded-2xl border border-[#dbe5f4] bg-white p-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
-              <h3 className="text-lg font-semibold text-white">
+              <h3 className="text-lg font-semibold text-[#17120a]">
                 Team Registration Summary
               </h3>
-              <p className="mt-1 text-sm text-slate-400">
+              <p className="mt-1 text-sm text-[#526071]">
                 Check team validity before submission and track what is already saved for this event.
               </p>
             </div>
@@ -1063,59 +1063,59 @@ const EventParticipationForm = memo(function EventParticipationForm({
           </div>
 
           <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-            <div className="rounded-xl border border-slate-700 bg-slate-950/60 px-4 py-3">
-              <div className="text-xs uppercase tracking-wide text-slate-500">
+            <div className="rounded-xl border border-[#dbe5f4] bg-[#f8fbff] px-4 py-3">
+              <div className="text-xs uppercase tracking-wide text-[#52657d]">
                 Allowed Teams
               </div>
-              <div className="mt-1 text-2xl font-bold text-white">
+              <div className="mt-1 text-2xl font-bold text-[#17120a]">
                 {teamLimit || "Unlimited"}
               </div>
             </div>
-            <div className="rounded-xl border border-slate-700 bg-slate-950/60 px-4 py-3">
-              <div className="text-xs uppercase tracking-wide text-slate-500">
+            <div className="rounded-xl border border-[#dbe5f4] bg-[#f8fbff] px-4 py-3">
+              <div className="text-xs uppercase tracking-wide text-[#52657d]">
                 Drafted Teams
               </div>
-              <div className="mt-1 text-2xl font-bold text-white">
+              <div className="mt-1 text-2xl font-bold text-[#17120a]">
                 {draftedTeams.length}
               </div>
             </div>
-            <div className="rounded-xl border border-slate-700 bg-slate-950/60 px-4 py-3">
-              <div className="text-xs uppercase tracking-wide text-slate-500">
+            <div className="rounded-xl border border-[#dbe5f4] bg-[#f8fbff] px-4 py-3">
+              <div className="text-xs uppercase tracking-wide text-[#52657d]">
                 Valid Teams
               </div>
-              <div className="mt-1 text-2xl font-bold text-emerald-300">
+              <div className="mt-1 text-2xl font-bold text-emerald-700">
                 {validTeamCount}
               </div>
             </div>
-            <div className="rounded-xl border border-slate-700 bg-slate-950/60 px-4 py-3">
-              <div className="text-xs uppercase tracking-wide text-slate-500">
+            <div className="rounded-xl border border-[#dbe5f4] bg-[#f8fbff] px-4 py-3">
+              <div className="text-xs uppercase tracking-wide text-[#52657d]">
                 Saved Registration
               </div>
-              <div className="mt-1 text-lg font-bold text-white">
+              <div className="mt-1 text-lg font-bold text-[#17120a]">
                 {savedTeamCount > 0 ? `${savedTeamCount} teams` : "None yet"}
               </div>
             </div>
-            <div className="rounded-xl border border-slate-700 bg-slate-950/60 px-4 py-3">
-              <div className="text-xs uppercase tracking-wide text-slate-500">
+            <div className="rounded-xl border border-[#dbe5f4] bg-[#f8fbff] px-4 py-3">
+              <div className="text-xs uppercase tracking-wide text-[#52657d]">
                 Team Size Rule
               </div>
-              <div className="mt-1 text-sm font-semibold text-white">
+              <div className="mt-1 text-sm font-semibold text-[#17120a]">
                 {minTeamSize || "No minimum"} to {maxTeamSize || "No maximum"}
               </div>
             </div>
           </div>
 
           <div className="mt-4 grid gap-3 xl:grid-cols-[1.2fr_1fr]">
-            <div className="rounded-xl border border-slate-700 bg-slate-950/60 p-4">
+            <div className="rounded-xl border border-[#dbe5f4] bg-[#f8fbff] p-4">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm font-semibold text-white">
+                <span className="text-sm font-semibold text-[#17120a]">
                   Submission readiness
                 </span>
                 <span
                   className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
                     canSubmitTeamRegistration
-                      ? "bg-emerald-500/15 text-emerald-200 border border-emerald-500/30"
-                      : "bg-amber-500/15 text-amber-200 border border-amber-500/30"
+                      ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                      : "bg-amber-50 text-amber-700 border border-amber-200"
                   }`}
                 >
                   {canSubmitTeamRegistration
@@ -1127,7 +1127,7 @@ const EventParticipationForm = memo(function EventParticipationForm({
                     : "Build at least one valid team"}
                 </span>
               </div>
-              <div className="mt-2 text-sm text-slate-400">
+              <div className="mt-2 text-sm text-[#526071]">
                 {teamLimit
                   ? `This school can submit up to ${teamLimit} team${teamLimit === 1 ? "" : "s"} for this event.`
                   : "This event does not set a school team limit."}
@@ -1136,8 +1136,8 @@ const EventParticipationForm = memo(function EventParticipationForm({
                   : " Event capacity is open unless the organizer closes registration."}
               </div>
               {registeredAt && (
-                <div className="mt-2 text-xs text-slate-500">
-                  Last saved registration: {registeredAt.toLocaleDateString()}{" "}
+                <div className="mt-2 text-xs text-[#52657d]">
+                  Last saved registration: {formatEventDate(registeredAt)}{" "}
                   {registeredAt.toLocaleTimeString([], {
                     hour: "2-digit",
                     minute: "2-digit",
@@ -1145,17 +1145,17 @@ const EventParticipationForm = memo(function EventParticipationForm({
                 </div>
               )}
               {savedTeamCount > 0 && (
-                <div className="mt-2 text-xs text-slate-500">
+                <div className="mt-2 text-xs text-[#52657d]">
                   Saved roster: {savedTeamCount} team{savedTeamCount === 1 ? "" : "s"} / {savedMemberCount} members
                 </div>
               )}
             </div>
 
-            <div className="rounded-xl border border-slate-700 bg-slate-950/60 p-4">
-              <div className="text-sm font-semibold text-white">Active team checks</div>
+            <div className="rounded-xl border border-[#dbe5f4] bg-[#f8fbff] p-4">
+              <div className="text-sm font-semibold text-[#17120a]">Active team checks</div>
               <div className="mt-3 space-y-2">
                 {draftedTeams.length === 0 ? (
-                  <div className="text-sm text-slate-500">
+                  <div className="text-sm text-[#52657d]">
                     No teams drafted yet. Add a team and select members to begin.
                   </div>
                 ) : (
@@ -1164,29 +1164,29 @@ const EventParticipationForm = memo(function EventParticipationForm({
                     return (
                       <div
                         key={`${team.teamName || "team"}-summary-${index}`}
-                        className="rounded-lg border border-slate-700 bg-slate-900/80 px-3 py-2"
+                        className="rounded-lg border border-[#dbe5f4] bg-white px-3 py-2"
                       >
                         <div className="flex items-center justify-between gap-3">
-                          <div className="text-sm font-semibold text-white">
+                          <div className="text-sm font-semibold text-[#17120a]">
                             {team.teamName || `Team ${index + 1}`}
                           </div>
                           <span
                             className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${
                               summary.isValid
-                                ? "bg-emerald-500/15 text-emerald-200 border border-emerald-500/30"
-                                : "bg-red-500/15 text-red-200 border border-red-500/30"
+                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                : "border border-rose-200 bg-rose-50 text-rose-700"
                             }`}
                           >
                             {summary.isValid ? "Valid" : "Needs fixes"}
                           </span>
                         </div>
-                        <div className="mt-1 text-xs text-slate-400">
+                        <div className="mt-1 text-xs text-[#526071]">
                           {summary.memberCount} members
-                          {team.captainStudentId ? " • Captain selected" : " • Captain missing"}
+                          {team.captainStudentId ? " - Captain selected" : " - Captain missing"}
                         </div>
                         {!summary.isValid && (
-                          <div className="mt-2 text-xs text-red-200">
-                            {summary.issues.join(" • ")}
+                          <div className="mt-2 text-xs font-semibold text-rose-700">
+                            {summary.issues.join(" - ")}
                           </div>
                         )}
                       </div>
@@ -1200,7 +1200,7 @@ const EventParticipationForm = memo(function EventParticipationForm({
       )}
 
       {isEventLocked && (
-        <div className="mb-6 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+        <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
           {lockReason}
         </div>
       )}
@@ -1210,19 +1210,19 @@ const EventParticipationForm = memo(function EventParticipationForm({
         {/* LEFT COLUMN: Registration Setup */}
         <div>
           <div className="mb-8">
-            <h3 className="text-lg font-bold text-emerald-400 mb-6 flex items-center gap-2">
+            <h3 className="text-lg font-bold text-emerald-700 mb-6 flex items-center gap-2">
               <FaUsers className="text-xl" />{" "}
               {isTeamEvent ? "Team Setup" : "Registration Setup"}
             </h3>
 
             {isTeamEvent && (
-              <div className="mb-6 rounded-xl border border-blue-500/20 bg-blue-500/10 p-4">
-                <h4 className="text-sm font-semibold uppercase tracking-wide text-blue-200">
+              <div className="mb-6 rounded-xl border border-blue-500/20 bg-blue-50 p-4">
+                <h4 className="text-sm font-semibold uppercase tracking-wide text-[#1d4ed8]">
                   Team Setup
                 </h4>
               <div className="mt-4 grid gap-4">
                   <div>
-                    <label className="block text-slate-300 font-medium mb-2">
+                    <label className="block text-[#526071] font-medium mb-2">
                       Team Name *
                     </label>
                     <input
@@ -1240,20 +1240,20 @@ const EventParticipationForm = memo(function EventParticipationForm({
                           ),
                         }))
                       }
-                      className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition disabled:cursor-not-allowed disabled:opacity-60"
+                      className="w-full bg-white border border-[#dbe5f4] rounded-lg px-4 py-3 text-[#17120a] placeholder-[#94a3b8] focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition disabled:cursor-not-allowed disabled:opacity-60"
                     />
                   </div>
                   <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-lg border border-slate-700 bg-slate-900/60 px-4 py-3">
-                      <div className="text-xs uppercase tracking-wide text-slate-500">
+                    <div className="rounded-lg border border-[#dbe5f4] bg-white px-4 py-3">
+                      <div className="text-xs uppercase tracking-wide text-[#52657d]">
                         Team Size Rule
                       </div>
-                        <div className="mt-1 text-sm text-white">
+                        <div className="mt-1 text-sm text-[#17120a]">
                         {minTeamSize || "No minimum"} to {maxTeamSize || "No maximum"} members
                       </div>
                     </div>
-                    <div className="rounded-lg border border-slate-700 bg-slate-900/60 px-4 py-3">
-                      <div className="text-xs uppercase tracking-wide text-slate-500">
+                    <div className="rounded-lg border border-[#dbe5f4] bg-white px-4 py-3">
+                      <div className="text-xs uppercase tracking-wide text-[#52657d]">
                         Captain
                       </div>
                       <select
@@ -1269,7 +1269,7 @@ const EventParticipationForm = memo(function EventParticipationForm({
                             ),
                           }))
                         }
-                        className="mt-2 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white disabled:cursor-not-allowed disabled:opacity-60"
+                        className="mt-2 w-full bg-white border border-[#dbe5f4] rounded-lg px-3 py-2 text-[#17120a] disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         <option value="">Select captain</option>
                         {activeTeam.studentIds.map((studentId) => {
@@ -1286,9 +1286,9 @@ const EventParticipationForm = memo(function EventParticipationForm({
                     </div>
                   </div>
                 </div>
-                <div className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+                <div className="rounded-xl border border-[#dbe5f4] bg-white p-4">
                   <div className="mb-3 flex items-center justify-between">
-                    <h4 className="text-sm font-semibold uppercase tracking-wide text-slate-300">
+                    <h4 className="text-sm font-semibold uppercase tracking-wide text-[#526071]">
                       Teams
                     </h4>
                     <button
@@ -1322,8 +1322,8 @@ const EventParticipationForm = memo(function EventParticipationForm({
                         key={`${team.teamName || "team"}-${index}`}
                         className={`flex items-center justify-between rounded-lg border px-3 py-2 ${
                           index === activeTeamIndex
-                            ? "border-emerald-500/40 bg-emerald-500/10"
-                            : "border-slate-700 bg-slate-950/60"
+                            ? "border-emerald-500/40 bg-emerald-50"
+                            : "border-[#dbe5f4] bg-[#f8fbff]"
                         }`}
                     >
                         <button
@@ -1331,10 +1331,10 @@ const EventParticipationForm = memo(function EventParticipationForm({
                           onClick={() => setActiveTeamIndex(index)}
                           className="flex-1 text-left"
                         >
-                          <div className="text-sm font-semibold text-white">
+                          <div className="text-sm font-semibold text-[#17120a]">
                             {team.teamName || `Team ${index + 1}`}
                           </div>
-                          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-400">
+                          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-[#526071]">
                             <span>{team.studentIds.length} members</span>
                             {(() => {
                               const summary = validateTeamDraft(team, {
@@ -1345,8 +1345,8 @@ const EventParticipationForm = memo(function EventParticipationForm({
                                 <span
                                   className={`rounded-full px-2.5 py-0.5 font-bold ${
                                     summary.isValid
-                                      ? "border border-emerald-500/30 bg-emerald-500/15 text-emerald-200"
-                                      : "border border-red-500/30 bg-red-500/15 text-red-200"
+                                      ? "border border-emerald-200 bg-emerald-50 text-emerald-700"
+                                      : "border border-rose-200 bg-rose-50 text-rose-700"
                                   }`}
                                 >
                                   {summary.isValid ? "Valid" : "Needs fixes"}
@@ -1368,7 +1368,7 @@ const EventParticipationForm = memo(function EventParticipationForm({
                                 prev > 0 && prev >= index ? prev - 1 : 0
                               );
                             }}
-                            className="ml-3 rounded-lg border border-red-500/30 bg-red-500/10 px-2 py-1 text-xs font-semibold text-red-200 disabled:cursor-not-allowed disabled:opacity-50"
+                            className="ml-3 rounded-lg border border-rose-200 bg-rose-50 px-2 py-1 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
                           >
                             Remove
                           </button>
@@ -1381,23 +1381,23 @@ const EventParticipationForm = memo(function EventParticipationForm({
             )}
 
             {!isTeamEvent && (
-              <div className="rounded-xl border border-blue-500/20 bg-blue-500/10 p-4">
-                <h4 className="text-sm font-semibold uppercase tracking-wide text-blue-200">
+              <div className="rounded-xl border border-blue-500/20 bg-blue-50 p-4">
+                <h4 className="text-sm font-semibold uppercase tracking-wide text-[#1d4ed8]">
                   Individual participant registration
                 </h4>
                 <div className="mt-4 grid gap-3">
-                  <div className="rounded-lg border border-slate-700 bg-slate-900/60 px-4 py-3">
-                    <div className="text-xs uppercase tracking-wide text-slate-500">
+                  <div className="rounded-lg border border-[#dbe5f4] bg-white px-4 py-3">
+                    <div className="text-xs uppercase tracking-wide text-[#52657d]">
                       Selected students
                     </div>
-                    <div className="mt-1 text-2xl font-bold text-white">
+                    <div className="mt-1 text-2xl font-bold text-[#17120a]">
                       {formData.selectedStudents.length}
                     </div>
-                    <p className="mt-1 text-xs text-slate-400">
+                    <p className="mt-1 text-xs text-[#526071]">
                       Choose students from the list on the right. This event does not need team names or captains.
                     </p>
                   </div>
-                  <div className="rounded-lg border border-slate-700 bg-slate-900/60 px-4 py-3 text-sm text-slate-300">
+                  <div className="rounded-lg border border-[#dbe5f4] bg-white px-4 py-3 text-sm text-[#526071]">
                     After you submit, the registration is saved to this event and can be updated while registration is open.
                   </div>
                 </div>
@@ -1407,49 +1407,49 @@ const EventParticipationForm = memo(function EventParticipationForm({
           </div>
         </div>
 
-        {/* RIGHT COLUMN: Student Management */}
+        {/* RIGHT COLUMN: Participant roster */}
         <div>
-          <h3 className="text-lg font-bold text-emerald-400 mb-2 flex items-center gap-2">
-            <FaUsers className="text-xl" /> {isTeamEvent ? "Team Members" : "Student Management"}
+          <h3 className="text-lg font-bold text-emerald-700 mb-2 flex items-center gap-2">
+            <FaUsers className="text-xl" /> {isTeamEvent ? "Team Members" : "Participant Roster"}
           </h3>
-          <p className="text-slate-400 text-sm mb-6">
+          <p className="text-[#526071] text-sm mb-6">
             {isTeamEvent
               ? "Build the school team by selecting roster members."
               : "Manage participation for your students."}
             {formData.selectedStudents.length > 0 && (
-              <span className="text-emerald-400 ml-2 font-bold">
+              <span className="text-emerald-700 ml-2 font-bold">
                 ({formData.selectedStudents.length} selected)
               </span>
             )}
             {isTeamEvent && (
-              <span className="text-slate-500 ml-2">
+              <span className="text-[#52657d] ml-2">
                 ({totalSelectedTeamMembers} members across {formData.teams.length} teams)
               </span>
             )}
           </p>
 
           <div className="mb-6 grid gap-3 sm:grid-cols-3">
-            <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3">
-              <div className="text-xs uppercase tracking-wide text-emerald-200/80">
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+              <div className="text-xs uppercase tracking-wide text-emerald-700">
                 {isTeamEvent ? "Roster Size" : "Selected Team"}
               </div>
-              <div className="mt-1 text-2xl font-bold text-white">
+              <div className="mt-1 text-2xl font-bold text-[#17120a]">
                 {isTeamEvent ? activeTeam.studentIds.length : formData.selectedStudents.length}
               </div>
             </div>
-            <div className="rounded-xl border border-slate-700 bg-slate-800/70 px-4 py-3">
-              <div className="text-xs uppercase tracking-wide text-slate-400">
+            <div className="rounded-xl border border-[#dbe5f4] bg-[#f8fbff] px-4 py-3">
+              <div className="text-xs uppercase tracking-wide text-[#526071]">
                 Selected in View
               </div>
-              <div className="mt-1 text-2xl font-bold text-white">
+              <div className="mt-1 text-2xl font-bold text-[#17120a]">
                 {visibleSelectedCount}
               </div>
             </div>
-            <div className="rounded-xl border border-slate-700 bg-slate-800/70 px-4 py-3">
-                <div className="text-xs uppercase tracking-wide text-slate-400">
+            <div className="rounded-xl border border-[#dbe5f4] bg-[#f8fbff] px-4 py-3">
+                <div className="text-xs uppercase tracking-wide text-[#526071]">
                 Eligible Students
                 </div>
-              <div className="mt-1 text-2xl font-bold text-white">
+              <div className="mt-1 text-2xl font-bold text-[#17120a]">
                 {filteredStudents.length}
               </div>
             </div>
@@ -1467,7 +1467,7 @@ const EventParticipationForm = memo(function EventParticipationForm({
                   className={`px-3 py-1 text-sm rounded-lg font-medium transition-colors ${
                     interestedFilter === filter.id
                       ? "event-participant-selected-control bg-emerald-600 text-white"
-                      : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                      : "bg-[#eef2f8] text-[#526071] hover:bg-[#e1e7f2]"
                   }`}
                   style={
                     interestedFilter === filter.id ? { color: "#ffffff" } : undefined
@@ -1482,20 +1482,20 @@ const EventParticipationForm = memo(function EventParticipationForm({
 
             {/* Search & Class Filter */}
             <div className="flex gap-3">
-              <div className="flex-1 flex items-center gap-2 bg-slate-900 rounded-lg px-3 py-2 border border-slate-700">
-                <FaSearch className="text-slate-500" />
+              <div className="flex-1 flex items-center gap-2 bg-white rounded-lg px-3 py-2 border border-[#dbe5f4]">
+                <FaSearch className="text-[#52657d]" />
                 <input
                   type="text"
                   placeholder="Search student..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="flex-1 bg-transparent outline-none text-white placeholder-slate-500"
+                  className="flex-1 bg-transparent outline-none text-[#17120a] placeholder-[#94a3b8]"
                 />
                 {searchQuery && (
                   <button
                     type="button"
                     onClick={() => setSearchQuery("")}
-                    className="text-slate-500 hover:text-slate-300"
+                    className="text-[#52657d] hover:text-[#526071]"
                   >
                     <FaTimes />
                   </button>
@@ -1504,7 +1504,7 @@ const EventParticipationForm = memo(function EventParticipationForm({
               <select
                 value={gradeFilter}
                 onChange={(e) => setGradeFilter(e.target.value)}
-                className="bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white"
+                className="bg-white border border-[#dbe5f4] rounded-lg px-4 py-2 text-[#17120a]"
               >
                 <option value="all">All Grades</option>
                 {Array.isArray(grades) &&
@@ -1522,24 +1522,24 @@ const EventParticipationForm = memo(function EventParticipationForm({
           </div>
 
           {/* Unified List */}
-          <div className="bg-slate-900/50 rounded-lg border border-slate-700 overflow-hidden">
+          <div className="bg-white rounded-lg border border-[#dbe5f4] overflow-hidden">
             {loading ? (
-              <div className="p-6 text-center text-slate-400">
+              <div className="p-6 text-center text-[#526071]">
                 Loading students...
               </div>
             ) : filteredStudents.length === 0 ? (
-              <div className="p-6 text-center text-slate-400">
-                <p className="font-semibold text-slate-300">
+              <div className="p-6 text-center text-[#526071]">
+                <p className="font-semibold text-[#526071]">
                   No students match the registration filters.
                 </p>
-                <p className="mt-1 text-sm text-slate-500">
+                <p className="mt-1 text-sm text-[#52657d]">
                   Clear search, change grade/status filters, or check this event&apos;s registration grades.
                 </p>
               </div>
             ) : (
               <div className="max-h-[500px] overflow-y-auto">
                 {/* Select Visible */}
-                <div className="flex items-center gap-3 p-4 bg-slate-800/50 border-b border-slate-700">
+                <div className="flex items-center gap-3 p-4 bg-[#f8fbff] border-b border-[#dbe5f4]">
                   <input
                     type="checkbox"
                     disabled={isEventLocked}
@@ -1558,12 +1558,12 @@ const EventParticipationForm = memo(function EventParticipationForm({
                     onChange={(e) => handleSelectAll(e.target.checked)}
                     className="w-5 h-5 rounded cursor-pointer accent-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
                   />
-                  <span className="text-white font-medium flex-1">
+                  <span className="text-[#17120a] font-medium flex-1">
                     {isTeamEvent ? "Add All Visible To Active Team" : "Select All Visible"}
                   </span>
                   {(isTeamEvent ? activeTeam.studentIds.length : formData.selectedStudents.length) >
                     0 && (
-                    <span className="text-xs bg-emerald-900/50 text-emerald-200 px-3 py-1 rounded-full">
+                    <span className="text-xs bg-emerald-900/50 text-emerald-700 px-3 py-1 rounded-full">
                       {isTeamEvent
                         ? activeTeam.studentIds.length
                         : formData.selectedStudents.length} selected
@@ -1572,7 +1572,7 @@ const EventParticipationForm = memo(function EventParticipationForm({
                 </div>
 
                 {/* Students List */}
-                <div className="divide-y divide-slate-700">
+                <div className="divide-y divide-[#e6eaf7]">
                   {Array.isArray(filteredStudents) &&
                     filteredStudents.map((student) => {
                       const request = participationMap.get(student._id);
@@ -1594,10 +1594,10 @@ const EventParticipationForm = memo(function EventParticipationForm({
                           key={student._id}
                           className={`flex items-center gap-3 p-4 transition-colors ${
                             isSelected
-                              ? "cursor-pointer border-l-2 border-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/15"
+                              ? "cursor-pointer border-l-2 border-emerald-400 bg-emerald-50 hover:bg-emerald-50"
                               : isAssignedElsewhere
-                              ? "cursor-not-allowed bg-slate-900/70 opacity-70"
-                              : "cursor-pointer hover:bg-slate-800/50"
+                              ? "cursor-not-allowed bg-white opacity-70"
+                              : "cursor-pointer hover:bg-[#f8fbff]"
                           }`}
                           onClick={() =>
                             !isAssignedElsewhere && handleStudentToggle(String(student._id))
@@ -1614,11 +1614,11 @@ const EventParticipationForm = memo(function EventParticipationForm({
 
                           <div className="flex-1">
                             <div className="flex flex-wrap items-center gap-2">
-                              <div className="text-white font-medium">
+                              <div className="text-[#17120a] font-medium">
                                 {student.name}
                               </div>
                               {isSelected && (
-                                <span className="rounded-full border border-emerald-500/30 bg-emerald-500/15 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-emerald-200">
+                                <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-emerald-700">
                                   {isTeamEvent
                                     ? activeTeam.captainStudentId === String(student._id)
                                       ? "Captain"
@@ -1627,12 +1627,12 @@ const EventParticipationForm = memo(function EventParticipationForm({
                                 </span>
                               )}
                               {isAssignedElsewhere && (
-                                <span className="rounded-full border border-slate-600 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-slate-300">
+                                <span className="rounded-full border border-[#dbe5f4] px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-[#526071]">
                                   In {assignedTeamName}
                                 </span>
                               )}
                             </div>
-                            <div className="text-slate-400 text-sm flex items-center gap-2">
+                            <div className="text-[#526071] text-sm flex items-center gap-2">
                               <FaSchool className="text-xs" />
                               {student.grade}
                               {student.rollNumber
@@ -1643,18 +1643,18 @@ const EventParticipationForm = memo(function EventParticipationForm({
 
                           <div className="flex flex-wrap items-center justify-end gap-2">
                             {requestStatus === "PENDING" && (
-                              <span className="rounded-full border border-yellow-700 bg-yellow-900/40 px-3 py-1 text-xs font-bold text-yellow-200">
+                              <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-bold text-amber-800">
                                 Pending
                               </span>
                             )}
                             {requestStatus === "APPROVED" && (
-                              <span className="inline-flex items-center gap-1 rounded-full border border-green-700 bg-green-900/40 px-3 py-1 text-xs font-bold text-green-200">
+                              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
                                 <FaCheck className="text-[10px]" />
                                 Approved
                               </span>
                             )}
                             {requestStatus === "REJECTED" && (
-                              <span className="inline-flex items-center gap-1 rounded-full border border-red-700 bg-red-900/40 px-3 py-1 text-xs font-bold text-red-200">
+                              <span className="inline-flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-bold text-rose-700">
                                 <FaTimes className="text-[10px]" />
                                 Rejected
                               </span>
@@ -1692,7 +1692,7 @@ const EventParticipationForm = memo(function EventParticipationForm({
             });
             setActiveTeamIndex(0);
           }}
-          className="px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+          className="px-6 py-3 bg-[#e1e7f2] hover:bg-[#cbd5e1] text-[#17120a] rounded-lg font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50"
         >
           Clear
         </button>
@@ -1705,7 +1705,7 @@ const EventParticipationForm = memo(function EventParticipationForm({
               : formData.selectedStudents.length === 0) ||
             isEventLocked
           }
-          className="event-participant-selected-control px-8 py-3 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-lg font-bold transition-colors flex items-center gap-2"
+          className="event-participant-selected-control px-8 py-3 bg-emerald-600 hover:bg-emerald-500 disabled:bg-[#cbd5e1] disabled:cursor-not-allowed text-white rounded-lg font-bold transition-colors flex items-center gap-2"
           style={{ color: "#ffffff" }}
         >
           <FaCheck />{" "}

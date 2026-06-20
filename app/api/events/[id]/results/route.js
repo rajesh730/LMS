@@ -10,7 +10,10 @@ import RoundParticipant from "@/models/RoundParticipant";
 import ParticipationRequest from "@/models/ParticipationRequest";
 import EventSchoolInvitation from "@/models/EventSchoolInvitation";
 import AuditLog from "@/models/AuditLog";
-import { canManageEventRounds } from "@/lib/eventRoundAccess";
+import {
+  canManageEventRounds,
+  getEnrolledStudentForEvent,
+} from "@/lib/eventRoundAccess";
 import {
   buildCertificateCode,
   buildCertificatePath,
@@ -21,11 +24,13 @@ import {
   normalizeRoundParticipantStatus,
 } from "@/lib/competitionFlow";
 import { publishEventRealtimeUpdate } from "@/lib/eventRealtime";
+import { syncAchievementNotifications } from "@/lib/achievementNotifications";
 
 export const dynamic = "force-dynamic";
 const FINAL_STATUS_TO_PLACEMENT = {
   WINNER: "WINNER",
   RUNNER_UP: "RUNNER_UP",
+  THIRD_PLACE: "THIRD_PLACE",
   FINALIST: "FINALIST",
   SELECTED: "FINALIST",
   DISQUALIFIED: "PARTICIPANT",
@@ -34,9 +39,10 @@ const FINAL_STATUS_TO_PLACEMENT = {
 const STATUS_PRIORITY = {
   WINNER: 1,
   RUNNER_UP: 2,
-  FINALIST: 3,
-  SELECTED: 4,
-  DISQUALIFIED: 5,
+  THIRD_PLACE: 3,
+  FINALIST: 4,
+  SELECTED: 5,
+  DISQUALIFIED: 6,
 };
 
 function isTeamEvent(event) {
@@ -212,12 +218,14 @@ function buildLevel(event) {
 }
 
 function placementLabel(placement) {
-  if (placement === "RUNNER_UP") return "Runner Up";
+  if (placement === "RUNNER_UP") return "1st Runner Up";
+  if (placement === "THIRD_PLACE") return "2nd Runner Up";
   return String(placement || "").replaceAll("_", " ");
 }
 
 function displayStatus(status) {
-  if (status === "RUNNER_UP") return "Runner Up";
+  if (status === "RUNNER_UP") return "1st Runner Up";
+  if (status === "THIRD_PLACE") return "2nd Runner Up";
   if (status === "NOT_ATTEMPTED") return "Not Attempted";
   return String(status || "").replaceAll("_", " ");
 }
@@ -547,7 +555,9 @@ export async function GET(req, props) {
     const session = await getServerSession(authOptions);
     if (
       !session ||
-      !["SUPER_ADMIN", "SCHOOL_ADMIN", "TEACHER"].includes(session.user.role)
+      !["SUPER_ADMIN", "SCHOOL_ADMIN", "TEACHER", "STUDENT"].includes(
+        session.user.role
+      )
     ) {
       return NextResponse.json(
         { success: false, message: "Unauthorized" },
@@ -569,7 +579,9 @@ export async function GET(req, props) {
       );
     }
 
-    if (!(await canViewEventResults(session, event))) {
+    // Enrolled students may view results read-only, scoped to their own school.
+    const viewerStudent = await getEnrolledStudentForEvent(params.id, session);
+    if (!viewerStudent && !(await canViewEventResults(session, event))) {
       return NextResponse.json(
         { success: false, message: "Forbidden" },
         { status: 403 }
@@ -595,6 +607,8 @@ export async function GET(req, props) {
     const schoolScopeId =
       session.user.role === "SCHOOL_ADMIN"
         ? session.user.schoolId || session.user.id
+        : viewerStudent
+        ? String(viewerStudent.school || "")
         : "";
     const scopedCertificateEntries = filterEntriesForSchool(
       roundContext.certificateEntries,
@@ -953,6 +967,13 @@ async function upsertResults(req, props) {
           scorecardCriteria,
           achievementCount: nextAchievements.length,
         },
+      });
+    }
+
+    if (resultsPublished) {
+      await syncAchievementNotifications({
+        event,
+        achievements: nextAchievements,
       });
     }
 

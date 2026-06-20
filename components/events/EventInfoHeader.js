@@ -11,6 +11,7 @@ import {
 import { getEventStage } from "@/lib/eventUiStatus";
 import {
   formatEventWorkflowStatus,
+  getEventNextActionLabel,
   getEventWorkflowStatus,
 } from "@/lib/eventWorkflow";
 
@@ -44,6 +45,7 @@ export default function EventInfoHeader({ event, capacityInfo }) {
     : null;
   const stage = getEventStage(event, { capacityInfo });
   const workflowStatus = getEventWorkflowStatus(event);
+  const nextAction = getEventNextActionLabel(event);
   const capacityPercent = Math.min(capacityInfo.percentage || 0, 100);
   const stageTone =
     stage.tone === "emerald" || event.resultsPublished
@@ -95,10 +97,10 @@ export default function EventInfoHeader({ event, capacityInfo }) {
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-[11px] font-black uppercase tracking-normal">
-              Current Stage
+              Event Status
             </p>
                 <p className="mt-1 text-lg font-black">{stage.label}</p>
-                <p className="mt-1 text-xs opacity-90">{stage.nextAction}</p>
+                <p className="mt-1 text-xs opacity-90">{nextAction}</p>
               </div>
               <FaCheckCircle className="mt-1 shrink-0 text-lg" />
             </div>
