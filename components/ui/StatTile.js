@@ -10,8 +10,8 @@ const ACCENTS = {
 
 export default function StatTile({ icon: Icon, label, value, accent = "indigo" }) {
   return (
-    <div className="rounded-xl border border-[#e6eaf7] bg-white p-4 shadow-sm sm:p-5">
-      <div className="flex items-center gap-3">
+    <div className="rounded-xl border border-[#e6eaf7] bg-white p-3 shadow-sm sm:p-5">
+      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center">
         {Icon && (
           <span
             className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
@@ -25,7 +25,9 @@ export default function StatTile({ icon: Icon, label, value, accent = "indigo" }
           <p className="text-2xl font-black leading-none text-[#10142f] sm:text-3xl">
             {value}
           </p>
-          <p className="mt-1 text-xs font-bold text-[#526071] sm:text-sm">{label}</p>
+          <p className="mt-1 break-words text-xs font-bold leading-snug text-[#526071] sm:text-sm">
+            {label}
+          </p>
         </div>
       </div>
     </div>

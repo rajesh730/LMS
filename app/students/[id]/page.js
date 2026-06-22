@@ -5,10 +5,12 @@ import connectDB from "@/lib/db";
 import Student from "@/models/Student";
 import Achievement from "@/models/Achievement";
 import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
+import SchoolShowcaseProfile from "@/models/SchoolShowcaseProfile";
 import { getActiveCertificateFilter } from "@/lib/certificates";
-import { stripWritingMarkup } from "@/components/WritingContent";
+import { WritingPreview } from "@/components/WritingContent";
 import PublicSiteNav from "@/components/public/PublicSiteNav";
 import PublicShareButton from "@/components/public/PublicShareButton";
+import SchoolLogoMark from "@/components/public/SchoolLogoMark";
 import StatTile from "@/components/ui/StatTile";
 import {
   FaArrowRight,
@@ -19,7 +21,6 @@ import {
   FaGraduationCap,
   FaMedal,
   FaPenNib,
-  FaSchool,
   FaTrophy,
 } from "react-icons/fa";
 
@@ -53,34 +54,6 @@ function getCategoryLabel(value) {
   return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
-function getInitials(value = "Student") {
-  return (
-    String(value)
-      .split(" ")
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((part) => part[0])
-      .join("")
-      .toUpperCase() || "S"
-  );
-}
-
-function getPreview(value = "", maxLength = 140) {
-  const text = stripWritingMarkup(value).replace(/\s+/g, " ").trim();
-  if (text.length <= maxLength) return text;
-  return `${text.slice(0, maxLength).trim()}...`;
-}
-
-const PLACEMENT_ORDER = {
-  WINNER: 1,
-  RUNNER_UP: 2,
-  THIRD_PLACE: 3,
-  FINALIST: 4,
-  SPECIAL_MENTION: 5,
-  MERIT: 6,
-  PARTICIPANT: 7,
-};
-
 async function getPortfolioData(id) {
   if (!mongoose.Types.ObjectId.isValid(id)) return null;
 
@@ -97,7 +70,9 @@ async function getPortfolioData(id) {
 
   if (!student) return null;
 
-  const [achievementsRaw, writingsRaw] = await Promise.all([
+  const schoolObjectId = student.school?._id || student.school;
+
+  const [achievementsRaw, writingsRaw, schoolProfile] = await Promise.all([
     Achievement.find({
       student: id,
       isPublic: true,
@@ -123,6 +98,11 @@ async function getPortfolioData(id) {
       .sort({ publishedAt: -1, updatedAt: -1 })
       .limit(24)
       .lean(),
+    schoolObjectId
+      ? SchoolShowcaseProfile.findOne({ school: schoolObjectId })
+          .select("coverImageUrl")
+          .lean()
+      : null,
   ]);
 
   // Only surface achievements tied to genuinely public, published events.
@@ -145,6 +125,7 @@ async function getPortfolioData(id) {
 
   return {
     student,
+    schoolProfile: schoolProfile || null,
     achievements,
     writings: writingsRaw,
     stats: {
@@ -183,7 +164,7 @@ function EmptyPanel({ icon: Icon, title, description }) {
 function AchievementRow({ achievement }) {
   const isWinner = achievement.placement === "WINNER";
   return (
-    <article className="flex items-start gap-4 rounded-xl border border-[#e7dcc8] bg-white p-4 shadow-sm">
+    <article className="flex h-full items-start gap-4 rounded-xl border border-[#e1e8f4] bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-[#c9d8ea] hover:shadow-md">
       <span
         className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${
           isWinner ? "bg-amber-50 text-amber-600" : "bg-slate-100 text-slate-500"
@@ -232,7 +213,7 @@ function WritingCard({ writing }) {
   return (
     <Link
       href={`/writings/${writing._id}`}
-      className="block rounded-xl border border-[#e6eaf7] bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+      className="block h-full rounded-xl border border-[#e1e8f4] bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-[#c9d8ea] hover:shadow-md"
     >
       <div className="flex flex-wrap gap-2">
         <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-black uppercase text-emerald-700">
@@ -245,9 +226,11 @@ function WritingCard({ writing }) {
       <h3 className="mt-2 line-clamp-2 text-sm font-black text-[#17120a]">
         {writing.title}
       </h3>
-      <p className="mt-2 line-clamp-3 text-xs leading-5 text-[#52657d]">
-        {getPreview(writing.content)}
-      </p>
+      <WritingPreview
+        content={writing.content}
+        maxLength={140}
+        className="mt-2 line-clamp-3 text-xs leading-5 text-[#52657d]"
+      />
       <p className="mt-3 inline-flex items-center gap-1.5 text-xs font-black text-purple-700">
         Read writing <FaArrowRight />
       </p>
@@ -261,16 +244,17 @@ export default async function StudentPortfolioPage({ params }) {
 
   if (!data) notFound();
 
-  const { student, achievements, writings, stats } = data;
+  const { student, schoolProfile, achievements, writings, stats } = data;
   const name = student.name || "Student";
   const schoolId = student.school?._id ? String(student.school._id) : "";
   const schoolName = student.school?.schoolName || "School";
+  const schoolLogoUrl = schoolProfile?.coverImageUrl || "";
 
   return (
     <main className="min-h-screen bg-[#f8f9fd] pb-24 text-[#17120a]">
       <PublicSiteNav active="schools" />
 
-      <div className="mx-auto max-w-5xl space-y-5 px-4 py-5 sm:px-6">
+      <div className="student-portfolio-shell mx-auto max-w-5xl space-y-5 px-0 py-4 sm:px-6 sm:py-5">
         {/* breadcrumb + share */}
         <div className="flex flex-wrap items-center justify-between gap-3 text-xs font-bold text-[#52657d]">
           <div className="flex items-center gap-2">
@@ -292,56 +276,98 @@ export default async function StudentPortfolioPage({ params }) {
             href={`/students/${student._id}`}
             title={`${name} — Student Portfolio`}
             label="Share Portfolio"
-            className="inline-flex items-center gap-2 rounded-lg border border-[#d7cdbb] bg-white px-3 py-2 text-[#0a2f66] transition hover:bg-[#f8fbff]"
+            className="inline-flex items-center gap-2 rounded-lg border border-[#d7e2ef] bg-white px-3 py-2 text-[#0a2f66] shadow-sm transition hover:bg-[#f8fbff]"
           />
         </div>
 
         {/* hero */}
-        <section className="overflow-hidden rounded-2xl border border-[#d7cdbb] bg-white shadow-[0_18px_50px_rgba(10,47,102,0.08)]">
-          <div className="pravyo-brand-surface relative h-28" />
+        <section className="overflow-hidden rounded-2xl border border-[#d7e2ef] bg-white shadow-[0_18px_50px_rgba(10,47,102,0.08)]">
+          <div className="student-portfolio-brand-band pravyo-brand-surface relative px-5 py-7 sm:px-8">
+            <div className="absolute inset-0 bg-gradient-to-r from-black/10 via-transparent to-black/10" />
+            <div className="relative flex flex-wrap items-center justify-between gap-3">
+              <span className="student-portfolio-brand-chip inline-flex items-center gap-2 rounded-full bg-white/20 px-3 py-1.5 text-xs font-black uppercase tracking-wide">
+                <FaCheckCircle />
+                Verified student portfolio
+              </span>
+              <span className="student-portfolio-brand-muted text-sm font-semibold">
+                {stats.achievements + stats.writings} public records
+              </span>
+            </div>
+          </div>
+
           <div className="px-5 pb-6 sm:px-8">
-            <div className="-mt-12 flex flex-col gap-4 sm:flex-row sm:items-end">
-              <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-2xl border-4 border-white bg-purple-700 text-3xl font-black text-white shadow-xl">
-                {getInitials(name)}
-              </div>
-              <div className="min-w-0 flex-1">
-                <h1 className="flex flex-wrap items-center gap-2 text-3xl font-black leading-tight text-[#17120a] md:text-4xl">
-                  {name}
-                  <FaCheckCircle className="text-xl text-emerald-500" title="Verified by Pravyo" />
-                </h1>
-                <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm font-semibold text-[#52657d]">
-                  {student.grade && (
-                    <span className="inline-flex items-center gap-1.5">
-                      <FaGraduationCap className="text-purple-700" /> {student.grade}
+            <div className="-mt-5 rounded-2xl border border-[#e1e8f4] bg-white p-5 shadow-sm sm:p-6">
+              <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
+                <div className="flex shrink-0 flex-col items-center gap-2 rounded-2xl border border-[#d7e2ef] bg-[#f8fbff] p-3 text-center shadow-sm">
+                  <SchoolLogoMark
+                    imageUrl={schoolLogoUrl}
+                    name={schoolName}
+                    className="h-24 w-24"
+                    iconClassName="text-3xl"
+                    shapeClassName="rounded-xl"
+                  />
+                  <span className="max-w-28 truncate text-[10px] font-black uppercase text-[#52657d]">
+                    {schoolName}
+                  </span>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h1 className="text-3xl font-black leading-tight text-[#17120a] md:text-4xl">
+                      {name}
+                    </h1>
+                    <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+                      <FaCheckCircle title="Verified by Pravyo" />
                     </span>
-                  )}
-                  {schoolId ? (
-                    <Link
-                      href={`/schools/${schoolId}`}
-                      className="inline-flex items-center gap-1.5 hover:text-purple-700"
-                    >
-                      <FaSchool className="text-purple-700" /> {schoolName}
-                    </Link>
-                  ) : (
-                    <span className="inline-flex items-center gap-1.5">
-                      <FaSchool className="text-purple-700" /> {schoolName}
-                    </span>
-                  )}
-                  {student.createdAt && (
-                    <span>On Pravyo since {formatMonthYear(student.createdAt)}</span>
-                  )}
+                  </div>
+                  <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm font-semibold text-[#52657d]">
+                    {student.grade && (
+                      <span className="inline-flex items-center gap-1.5">
+                        <FaGraduationCap className="text-[#1f4f7a]" /> {student.grade}
+                      </span>
+                    )}
+                    {schoolId ? (
+                      <Link
+                        href={`/schools/${schoolId}`}
+                        className="inline-flex items-center gap-1.5 hover:text-purple-700"
+                      >
+                        <SchoolLogoMark
+                          imageUrl={schoolLogoUrl}
+                          name={schoolName}
+                          className="h-6 w-6"
+                          iconClassName="text-xs"
+                          shapeClassName="rounded-md"
+                        />
+                        {schoolName}
+                      </Link>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5">
+                        <SchoolLogoMark
+                          imageUrl={schoolLogoUrl}
+                          name={schoolName}
+                          className="h-6 w-6"
+                          iconClassName="text-xs"
+                          shapeClassName="rounded-md"
+                        />
+                        {schoolName}
+                      </span>
+                    )}
+                    {student.createdAt && (
+                      <span>On Pravyo since {formatMonthYear(student.createdAt)}</span>
+                    )}
+                  </div>
+                  <p className="mt-4 max-w-3xl text-sm leading-6 text-[#52657d]">
+                    A verified record of {name.split(" ")[0]}&apos;s achievements,
+                    certificates, and published writing — recognized through events and
+                    showcases on Pravyo.
+                  </p>
                 </div>
               </div>
             </div>
-            <p className="mt-4 max-w-2xl text-sm leading-6 text-[#52657d]">
-              A verified record of {name.split(" ")[0]}&apos;s achievements, certificates,
-              and published writing — recognized through events and showcases on Pravyo.
-            </p>
           </div>
         </section>
 
         {/* stats */}
-        <section className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        <section className="grid grid-cols-2 gap-3 px-4 sm:gap-4 sm:px-0 md:grid-cols-4">
           <StatTile icon={FaTrophy} accent="amber" label="Achievements" value={stats.achievements} />
           <StatTile icon={FaMedal} accent="amber" label="Wins" value={stats.wins} />
           <StatTile icon={FaCertificate} accent="purple" label="Certificates" value={stats.certificates} />
@@ -349,11 +375,16 @@ export default async function StudentPortfolioPage({ params }) {
         </section>
 
         {/* achievements */}
-        <section className="rounded-2xl border border-[#e7dcc8] bg-white p-5 shadow-sm">
-          <h2 className="inline-flex items-center gap-2 text-lg font-black text-[#17120a]">
-            <FaTrophy className="text-amber-500" />
-            Achievements & Certificates
-          </h2>
+        <section className="rounded-2xl border border-[#d7e2ef] bg-white p-5 shadow-sm sm:p-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="inline-flex items-center gap-2 text-lg font-black text-[#17120a]">
+              <FaTrophy className="text-amber-500" />
+              Achievements & Certificates
+            </h2>
+            <span className="rounded-full bg-[#eef5fb] px-3 py-1 text-xs font-black text-[#1f4f7a]">
+              {achievements.length} records
+            </span>
+          </div>
           {achievements.length === 0 ? (
             <div className="mt-5">
               <EmptyPanel
@@ -372,15 +403,20 @@ export default async function StudentPortfolioPage({ params }) {
         </section>
 
         {/* writings */}
-        <section className="rounded-2xl border border-[#e7dcc8] bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between gap-3">
+        <section className="rounded-2xl border border-[#d7e2ef] bg-white p-5 shadow-sm sm:p-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="inline-flex items-center gap-2 text-lg font-black text-[#17120a]">
               <FaPenNib className="text-purple-700" />
               Published Writing
             </h2>
-            <Link href="/student-voices" className="text-sm font-black text-purple-700">
-              Explore student voices
-            </Link>
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="rounded-full bg-purple-50 px-3 py-1 text-xs font-black text-purple-700">
+                {writings.length} pieces
+              </span>
+              <Link href="/student-voices" className="text-sm font-black text-purple-700">
+                Explore student voices
+              </Link>
+            </div>
           </div>
           {writings.length === 0 ? (
             <div className="mt-5">
@@ -400,18 +436,18 @@ export default async function StudentPortfolioPage({ params }) {
         </section>
 
         {/* trust / CTA */}
-        <section className="pravyo-brand-surface relative overflow-hidden rounded-2xl p-6 shadow-lg">
+        <section className="student-portfolio-brand-band pravyo-brand-surface relative overflow-hidden rounded-2xl p-6 shadow-lg">
           <div className="absolute inset-0 bg-gradient-to-r from-black/20 via-transparent to-black/10" />
           <div className="relative z-10 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="flex items-start gap-4">
-              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/16 text-xl text-white">
+              <span className="student-portfolio-brand-icon flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/20 text-xl">
                 <FaCheckCircle />
               </span>
               <div>
-                <h2 className="text-lg font-black text-white drop-shadow">
+                <h2 className="student-portfolio-brand-title text-lg font-black drop-shadow">
                   Every achievement here is verified by Pravyo
                 </h2>
-                <p className="mt-1 text-sm font-semibold leading-6 text-white/90">
+                <p className="student-portfolio-brand-muted mt-1 text-sm font-semibold leading-6">
                   Results, certificates, and writing are published through {schoolName} and
                   recognized on the Pravyo platform.
                 </p>
@@ -419,7 +455,7 @@ export default async function StudentPortfolioPage({ params }) {
             </div>
             <Link
               href="/schools"
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-white px-4 py-3 text-sm font-black text-[#3120c9] shadow-sm transition hover:bg-[#f8fbff]"
+              className="student-portfolio-cta-button inline-flex items-center justify-center gap-2 rounded-lg bg-white px-4 py-3 text-sm font-black shadow-sm transition hover:bg-[#f8fbff]"
             >
               Explore schools
               <FaArrowRight />

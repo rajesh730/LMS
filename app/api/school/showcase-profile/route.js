@@ -45,6 +45,28 @@ function sanitizePublicHighlights(value) {
     .slice(0, 8);
 }
 
+const SOCIAL_KEYS = [
+  "facebook",
+  "instagram",
+  "linkedin",
+  "tiktok",
+  "youtube",
+  "twitter",
+];
+
+function sanitizeSocialLinks(value = {}) {
+  const source = value && typeof value === "object" ? value : {};
+  return SOCIAL_KEYS.reduce((acc, key) => {
+    acc[key] = sanitizeString(source[key], 300);
+    return acc;
+  }, {});
+}
+
+const EMPTY_SOCIAL_LINKS = SOCIAL_KEYS.reduce((acc, key) => {
+  acc[key] = "";
+  return acc;
+}, {});
+
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
@@ -67,6 +89,10 @@ export async function GET() {
         summary: "",
         coverImageUrl: "",
         websiteUrl: "",
+        motto: "",
+        contactEmail: "",
+        contactPhone: "",
+        socialLinks: { ...EMPTY_SOCIAL_LINKS },
         visibility: "PRIVATE",
         highlightMetrics: metrics,
         featuredEvents: [],
@@ -109,6 +135,10 @@ export async function PUT(req) {
           summary: sanitizeString(body.summary, 3000),
           coverImageUrl: sanitizeString(body.coverImageUrl, 1000),
           websiteUrl: sanitizeString(body.websiteUrl, 1000),
+          motto: sanitizeString(body.motto, 160),
+          contactEmail: sanitizeString(body.contactEmail, 160),
+          contactPhone: sanitizeString(body.contactPhone, 40),
+          socialLinks: sanitizeSocialLinks(body.socialLinks),
           visibility: ["PRIVATE", "PUBLIC"].includes(body.visibility)
             ? body.visibility
             : "PRIVATE",
@@ -119,7 +149,9 @@ export async function PUT(req) {
           highlightMetrics: metrics,
         },
       },
-      { new: true, upsert: true, setDefaultsOnInsert: true }
+      // strict:false ensures newer fields (socialLinks, contact, motto) persist
+      // even if a long-running process cached an older schema.
+      { new: true, upsert: true, setDefaultsOnInsert: true, strict: false }
     )
       .populate("featuredEvents", "title date visibility eventType");
 

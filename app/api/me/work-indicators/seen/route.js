@@ -7,9 +7,14 @@ import { publishWorkIndicatorsUpdate } from "@/lib/workIndicatorRealtime";
 
 const ALLOWED_SURFACES = new Set([
   "school.platformEvents",
+  "school.schoolWall",
+  "school.eventInvitations",
+  "school.eventRegistrations",
+  "school.eventResults",
   "student.schoolWall",
   "student.schoolMagazine",
   "student.events",
+  "student.eventResults",
 ]);
 
 export async function POST(request) {

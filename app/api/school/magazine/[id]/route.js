@@ -52,6 +52,24 @@ export async function PATCH(request, props) {
     const action = String(body.action || "").toUpperCase();
     const requestedIssueId = body.magazineIssueId;
 
+    // Lightweight per-post read marker — set once when the school first opens
+    // the post. Uses a direct $set update (not doc.save) so it persists
+    // reliably and skips the publishing lifecycle / full-doc validation.
+    if (action === "MARK_READ") {
+      if (!article.schoolReadAt) {
+        const readAt = new Date();
+        await SchoolMagazineArticle.updateOne(
+          { _id: article._id, school: session.user.id },
+          { $set: { schoolReadAt: readAt } },
+          { strict: false, timestamps: false }
+        );
+      }
+      return NextResponse.json(
+        { message: "Marked read" },
+        { status: 200 }
+      );
+    }
+
     if (
       ![
         "PUBLISH",

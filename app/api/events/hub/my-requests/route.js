@@ -4,7 +4,6 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import dbConnect from "@/lib/db";
 import Student from "@/models/Student";
 import ParticipationRequest from "@/models/ParticipationRequest";
-import Event from "@/models/Event";
 import { buildEventPresentationState } from "@/lib/eventPresentation";
 
 /**

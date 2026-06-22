@@ -15,7 +15,9 @@ import {
   FaEye,
   FaFeatherAlt,
   FaFileAlt,
+  FaGlobeAsia,
   FaHeart,
+  FaHome,
   FaImage,
   FaItalic,
   FaLayerGroup,
@@ -104,7 +106,7 @@ const STATUS_META = {
     icon: FaCheckCircle,
   },
   REJECTED: {
-    label: "Private",
+    label: "Returned",
     chip: "border-red-200 bg-red-50 text-red-700",
     dot: "bg-red-500",
     icon: FaEdit,
@@ -133,7 +135,7 @@ function getStatusMeta(value) {
 }
 
 function getLibraryBucket(writing) {
-  if (writing.isMagazinePublished) return "MAGAZINE";
+  if (writing.isMagazinePublished && writing.magazineIssue) return "MAGAZINE";
   if (
     writing.submissionSource === "FREE_WRITE" &&
     String(writing.status || "DRAFT").toUpperCase() === "DRAFT"
@@ -169,6 +171,10 @@ function getWorkflowMessage(writing) {
   const bucket = getLibraryBucket(writing);
   const status = String(writing.status || "DRAFT").toUpperCase();
 
+  if (writing.isMagazinePublished && !writing.magazineIssue) {
+    return "Selected writing with an old magazine placement. Make it private or withdraw from magazine to clean it up.";
+  }
+
   if (bucket === "MAGAZINE") {
     return "Published in your school magazine and visible to students from your school.";
   }
@@ -190,6 +196,88 @@ function getWorkflowMessage(writing) {
   }
 
   return "Writing is saved in your library.";
+}
+
+function isLockedPublishedWriting(writing) {
+  return Boolean(
+    writing?.isMagazinePublished ||
+      writing?.isPublished ||
+      writing?.isGlobalWallPublished
+  );
+}
+
+function canEditWriting(writing) {
+  return !isLockedPublishedWriting(writing);
+}
+
+function getDeleteMessage(writing) {
+  if (!writing) return "";
+  const publicSurfaces = [
+    writing.isPublished ? "homepage" : "",
+    writing.isMagazinePublished ? "school magazine" : "",
+    writing.isGlobalWallPublished ? "global wall" : "",
+    writing.showOnSchoolWall ? "school wall" : "",
+  ].filter(Boolean);
+
+  if (publicSurfaces.length === 0) {
+    return `"${writing.title}" will be removed from your writing list.`;
+  }
+
+  return `"${writing.title}" will be removed from your writing list and hidden from ${publicSurfaces.join(", ")}.`;
+}
+
+function getWithdrawalActions(writing) {
+  return [
+    writing.showOnSchoolWall
+      ? {
+          label: "Withdraw from school wall",
+          icon: FaSchool,
+          action: "WITHDRAW_SCHOOL_WALL",
+        }
+      : null,
+    writing.isPublished
+      ? {
+          label: "Withdraw from homepage",
+          icon: FaHome,
+          action: "WITHDRAW_HOMEPAGE",
+        }
+      : null,
+    writing.isMagazinePublished
+      ? {
+          label: "Withdraw from magazine",
+          icon: FaBookOpen,
+          action: "WITHDRAW_MAGAZINE",
+        }
+      : null,
+    writing.isGlobalWallPublished
+      ? {
+          label: "Withdraw from global wall",
+          icon: FaGlobeAsia,
+          action: "WITHDRAW_GLOBAL_WALL",
+        }
+      : null,
+  ].filter(Boolean);
+}
+
+function getReleaseActions(writing) {
+  const status = String(writing?.status || "DRAFT").toUpperCase();
+  const canReleaseToSchoolWall =
+    writing &&
+    writing.showOnSchoolWall === false &&
+    ["SUBMITTED", "APPROVED"].includes(status) &&
+    !writing.isMagazinePublished &&
+    !writing.isPublished &&
+    !writing.isGlobalWallPublished;
+
+  return [
+    canReleaseToSchoolWall
+      ? {
+          label: "Show on school wall",
+          icon: FaSchool,
+          action: "RELEASE_SCHOOL_WALL",
+        }
+      : null,
+  ].filter(Boolean);
 }
 
 function formatDate(value) {
@@ -273,7 +361,6 @@ function CategoryArt({ category, className = "" }) {
 
 function WritingStudioHero({
   student,
-  writings,
   libraryCounts,
   onNewDraft,
 }) {
@@ -765,7 +852,7 @@ function WritingEditor({
             <FaPaperPlane />
             {saving
               ? "Posting..."
-              : "Post to School"}
+              : "Post to School Wall"}
           </button>
           {(form.id || form.title || form.content) && (
             <button
@@ -799,7 +886,7 @@ function WritingListItem({
   const isPrivate = status === "DRAFT" || status === "REJECTED";
   const primaryStatusAction = isPrivate
     ? {
-        label: "Send to school",
+        label: "Post to school wall",
         icon: FaPaperPlane,
         action: "SUBMITTED",
       }
@@ -809,6 +896,9 @@ function WritingListItem({
         action: "MAKE_PRIVATE",
       };
   const PrimaryStatusIcon = primaryStatusAction.icon;
+  const editAllowed = canEditWriting(writing);
+  const withdrawalActions = getWithdrawalActions(writing);
+  const releaseActions = getReleaseActions(writing);
 
   const runMenuAction = (callback) => {
     setMenuOpen(false);
@@ -852,7 +942,7 @@ function WritingListItem({
             </button>
             {menuOpen && (
               <div
-                className="student-writing-menu absolute right-0 top-10 z-20 w-44 overflow-hidden rounded-lg border border-[#d8e0f0] bg-white py-1 text-sm font-bold text-[#27344a] shadow-lg"
+                className="student-writing-menu absolute right-0 top-10 z-20 w-64 overflow-hidden rounded-lg border border-[#d8e0f0] bg-white py-1 text-sm font-bold text-[#27344a] shadow-lg"
                 onMouseDown={(event) => event.preventDefault()}
               >
                 <button
@@ -863,14 +953,21 @@ function WritingListItem({
                   <FaEye className="text-[#1f4e79]" />
                   Open
                 </button>
-                <button
-                  type="button"
-                  onClick={() => runMenuAction(() => onEdit(writing))}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-[#f8fbff]"
-                >
-                  <FaEdit className="text-[#1f4e79]" />
-                  Edit
-                </button>
+                {editAllowed ? (
+                  <button
+                    type="button"
+                    onClick={() => runMenuAction(() => onEdit(writing))}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-[#f8fbff]"
+                  >
+                    <FaEdit className="text-[#1f4e79]" />
+                    Edit
+                  </button>
+                ) : (
+                  <div className="flex w-full items-start gap-2 px-3 py-2 text-left text-xs leading-5 text-[#52657d]">
+                    <FaLock className="mt-0.5 shrink-0 text-[#1f4e79]" />
+                    Editing is locked while published
+                  </div>
+                )}
                 <button
                   type="button"
                   onClick={() =>
@@ -883,6 +980,48 @@ function WritingListItem({
                   <PrimaryStatusIcon className="text-[#1f4e79]" />
                   {primaryStatusAction.label}
                 </button>
+                {withdrawalActions.map((withdrawAction) => {
+                  const WithdrawIcon = withdrawAction.icon;
+                  return (
+                    <button
+                      key={withdrawAction.action}
+                      type="button"
+                      onClick={() =>
+                        runMenuAction(() =>
+                          onStatusAction(writing, withdrawAction.action)
+                        )
+                      }
+                      className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-[#f8fbff]"
+                    >
+                      <WithdrawIcon className="text-[#1f4e79]" />
+                      {withdrawAction.label}
+                    </button>
+                  );
+                })}
+                {releaseActions.map((releaseAction) => {
+                  const ReleaseIcon = releaseAction.icon;
+                  return (
+                    <button
+                      key={releaseAction.action}
+                      type="button"
+                      onClick={() =>
+                        runMenuAction(() =>
+                          onStatusAction(writing, releaseAction.action)
+                        )
+                      }
+                      className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-[#f8fbff]"
+                    >
+                      <ReleaseIcon className="text-[#1f4e79]" />
+                      {releaseAction.label}
+                    </button>
+                  );
+                })}
+                {(writing.isPublished || writing.isMagazinePublished) && (
+                  <div className="border-t border-[#e6eaf7] px-3 py-2 text-xs font-semibold leading-5 text-[#52657d]">
+                    Homepage and magazine placement are selected by your school.
+                    Repost after editing so your school can select it again.
+                  </div>
+                )}
                 <button
                   type="button"
                   onClick={() => runMenuAction(() => onDelete(writing))}
@@ -1062,6 +1201,12 @@ export default function StudentWritingWorkspace() {
   }, []);
 
   const startEdit = useCallback((writing) => {
+    if (!canEditWriting(writing)) {
+      setSuccess("");
+      setError("Make this writing private before editing published work.");
+      return;
+    }
+
     setReadingWriting(null);
     setSuccess("");
     setError("");
@@ -1156,6 +1301,7 @@ export default function StudentWritingWorkspace() {
   const handleDelete = async () => {
     if (!deleteTarget) return;
     try {
+      setSaving(true);
       setError("");
       setSuccess("");
       const res = await fetch(`/api/student/writings/${deleteTarget.id}`, {
@@ -1179,21 +1325,27 @@ export default function StudentWritingWorkspace() {
     } catch (deleteError) {
       setError(deleteError.message || "Failed to delete writing");
       setDeleteTarget(null);
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleStatusAction = async (writing, action) => {
     try {
+      setSaving(true);
       setError("");
       setSuccess("");
 
-      const isMakePrivate = action === "MAKE_PRIVATE";
+      const isActionCommand =
+        action === "MAKE_PRIVATE" ||
+        action === "RELEASE_SCHOOL_WALL" ||
+        String(action).startsWith("WITHDRAW_");
       const res = await fetch(`/api/student/writings/${writing.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(
-          isMakePrivate
-            ? { action: "MAKE_PRIVATE" }
+          isActionCommand
+            ? { action }
             : {
                 title: writing.title,
                 content: writing.content,
@@ -1208,10 +1360,10 @@ export default function StudentWritingWorkspace() {
         throw new Error(payload.message || "Failed to update writing");
       }
 
-      if (isMakePrivate && form.id === writing.id) {
+      if (isActionCommand && form.id === writing.id) {
         resetForm();
       }
-      if (isMakePrivate && editForm.id === writing.id) {
+      if (isActionCommand && editForm.id === writing.id) {
         closeEditDialog();
       }
 
@@ -1219,6 +1371,8 @@ export default function StudentWritingWorkspace() {
       await loadWritings();
     } catch (actionError) {
       setError(actionError.message || "Failed to update writing");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -1328,7 +1482,7 @@ export default function StudentWritingWorkspace() {
                 <option value="DRAFT">Drafts</option>
                 <option value="SUBMITTED">Posted to School</option>
                 <option value="APPROVED">Selected</option>
-                <option value="REJECTED">Private</option>
+                <option value="REJECTED">Returned</option>
               </select>
             </div>
 
@@ -1382,7 +1536,7 @@ export default function StudentWritingWorkspace() {
                 ["DRAFT", "Drafts"],
                 ["SUBMITTED", "Posted"],
                 ["APPROVED", "Selected"],
-                ["REJECTED", "Private"],
+                ["REJECTED", "Returned"],
               ].map(([status, label]) => (
                 <button
                   key={status}
@@ -1506,9 +1660,7 @@ export default function StudentWritingWorkspace() {
                 <FaArrowLeft />
                 Back to writing
               </button>
-              {["DRAFT", "REJECTED", "SUBMITTED"].includes(
-                readingWriting.status
-              ) && (
+              {canEditWriting(readingWriting) && (
                 <button
                   type="button"
                   onClick={() => startEdit(readingWriting)}
@@ -1550,13 +1702,10 @@ export default function StudentWritingWorkspace() {
       <ConfirmDialog
         open={Boolean(deleteTarget)}
         title="Delete this writing?"
-        message={
-          deleteTarget
-            ? `"${deleteTarget.title}" will be removed from your writing list.`
-            : ""
-        }
+        message={getDeleteMessage(deleteTarget)}
         confirmLabel="Delete writing"
         tone="danger"
+        busy={saving}
         onClose={() => setDeleteTarget(null)}
         onConfirm={handleDelete}
       />

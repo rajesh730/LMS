@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import mongoose from "mongoose";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import Student from "@/models/Student";
 import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
+import MagazineIssue from "@/models/MagazineIssue";
 import { publishWorkIndicatorsUpdate } from "@/lib/workIndicatorRealtime";
 import { notifySchoolMagazineSubmitted } from "@/lib/magazineNotifications";
 import { normalizeWritingCategory } from "@/lib/writingCategories";
@@ -19,6 +21,23 @@ function buildStudentLookup(session) {
       { username: session.user.email },
     ],
   };
+}
+
+function hasVisibleSurface(article) {
+  return Boolean(
+    (article.status !== "DRAFT" && article.showOnSchoolWall !== false) ||
+      article.isPublished ||
+      article.isMagazinePublished ||
+      article.isGlobalWallPublished
+  );
+}
+
+function resetReviewStateIfFullyWithdrawn(article) {
+  if (hasVisibleSurface(article)) return;
+  article.status = "DRAFT";
+  article.reviewedAt = null;
+  article.reviewedBy = null;
+  article.reviewNote = "";
 }
 
 export async function PATCH(request, props) {
@@ -43,6 +62,13 @@ export async function PATCH(request, props) {
     }
 
     const params = await props.params;
+    if (!mongoose.Types.ObjectId.isValid(params.id)) {
+      return NextResponse.json(
+        { message: "Invalid writing id" },
+        { status: 400 }
+      );
+    }
+
     const article = await SchoolMagazineArticle.findOne({
       _id: params.id,
       authorStudent: student._id,
@@ -61,6 +87,8 @@ export async function PATCH(request, props) {
     const action = String(body.action || "").toUpperCase();
 
     if (action === "MAKE_PRIVATE") {
+      const previousMagazineIssue = article.magazineIssue;
+
       article.status = "DRAFT";
       article.showOnSchoolWall = false;
       article.isMagazinePublished = false;
@@ -78,6 +106,13 @@ export async function PATCH(request, props) {
 
       await article.save();
 
+      if (previousMagazineIssue) {
+        await MagazineIssue.updateOne(
+          { _id: previousMagazineIssue, school: student.school },
+          { $pull: { articles: article._id } }
+        );
+      }
+
       publishWorkIndicatorsUpdate("student-writing-updated", {
         schoolId: String(student.school),
         studentId: String(student._id),
@@ -90,10 +125,141 @@ export async function PATCH(request, props) {
       });
     }
 
-    if (article.isMagazinePublished || article.isPublished) {
+    if (action === "WITHDRAW_SCHOOL_WALL") {
+      article.showOnSchoolWall = false;
+      resetReviewStateIfFullyWithdrawn(article);
+      await article.save();
+
+      publishWorkIndicatorsUpdate("student-writing-updated", {
+        schoolId: String(student.school),
+        studentId: String(student._id),
+        status: article.status,
+      });
+
+      return NextResponse.json({
+        message: "Writing withdrawn from school wall",
+        article,
+      });
+    }
+
+    if (action === "WITHDRAW_HOMEPAGE") {
+      article.isPublished = false;
+      article.isFeatured = false;
+      article.publishedAt = null;
+      article.homeShownAt = null;
+      resetReviewStateIfFullyWithdrawn(article);
+      await article.save();
+
+      publishWorkIndicatorsUpdate("student-writing-updated", {
+        schoolId: String(student.school),
+        studentId: String(student._id),
+        status: article.status,
+      });
+
+      return NextResponse.json({
+        message: "Writing withdrawn from homepage",
+        article,
+      });
+    }
+
+    if (action === "WITHDRAW_GLOBAL_WALL") {
+      article.isGlobalWallPublished = false;
+      resetReviewStateIfFullyWithdrawn(article);
+      await article.save();
+
+      publishWorkIndicatorsUpdate("student-writing-updated", {
+        schoolId: String(student.school),
+        studentId: String(student._id),
+        status: article.status,
+      });
+
+      return NextResponse.json({
+        message: "Writing withdrawn from global wall",
+        article,
+      });
+    }
+
+    if (action === "WITHDRAW_MAGAZINE") {
+      const previousMagazineIssue = article.magazineIssue;
+      article.isMagazinePublished = false;
+      article.magazineIssue = null;
+      article.magazineIssueAssignedAt = null;
+      article.magazinePublishedAt = null;
+      resetReviewStateIfFullyWithdrawn(article);
+      await article.save();
+
+      if (previousMagazineIssue) {
+        await MagazineIssue.updateOne(
+          { _id: previousMagazineIssue, school: student.school },
+          { $pull: { articles: article._id } }
+        );
+      }
+
+      publishWorkIndicatorsUpdate("student-writing-updated", {
+        schoolId: String(student.school),
+        studentId: String(student._id),
+        status: article.status,
+      });
+
+      return NextResponse.json({
+        message: "Writing withdrawn from school magazine",
+        article,
+      });
+    }
+
+    if (action === "RELEASE_SCHOOL_WALL") {
+      const previousStatus = article.status;
+      const submittedAt = new Date();
+
+      article.status =
+        previousStatus === "APPROVED" || previousStatus === "SUBMITTED"
+          ? previousStatus
+          : "SUBMITTED";
+      article.showOnSchoolWall = true;
+
+      if (article.status === "SUBMITTED") {
+        article.firstSubmittedAt =
+          article.firstSubmittedAt || article.submittedAt || submittedAt;
+        article.submittedAt = submittedAt;
+        if (previousStatus === "REJECTED") {
+          article.lastResubmittedAt = submittedAt;
+          article.revisionCount = Number(article.revisionCount || 0) + 1;
+        }
+        article.reviewedAt = null;
+        article.reviewedBy = null;
+      }
+
+      await article.save();
+
+      publishWorkIndicatorsUpdate("student-writing-updated", {
+        schoolId: String(student.school),
+        studentId: String(student._id),
+        status: article.status,
+      });
+
+      if (article.status === "SUBMITTED") {
+        await notifySchoolMagazineSubmitted({
+          article,
+          student,
+          schoolId: student.school,
+          isResubmission: previousStatus === "REJECTED",
+        });
+      }
+
+      return NextResponse.json({
+        message: "Writing released to school wall",
+        article,
+      });
+    }
+
+    if (
+      article.isMagazinePublished ||
+      article.isPublished ||
+      article.isGlobalWallPublished
+    ) {
       return NextResponse.json(
         {
-          message: "Published writing can no longer be changed here",
+          message: "Make this writing private before editing published work",
         },
         { status: 400 }
       );
@@ -210,6 +376,8 @@ export async function DELETE(request, props) {
       );
     }
 
+    const previousMagazineIssue = article.magazineIssue;
+
     article.isDeleted = true;
     article.deletedAt = new Date();
     article.deletedBy = student._id;
@@ -220,8 +388,17 @@ export async function DELETE(request, props) {
     article.isGlobalWallPublished = false;
     article.publishedAt = null;
     article.magazinePublishedAt = null;
+    article.magazineIssue = null;
+    article.magazineIssueAssignedAt = null;
     article.homeShownAt = null;
     await article.save();
+
+    if (previousMagazineIssue) {
+      await MagazineIssue.updateOne(
+        { _id: previousMagazineIssue, school: student.school },
+        { $pull: { articles: article._id } }
+      );
+    }
 
     publishWorkIndicatorsUpdate("student-writing-deleted", {
       schoolId: String(student.school),

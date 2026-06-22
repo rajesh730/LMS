@@ -20,7 +20,6 @@ import {
   FaCalendarAlt,
   FaFeatherAlt,
   FaRegCalendarAlt,
-  FaSchool,
   FaShieldAlt,
 } from "react-icons/fa";
 import "@/models/Student";
@@ -432,64 +431,6 @@ function RightColumn({ schools, event }) {
         </section>
       )}
     </aside>
-  );
-}
-
-function MobileActivityList({ writings, events }) {
-  const items = [];
-
-  if (writings[0]) {
-    items.push({
-      icon: FaFeatherAlt,
-      bgClass: "bg-[var(--brand-primary-soft)]",
-      iconColor: "text-[var(--brand-primary)]",
-      title: writings[0].title,
-      text: `Published by ${writings[0].author}.`,
-      time: formatDate(writings[0].date),
-    });
-  }
-
-  if (events[0]) {
-    items.push({
-      icon: FaRegCalendarAlt,
-      bgClass: "bg-emerald-50",
-      iconColor: "text-emerald-600",
-      title: events[0].title,
-      text: events[0].description,
-      time: formatDate(events[0].date),
-    });
-  }
-
-  if (items.length === 0) return null;
-
-  return (
-    <section>
-      <SectionTitle title="Recent Activity" href="/events" />
-      <div className="overflow-hidden rounded-2xl border border-[#edf0f7] bg-white shadow-sm">
-        {items.map((item, index) => {
-          const Icon = item.icon;
-          return (
-            <div
-              key={item.title}
-              className={`flex gap-3 px-4 py-3.5 ${index > 0 ? "border-t border-[#f0f2f7]" : ""}`}
-            >
-              <span
-                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${item.bgClass}`}
-              >
-                <Icon className={`text-sm ${item.iconColor}`} />
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="line-clamp-1 text-sm font-semibold text-[#111827]">{item.title}</p>
-                <p className="mt-0.5 line-clamp-1 text-xs leading-5 text-[#667085]">
-                  {item.text}
-                </p>
-              </div>
-              <span className="shrink-0 text-xs text-[#9aa3b5]">{item.time}</span>
-            </div>
-          );
-        })}
-      </div>
-    </section>
   );
 }
 

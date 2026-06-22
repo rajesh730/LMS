@@ -30,6 +30,30 @@ const SchoolShowcaseProfileSchema = new mongoose.Schema(
       default: "",
       trim: true,
     },
+    motto: {
+      type: String,
+      default: "",
+      trim: true,
+      maxlength: 160,
+    },
+    contactEmail: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    contactPhone: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    socialLinks: {
+      facebook: { type: String, default: "", trim: true },
+      instagram: { type: String, default: "", trim: true },
+      linkedin: { type: String, default: "", trim: true },
+      tiktok: { type: String, default: "", trim: true },
+      youtube: { type: String, default: "", trim: true },
+      twitter: { type: String, default: "", trim: true },
+    },
     visibility: {
       type: String,
       enum: ["PRIVATE", "PUBLIC"],

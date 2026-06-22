@@ -5,11 +5,9 @@ import {
   FaBell,
   FaCertificate,
   FaClipboardList,
-  FaCog,
   FaEdit,
   FaGlobe,
   FaLayerGroup,
-  FaListUl,
   FaUsers,
 } from "react-icons/fa";
 import RoundsTab from "./RoundsTab";

@@ -223,13 +223,6 @@ function placementLabel(placement) {
   return String(placement || "").replaceAll("_", " ");
 }
 
-function displayStatus(status) {
-  if (status === "RUNNER_UP") return "1st Runner Up";
-  if (status === "THIRD_PLACE") return "2nd Runner Up";
-  if (status === "NOT_ATTEMPTED") return "Not Attempted";
-  return String(status || "").replaceAll("_", " ");
-}
-
 async function getRoundResultContext(event) {
   const eventId = event._id || event;
   const rounds = await EventRound.find({ event: eventId })

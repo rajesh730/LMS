@@ -5,25 +5,55 @@ import Link from "next/link";
 import {
   FaCalendarAlt,
   FaCheckSquare,
+  FaEnvelope,
   FaExternalLinkAlt,
+  FaFacebookF,
   FaGlobe,
   FaImage,
+  FaInstagram,
   FaLink,
-  FaLock,
+  FaLinkedinIn,
+  FaPhone,
   FaSave,
   FaSpinner,
   FaStar,
+  FaTiktok,
   FaTrophy,
+  FaTwitter,
   FaUsers,
+  FaYoutube,
 } from "react-icons/fa";
 import { normalizeImageUrl } from "@/lib/imageUrls";
 import SchoolLogoMark from "@/components/public/SchoolLogoMark";
+
+const EMPTY_SOCIAL_LINKS = {
+  facebook: "",
+  instagram: "",
+  linkedin: "",
+  tiktok: "",
+  youtube: "",
+  twitter: "",
+};
+
+// Social inputs rendered in the editor, in display order.
+const SOCIAL_FIELDS = [
+  { key: "facebook", label: "Facebook", icon: FaFacebookF, placeholder: "https://facebook.com/yourschool" },
+  { key: "instagram", label: "Instagram", icon: FaInstagram, placeholder: "https://instagram.com/yourschool" },
+  { key: "linkedin", label: "LinkedIn", icon: FaLinkedinIn, placeholder: "https://linkedin.com/company/yourschool" },
+  { key: "tiktok", label: "TikTok", icon: FaTiktok, placeholder: "https://tiktok.com/@yourschool" },
+  { key: "youtube", label: "YouTube", icon: FaYoutube, placeholder: "https://youtube.com/@yourschool" },
+  { key: "twitter", label: "X (Twitter)", icon: FaTwitter, placeholder: "https://x.com/yourschool" },
+];
 
 const EMPTY_FORM = {
   tagline: "",
   summary: "",
   coverImageUrl: "",
   websiteUrl: "",
+  motto: "",
+  contactEmail: "",
+  contactPhone: "",
+  socialLinks: { ...EMPTY_SOCIAL_LINKS },
   visibility: "PRIVATE",
   featuredEvents: [],
 };
@@ -90,6 +120,10 @@ export default function ShowcaseProfileManager() {
           summary: nextProfile.summary || "",
           coverImageUrl: nextProfile.coverImageUrl || "",
           websiteUrl: nextProfile.websiteUrl || "",
+          motto: nextProfile.motto || "",
+          contactEmail: nextProfile.contactEmail || "",
+          contactPhone: nextProfile.contactPhone || "",
+          socialLinks: { ...EMPTY_SOCIAL_LINKS, ...(nextProfile.socialLinks || {}) },
           visibility: nextProfile.visibility || "PRIVATE",
           featuredEvents: (nextProfile.featuredEvents || []).map((item) =>
             typeof item === "string" ? item : item._id || item.id
@@ -149,6 +183,10 @@ export default function ShowcaseProfileManager() {
         summary: profile.summary,
         coverImageUrl: profile.coverImageUrl,
         websiteUrl: profile.websiteUrl,
+        motto: profile.motto,
+        contactEmail: profile.contactEmail,
+        contactPhone: profile.contactPhone,
+        socialLinks: profile.socialLinks,
         visibility: profile.visibility,
         featuredEvents: profile.featuredEvents,
       };
@@ -351,6 +389,92 @@ export default function ShowcaseProfileManager() {
               <p className="mt-2 text-xs font-semibold text-[#52657d]">
                 This link will be displayed on your public profile.
               </p>
+            </label>
+          </section>
+
+          <section className="rounded-lg border border-[#e1e7f2] bg-white p-5 shadow-sm">
+            <div className="mb-4">
+              <h2 className="flex items-center gap-2 text-sm font-black text-[#17120a]">
+                <FaGlobe className="text-purple-700" />
+                Social Media &amp; Contact
+              </h2>
+              <p className="mt-1 text-xs font-semibold text-[#52657d]">
+                Add the channels families can follow you on. Only the ones you fill
+                in are shown on your public profile.
+              </p>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              {SOCIAL_FIELDS.map(({ key, label, icon: Icon, placeholder }) => (
+                <label key={key} className="block">
+                  <div className="mb-1.5 flex items-center gap-2 text-[11px] font-black text-[#27364a]">
+                    <Icon className="text-[#52657d]" />
+                    {label}
+                  </div>
+                  <input
+                    type="url"
+                    value={profile.socialLinks?.[key] || ""}
+                    onChange={(e) =>
+                      setProfile((prev) => ({
+                        ...prev,
+                        socialLinks: { ...prev.socialLinks, [key]: e.target.value },
+                      }))
+                    }
+                    className="h-10 w-full rounded-lg border border-[#dbe5f4] px-3 text-xs font-semibold text-[#17120a] outline-none focus:border-purple-300"
+                    placeholder={placeholder}
+                  />
+                </label>
+              ))}
+            </div>
+
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              <label className="block">
+                <div className="mb-1.5 flex items-center gap-2 text-[11px] font-black text-[#27364a]">
+                  <FaEnvelope className="text-[#52657d]" />
+                  Public Email
+                </div>
+                <input
+                  type="email"
+                  value={profile.contactEmail}
+                  onChange={(e) =>
+                    setProfile((prev) => ({ ...prev, contactEmail: e.target.value }))
+                  }
+                  className="h-10 w-full rounded-lg border border-[#dbe5f4] px-3 text-xs font-semibold text-[#17120a] outline-none focus:border-purple-300"
+                  placeholder="info@yourschool.edu.np"
+                />
+              </label>
+              <label className="block">
+                <div className="mb-1.5 flex items-center gap-2 text-[11px] font-black text-[#27364a]">
+                  <FaPhone className="text-[#52657d]" />
+                  Public Phone
+                </div>
+                <input
+                  type="tel"
+                  value={profile.contactPhone}
+                  onChange={(e) =>
+                    setProfile((prev) => ({ ...prev, contactPhone: e.target.value }))
+                  }
+                  className="h-10 w-full rounded-lg border border-[#dbe5f4] px-3 text-xs font-semibold text-[#17120a] outline-none focus:border-purple-300"
+                  placeholder="+977-..."
+                />
+              </label>
+            </div>
+
+            <label className="mt-4 block">
+              <div className="mb-1.5 flex items-center gap-2 text-[11px] font-black text-[#27364a]">
+                <FaStar className="text-[#52657d]" />
+                School Motto
+              </div>
+              <input
+                type="text"
+                value={profile.motto}
+                maxLength={160}
+                onChange={(e) =>
+                  setProfile((prev) => ({ ...prev, motto: e.target.value }))
+                }
+                className="h-10 w-full rounded-lg border border-[#dbe5f4] px-3 text-xs font-semibold text-[#17120a] outline-none focus:border-purple-300"
+                placeholder="e.g. Knowledge, Character, Service"
+              />
             </label>
           </section>
 

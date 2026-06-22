@@ -100,6 +100,14 @@ import {
   FaBars,
 } from "react-icons/fa";
 import SchoolEventWorkspace from "@/components/events/SchoolEventWorkspace";
+const PlatformEventsManager = dynamic(
+  () => import("@/components/events/PlatformEventsManager"),
+  {
+    loading: () => (
+      <LoadingState title="Loading platform events" message="Preparing Pravyo competition invitations." />
+    ),
+  }
+);
 
 function SchoolDashboardContent() {
   const { data: session, status } = useSession();
@@ -114,9 +122,7 @@ function SchoolDashboardContent() {
   useEffect(() => {
     if (tabParam) {
       setActiveTab(
-        ["judging", "events", "platform-events"].includes(tabParam)
-          ? "school-events"
-          : tabParam
+        ["judging", "events"].includes(tabParam) ? "school-events" : tabParam
       );
     }
   }, [tabParam]);
@@ -136,15 +142,6 @@ function SchoolDashboardContent() {
   const [loading, setLoading] = useState(true);
 
   // Forms State
-  const [teacherForm, setTeacherForm] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    subject: "",
-    roles: ["MENTOR"],
-    assignments: [],
-    password: "",
-  });
   const [editingTeacher, setEditingTeacher] = useState(null);
 
   // Credentials Modal State
@@ -195,39 +192,6 @@ function SchoolDashboardContent() {
     }
   };
 
-  // Student CRUD
-
-  // Teacher CRUD
-  const createTeacher = async (e) => {
-    e.preventDefault();
-    try {
-      const res = await fetch("/api/teachers", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(teacherForm),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setTeachers([data.teacher, ...teachers]);
-        // Show credentials modal
-        if (data.credentials) {
-          setCredentialsModal({ isOpen: true, credentials: data.credentials });
-        }
-        setTeacherForm({
-          name: "",
-          email: "",
-          phone: "",
-          subject: "",
-          roles: ["MENTOR"],
-          assignments: [],
-          password: "",
-        });
-      }
-    } catch (error) {
-      console.error("Error creating teacher", error);
-    }
-  };
-
   const updateTeacher = async (e) => {
     e.preventDefault();
     try {
@@ -246,18 +210,6 @@ function SchoolDashboardContent() {
     } catch (error) {
       console.error("Error updating teacher", error);
     }
-  };
-
-  const requestDeleteTeacher = (teacher) => {
-    setConfirmState({
-      type: "delete-teacher",
-      teacher,
-      title: "Archive this teacher?",
-      message: `${teacher.name || "This teacher"} will be removed from active teacher records.`,
-      confirmLabel: "Archive teacher",
-      tone: "danger",
-      busy: false,
-    });
   };
 
   const deleteTeacher = async (id) => {
@@ -283,18 +235,6 @@ function SchoolDashboardContent() {
     } finally {
       setConfirmState(null);
     }
-  };
-
-  const requestResetTeacherPassword = (teacher) => {
-    setConfirmState({
-      type: "reset-teacher-password",
-      teacher,
-      title: "Reset teacher password?",
-      message: `A new temporary password will be generated for ${teacher.name || "this teacher"}.`,
-      confirmLabel: "Reset password",
-      tone: "warning",
-      busy: false,
-    });
   };
 
   const resetTeacherPassword = async (id) => {
@@ -328,71 +268,6 @@ function SchoolDashboardContent() {
       });
     } finally {
       setConfirmState(null);
-    }
-  };
-
-  const handleBulkTeacherUpload = async (data) => {
-    try {
-      const res = await fetch("/api/teachers", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      if (res.ok) {
-        const resData = await res.json();
-        setFeedback({
-          type: "success",
-          title: "Teachers imported",
-          message: `Successfully imported ${resData.count} mentors.`,
-        });
-        if (resData.credentials?.length > 0) {
-          setCredentialsModal({
-            isOpen: true,
-            credentials: resData.credentials,
-          });
-        }
-        fetchData(); // Reload to get updated list
-      } else {
-        const error = await res.json();
-        setFeedback({
-          type: "error",
-          title: "Teacher import failed",
-          message: error.message || "Please check the upload and retry.",
-        });
-      }
-    } catch (error) {
-      console.error("Bulk Import Error:", error);
-      setFeedback({
-        type: "error",
-        title: "Teacher import failed",
-        message: "Error importing teachers.",
-      });
-    }
-  };
-
-  const updateSchoolConfig = async (newRoles) => {
-    try {
-      const payload = {};
-      if (newRoles) payload.teacherRoles = newRoles;
-
-      const res = await fetch("/api/school/config", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setSchoolConfig(data.config);
-      } else {
-        setFeedback({
-          type: "error",
-          title: "Configuration update failed",
-          message: "Failed to update config.",
-        });
-      }
-    } catch (error) {
-      console.error("Error updating config", error);
     }
   };
 
@@ -524,6 +399,7 @@ function SchoolDashboardContent() {
             {activeTab === "settings" && <SchoolSettingsManager />}
 
             {activeTab === "school-events" && <SchoolEventWorkspace />}
+            {activeTab === "platform-events" && <PlatformEventsManager />}
             {activeTab === "student-notices" && <StudentNoticeManager />}
             {activeTab === "notices" && <SchoolNoticeBoard />}
             {activeTab === "magazine" && <SchoolMagazineManager />}

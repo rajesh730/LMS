@@ -12,11 +12,9 @@ import {
   FaFeatherAlt,
   FaLayerGroup,
   FaPenNib,
-  FaQuoteLeft,
   FaShieldAlt,
   FaSearch,
   FaStar,
-  FaTags,
   FaUser,
 } from "react-icons/fa";
 import AlertBanner from "@/components/ui/AlertBanner";
@@ -25,7 +23,6 @@ import LoadingState from "@/components/ui/LoadingState";
 import StudentQuickNav from "@/components/student/StudentQuickNav";
 import {
   getWritingPreviewText,
-  stripWritingMarkup,
   WritingPreview,
 } from "@/components/WritingContent";
 import useRealtimeChannel from "@/lib/useRealtimeChannel";
@@ -392,7 +389,7 @@ export default function StudentSchoolMagazine({
   initialView = "school-wall",
   lockedView = false,
 }) {
-  const { markSurfaceSeen } = useWorkIndicators();
+  const { markSurfaceSeen, getIndicator } = useWorkIndicators();
   const [student, setStudent] = useState(null);
   const [articles, setArticles] = useState([]);
   const [wallArticles, setWallArticles] = useState([]);
@@ -698,25 +695,34 @@ export default function StudentSchoolMagazine({
             {!lockedView && (
               <div className="mt-4 flex flex-wrap gap-2">
                 {[
-                  ["school-wall", "School Wall", wallArticles.length],
-                  ["magazine", "School Magazine", articles.length],
-                ].map(([view, label, count]) => (
-                  <button
-                    key={view}
-                    type="button"
-                    onClick={() => {
-                      setActiveView(view);
-                      setActiveCategory("ALL");
-                    }}
-                    className={`rounded-full px-4 py-2 text-xs font-black transition ${
-                      activeView === view
-                        ? "bg-purple-700 text-white"
-                        : "bg-purple-50 text-purple-700 hover:bg-purple-100"
-                    }`}
-                  >
-                    {label} {count}
-                  </button>
-                ))}
+                  ["school-wall", "School Wall", wallArticles.length, "student.schoolWall"],
+                  ["magazine", "School Magazine", articles.length, "student.schoolMagazine"],
+                ].map(([view, label, count, surface]) => {
+                  // Red dot when there's new content in the other view; clears
+                  // when you open it (the view marks its surface seen).
+                  const showDot =
+                    getIndicator(surface).count > 0 && activeView !== view;
+                  return (
+                    <button
+                      key={view}
+                      type="button"
+                      onClick={() => {
+                        setActiveView(view);
+                        setActiveCategory("ALL");
+                      }}
+                      className={`relative rounded-full px-4 py-2 text-xs font-black transition ${
+                        activeView === view
+                          ? "bg-purple-700 text-white"
+                          : "bg-purple-50 text-purple-700 hover:bg-purple-100"
+                      }`}
+                    >
+                      {label} {count}
+                      {showDot && (
+                        <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white" />
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             )}
 

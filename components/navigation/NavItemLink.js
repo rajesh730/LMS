@@ -39,6 +39,7 @@ export default function NavItemLink({
         <WorkIndicatorBadge
           count={indicator.count}
           tone={indicator.tone}
+          label={indicator.label}
           compact
         />
       )}

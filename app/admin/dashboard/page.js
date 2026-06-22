@@ -27,15 +27,12 @@ const EventParticipantsView = dynamic(() => import("./EventParticipantsView"), {
 });
 
 import {
-  FaSchool,
   FaCalendarAlt,
   FaToggleOn,
   FaToggleOff,
-  FaEdit,
   FaTrash,
   FaCheckCircle,
   FaTimesCircle,
-  FaInfoCircle,
   FaKey,
   FaLayerGroup,
   FaSearch,
@@ -111,7 +108,7 @@ async function fetchNamedResource(label, url) {
 }
 
 function AdminDashboardContent() {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
   const requestedTab = searchParams.get("tab") || "approvals";
@@ -192,9 +189,6 @@ function AdminDashboardContent() {
       }
 
       if (failed.length > 0) {
-        const failedSummary = failed
-          .map((result) => `${result.label}: ${result.error}`)
-          .join(" | ");
         setLoadError(
           `Some dashboard data could not load: ${failed
             .map((result) => result.label)
@@ -324,53 +318,92 @@ function AdminDashboardContent() {
   };
 
   // Event CRUD
-  const requestArchiveEvent = (event) => {
+  const requestCancelEvent = (event) => {
     setConfirmState({
-      type: "event-archive",
+      type: "event-cancel",
       event,
-      title: "Archive this event?",
-      message: `${event.title} will move to history. You can restore it later.`,
-      confirmLabel: "Archive event",
+      title: "Cancel this event?",
+      message: `${event.title} will be marked cancelled. Every registered school and student is notified and their registrations are withdrawn. This is for events that should not go ahead.`,
+      confirmLabel: "Cancel event",
       tone: "danger",
       busy: false,
     });
   };
 
-  const deleteEvent = async (id) => {
+  const cancelEvent = async (id) => {
     setLastError(null);
     setDeletingId(id);
     try {
       setConfirmState((current) => (current ? { ...current, busy: true } : current));
       setActionFeedback(null);
-      const res = await fetch(`/api/events/${id}`, {
-        method: "DELETE",
-      });
+      const res = await fetch(`/api/events/${id}/cancel`, { method: "POST" });
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
         setEvents(
           events.map((e) =>
-            e._id === id ? { ...e, lifecycleStatus: "ARCHIVED" } : e
+            e._id === id ? { ...e, lifecycleStatus: "CANCELLED" } : e
           )
         );
         setActionFeedback({
           type: "success",
-          title: "Event archived",
-          message: "The event moved to archived history.",
+          title: "Event cancelled",
+          message: data.message || "Schools and students were notified.",
         });
       } else {
-        const data = await res.json();
         const msg = `Failed: ${data.message} (${res.status})`;
         setLastError(msg);
-        setActionFeedback({
-          type: "error",
-          title: "Event archive failed",
-          message: msg,
-        });
+        setActionFeedback({ type: "error", title: "Cancel failed", message: msg });
       }
     } catch (error) {
       setLastError(`Error: ${error.message}`);
       setActionFeedback({
         type: "error",
-        title: "Event archive failed",
+        title: "Cancel failed",
+        message: `Network/Client Error: ${error.message}`,
+      });
+    } finally {
+      setDeletingId(null);
+      setConfirmState(null);
+    }
+  };
+
+  const requestPermanentDeleteEvent = (event) => {
+    setConfirmState({
+      type: "event-permanent-delete",
+      event,
+      title: "Permanently delete this event?",
+      message: `${event.title} and all its registrations, rounds, notices, and invitations will be permanently removed. This cannot be undone.`,
+      confirmLabel: "Delete permanently",
+      tone: "danger",
+      busy: false,
+    });
+  };
+
+  const permanentlyDeleteEvent = async (id) => {
+    setLastError(null);
+    setDeletingId(id);
+    try {
+      setConfirmState((current) => (current ? { ...current, busy: true } : current));
+      setActionFeedback(null);
+      const res = await fetch(`/api/events/${id}/delete`, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setEvents(events.filter((e) => e._id !== id));
+        setActionFeedback({
+          type: "success",
+          title: "Event deleted",
+          message: data.message || "The event was permanently removed.",
+        });
+      } else {
+        const msg = `Failed: ${data.message} (${res.status})`;
+        setLastError(msg);
+        setActionFeedback({ type: "error", title: "Delete failed", message: msg });
+      }
+    } catch (error) {
+      setLastError(`Error: ${error.message}`);
+      setActionFeedback({
+        type: "error",
+        title: "Delete failed",
         message: `Network/Client Error: ${error.message}`,
       });
     } finally {
@@ -474,8 +507,8 @@ function AdminDashboardContent() {
     )
   );
   const archivedEvents = newestEventsFirst(
-    platformEvents.filter(
-      (event) => (event.lifecycleStatus || "ACTIVE") === "ARCHIVED"
+    platformEvents.filter((event) =>
+      ["ARCHIVED", "CANCELLED"].includes(event.lifecycleStatus || "ACTIVE")
     )
   );
 
@@ -783,7 +816,7 @@ function AdminDashboardContent() {
                   {[
                     { id: "manage", label: "Manage Events" },
                     { id: "completed", label: "Completed Events" },
-                    { id: "archived", label: "Archived Events" },
+                    { id: "archived", label: "Cancelled" },
                     { id: "create", label: "Create Event" },
                   ].map((tab) => (
                     <button
@@ -843,7 +876,8 @@ function AdminDashboardContent() {
                         <EventCard
                           key={event._id}
                           event={event}
-                          onDelete={() => requestArchiveEvent(event)}
+                          onCancel={() => requestCancelEvent(event)}
+                          onPermanentDelete={() => requestPermanentDeleteEvent(event)}
                           onUpdateStatus={updateEventStatus}
                           isDeleting={deletingId === event._id}
                           onEdit={(e) => {
@@ -881,7 +915,8 @@ function AdminDashboardContent() {
                           <EventCard
                             key={event._id}
                             event={event}
-                            onDelete={() => requestArchiveEvent(event)}
+                              onCancel={() => requestCancelEvent(event)}
+                            onPermanentDelete={() => requestPermanentDeleteEvent(event)}
                             onUpdateStatus={updateEventStatus}
                             isDeleting={deletingId === event._id}
                             onViewParticipants={(e) => setViewingEvent(e)}
@@ -897,10 +932,11 @@ function AdminDashboardContent() {
                 <div className="rounded-2xl border border-[#e1e7f2] bg-white p-6 shadow-[0_14px_34px_rgba(10,47,102,0.08)]">
                   <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
                     <h2 className="text-xl font-black text-[#17120a]">
-                      Archived Platform Events
+                      Cancelled Events
                     </h2>
                     <div className="rounded-lg border border-blue-100 bg-blue-50 px-4 py-2 text-sm font-bold text-[#0a2f66]">
-                      Archived events stay available for review and can be restored.
+                      Restore an event, or permanently delete it (results and
+                      certificates are always preserved).
                     </div>
                   </div>
 
@@ -916,7 +952,8 @@ function AdminDashboardContent() {
                           <EventCard
                             key={event._id}
                             event={event}
-                            onDelete={() => requestArchiveEvent(event)}
+                              onCancel={() => requestCancelEvent(event)}
+                            onPermanentDelete={() => requestPermanentDeleteEvent(event)}
                             onUpdateStatus={updateEventStatus}
                             isDeleting={deletingId === event._id}
                             onEdit={(e) => {
@@ -987,8 +1024,10 @@ function AdminDashboardContent() {
             updateStatus(confirmState.school._id, confirmState.newStatus);
           } else if (confirmState?.type === "school-password") {
             resetSchoolPassword(confirmState.school);
-          } else if (confirmState?.type === "event-archive") {
-            deleteEvent(confirmState.event._id);
+          } else if (confirmState?.type === "event-cancel") {
+            cancelEvent(confirmState.event._id);
+          } else if (confirmState?.type === "event-permanent-delete") {
+            permanentlyDeleteEvent(confirmState.event._id);
           }
         }}
       />

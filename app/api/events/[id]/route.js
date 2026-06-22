@@ -4,6 +4,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import Event from "@/models/Event";
 import { syncEventSchoolInvitations } from "@/lib/eventInvitations";
+import { getEventDeletionPolicy } from "@/lib/eventDeletion";
 import { validateEventDates } from "@/lib/eventDates";
 import { validateEventCapacity } from "@/lib/eventCapacity";
 import { normalizeGradeValue } from "@/lib/schoolGrades";
@@ -351,9 +352,10 @@ export async function DELETE(req, props) {
       return NextResponse.json({ message: "Forbidden" }, { status: 403 });
     }
 
-    if (event.resultsPublished) {
+    const archivePolicy = getEventDeletionPolicy(event);
+    if (!archivePolicy.canArchive) {
       return NextResponse.json(
-        { message: "Events cannot be archived after results are published." },
+        { message: archivePolicy.archiveBlockedReason || "This event cannot be archived." },
         { status: 400 }
       );
     }

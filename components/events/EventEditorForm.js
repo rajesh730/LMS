@@ -55,7 +55,6 @@ function buildInitialFormData(initialData, ownerMode) {
 }
 
 export default function EventEditorForm({
-  teachers = [],
   onEventCreated,
   initialData = null,
   onCancel,
@@ -174,16 +173,6 @@ export default function EventEditorForm({
         : [...new Set([...prev.eligibleGrades, ...groupGrades])];
 
       return { ...prev, eligibleGrades: nextGrades };
-    });
-  };
-
-  const handleMentorToggle = (mentorId) => {
-    setFormData((prev) => {
-      const nextMentors = prev.assignedMentors.includes(mentorId)
-        ? prev.assignedMentors.filter((id) => id !== mentorId)
-        : [...prev.assignedMentors, mentorId];
-
-      return { ...prev, assignedMentors: nextMentors };
     });
   };
 

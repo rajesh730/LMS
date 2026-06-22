@@ -5,7 +5,6 @@ import {
   FaBookOpen,
   FaCalendarAlt,
   FaCheckCircle,
-  FaClock,
   FaEye,
   FaFileAlt,
   FaHome,
@@ -17,7 +16,13 @@ import {
 import SchoolMagazineReviewManager from "@/components/school/SchoolMagazineReviewManager";
 import AlertBanner from "@/components/ui/AlertBanner";
 import LoadingState from "@/components/ui/LoadingState";
+import WritingContent from "@/components/WritingContent";
+import useWorkIndicators from "@/lib/useWorkIndicators";
 import { getWritingCategoryLabel } from "@/lib/writingCategories";
+
+function getReadMinutes(content) {
+  return Math.max(1, Math.ceil(wordCount(content) / 180));
+}
 
 function formatDate(value) {
   if (!value) return "";
@@ -72,8 +77,26 @@ function wordCount(value) {
     .filter(Boolean).length;
 }
 
-function MagazineTabButton({ id, activeTab, onClick, icon: Icon, label, helper }) {
+function MagazineTabButton({
+  id,
+  activeTab,
+  onClick,
+  icon: Icon,
+  label,
+  helper,
+  count = 0,
+  tone = "neutral",
+  dot = false,
+}) {
   const isActive = activeTab === id;
+  const pillClass = isActive
+    ? "bg-white/20 text-white"
+    : tone === "attention"
+    ? "bg-amber-100 text-amber-700"
+    : "bg-purple-50 text-purple-700";
+  // The red "new activity here" dot stays visible (even on the active tab)
+  // until the tab is clicked, which marks its content seen.
+  const showDot = dot;
 
   return (
     <button
@@ -86,15 +109,18 @@ function MagazineTabButton({ id, activeTab, onClick, icon: Icon, label, helper }
       }`}
     >
       <span
-        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border ${
+        className={`relative flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border ${
           isActive
             ? "border-white/30 bg-white/20 text-white"
             : "border-purple-100 bg-purple-50 text-purple-700"
         }`}
       >
         <Icon />
+        {showDot && (
+          <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-red-500 ring-2 ring-white" />
+        )}
       </span>
-      <span>
+      <span className="min-w-0">
         <span className="block text-sm font-black leading-tight">{label}</span>
         <span
           className={`mt-0.5 block text-[11px] font-semibold ${
@@ -104,6 +130,13 @@ function MagazineTabButton({ id, activeTab, onClick, icon: Icon, label, helper }
           {helper}
         </span>
       </span>
+      {count > 0 && (
+        <span
+          className={`ml-auto inline-flex h-6 min-w-6 items-center justify-center rounded-full px-1.5 text-[11px] font-black ${pillClass}`}
+        >
+          {count}
+        </span>
+      )}
     </button>
   );
 }
@@ -291,6 +324,7 @@ function WritingTable({ articles, busyId, emptyState, mode, onRead, onAction }) 
 }
 
 export default function SchoolMagazineManager() {
+  const { getIndicator, markSurfaceSeen } = useWorkIndicators();
   const [activeTab, setActiveTab] = useState("wall");
   const [activeGrade, setActiveGrade] = useState("ALL");
   const [gradeOptions, setGradeOptions] = useState([]);
@@ -299,6 +333,13 @@ export default function SchoolMagazineManager() {
   const [publishedArticles, setPublishedArticles] = useState([]);
   const [pendingCount, setPendingCount] = useState(0);
   const [currentIssue, setCurrentIssue] = useState(null);
+
+  // Clicking the School Wall tab marks its new posts "seen" → the red dot
+  // clears until the next new post arrives.
+  const handleSelectTab = (id) => {
+    setActiveTab(id);
+    if (id === "wall") void markSurfaceSeen("school.schoolWall");
+  };
   const [magazineIssues, setMagazineIssues] = useState([]);
   const [selectedIssueId, setSelectedIssueId] = useState("");
   const [selectedIssueMonth, setSelectedIssueMonth] = useState("");
@@ -628,6 +669,8 @@ export default function SchoolMagazineManager() {
     }
   };
 
+  const shownPublicly = approvedArticles.filter((article) => article.isPublished).length;
+
   const metrics = [
     ["School Wall Posts", pendingCount, FaFileAlt, "border-purple-100 bg-purple-50 text-purple-700"],
     ["Fresh For Magazine", approvedArticles.filter((article) => !article.magazineIssue && isFreshForMagazine(article)).length, FaCheckCircle, "border-emerald-100 bg-emerald-50 text-emerald-700"],
@@ -672,26 +715,30 @@ export default function SchoolMagazineManager() {
           <MagazineTabButton
             id="wall"
             activeTab={activeTab}
-            onClick={setActiveTab}
+            onClick={handleSelectTab}
             icon={FaInbox}
             label="School Wall"
             helper="Student posts"
+            count={pendingCount}
+            dot={getIndicator("school.magazine").count > 0}
           />
           <MagazineTabButton
             id="magazine"
             activeTab={activeTab}
-            onClick={setActiveTab}
+            onClick={handleSelectTab}
             icon={FaRegNewspaper}
             label="School Magazine"
-            helper="Magazine issue"
+            helper="Created magazines"
+            count={magazineIssues.length}
           />
           <MagazineTabButton
             id="home"
             activeTab={activeTab}
-            onClick={setActiveTab}
+            onClick={handleSelectTab}
             icon={FaHome}
             label="Show To Home"
-            helper="Public homepage"
+            helper="Shown publicly"
+            count={shownPublicly}
           />
           <label className="flex min-h-12 items-center gap-2 rounded-lg border border-[#dbe5f4] bg-white px-3 text-xs font-black text-[#0a2f66]">
             Grade
@@ -795,6 +842,16 @@ export default function SchoolMagazineManager() {
                   {readingArticle.authorStudent?.grade || "Grade"} - Roll{" "}
                   {readingArticle.authorStudent?.rollNumber || "-"}
                 </p>
+                <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px] font-bold text-[#75869b]">
+                  <span className="inline-flex items-center gap-1.5">
+                    <FaCalendarAlt />
+                    Posted {formatShortDate(readingArticle.submittedAt || readingArticle.updatedAt)}
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <FaBookOpen />
+                    {getReadMinutes(readingArticle.content)} min read
+                  </span>
+                </div>
               </div>
               <button
                 type="button"
@@ -805,9 +862,10 @@ export default function SchoolMagazineManager() {
                 <FaTimes />
               </button>
             </div>
-            <article className="mt-5 whitespace-pre-wrap rounded-lg border border-[#e1e7f2] bg-[#f8fbff] p-5 text-sm font-semibold leading-7 text-[#27364a]">
-              {readingArticle.content}
-            </article>
+            <WritingContent
+              content={readingArticle.content}
+              className="mt-5 rounded-lg border border-[#e1e7f2] bg-[#f8fbff] p-5 text-sm font-semibold leading-7 text-[#27364a]"
+            />
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs font-black text-[#52657d]">
               <span>{wordCount(readingArticle.content)} words</span>
               <StatusPill article={readingArticle} />
@@ -1089,44 +1147,28 @@ function PublishingPanel({
                           openIssue();
                         }
                       }}
-                      className={`rounded-lg border p-4 text-left transition hover:-translate-y-0.5 hover:shadow-md ${
+                      className={`rounded-lg border p-4 text-left text-[#17120a] transition hover:-translate-y-0.5 hover:shadow-md cursor-pointer outline-none focus:ring-2 focus:ring-purple-300 ${
                         isSelected
-                          ? "border-purple-300 bg-purple-800 text-white"
-                          : "border-[#e1e7f2] bg-[#f8fbff] text-[#17120a] hover:border-purple-200"
-                      } cursor-pointer outline-none focus:ring-2 focus:ring-purple-300`}
+                          ? "border-purple-400 bg-purple-50 ring-2 ring-purple-200"
+                          : "border-[#e1e7f2] bg-[#f8fbff] hover:border-purple-200"
+                      }`}
                     >
                     <div className="flex items-start justify-between gap-3">
                       <div className="font-black">{issue.title}</div>
                       <span
                         className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase ${
                           issue.status === "PUBLISHED"
-                            ? isSelected
-                              ? "bg-white/20 text-white"
-                              : "bg-emerald-50 text-emerald-700"
-                            : isSelected
-                            ? "bg-white/20 text-white"
+                            ? "bg-emerald-50 text-emerald-700"
                             : "bg-amber-50 text-amber-700"
                         }`}
                       >
                         {issue.status === "PUBLISHED" ? "Published" : "Draft"}
                       </span>
                     </div>
-                    <div
-                      className={`mt-2 text-xs font-bold ${
-                        isSelected
-                          ? "text-white/82"
-                          : "text-[#52657d]"
-                      }`}
-                    >
+                    <div className="mt-2 text-xs font-bold text-[#52657d]">
                       {formatShortDate(issue.publishedAt || issue.weekStart)}
                     </div>
-                    <div
-                      className={`mt-3 inline-flex rounded-full px-3 py-1 text-[11px] font-black uppercase ${
-                        isSelected
-                          ? "bg-white/20 text-white"
-                          : "bg-white text-purple-700"
-                      }`}
-                    >
+                    <div className="mt-3 inline-flex rounded-full bg-white px-3 py-1 text-[11px] font-black uppercase text-purple-700 ring-1 ring-inset ring-purple-100">
                       {issue.articleCount || 0} writings
                     </div>
                     <div className="mt-4 flex flex-wrap gap-2">
@@ -1138,11 +1180,7 @@ function PublishingPanel({
                             onPublishIssue(issue.id);
                           }}
                           disabled={issueBusy || (issue.articleCount || 0) === 0}
-                          className={`inline-flex h-9 items-center justify-center rounded-lg px-3 text-xs font-black ${
-                            isSelected
-                              ? "bg-white/20 text-white disabled:opacity-50"
-                              : "bg-emerald-700 text-white hover:bg-emerald-800 disabled:opacity-50"
-                          }`}
+                          className="inline-flex h-9 items-center justify-center rounded-lg bg-emerald-700 px-3 text-xs font-black text-white hover:bg-emerald-800 disabled:opacity-50"
                         >
                           Publish
                         </button>
@@ -1154,12 +1192,10 @@ function PublishingPanel({
                           onToggleIssueHome(issue);
                         }}
                         disabled={issueBusy || issue.status !== "PUBLISHED"}
-                        className={`inline-flex h-9 items-center justify-center rounded-lg px-3 text-xs font-black ${
-                          isSelected
-                            ? "bg-white/20 text-white hover:bg-white/25 disabled:opacity-50"
-                            : issue.showOnHome
-                            ? "bg-sky-50 text-sky-700 hover:bg-sky-100 disabled:opacity-50"
-                            : "bg-purple-50 text-purple-700 hover:bg-purple-100 disabled:opacity-50"
+                        className={`inline-flex h-9 items-center justify-center rounded-lg px-3 text-xs font-black disabled:opacity-50 ${
+                          issue.showOnHome
+                            ? "bg-sky-50 text-sky-700 hover:bg-sky-100"
+                            : "bg-purple-50 text-purple-700 hover:bg-purple-100"
                         }`}
                       >
                         {issue.showOnHome ? "Hide from Home" : "Show to Home"}
@@ -1171,11 +1207,7 @@ function PublishingPanel({
                           onDeleteIssue(issue.id);
                         }}
                         disabled={issueBusy}
-                        className={`inline-flex h-9 items-center justify-center rounded-lg px-3 text-xs font-black ${
-                          isSelected
-                            ? "bg-white/20 text-white hover:bg-white/25 disabled:opacity-50"
-                            : "bg-rose-50 text-rose-700 hover:bg-rose-100 disabled:opacity-50"
-                        }`}
+                        className="inline-flex h-9 items-center justify-center rounded-lg bg-rose-50 px-3 text-xs font-black text-rose-700 hover:bg-rose-100 disabled:opacity-50"
                       >
                         Delete
                       </button>

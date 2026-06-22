@@ -201,16 +201,6 @@ export default function RoundsTab({ event, readOnly = false, onCompetitionClosed
       ? String(selectedRound._id) === String(latestRound._id)
       : false;
   const statusButtons = isFinalRound ? FINAL_STATUS_BUTTONS : NON_FINAL_STATUS_BUTTONS;
-  const completedRoundCount = rounds.filter((round) =>
-    ["COMPLETED", "SHORTLIST_PUBLISHED"].includes(round.status)
-  ).length;
-  const certificateCount = event?.resultsPublished
-    ? rounds.flatMap((round) => round.participants || []).filter((participant) =>
-        ["WINNER", "RUNNER_UP", "THIRD_PLACE", "FINALIST", "SELECTED"].includes(
-          participant.status
-        )
-      ).length
-    : 0;
 
   const selectedCount = useMemo(
     () =>

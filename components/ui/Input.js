@@ -2,7 +2,7 @@ import clsx from "clsx";
 import { forwardRef, useImperativeHandle, useRef } from "react";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 
-export default function InputForwardRef({
+function InputForwardRef({
   label,
   id,
   error,
@@ -84,3 +84,5 @@ export function PasswordInput({
     </div>
   );
 }
+
+export default Input;

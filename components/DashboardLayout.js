@@ -7,16 +7,6 @@ import { FaBars, FaTimes } from 'react-icons/fa';
 import PravyoLogo from '@/components/brand/PravyoLogo';
 import AuthenticatedPublicLinkGuard from '@/components/AuthenticatedPublicLinkGuard';
 
-function getInitials(name = '') {
-  return String(name)
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((p) => p[0])
-    .join('')
-    .toUpperCase() || 'U';
-}
-
 export default function DashboardLayout({ children }) {
   const { data: session } = useSession();
   const [isNavOpen, setIsNavOpen] = useState(false);
@@ -71,7 +61,6 @@ export default function DashboardLayout({ children }) {
 
   const userName = session?.user?.name || session?.user?.email || 'Dashboard';
   const userRole = String(session?.user?.role || 'User').replaceAll('_', ' ');
-  const initials = getInitials(session?.user?.name || '');
 
   return (
     <div className="pravyo-page-shell min-h-screen font-sans">

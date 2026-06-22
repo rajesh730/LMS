@@ -12,7 +12,6 @@ import {
   FaMedal,
   FaSchool,
   FaTrophy,
-  FaUserGraduate,
 } from "react-icons/fa";
 import "@/models/Event";
 import "@/models/Student";

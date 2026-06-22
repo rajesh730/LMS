@@ -9,7 +9,9 @@ import EventRound from "@/models/EventRound";
 import EventSchoolInvitation from "@/models/EventSchoolInvitation";
 import ParticipationRequest from "@/models/ParticipationRequest";
 import RoundParticipant from "@/models/RoundParticipant";
+import Notice from "@/models/Notice";
 import { canManageEventRecord } from "@/lib/authz";
+import { getEventDeletionPolicy } from "@/lib/eventDeletion";
 import { syncEventSchoolInvitations } from "@/lib/eventInvitations";
 import { publishEventRealtimeUpdate } from "@/lib/eventRealtime";
 
@@ -38,9 +40,10 @@ export async function POST(req, props) {
       return NextResponse.json({ message: "Forbidden" }, { status: 403 });
     }
 
-    if (event.resultsPublished) {
+    const archivePolicy = getEventDeletionPolicy(event);
+    if (!archivePolicy.canArchive) {
       return NextResponse.json(
-        { message: "Events cannot be archived after results are published." },
+        { message: archivePolicy.archiveBlockedReason || "This event cannot be archived." },
         { status: 400 }
       );
     }
@@ -97,9 +100,14 @@ export async function DELETE(req, props) {
       return NextResponse.json({ message: "Forbidden" }, { status: 403 });
     }
 
-    if (String(event.lifecycleStatus || "").toUpperCase() !== "ARCHIVED") {
+    const deletePolicy = getEventDeletionPolicy(event);
+    if (!deletePolicy.canDelete) {
       return NextResponse.json(
-        { message: "Only archived events can be permanently deleted." },
+        {
+          message:
+            deletePolicy.deleteBlockedReason ||
+            "Only archived or cancelled events can be permanently deleted.",
+        },
         { status: 400 }
       );
     }
@@ -111,6 +119,9 @@ export async function DELETE(req, props) {
       EventSchoolInvitation.deleteMany({ event: event._id }),
       ParticipationRequest.deleteMany({ event: event._id }),
       RoundParticipant.deleteMany({ event: event._id }),
+      // Student-facing EVENT notices reference the event; remove them too so we
+      // don't leave notices pointing at a deleted event.
+      Notice.deleteMany({ event: event._id }),
     ]);
     await Event.deleteOne({ _id: event._id });
 

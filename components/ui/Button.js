@@ -1,5 +1,4 @@
 import clsx from "clsx";
-import { forwardRef } from "react";
 
 const VARIANTS = {
   primary: "pravyo-btn-primary bg-[#4326e8] text-white hover:bg-[#3217d3]",

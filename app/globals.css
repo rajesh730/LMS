@@ -2990,3 +2990,35 @@ button.round-status-final {
   color: #ffffff !important;
   -webkit-text-fill-color: #ffffff !important;
 }
+
+.student-portfolio-brand-band,
+.student-portfolio-brand-band :where(.student-portfolio-brand-title, .student-portfolio-brand-chip, .student-portfolio-brand-icon) {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+.student-portfolio-brand-muted {
+  color: rgba(255, 255, 255, 0.9) !important;
+  -webkit-text-fill-color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.student-portfolio-cta-button,
+.student-portfolio-cta-button:hover,
+.student-portfolio-cta-button:focus {
+  color: #3120c9 !important;
+  -webkit-text-fill-color: #3120c9 !important;
+}
+
+.student-portfolio-cta-button svg {
+  color: currentColor !important;
+  -webkit-text-fill-color: currentColor !important;
+}
+
+@media (max-width: 639px) {
+  .student-portfolio-shell > section,
+  .student-portfolio-shell > div {
+    border-left-width: 0 !important;
+    border-right-width: 0 !important;
+    border-radius: 0 !important;
+  }
+}

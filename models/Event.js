@@ -53,7 +53,7 @@ const EventSchema = new mongoose.Schema(
     },
     lifecycleStatus: {
       type: String,
-      enum: ["ACTIVE", "COMPLETED", "ARCHIVED"],
+      enum: ["ACTIVE", "COMPLETED", "ARCHIVED", "CANCELLED"],
       default: "ACTIVE",
     },
     eventWorkflowStatus: {
@@ -233,6 +233,8 @@ EventSchema.pre("validate", function () {
   );
   if (this.lifecycleStatus === "ARCHIVED") {
     this.eventWorkflowStatus = "ARCHIVED";
+  } else if (this.lifecycleStatus === "CANCELLED") {
+    this.eventWorkflowStatus = "CANCELLED";
   } else if (this.lifecycleStatus === "COMPLETED" && this.resultsPublished) {
     this.eventWorkflowStatus = "COMPLETED";
   } else if (this.resultsPublished) {

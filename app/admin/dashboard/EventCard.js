@@ -2,22 +2,23 @@
 
 import Link from "next/link";
 import {
-  FaArchive,
+  FaBan,
   FaBell,
   FaCalendarAlt,
   FaCircle,
   FaDownload,
   FaEdit,
   FaHistory,
+  FaTrash,
   FaTrophy,
   FaUsers,
 } from "react-icons/fa";
 import { isTeamEventLike } from "@/lib/eventParticipationFormat";
 import {
-  formatEventWorkflowStatus,
   getEventNextActionLabel,
   getEventWorkflowStatus,
 } from "@/lib/eventWorkflow";
+import { getEventDeletionPolicy } from "@/lib/eventDeletion";
 
 function formatType(value) {
   return String(value || "EVENT").replaceAll("_", " ");
@@ -30,14 +31,6 @@ function formatDate(value) {
     day: "numeric",
     year: "numeric",
   });
-}
-
-function isApprovedEvent(event) {
-  return String(event.status || "APPROVED").toUpperCase() === "APPROVED";
-}
-
-function getCurrentStageLabel(event) {
-  return formatEventWorkflowStatus(getEventWorkflowStatus(event));
 }
 
 function getEventUnitLabel(event) {
@@ -61,7 +54,8 @@ function formatGradeSummary(grades = []) {
 
 export default function EventCard({
   event,
-  onDelete,
+  onCancel,
+  onPermanentDelete,
   isDeleting,
   onEdit,
   onUpdateStatus,
@@ -69,11 +63,15 @@ export default function EventCard({
 }) {
   const isTeamEvent = isTeamEventLike(event);
   const eventState = String(event.lifecycleStatus || "ACTIVE").toUpperCase();
-  const isArchivedMode = actionMode === "archived" || eventState === "ARCHIVED";
+  const isCancelledState = eventState === "CANCELLED";
+  // Archived and cancelled are both terminal: managed the same way (restore /
+  // permanently delete), and never editable.
+  const isArchivedMode =
+    actionMode === "archived" || eventState === "ARCHIVED" || isCancelledState;
+  const policy = getEventDeletionPolicy(event);
   const isFinished =
     event.resultsPublished || eventState === "COMPLETED" || eventState === "ARCHIVED";
   const registered = getRegisteredCount(event);
-  const currentStage = getCurrentStageLabel(event);
   const workflowStatus = getEventWorkflowStatus(event);
   const nextAction = getEventNextActionLabel(event);
   const gradeSummary = formatGradeSummary(event.eligibleGrades || []);
@@ -174,6 +172,17 @@ export default function EventCard({
               <span className="rounded-full bg-[#f4f8fd] px-2 py-0.5 text-[10px] font-black uppercase text-[#52657d]">
                 {isTeamEvent ? "Team Event" : "Individual Event"}
               </span>
+              {(isCancelledState || eventState === "ARCHIVED") && (
+                <span
+                  className={`rounded-full px-2 py-0.5 text-[10px] font-black uppercase ${
+                    isCancelledState
+                      ? "bg-rose-50 text-rose-700"
+                      : "bg-slate-100 text-slate-600"
+                  }`}
+                >
+                  {isCancelledState ? "Cancelled" : "Archived"}
+                </span>
+              )}
               <span
                 title={gradeTitle}
                 className="max-w-[180px] truncate rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-black uppercase text-[#0a2f66]"
@@ -233,25 +242,37 @@ export default function EventCard({
             </div>
             <div className="mt-3 flex flex-wrap gap-2">
               {isArchivedMode ? (
-              <button
-                type="button"
-                onClick={() => onUpdateStatus?.(event._id, "ACTIVE")}
-                className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-[#cbd5e1] bg-white px-3.5 py-1.5 text-xs font-bold text-[#1e293b] transition hover:bg-[#f8fafc] hover:text-[#0a2f66]"
-              >
-                <FaHistory />
-                Restore Event
-              </button>
-            ) : (
-              <button
-                type="button"
-                disabled={isDeleting}
-                onClick={() => onDelete?.(event)}
-                className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-rose-200 bg-white px-3.5 py-1.5 text-xs font-bold text-rose-700 transition hover:bg-rose-50 disabled:cursor-wait disabled:opacity-60"
-              >
-                <FaArchive />
-                Delete / Archive Event
-              </button>
-            )}
+                policy.canDelete ? (
+                  <button
+                    type="button"
+                    disabled={isDeleting}
+                    onClick={() => onPermanentDelete?.(event)}
+                    className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-rose-300 bg-rose-50 px-3.5 py-1.5 text-xs font-bold text-rose-700 transition hover:bg-rose-100 disabled:cursor-wait disabled:opacity-60"
+                  >
+                    <FaTrash />
+                    Delete Permanently
+                  </button>
+                ) : (
+                  <span
+                    title={policy.deleteBlockedReason}
+                    className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-[#e1e7f2] bg-[#f8fafc] px-3.5 py-1.5 text-[11px] font-bold text-[#75869b]"
+                  >
+                    Kept for records — cannot delete
+                  </span>
+                )
+              ) : (
+                policy.canCancel && (
+                  <button
+                    type="button"
+                    disabled={isDeleting}
+                    onClick={() => onCancel?.(event)}
+                    className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-rose-200 bg-white px-3.5 py-1.5 text-xs font-bold text-rose-700 transition hover:bg-rose-50 disabled:cursor-wait disabled:opacity-60"
+                  >
+                    <FaBan />
+                    Cancel Event
+                  </button>
+                )
+              )}
             {event.participants?.length > 0 && (
               <button
                 type="button"

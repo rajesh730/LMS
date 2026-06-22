@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import { useEffect } from "react";
@@ -20,6 +19,7 @@ const HREF_INDICATOR_KEYS = {
   "/admin/feedback": "admin.feedback",
   "/admin/dashboard?tab=spotlight": "admin.spotlight",
   "/school/dashboard?tab=school-events": "school.schoolEvents",
+  "/school/dashboard?tab=platform-events": "school.platformEvents",
   "/school/dashboard?tab=student-notices": "school.studentNotices",
   "/school/dashboard?tab=notices": "school.receivedNotices",
   "/school/dashboard?tab=magazine": "school.magazine",
@@ -39,6 +39,7 @@ const SCHOOL_NAV_GROUPS = [
       "Students",
       "Teachers",
       "School Events",
+      "Platform Events",
       "Student Notices",
       "Received Notices",
     ],

@@ -17,12 +17,18 @@ import EmptyState from "@/components/EmptyState";
 import LoadingState from "@/components/ui/LoadingState";
 import AlertBanner from "@/components/ui/AlertBanner";
 import useRealtimeChannel from "@/lib/useRealtimeChannel";
+import useWorkIndicators from "@/lib/useWorkIndicators";
 import { isTeamEventLike } from "@/lib/eventParticipationFormat";
 import {
   formatEventWorkflowStatus,
   getEventNextActionLabel,
   getEventWorkflowStatus,
 } from "@/lib/eventWorkflow";
+
+// Sub-tabs that carry a "new activity" red dot map to a seen-surface.
+const TAB_SEEN_SURFACE = {
+  COMPLETED: "student.eventResults",
+};
 
 function formatType(value) {
   return String(value || "EVENT").replaceAll("_", " ");
@@ -50,6 +56,10 @@ function formatGradeSummary(grades = []) {
   if (visibleGrades.length === 0) return "All grades";
   if (visibleGrades.length <= 2) return visibleGrades.join(", ");
   return `${visibleGrades.length} grades`;
+}
+
+function isCancelled(event) {
+  return String(event.lifecycleStatus || "ACTIVE").toUpperCase() === "CANCELLED";
 }
 
 function isCompleted(event) {
@@ -108,6 +118,8 @@ function statusClasses(status) {
 }
 
 function getStudentNextAction(event) {
+  if (isCancelled(event))
+    return "This event was cancelled. Your registration was withdrawn.";
   if (isCompleted(event)) return "Review final result and certificates.";
   if (event.participationStatus) return "Follow notices, rounds, and event updates.";
   if (event.isGradeEligible === false) {
@@ -118,6 +130,7 @@ function getStudentNextAction(event) {
 }
 
 export default function StudentEventsManager() {
+  const { getIndicator, markSurfaceSeen } = useWorkIndicators();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState("ALL");
@@ -372,21 +385,47 @@ export default function StudentEventsManager() {
       <section className="overflow-hidden rounded-2xl border border-[#e1e7f2] bg-white shadow-[0_14px_34px_rgba(10,47,102,0.08)]">
         <div className="border-b border-[#e1e7f2]">
           <div className="flex flex-wrap gap-0 px-4">
-            {filterTabs.map(([key, label, Icon]) => (
+            {filterTabs.map(([key, label, Icon, count]) => {
+              const seenSurface = TAB_SEEN_SURFACE[key];
+              const showDot =
+                Boolean(seenSurface) &&
+                getIndicator(seenSurface).count > 0 &&
+                activeFilter !== key;
+              return (
               <button
                 key={key}
                 type="button"
-                onClick={() => setActiveFilter(key)}
+                onClick={() => {
+                  setActiveFilter(key);
+                  if (seenSurface) void markSurfaceSeen(seenSurface);
+                }}
                 className={`relative inline-flex min-h-14 items-center gap-2 px-5 text-sm font-black transition ${
                   activeFilter === key
                     ? "text-[#0a2f66] after:absolute after:bottom-0 after:left-0 after:h-[3px] after:w-full after:rounded-full after:bg-[#0a2f66]"
                     : "text-[#24314d] hover:bg-[#f8fbff] hover:text-[#0a2f66]"
                 }`}
               >
-                <Icon />
+                <span className="relative inline-flex">
+                  <Icon />
+                  {showDot && (
+                    <span className="absolute -right-1.5 -top-1.5 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white" />
+                  )}
+                </span>
                 {label}
+                {count > 0 && (
+                  <span
+                    className={`ml-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-black ${
+                      activeFilter === key
+                        ? "bg-blue-100 text-[#0a2f66]"
+                        : "bg-[#eef2f8] text-[#52657d]"
+                    }`}
+                  >
+                    {count}
+                  </span>
+                )}
               </button>
-            ))}
+              );
+            })}
           </div>
 
           <div className="grid gap-3 border-t border-[#e1e7f2] p-4 lg:grid-cols-[minmax(240px,1fr)_180px_180px_auto_auto]">
@@ -475,6 +514,7 @@ export default function StudentEventsManager() {
                     ? event.eligibleGrades.join(", ")
                     : "All grades";
                 const finished = isCompleted(event);
+                const cancelled = isCancelled(event);
                 const primaryHref = `/student/events/${event._id}${
                   finished ? "?tab=results" : ""
                 }`;
@@ -526,6 +566,16 @@ export default function StudentEventsManager() {
                             <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-black uppercase text-[#0a2f66]">
                               {formatType(event.eventType)}
                             </span>
+                            {event.eventScope === "PLATFORM" && (
+                              <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-black uppercase text-indigo-700">
+                                Platform
+                              </span>
+                            )}
+                            {cancelled && (
+                              <span className="rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-black uppercase text-rose-700">
+                                Cancelled
+                              </span>
+                            )}
                             <span className={`rounded-full px-2 py-0.5 text-[10px] font-black uppercase ${statusClasses(studentStatus)}`}>
                               {formatStudentStatus(studentStatus)}
                             </span>
@@ -593,7 +643,7 @@ export default function StudentEventsManager() {
                       </div>
 
                       <div className="relative flex flex-col gap-2 border-l border-[#e1e7f2] pl-4">
-                        {event.canRequest && !event.participationStatus && !finished ? (
+                        {event.canRequest && !event.participationStatus && !finished && !cancelled ? (
                           <button
                             type="button"
                             onClick={() => enroll(event)}

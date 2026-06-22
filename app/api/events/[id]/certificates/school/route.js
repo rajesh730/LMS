@@ -47,9 +47,6 @@ export async function GET(req, props) {
       .populate("captainStudent", "name grade")
       .sort({ awardedAt: -1 })
       .lean();
-    const isTeamEvent =
-      String(event?.participationFormat || "INDIVIDUAL").toUpperCase() === "TEAM";
-
     const sortedCertificates = [...certificates].sort((a, b) => {
       const recipientTypeDelta =
         String(a.recipientType || "STUDENT") === String(b.recipientType || "STUDENT")

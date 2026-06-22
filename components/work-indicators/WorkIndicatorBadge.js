@@ -5,6 +5,7 @@ import { getWorkIndicatorBadgeText } from "@/lib/workIndicatorLabels";
 export default function WorkIndicatorBadge({
   count,
   tone = "action",
+  label = "",
   compact = false,
   className = "",
 }) {
@@ -17,7 +18,13 @@ export default function WorkIndicatorBadge({
 
   if (numericCount <= 0) return null;
 
-  const toneClass = "pravyo-notification-badge bg-red-500 text-white ring-1 ring-red-200";
+  // "new" = something new to look at (e.g. invitations, unread notices) → blue.
+  // "action" = a to-do you must clear (e.g. results to publish) → red.
+  const toneClass =
+    tone === "new"
+      ? "pravyo-notification-badge bg-indigo-500 text-white ring-1 ring-indigo-200"
+      : "pravyo-notification-badge bg-red-500 text-white ring-1 ring-red-200";
+  const tooltip = label || fullLabel;
 
   return (
     <span
@@ -26,8 +33,8 @@ export default function WorkIndicatorBadge({
           ? "h-5 min-w-5 px-1 text-[10px]"
           : "h-6 min-w-6 px-2 text-xs"
       } ${className}`}
-      aria-label={ariaLabel}
-      title={fullLabel}
+      aria-label={label || ariaLabel}
+      title={tooltip}
     >
       {compact ? displayCount : fullLabel}
     </span>

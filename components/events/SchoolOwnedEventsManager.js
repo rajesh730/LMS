@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
-  FaArchive,
+  FaBan,
   FaBell,
   FaCalendarAlt,
   FaCheckCircle,
@@ -24,12 +24,26 @@ import LoadingState from "@/components/ui/LoadingState";
 import AlertBanner from "@/components/ui/AlertBanner";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import useRealtimeChannel from "@/lib/useRealtimeChannel";
+import useWorkIndicators from "@/lib/useWorkIndicators";
 import { isTeamEventLike } from "@/lib/eventParticipationFormat";
 import {
   formatEventWorkflowStatus,
   getEventNextActionLabel,
   getEventWorkflowStatus,
 } from "@/lib/eventWorkflow";
+import { getEventDeletionPolicy } from "@/lib/eventDeletion";
+
+function isTerminalState(event) {
+  return ["ARCHIVED", "CANCELLED"].includes(
+    String(event.lifecycleStatus || "ACTIVE").toUpperCase()
+  );
+}
+
+// Sub-tabs that carry a "new activity" red dot map to a seen-surface; clicking
+// the tab clears that surface until something new lands.
+const TAB_SEEN_SURFACE = {
+  REGISTRATION: "school.eventRegistrations",
+};
 
 function formatType(value) {
   return String(value || "EVENT").replaceAll("_", " ");
@@ -92,6 +106,7 @@ export default function SchoolOwnedEventsManager({
   onChanged,
 }) {
   const { data: session } = useSession();
+  const { getIndicator, markSurfaceSeen } = useWorkIndicators();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState("ALL");
@@ -101,9 +116,8 @@ export default function SchoolOwnedEventsManager({
   const [visibilityFilter, setVisibilityFilter] = useState("");
   const [showFilters, setShowFilters] = useState(true);
   const [editingEvent, setEditingEvent] = useState(null);
-  const [statusMessage, setStatusMessage] = useState("");
   const [feedback, setFeedback] = useState(null);
-  const [archiveTarget, setArchiveTarget] = useState(null);
+  const [cancelTarget, setCancelTarget] = useState(null);
   const [clearTarget, setClearTarget] = useState(null);
   const [clearAllRequested, setClearAllRequested] = useState(false);
 
@@ -175,9 +189,7 @@ export default function SchoolOwnedEventsManager({
   );
 
   const eventMetrics = useMemo(() => {
-    const activeRecords = events.filter(
-      (event) => String(event.lifecycleStatus || "ACTIVE").toUpperCase() !== "ARCHIVED"
-    );
+    const activeRecords = events.filter((event) => !isTerminalState(event));
     const live = events.filter(
       (event) => isLiveEvent(event)
     );
@@ -193,9 +205,7 @@ export default function SchoolOwnedEventsManager({
           (String(event.lifecycleStatus || "").toUpperCase() === "COMPLETED" ||
             event.resultsPublished)
       ).length,
-      archived: events.filter(
-        (event) => String(event.lifecycleStatus || "").toUpperCase() === "ARCHIVED"
-      ).length,
+      archived: events.filter((event) => isTerminalState(event)).length,
       activeRecords: activeRecords.length,
     };
   }, [events]);
@@ -204,17 +214,18 @@ export default function SchoolOwnedEventsManager({
     const needle = search.trim().toLowerCase();
     return events.filter((event) => {
       const state = String(event.lifecycleStatus || "ACTIVE").toUpperCase();
+      const terminal = isTerminalState(event);
       const matchesStatus =
-        (activeFilter === "ALL" && state !== "ARCHIVED") ||
+        (activeFilter === "ALL" && !terminal) ||
         (activeFilter === "ACTIVE" &&
           isLiveEvent(event)) ||
         (activeFilter === "REGISTRATION" &&
           isRegistrationOpen(event) &&
           getRegisteredCount(event) === 0) ||
         (activeFilter === "COMPLETED" &&
-          state !== "ARCHIVED" &&
+          !terminal &&
           (state === "COMPLETED" || event.resultsPublished)) ||
-        (activeFilter === "ARCHIVED" && state === "ARCHIVED");
+        (activeFilter === "ARCHIVED" && terminal);
       const matchesSearch =
         !needle ||
         String(event.title || "").toLowerCase().includes(needle) ||
@@ -234,35 +245,33 @@ export default function SchoolOwnedEventsManager({
     });
   }, [activeFilter, events, gradeFilter, search, typeFilter, visibilityFilter]);
 
-  const handleArchive = async () => {
-    if (!archiveTarget) return;
+  const handleCancel = async () => {
+    if (!cancelTarget) return;
     try {
-      const res = await fetch(`/api/events/${archiveTarget._id}`, {
-        method: "DELETE",
+      const res = await fetch(`/api/events/${cancelTarget._id}/cancel`, {
+        method: "POST",
       });
-
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.message || "Failed to archive event");
+        throw new Error(data.message || "Failed to cancel event");
       }
-
-      setStatusMessage("Event archived.");
       setFeedback({
         type: "success",
-        title: "Event archived",
-        message: `${archiveTarget.title} moved to event history.`,
+        title: "Event cancelled",
+        message:
+          data.message ||
+          `${cancelTarget.title} was cancelled and students were notified.`,
       });
-      setArchiveTarget(null);
+      setCancelTarget(null);
       await loadEvents();
       onChanged?.();
     } catch (error) {
-      console.error("Failed to archive event", error);
       setFeedback({
         type: "error",
-        title: "Event was not archived",
-        message: error.message || "Failed to archive event.",
+        title: "Event was not cancelled",
+        message: error.message || "Failed to cancel event.",
       });
-      setArchiveTarget(null);
+      setCancelTarget(null);
     }
   };
 
@@ -331,10 +340,7 @@ export default function SchoolOwnedEventsManager({
   };
 
   const archivedEvents = useMemo(
-    () =>
-      events.filter(
-        (event) => String(event.lifecycleStatus || "").toUpperCase() === "ARCHIVED"
-      ),
+    () => events.filter((event) => isTerminalState(event)),
     [events]
   );
 
@@ -345,8 +351,8 @@ export default function SchoolOwnedEventsManager({
       }
       setFeedback({
         type: "success",
-        title: "Archived events cleared",
-        message: `${archivedEvents.length} archived event${
+        title: "Cancelled events deleted",
+        message: `${archivedEvents.length} cancelled event${
           archivedEvents.length === 1 ? "" : "s"
         } permanently deleted.`,
       });
@@ -356,8 +362,8 @@ export default function SchoolOwnedEventsManager({
     } catch (error) {
       setFeedback({
         type: "error",
-        title: "Archived events were not fully cleared",
-        message: error.message || "Failed to clear archived events.",
+        title: "Cancelled events were not fully cleared",
+        message: error.message || "Failed to delete cancelled events.",
       });
       setClearAllRequested(false);
     }
@@ -390,10 +396,10 @@ export default function SchoolOwnedEventsManager({
     },
     {
       key: "ARCHIVED",
-      label: "Archived",
+      label: "Cancelled",
       value: eventMetrics.archived,
-      note: "Older events",
-      icon: FaArchive,
+      note: "Cancelled events",
+      icon: FaBan,
       tone: "slate",
     },
   ];
@@ -411,7 +417,7 @@ export default function SchoolOwnedEventsManager({
     ["REGISTRATION", "Registration Open", FaUsers, eventMetrics.registrationOpen],
     ["ALL", "All Events", FaCalendarAlt, eventMetrics.activeRecords],
     ["COMPLETED", "Completed", FaCheckCircle, eventMetrics.completed],
-    ["ARCHIVED", "Archived", FaArchive, eventMetrics.archived],
+    ["ARCHIVED", "Cancelled", FaBan, eventMetrics.archived],
   ];
 
   return (
@@ -471,34 +477,58 @@ export default function SchoolOwnedEventsManager({
         })}
       </div>
 
-      {feedback ? (
+      {feedback && (
         <AlertBanner
           type={feedback.type}
           title={feedback.title}
           message={feedback.message}
         />
-      ) : (
-        statusMessage && <p className="text-sm font-semibold text-[#17643a]">{statusMessage}</p>
       )}
 
       <section className="overflow-hidden rounded-2xl border border-[#e1e7f2] bg-white shadow-[0_14px_34px_rgba(10,47,102,0.08)]">
         <div className="border-b border-[#e1e7f2]">
           <div className="flex flex-wrap gap-0 px-4">
-            {filterTabs.map(([key, label, Icon, count]) => (
+            {filterTabs.map(([key, label, Icon, count]) => {
+              const seenSurface = TAB_SEEN_SURFACE[key];
+              const showDot =
+                Boolean(seenSurface) &&
+                getIndicator(seenSurface).count > 0 &&
+                activeFilter !== key;
+              return (
               <button
                 key={key}
                 type="button"
-                onClick={() => setActiveFilter(key)}
+                onClick={() => {
+                  setActiveFilter(key);
+                  if (seenSurface) void markSurfaceSeen(seenSurface);
+                }}
                 className={`relative inline-flex min-h-14 items-center gap-2 px-5 text-sm font-black transition ${
                   activeFilter === key
                     ? "text-purple-700 after:absolute after:bottom-0 after:left-0 after:h-[3px] after:w-full after:rounded-full after:bg-purple-700"
                     : "text-[#24314d] hover:bg-[#f8fbff] hover:text-purple-700"
                 }`}
               >
-                <Icon />
+                <span className="relative inline-flex">
+                  <Icon />
+                  {showDot && (
+                    <span className="absolute -right-1.5 -top-1.5 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white" />
+                  )}
+                </span>
                 {label}
+                {count > 0 && (
+                  <span
+                    className={`ml-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-black ${
+                      activeFilter === key
+                        ? "bg-purple-100 text-purple-700"
+                        : "bg-[#eef2f8] text-[#52657d]"
+                    }`}
+                  >
+                    {count}
+                  </span>
+                )}
               </button>
-            ))}
+              );
+            })}
           </div>
 
           <div className="grid gap-3 border-t border-[#e1e7f2] p-4 lg:grid-cols-[minmax(240px,1fr)_150px_150px_150px_auto_auto]">
@@ -577,22 +607,28 @@ export default function SchoolOwnedEventsManager({
 
         <div className="p-4">
           {activeFilter === "ARCHIVED" && archivedEvents.length > 0 && (
-            <div className="mb-4 flex flex-col gap-3 rounded-xl border border-rose-100 bg-rose-50 p-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-sm font-black text-rose-900">
-                  Archived events
-                </p>
-                <p className="mt-1 text-xs font-semibold text-rose-700">
-                  Restore events to bring them back, or clear them permanently.
-                </p>
+            <div className="mb-4 flex flex-col gap-3 rounded-xl border border-[#e6eaf7] bg-[#fbfcff] p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-start gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500">
+                  <FaBan />
+                </span>
+                <div>
+                  <p className="text-sm font-black text-[#17120a]">
+                    Cancelled events
+                  </p>
+                  <p className="mt-0.5 text-xs font-semibold text-[#52657d]">
+                    Restore an event to bring it back, or permanently delete the
+                    records you no longer need.
+                  </p>
+                </div>
               </div>
               <button
                 type="button"
                 onClick={() => setClearAllRequested(true)}
-                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-rose-700 px-4 text-sm font-black text-white transition hover:bg-rose-800"
+                className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-xl border border-rose-200 bg-white px-4 text-sm font-black text-rose-700 transition hover:bg-rose-50"
               >
                 <FaTrash />
-                Clear all archived
+                Delete all permanently
               </button>
             </div>
           )}
@@ -616,6 +652,8 @@ export default function SchoolOwnedEventsManager({
                 const eventState = String(
                   event.lifecycleStatus || "ACTIVE"
                 ).toUpperCase();
+                const policy = getEventDeletionPolicy(event);
+                const terminal = isTerminalState(event);
                 const registered = getRegisteredCount(event);
                 const capacity = getCapacityTotal(event);
                 const currentStage = getCurrentStageLabel(event);
@@ -709,6 +747,17 @@ export default function SchoolOwnedEventsManager({
                             <span className="rounded-full bg-[#f4f8fd] px-2 py-0.5 text-[10px] font-black uppercase text-[#52657d]">
                               {isTeamEvent ? "Team Event" : "Individual Event"}
                             </span>
+                            {terminal && (
+                              <span
+                                className={`rounded-full px-2 py-0.5 text-[10px] font-black uppercase ${
+                                  eventState === "CANCELLED"
+                                    ? "bg-rose-50 text-rose-700"
+                                    : "bg-slate-100 text-slate-600"
+                                }`}
+                              >
+                                {eventState === "CANCELLED" ? "Cancelled" : "Archived"}
+                              </span>
+                            )}
                             <span
                               title={gradeTitle}
                               className="max-w-[180px] truncate rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-black uppercase text-[#0a2f66]"
@@ -768,17 +817,7 @@ export default function SchoolOwnedEventsManager({
                             ))}
                           </div>
                           <div className="mt-3 flex flex-wrap gap-2">
-                            {!isFinished &&
-                            (event.lifecycleStatus || "ACTIVE") !== "ARCHIVED" ? (
-                              <button
-                                type="button"
-                                onClick={() => setArchiveTarget(event)}
-                                className="inline-flex min-h-9 items-center gap-2 rounded-xl bg-white px-4 text-xs font-black text-rose-700 transition hover:bg-rose-50"
-                              >
-                                <FaArchive />
-                                Delete / Archive Event
-                              </button>
-                            ) : (event.lifecycleStatus || "ACTIVE") === "ARCHIVED" ? (
+                            {terminal ? (
                               <div className="flex flex-wrap gap-2">
                                 <button
                                   type="button"
@@ -788,16 +827,36 @@ export default function SchoolOwnedEventsManager({
                                   <FaUndo />
                                   Restore Event
                                 </button>
+                                {policy.canDelete ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => setClearTarget(event)}
+                                    className="inline-flex min-h-9 items-center gap-2 rounded-xl bg-rose-50 px-4 text-xs font-black text-rose-700 transition hover:bg-rose-100"
+                                  >
+                                    <FaTrash />
+                                    Clear Permanently
+                                  </button>
+                                ) : (
+                                  <span
+                                    title={policy.deleteBlockedReason}
+                                    className="inline-flex min-h-9 items-center gap-2 rounded-xl bg-[#f4f8fd] px-4 text-[11px] font-black text-[#75869b]"
+                                  >
+                                    Kept for records
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              policy.canCancel && (
                                 <button
                                   type="button"
-                                  onClick={() => setClearTarget(event)}
-                                  className="inline-flex min-h-9 items-center gap-2 rounded-xl bg-rose-50 px-4 text-xs font-black text-rose-700 transition hover:bg-rose-100"
+                                  onClick={() => setCancelTarget(event)}
+                                  className="inline-flex min-h-9 items-center gap-2 rounded-xl bg-white px-4 text-xs font-black text-rose-700 transition hover:bg-rose-50"
                                 >
-                                  <FaTrash />
-                                  Clear Permanently
+                                  <FaBan />
+                                  Cancel Event
                                 </button>
-                              </div>
-                            ) : null}
+                              )
+                            )}
                           </div>
                         </div>
                       </div>
@@ -860,17 +919,17 @@ export default function SchoolOwnedEventsManager({
       )}
 
       <ConfirmDialog
-        open={Boolean(archiveTarget)}
-        title="Archive this event?"
+        open={Boolean(cancelTarget)}
+        title="Cancel this event?"
         message={
-          archiveTarget
-            ? `${archiveTarget.title} will move to history and disappear from active student discovery. You can restore it later from archived events.`
+          cancelTarget
+            ? `${cancelTarget.title} will be marked cancelled. Registered students are notified and their registrations are withdrawn. Use this when the event should not go ahead.`
             : ""
         }
-        confirmLabel="Archive event"
+        confirmLabel="Cancel event"
         tone="danger"
-        onClose={() => setArchiveTarget(null)}
-        onConfirm={handleArchive}
+        onClose={() => setCancelTarget(null)}
+        onConfirm={handleCancel}
       />
       <ConfirmDialog
         open={Boolean(clearTarget)}
@@ -887,11 +946,11 @@ export default function SchoolOwnedEventsManager({
       />
       <ConfirmDialog
         open={clearAllRequested}
-        title="Clear all archived events?"
-        message={`${archivedEvents.length} archived event${
+        title="Delete all cancelled events?"
+        message={`${archivedEvents.length} cancelled event${
           archivedEvents.length === 1 ? "" : "s"
         } will be permanently deleted with related registrations, rounds, notices, and certificates. This cannot be undone.`}
-        confirmLabel="Clear all permanently"
+        confirmLabel="Delete all permanently"
         tone="danger"
         onClose={() => setClearAllRequested(false)}
         onConfirm={handleClearAll}

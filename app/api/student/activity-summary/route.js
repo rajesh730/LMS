@@ -46,7 +46,7 @@ export async function GET() {
       );
     }
 
-    const [school, achievements, participationRequests, publicWritingsCount] =
+    const [school, achievements, participationRequests, writings] =
       await Promise.all([
         User.findById(student.school).select("schoolName schoolLocation").lean(),
         Achievement.find({
@@ -65,13 +65,55 @@ export async function GET() {
         })
           .select("event status approvedAt enrollmentConfirmedAt requestedAt")
           .lean(),
-        SchoolMagazineArticle.countDocuments({
+        SchoolMagazineArticle.find({
           authorStudent: student._id,
-          status: "APPROVED",
-          isPublished: true,
           isDeleted: { $ne: true },
-        }),
+        })
+          .select(
+            "status category showOnSchoolWall isPublished isMagazinePublished isGlobalWallPublished magazineIssue publishedAt magazinePublishedAt createdAt updatedAt"
+          )
+          .lean(),
       ]);
+
+    const writingSummary = writings.reduce(
+      (summary, writing) => {
+        const status = String(writing.status || "DRAFT").toUpperCase();
+        const category = String(writing.category || "BLOG_ARTICLE").toUpperCase();
+        const visibleOnSchoolWall =
+          ["SUBMITTED", "APPROVED"].includes(status) &&
+          writing.showOnSchoolWall !== false;
+        const inMagazine =
+          Boolean(writing.isMagazinePublished) && Boolean(writing.magazineIssue);
+
+        summary.total += 1;
+        summary.status[status] = (summary.status[status] || 0) + 1;
+        summary.categories[category] = (summary.categories[category] || 0) + 1;
+        if (visibleOnSchoolWall) summary.destinations.schoolWall += 1;
+        if (writing.isPublished) summary.destinations.homepage += 1;
+        if (inMagazine) summary.destinations.magazine += 1;
+        if (writing.isGlobalWallPublished) summary.destinations.globalWall += 1;
+        if (status === "APPROVED") summary.approved += 1;
+        if (status === "SUBMITTED") summary.pendingReview += 1;
+        if (status === "DRAFT") summary.drafts += 1;
+        if (status === "REJECTED") summary.rejected += 1;
+        return summary;
+      },
+      {
+        total: 0,
+        approved: 0,
+        pendingReview: 0,
+        drafts: 0,
+        rejected: 0,
+        status: {},
+        categories: {},
+        destinations: {
+          schoolWall: 0,
+          homepage: 0,
+          magazine: 0,
+          globalWall: 0,
+        },
+      }
+    );
 
     // Mirrors the public portfolio gate at /students/[id]: a profile is public
     // only if there is at least one publicly-published achievement or writing.
@@ -82,7 +124,7 @@ export async function GET() {
         achievement.event?.resultsPublished
     ).length;
     const publicProfileAvailable =
-      publicAchievementsCount > 0 || publicWritingsCount > 0;
+      publicAchievementsCount > 0 || writingSummary.destinations.homepage > 0;
 
     const winsCount = achievements.filter((achievement) =>
       ["WINNER", "RUNNER_UP", "THIRD_PLACE"].includes(
@@ -119,7 +161,9 @@ export async function GET() {
               (achievement) => Boolean(achievement.certificateUrl)
             ).length,
             registeredEventsCount: participationRequests.length,
+            writingsCount: writingSummary.total,
           },
+          writingSummary,
           achievements: achievements.map((achievement) => ({
             id: String(achievement._id),
             title: achievement.title,

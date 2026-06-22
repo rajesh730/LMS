@@ -5,7 +5,6 @@ import {
   FaBell,
   FaBroadcastTower,
   FaCheckCircle,
-  FaDatabase,
   FaExclamationTriangle,
   FaHeartbeat,
   FaRedoAlt,

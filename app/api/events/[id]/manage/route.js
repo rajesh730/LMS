@@ -5,7 +5,6 @@ import dbConnect from "@/lib/db";
 import Event from "@/models/Event";
 import EventSchoolInvitation from "@/models/EventSchoolInvitation";
 import ParticipationRequest from "@/models/ParticipationRequest";
-import Student from "@/models/Student";
 import { buildParticipationLifecycle } from "@/lib/lifecycle";
 import { getStudentViewerForEvent } from "@/lib/eventRoundAccess";
 

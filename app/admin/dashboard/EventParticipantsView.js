@@ -13,8 +13,6 @@ import {
 import { isTeamEventLike } from "@/lib/eventParticipationFormat";
 import AlertBanner from "@/components/ui/AlertBanner";
 
-const ACTIVE_STATUSES = ["APPROVED", "ENROLLED"];
-
 function buildIndividualEntries(requests = []) {
   const buckets = new Map();
 

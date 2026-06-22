@@ -6,6 +6,7 @@ import Event from "@/models/Event";
 import Student from "@/models/Student";
 import ParticipationRequest from "@/models/ParticipationRequest";
 import EventNotice from "@/models/EventNotice";
+import EventSchoolInvitation from "@/models/EventSchoolInvitation";
 import { isAfterEndOfDay } from "@/lib/eventDates";
 import { buildEventPresentationState } from "@/lib/eventPresentation";
 import { isTeamEventLike } from "@/lib/eventParticipationFormat";
@@ -63,12 +64,47 @@ export async function GET(req) {
       : {};
 
     const studentGradeValues = getEquivalentGradeValues(student.grade);
+
+    // Platform events reach students only after their school approves the
+    // invitation. School-owned events of the student's school are always visible.
+    const approvedPlatformInvites = await EventSchoolInvitation.find({
+      school: student.school,
+      status: "APPROVED",
+    })
+      .select("event")
+      .lean();
+    const approvedPlatformEventIds = approvedPlatformInvites.map(
+      (invitation) => invitation.event
+    );
+
+    // Cancelled events the student was registered for stay visible (clearly
+    // marked) so they understand why their entry went away — instead of the
+    // event silently vanishing. Archived events are hidden from everyone.
+    const participatedEventIds = await ParticipationRequest.find({
+      student: student._id,
+    }).distinct("event");
+
+    const ACTIVE_LIFECYCLE = { $nin: ["ARCHIVED", "CANCELLED"] };
+    const scopeConditions = [
+      { eventScope: "SCHOOL", school: student.school, lifecycleStatus: ACTIVE_LIFECYCLE },
+    ];
+    if (approvedPlatformEventIds.length > 0) {
+      scopeConditions.push({
+        eventScope: "PLATFORM",
+        _id: { $in: approvedPlatformEventIds },
+        lifecycleStatus: ACTIVE_LIFECYCLE,
+      });
+    }
+    if (participatedEventIds.length > 0) {
+      scopeConditions.push({
+        _id: { $in: participatedEventIds },
+        lifecycleStatus: "CANCELLED",
+      });
+    }
+
     const baseQuery = {
       status: "APPROVED",
-      eventScope: "SCHOOL",
-      school: student.school,
-      lifecycleStatus: { $ne: "ARCHIVED" },
-      ...(search ? searchQuery : {}),
+      $and: [{ $or: scopeConditions }, ...(search ? [searchQuery] : [])],
     };
 
     const events = await Event.find(baseQuery)

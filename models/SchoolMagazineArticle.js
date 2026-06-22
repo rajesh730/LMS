@@ -54,6 +54,12 @@ const SchoolMagazineArticleSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    // When the school first opened/read this post on the wall. Drives the
+    // per-post "unread" marker (null = not yet read by the school).
+    schoolReadAt: {
+      type: Date,
+      default: null,
+    },
     firstSubmittedAt: {
       type: Date,
       default: null,

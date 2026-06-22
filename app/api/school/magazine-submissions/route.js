@@ -4,6 +4,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
 import Student from "@/models/Student";
+import UserSurfaceSeenState from "@/models/UserSurfaceSeenState";
 import "@/models/MagazineIssue";
 import { buildMagazineLifecycle } from "@/lib/lifecycle";
 import { serializeMagazineIssue } from "@/lib/magazineIssues";
@@ -52,7 +53,16 @@ export async function GET(request) {
       query.authorStudent = { $in: studentIds };
     }
 
-    const [totalSubmissions, submissions] = await Promise.all([
+    // "New" = posted since the school last opened the wall (Instagram-style).
+    const wallSeenState = await UserSurfaceSeenState.findOne({
+      user: session.user.id,
+      surface: "school.schoolWall",
+    })
+      .select("seenAt")
+      .lean();
+    const wallSeenAt = wallSeenState?.seenAt ? new Date(wallSeenState.seenAt) : null;
+
+    const [totalSubmissions, submissions, newCount] = await Promise.all([
       SchoolMagazineArticle.countDocuments(query),
       SchoolMagazineArticle.find(query)
         .populate("authorStudent", "name grade rollNumber")
@@ -65,12 +75,25 @@ export async function GET(request) {
         .skip(skip)
         .limit(limit)
         .lean(),
+      wallSeenAt
+        ? SchoolMagazineArticle.countDocuments({
+            ...query,
+            submittedAt: { $gt: wallSeenAt },
+          })
+        : Promise.resolve(0),
     ]);
     const pagination = buildPagination({
       page,
       limit,
       total: totalSubmissions,
     });
+
+    const isNewArticle = (article) =>
+      Boolean(
+        wallSeenAt &&
+          article.submittedAt &&
+          new Date(article.submittedAt) > wallSeenAt
+      );
 
     return NextResponse.json({
       submissions: submissions.map((article) => ({
@@ -80,6 +103,10 @@ export async function GET(request) {
         category: article.category,
         submissionSource: article.submissionSource || "FREE_WRITE",
         status: article.status,
+        isNew: isNewArticle(article),
+        // Per-post unread: a wall post the school has not opened/read yet.
+        isUnread: article.status !== "DRAFT" && !article.schoolReadAt,
+        schoolReadAt: article.schoolReadAt || null,
         showOnSchoolWall:
           article.status !== "DRAFT" && article.showOnSchoolWall !== false,
         isPublished: Boolean(article.isPublished),
@@ -106,6 +133,7 @@ export async function GET(request) {
         ...pagination,
         totalSubmissions,
       },
+      newCount,
     });
   } catch (error) {
     console.error("GET /api/school/magazine-submissions error:", error);

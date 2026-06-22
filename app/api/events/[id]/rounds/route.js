@@ -16,7 +16,6 @@ import {
   getLatestRound,
   getOrderedRounds,
   getInitialStatusForRound,
-  repairLegacyRoundMetadata,
 } from "@/lib/competitionFlow";
 import "@/models/Student";
 import "@/models/User";

@@ -62,6 +62,7 @@ export async function GET() {
           reviewNote: article.reviewNote || "",
           isPublished: Boolean(article.isPublished),
           isMagazinePublished: Boolean(article.isMagazinePublished),
+          magazineIssue: article.magazineIssue ? String(article.magazineIssue) : "",
           isFeatured: Boolean(article.isFeatured),
           showOnSchoolWall:
             article.status !== "DRAFT" && article.showOnSchoolWall !== false,

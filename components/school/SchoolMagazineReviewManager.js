@@ -6,6 +6,7 @@ import AlertBanner from "@/components/ui/AlertBanner";
 import LoadingState from "@/components/ui/LoadingState";
 import EmptyState from "@/components/EmptyState";
 import PaginationControls from "@/components/PaginationControls";
+import WritingContent from "@/components/WritingContent";
 import { getWritingCategoryLabel } from "@/lib/writingCategories";
 
 function formatDate(value) {
@@ -19,12 +20,6 @@ function formatDate(value) {
   });
 }
 
-function wordCount(value) {
-  return String(value || "")
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean).length;
-}
 
 function categoryTone(category = "") {
   const normalized = category.toLowerCase();
@@ -135,6 +130,20 @@ export default function SchoolMagazineReviewManager({
     setSelectedSubmission(submission);
     setSuccess("");
     setError("");
+
+    // Opening a post marks that specific post read → its unread dot clears.
+    if (submission?.isUnread) {
+      setSubmissions((current) =>
+        current.map((item) =>
+          item.id === submission.id ? { ...item, isUnread: false } : item
+        )
+      );
+      fetch(`/api/school/magazine/${submission.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "MARK_READ" }),
+      }).catch(() => {});
+    }
   };
 
   const handleWallAction = async (submission, action) => {
@@ -252,15 +261,27 @@ export default function SchoolMagazineReviewManager({
               <span className="text-right">Action</span>
             </div>
             <div>
-              {submissions.map((submission) => (
+              {submissions.map((submission) => {
+                // Per-post unread: stays marked until the school opens/reads it.
+                const isNew = Boolean(submission.isUnread);
+                return (
                 <div
                   key={submission.id}
-                  className="grid min-w-[980px] grid-cols-[minmax(240px,1.5fr)_150px_110px_150px_130px_210px] gap-3 border-b border-[#eef2f7] px-4 py-4 text-sm last:border-b-0"
+                  className={`grid min-w-[980px] grid-cols-[minmax(240px,1.5fr)_150px_110px_150px_130px_210px] gap-3 border-b border-l-4 border-[#eef2f7] px-4 py-4 text-sm last:border-b-0 ${
+                    isNew ? "border-l-amber-400 bg-amber-50/40" : "border-l-transparent"
+                  }`}
                 >
                   <div className="min-w-0">
-                    <p className="truncate font-black text-[#17120a]">
-                      {submission.title}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="truncate font-black text-[#17120a]">
+                        {submission.title}
+                      </p>
+                      {isNew && (
+                        <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-amber-700">
+                          New
+                        </span>
+                      )}
+                    </div>
                     <p className="mt-1 text-[11px] font-semibold text-[#52657d]">
                       Posted {formatDate(
                         submission.submittedAt || submission.updatedAt
@@ -309,7 +330,8 @@ export default function SchoolMagazineReviewManager({
                     </button>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
@@ -352,9 +374,10 @@ export default function SchoolMagazineReviewManager({
               </button>
             </div>
 
-            <article className="mt-5 whitespace-pre-wrap rounded-lg border border-[#e1e7f2] bg-[#f8fbff] p-5 text-sm font-semibold leading-7 text-[#27364a]">
-              {selectedSubmission.content}
-            </article>
+            <WritingContent
+              content={selectedSubmission.content}
+              className="mt-5 rounded-lg border border-[#e1e7f2] bg-[#f8fbff] p-5 text-sm font-semibold leading-7 text-[#27364a]"
+            />
 
             <div className="mt-5 flex flex-wrap justify-end gap-3">
               <button

@@ -8,7 +8,6 @@ import {
   FaCircle,
   FaFlask,
   FaFutbol,
-  FaLayerGroup,
   FaMapMarkerAlt,
   FaMusic,
   FaPaintBrush,
@@ -29,17 +28,6 @@ import {
   PUBLIC_EXPLORE_ITEMS,
   PublicSidebarGroup,
 } from "@/components/public/PublicExplorePanel";
-
-const CATEGORY_FILTERS = [
-  ["ALL", "All", FaLayerGroup],
-  ["COMPETITION", "Competition", FaTrophy],
-  ["WORKSHOP", "Workshop", FaFlask],
-  ["SPORTS", "Sports", FaFutbol],
-  ["FESTIVAL", "Festival", FaMusic],
-  ["EXHIBITION", "Exhibition", FaPaintBrush],
-  ["SHOWCASE", "Showcase", FaTheaterMasks],
-  ["OTHER", "Writing", FaPenNib],
-];
 
 const VIEW_FILTERS = [
   ["all", "All Events"],
@@ -197,28 +185,6 @@ function LiveEventsStrip({ events = [], onViewAll }) {
   );
 }
 
-function CategoryTabs({ activeCategory, setActiveCategory }) {
-  return (
-    <div className="flex gap-2 overflow-x-auto pb-1">
-      {CATEGORY_FILTERS.map(([id, label, Icon]) => (
-        <button
-          key={id}
-          type="button"
-          onClick={() => setActiveCategory(id)}
-          className={`inline-flex min-h-10 shrink-0 items-center gap-2 rounded-full px-4 text-xs font-black transition ${
-            activeCategory === id
-              ? "bg-[#4326e8] text-white"
-              : "border border-[#e6eaf7] bg-white text-[#24314d] hover:bg-[#f4f1ff] hover:text-[#4326e8]"
-          }`}
-        >
-          <Icon />
-          {label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
 function EventRow({ event }) {
   const hasPublicResults =
     event.eventScope === "PLATFORM" &&
@@ -278,7 +244,7 @@ function EventRow({ event }) {
 export default function PublicEventsHub({ initialData }) {
   const [data, setData] = useState(initialData);
   const [activeView, setActiveView] = useState("all");
-  const [activeCategory, setActiveCategory] = useState("ALL");
+  const [activeCategory] = useState("ALL");
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
 

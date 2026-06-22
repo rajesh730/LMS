@@ -199,10 +199,6 @@ async function replaceTeamParticipation({
     return { error: "One or more selected students were not found in your school." };
   }
 
-  const studentById = new Map(
-    selectedStudents.map((student) => [String(student._id), student])
-  );
-
   const ineligibleStudents = selectedStudents.filter(
     (student) => !gradeListContains(event.eligibleGrades, student.grade)
   );
@@ -253,7 +249,6 @@ async function replaceTeamParticipation({
   const now = new Date();
   const documents = teams.flatMap((team) =>
     team.studentIds.map((studentId) => {
-      const student = studentById.get(studentId);
       return {
         student: studentId,
         event: eventId,
@@ -336,45 +331,6 @@ async function getPlatformInvitationBlocker(event, schoolId) {
   }
 
   return "Your school must approve this platform event before students can participate.";
-}
-
-function syncSchoolParticipants(event, schoolId, studentIds, contactInfo = {}) {
-  const normalizedStudentIds = Array.from(
-    new Set((studentIds || []).map((id) => String(id)))
-  );
-
-  const existingParticipant = event.participants.find(
-    (participant) => participant.school?.toString() === schoolId.toString()
-  );
-
-  if (normalizedStudentIds.length === 0) {
-    event.participants = event.participants.filter(
-      (participant) => participant.school?.toString() !== schoolId.toString()
-    );
-    return;
-  }
-
-  if (existingParticipant) {
-    existingParticipant.students = normalizedStudentIds;
-    existingParticipant.contactPerson =
-      contactInfo.contactPerson || existingParticipant.contactPerson;
-    existingParticipant.contactPhone =
-      contactInfo.contactPhone || existingParticipant.contactPhone;
-    existingParticipant.notes =
-      contactInfo.notes !== undefined ? contactInfo.notes : existingParticipant.notes;
-    existingParticipant.expectedStudents = normalizedStudentIds.length;
-    return;
-  }
-
-  event.participants.push({
-    school: schoolId,
-    students: normalizedStudentIds,
-    joinedAt: new Date(),
-    contactPerson: contactInfo.contactPerson || undefined,
-    contactPhone: contactInfo.contactPhone || undefined,
-    notes: contactInfo.notes || undefined,
-    expectedStudents: normalizedStudentIds.length,
-  });
 }
 
 export async function POST(req, { params }) {

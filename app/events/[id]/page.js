@@ -152,9 +152,7 @@ export default async function PublicEventPage({ params }) {
 
   const {
     event,
-    participationRequests,
     participatingSchools,
-    participantCount,
     achievements,
     eventNotices,
   } = data;

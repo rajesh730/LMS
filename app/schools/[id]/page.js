@@ -20,23 +20,50 @@ import {
   FaArrowRight,
   FaBookOpen,
   FaCalendarAlt,
-  FaCertificate,
   FaCheckCircle,
+  FaEnvelope,
   FaFacebookF,
+  FaGlobe,
   FaGraduationCap,
   FaInstagram,
+  FaLinkedinIn,
   FaMapMarkerAlt,
   FaMedal,
   FaPenNib,
+  FaPhone,
   FaSchool,
   FaStar,
+  FaTiktok,
   FaTrophy,
   FaTwitter,
+  FaUserTie,
   FaUsers,
   FaYoutube,
 } from "react-icons/fa";
 
 export const dynamic = "force-dynamic";
+
+function ensureHttp(url) {
+  const value = String(url || "").trim();
+  if (!value) return "";
+  return /^https?:\/\//i.test(value) ? value : `https://${value}`;
+}
+
+const SOCIAL_PLATFORMS = [
+  { key: "facebook", label: "Facebook", icon: FaFacebookF, hover: "hover:bg-[#1877f2] hover:!text-white hover:border-[#1877f2]" },
+  { key: "instagram", label: "Instagram", icon: FaInstagram, hover: "hover:bg-[#e1306c] hover:!text-white hover:border-[#e1306c]" },
+  { key: "linkedin", label: "LinkedIn", icon: FaLinkedinIn, hover: "hover:bg-[#0a66c2] hover:!text-white hover:border-[#0a66c2]" },
+  { key: "tiktok", label: "TikTok", icon: FaTiktok, hover: "hover:bg-black hover:!text-white hover:border-black" },
+  { key: "youtube", label: "YouTube", icon: FaYoutube, hover: "hover:bg-[#ff0000] hover:!text-white hover:border-[#ff0000]" },
+  { key: "twitter", label: "X (Twitter)", icon: FaTwitter, hover: "hover:bg-black hover:!text-white hover:border-black" },
+];
+
+function getSocialEntries(socialLinks = {}) {
+  return SOCIAL_PLATFORMS.map((platform) => ({
+    ...platform,
+    url: ensureHttp(socialLinks?.[platform.key]),
+  })).filter((platform) => platform.url);
+}
 
 function formatDate(value) {
   if (!value) return "Date to be announced";
@@ -409,6 +436,7 @@ function AtGlance({ school, studentCount, teacherCount, grades }) {
     formatConfigLabel(config.instructionMedium);
 
   const items = [
+    ["Principal", school.principalName],
     ["Grades", gradeSummary],
     ["Total Students", studentCount ? String(studentCount) : ""],
     ["Teachers", teacherCount ? String(teacherCount) : ""],
@@ -446,6 +474,99 @@ function AtGlance({ school, studentCount, teacherCount, grades }) {
   );
 }
 
+function SocialIconLinks({ entries, variant = "light" }) {
+  if (!entries || entries.length === 0) return null;
+  const base =
+    variant === "dark"
+      ? "border-white/30 bg-white/15 text-white backdrop-blur-sm"
+      : "border-[#e7dcc8] bg-[#f8fbff] text-[#52657d]";
+  return (
+    <div className="flex flex-wrap gap-2">
+      {entries.map(({ key, label, icon: Icon, url, hover }) => (
+        <a
+          key={key}
+          href={url}
+          target="_blank"
+          rel="noreferrer"
+          aria-label={label}
+          title={label}
+          className={`flex h-9 w-9 items-center justify-center rounded-full border transition ${base} ${hover}`}
+        >
+          <Icon />
+        </a>
+      ))}
+    </div>
+  );
+}
+
+function ConnectCard({ websiteUrl, socialLinks, contactEmail, contactPhone }) {
+  const socialEntries = getSocialEntries(socialLinks);
+  const links = [
+    websiteUrl && {
+      icon: FaGlobe,
+      label: "Website",
+      value: websiteUrl.replace(/^https?:\/\//i, ""),
+      href: ensureHttp(websiteUrl),
+    },
+    contactEmail && {
+      icon: FaEnvelope,
+      label: "Email",
+      value: contactEmail,
+      href: `mailto:${contactEmail}`,
+    },
+    contactPhone && {
+      icon: FaPhone,
+      label: "Phone",
+      value: contactPhone,
+      href: `tel:${contactPhone.replace(/\s+/g, "")}`,
+    },
+  ].filter(Boolean);
+
+  if (links.length === 0 && socialEntries.length === 0) return null;
+
+  return (
+    <section className="rounded-2xl border border-[#e7dcc8] bg-white p-5 shadow-sm">
+      <h2 className="inline-flex items-center gap-2 text-lg font-black text-[#17120a]">
+        <FaGlobe className="text-purple-700" />
+        Connect
+      </h2>
+      {links.length > 0 && (
+        <div className="mt-4 space-y-2">
+          {links.map(({ icon: Icon, label, value, href }) => (
+            <a
+              key={label}
+              href={href}
+              target={href.startsWith("http") ? "_blank" : undefined}
+              rel="noreferrer"
+              className="flex items-center gap-3 rounded-xl border border-[#eef1f6] bg-[#f8fbff] px-3 py-2.5 transition hover:border-purple-200 hover:bg-purple-50"
+            >
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-purple-700 shadow-sm">
+                <Icon />
+              </span>
+              <span className="min-w-0">
+                <span className="block text-[10px] font-black uppercase tracking-wide text-[#75869b]">
+                  {label}
+                </span>
+                <span className="block truncate text-sm font-bold text-[#17120a]">
+                  {value}
+                </span>
+              </span>
+            </a>
+          ))}
+        </div>
+      )}
+      {socialEntries.length > 0 && (
+        <div className="mt-4 border-t border-[#eef1f6] pt-4">
+          <p className="mb-2.5 text-[10px] font-black uppercase tracking-wide text-[#75869b]">
+            Follow us
+          </p>
+          <SocialIconLinks entries={socialEntries} variant="light" />
+        </div>
+      )}
+    </section>
+  );
+}
+
 export default async function PublicSchoolPage({ params }) {
   const resolvedParams = await params;
   const data = await getSchoolData(resolvedParams.id);
@@ -475,6 +596,9 @@ export default async function PublicSchoolPage({ params }) {
   } = data;
   const metrics = profile?.highlightMetrics || {};
   const coverImage = normalizeImageUrl(profile?.coverImageUrl);
+  const socialEntries = getSocialEntries(profile?.socialLinks);
+  const websiteUrl = profile?.websiteUrl || school.website || "";
+  const motto = profile?.motto || "";
   return (
     <main className="min-h-screen bg-[#f8f9fd] pb-24 text-[#17120a]">
       <PublicSiteNav active="schools" />
@@ -542,12 +666,25 @@ export default async function PublicSchoolPage({ params }) {
                       {profile?.tagline ||
                         "A school building identity through talent, activities, and showcases."}
                     </p>
+                    {motto && (
+                      <p
+                        className="mt-1.5 text-sm font-semibold italic drop-shadow"
+                        style={{ color: "rgba(255,255,255,0.82)" }}
+                      >
+                        &ldquo;{motto}&rdquo;
+                      </p>
+                    )}
                   </div>
                 </div>
                 <div
-                  className="mt-5 flex flex-wrap gap-4 text-sm font-black drop-shadow"
+                  className="mt-5 flex flex-wrap items-center gap-4 text-sm font-black drop-shadow"
                   style={{ color: "rgba(255,255,255,0.94)" }}
                 >
+                  {school.principalName && (
+                    <span className="inline-flex items-center gap-2">
+                      <FaUserTie /> {school.principalName}
+                    </span>
+                  )}
                   {school.schoolLocation && (
                     <span className="inline-flex items-center gap-2">
                       <FaMapMarkerAlt /> {school.schoolLocation}
@@ -556,17 +693,23 @@ export default async function PublicSchoolPage({ params }) {
                   {school.establishedYear && (
                     <span>Established {school.establishedYear}</span>
                   )}
-                  {school.website && (
+                  {websiteUrl && (
                     <a
-                      href={school.website}
+                      href={ensureHttp(websiteUrl)}
                       target="_blank"
                       rel="noreferrer"
-                      className="hover:text-white"
+                      className="inline-flex items-center gap-2 hover:text-white"
                     >
-                      Visit website
+                      <FaGlobe /> Visit website
                     </a>
                   )}
                 </div>
+
+                {socialEntries.length > 0 && (
+                  <div className="mt-4">
+                    <SocialIconLinks entries={socialEntries} variant="dark" />
+                  </div>
+                )}
               </div>
 
             </div>
@@ -671,6 +814,12 @@ export default async function PublicSchoolPage({ params }) {
                     grades={grades}
                   />
             </div>
+            <ConnectCard
+              websiteUrl={websiteUrl}
+              socialLinks={profile?.socialLinks}
+              contactEmail={profile?.contactEmail}
+              contactPhone={profile?.contactPhone}
+            />
           </aside>
         </div>
 
@@ -745,12 +894,16 @@ export default async function PublicSchoolPage({ params }) {
       <footer className="border-t border-[#d7cdbb] px-4 py-6 text-center text-sm text-[#52657d]">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p>&copy; 2026 Pravyo. Student talent, school recognition, public events, and verified certificates.</p>
-          <div className="flex justify-center gap-4 text-[#0a2f66]">
-            <FaFacebookF />
-            <FaTwitter />
-            <FaInstagram />
-            <FaYoutube />
-          </div>
+          {socialEntries.length > 0 ? (
+            <SocialIconLinks entries={socialEntries} variant="light" />
+          ) : (
+            <div className="flex justify-center gap-4 text-[#0a2f66]">
+              <FaFacebookF />
+              <FaTwitter />
+              <FaInstagram />
+              <FaYoutube />
+            </div>
+          )}
         </div>
       </footer>
     </main>

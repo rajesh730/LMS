@@ -4,7 +4,6 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import Event from "@/models/Event";
 import EventNotice from "@/models/EventNotice";
-import Student from "@/models/Student";
 import ParticipationRequest from "@/models/ParticipationRequest";
 import EventSchoolInvitation from "@/models/EventSchoolInvitation";
 import {
@@ -333,8 +332,15 @@ export async function GET(req) {
       // - its own school-owned events
       // - approved platform-wide events
       const schoolOwnedCondition = schoolObjectId ? { school: schoolObjectId } : null;
+      // Archived platform events are pulled out of circulation, so schools must
+      // not see them. (A school still sees its own archived events because the
+      // school-owned condition below carries no lifecycle filter.)
       const visibleConditions = [
-        { eventScope: "PLATFORM", status: "APPROVED" },
+        {
+          eventScope: "PLATFORM",
+          status: "APPROVED",
+          lifecycleStatus: { $ne: "ARCHIVED" },
+        },
       ];
 
       if (schoolOwnedCondition) {
@@ -345,7 +351,11 @@ export async function GET(req) {
 
       if (session.user.role === "TEACHER") {
         const teacherConditions = [
-          { eventScope: "PLATFORM", status: "APPROVED" },
+          {
+            eventScope: "PLATFORM",
+            status: "APPROVED",
+            lifecycleStatus: { $ne: "ARCHIVED" },
+          },
         ];
 
         if (schoolOwnedCondition) {
@@ -400,7 +410,6 @@ export async function GET(req) {
     }
 
     const eventIds = events.map((event) => event._id);
-    const activeStatusFilter = { $in: ["PENDING", "APPROVED", "ENROLLED"] };
 
     const [
       summaryRequests,
