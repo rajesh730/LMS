@@ -16,6 +16,7 @@ import {
   FiUsers,
 } from "react-icons/fi";
 import SettingsAuditPanel from "@/components/settings/SettingsAuditPanel";
+import AcademicYearManager from "@/components/school/AcademicYearManager";
 
 const defaultConfig = {
   schoolName: "",
@@ -547,6 +548,8 @@ export default function SchoolSettingsManager() {
           description="Grade bands derived from the school registration profile."
         />
       </div>
+
+      <AcademicYearManager />
 
       <div className="grid gap-6 xl:grid-cols-[1.35fr_1fr]">
         <section className="space-y-6">

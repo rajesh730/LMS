@@ -58,6 +58,24 @@ async function main() {
     serverSelectionTimeoutMS: 10000,
   });
 
+  // Migration: the student roll-number index became partial (unique only among
+  // ACTIVE students) so graduated/transferred students release their roll. The
+  // old non-partial index must be dropped before the new one can be created.
+  try {
+    const studentIndexes = await Student.collection.indexes();
+    const legacyRollIndex = studentIndexes.find(
+      (ix) =>
+        ix.name === "school_1_grade_1_rollNumber_1" &&
+        !ix.partialFilterExpression
+    );
+    if (legacyRollIndex) {
+      await Student.collection.dropIndex("school_1_grade_1_rollNumber_1");
+      console.log("Migrated: dropped legacy non-partial student roll index.");
+    }
+  } catch (error) {
+    console.warn("Roll-index migration check skipped:", error.message);
+  }
+
   for (const model of models) {
     await model.createIndexes();
     console.log(`Ensured indexes for ${model.modelName}`);

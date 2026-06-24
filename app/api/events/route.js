@@ -401,7 +401,9 @@ export async function GET(req) {
         school: { $in: schoolIdStrings },
         event: { $in: events.map((event) => event._id) },
       })
-        .select("event status notifiedAt readAt decisionAt reason")
+        .select(
+          "event status notifiedAt readAt decisionAt reason studentSelfRegistration"
+        )
         .lean();
 
       invitations.forEach((invitation) => {
@@ -516,6 +518,9 @@ export async function GET(req) {
           const invitation = schoolInvitationMap.get(String(event._id));
           eventObj.schoolInvitationStatus = invitation?.status || null;
           eventObj.schoolInvitation = invitation || null;
+          eventObj.studentSelfRegistration = Boolean(
+            invitation?.studentSelfRegistration
+          );
         }
 
         // Calculate real-time counts from ParticipationRequest

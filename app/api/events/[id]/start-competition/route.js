@@ -3,7 +3,9 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import dbConnect from "@/lib/db";
 import Event from "@/models/Event";
+import ParticipationRequest from "@/models/ParticipationRequest";
 import { syncApprovedRequestsToRoundOne } from "@/lib/competitionFlow";
+import { getEventStartState } from "@/lib/eventStartRules";
 
 function canManageEvent(session, event) {
   if (!session?.user || !event) return false;
@@ -30,19 +32,6 @@ export async function POST(req, props) {
 
     await dbConnect();
     const params = await props.params;
-    let body;
-    try {
-      body = await req.json();
-    } catch (error) {
-      return NextResponse.json(
-        { message: "Invalid JSON in request body" },
-        { status: 400 }
-      );
-    }
-    const requestIds = Array.isArray(body.requestIds)
-      ? body.requestIds.map(String).filter(Boolean)
-      : [];
-
     const event = await Event.findById(params.id);
     if (!event) {
       return NextResponse.json({ message: "Event not found" }, { status: 404 });
@@ -51,10 +40,27 @@ export async function POST(req, props) {
       return NextResponse.json({ message: "Forbidden" }, { status: 403 });
     }
 
+    const approvedRequests = await ParticipationRequest.find({
+      event: params.id,
+      status: { $in: ["APPROVED", "ENROLLED"] },
+    })
+      .select("school teamName status")
+      .lean();
+    const startState = getEventStartState(event, approvedRequests);
+    if (!startState.canStart) {
+      return NextResponse.json(
+        {
+          message: startState.reason || "This event cannot be started yet.",
+          entryCount: startState.entryCount,
+          unitLabel: startState.unitLabel,
+        },
+        { status: 400 }
+      );
+    }
+
     const syncResult = await syncApprovedRequestsToRoundOne({
       eventId: params.id,
       createdBy: session.user.id,
-      requestIds,
     });
 
     if (!syncResult.round) {

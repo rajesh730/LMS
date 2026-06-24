@@ -39,6 +39,12 @@ const SchoolConfigSchema = new mongoose.Schema({
         type: [String],
         default: [],
     },
+    // Which calendar this school's academic years are displayed in (AD or BS).
+    academicCalendar: {
+        type: String,
+        enum: ["AD", "BS"],
+        default: "AD",
+    },
 }, { timestamps: true });
 
 SchoolConfigSchema.pre("validate", function () {

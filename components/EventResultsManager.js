@@ -58,7 +58,6 @@ export default function EventResultsManager({
   const [expandedTeams, setExpandedTeams] = useState({});
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [searchTerm, setSearchTerm] = useState("");
-  const [publishPublicly, setPublishPublicly] = useState(false);
   const [reopenOpen, setReopenOpen] = useState(false);
 
   const eventId = fixedEventId;
@@ -92,15 +91,7 @@ export default function EventResultsManager({
   const isTeamEvent =
     String(detail?.event?.participationFormat || "INDIVIDUAL").toUpperCase() ===
     "TEAM";
-  const isPlatformEvent =
-    String(detail?.event?.eventScope || "").toUpperCase() === "PLATFORM";
   const resultsPublished = Boolean(detail?.event?.resultsPublished);
-
-  // Mirror the event's current public-visibility setting whenever results load,
-  // so the organizer's "make public" choice starts from the saved state.
-  useEffect(() => {
-    setPublishPublicly(Boolean(detail?.publishPublicly));
-  }, [detail?.publishPublicly]);
 
   const saveResults = useCallback(async ({ publish = false, reopen = false } = {}) => {
     if (!eventId || participants.length === 0) return;
@@ -119,7 +110,7 @@ export default function EventResultsManager({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           resultsPublished: publish,
-          publishPublicly: publish && isPlatformEvent ? publishPublicly : false,
+          publishPublicly: false,
           confirmPublish: publish,
         }),
       });
@@ -141,7 +132,7 @@ export default function EventResultsManager({
     } finally {
       setSaving(false);
     }
-  }, [eventId, loadDetail, participants.length, isPlatformEvent, publishPublicly]);
+  }, [eventId, loadDetail, participants.length]);
 
   const resultSummary = useMemo(() => {
     const source = participants;
@@ -324,40 +315,13 @@ export default function EventResultsManager({
                     ? "Saving"
                     : resultsPublished
                     ? "Published"
-                    : "Ready to publish"}
+                    : "Draft results"}
                 </span>
               </div>
             </div>
           </div>
-          {!readOnly && (
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            {isPlatformEvent && !resultsPublished && (
-              <label
-                className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-bold ${
-                  embedded
-                    ? "border-[#dbe5f4] bg-white text-[#0a2f66]"
-                    : "border-[#1c4a8d] bg-[#081b39]/60 text-[#cddfff]"
-                }`}
-                title="When enabled, these results and certificates appear on the public event page."
-              >
-                <input
-                  type="checkbox"
-                  checked={publishPublicly}
-                  disabled={saving || loading}
-                  onChange={(e) => setPublishPublicly(e.target.checked)}
-                />
-                Make results public
-              </label>
-            )}
-            <button
-              type="button"
-              disabled={saving || loading || participants.length === 0 || resultsPublished}
-              onClick={() => saveResults({ publish: true })}
-              className="inline-flex min-h-10 items-center justify-center rounded-lg bg-[#0a2f66] px-4 text-xs font-black text-white hover:bg-[#1150a1] disabled:opacity-50"
-            >
-              Publish Final Results
-            </button>
-            {resultsPublished && (
+          {!readOnly && resultsPublished && (
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
               <button
                 type="button"
                 disabled={saving || loading}
@@ -367,20 +331,19 @@ export default function EventResultsManager({
                 <FaUndo />
                 Reopen for Correction
               </button>
-            )}
-          </div>
+            </div>
           )}
         </div>
         <p className={`mt-3 text-xs font-semibold ${embedded ? "text-[#52657d]" : "text-[#cddfff]"}`}>
           {readOnly
             ? resultsPublished
               ? "Final results are published. You can view the placements and download your certificate below."
-              : "Results have not been published yet. Final placements and certificates will appear here once your school publishes them."
+              : "Results have not been published yet. Final placements and certificates will appear here once the organizer publishes them."
             : participants.length === 0
-            ? "No participants are enrolled yet. Register students and run the rounds before publishing results."
+            ? "No participants are enrolled yet. Register students and run the rounds before reviewing results."
             : resultsPublished
             ? "Results are published and certificates issued — students and schools can view them. Made a mistake? Use Reopen for Correction to safely edit placements and republish."
-            : "Review the placements below, then Publish Final Results to issue certificates. Nothing is issued until you publish."}
+            : "Review the placements and certificate records below."}
         </p>
         {message && <div className="mt-4 text-sm font-semibold text-[#1150a1]">{message}</div>}
         {error && <div className="mt-4 text-sm font-semibold text-[#d97706]">{error}</div>}
@@ -405,7 +368,7 @@ export default function EventResultsManager({
           <div>
             <h3 className="text-lg font-black text-[#17120a]">Final Placements</h3>
             <p className="mt-1 text-xs font-semibold text-[#52657d]">
-              Draft placements are calculated from approved participation and round history. Publishing requires organizer confirmation.
+              Draft placements are calculated from approved participation and round history.
             </p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">

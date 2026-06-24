@@ -70,7 +70,7 @@ export default function EventCard({
     actionMode === "archived" || eventState === "ARCHIVED" || isCancelledState;
   const policy = getEventDeletionPolicy(event);
   const isFinished =
-    event.resultsPublished || eventState === "COMPLETED" || eventState === "ARCHIVED";
+    event.resultsPublished || eventState === "ARCHIVED";
   const registered = getRegisteredCount(event);
   const workflowStatus = getEventWorkflowStatus(event);
   const nextAction = getEventNextActionLabel(event);

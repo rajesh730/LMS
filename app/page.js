@@ -1,4 +1,7 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import Event from "@/models/Event";
 import SchoolPromotion from "@/models/SchoolPromotion";
@@ -26,6 +29,19 @@ import "@/models/Student";
 import "@/models/User";
 
 export const dynamic = "force-dynamic";
+
+// Logged-in users land straight in their dashboard (Facebook-style) instead of
+// the public marketing home. They can still reach public pages via direct links.
+const DASHBOARD_BY_ROLE = {
+  SUPER_ADMIN: "/admin/dashboard",
+  SCHOOL_ADMIN: "/school/dashboard",
+  TEACHER: "/teacher/dashboard",
+  STUDENT: "/student/dashboard",
+};
+
+function dashboardPathForRole(role) {
+  return DASHBOARD_BY_ROLE[role] || "/school/dashboard";
+}
 
 function formatDate(value) {
   if (!value) return "";
@@ -527,6 +543,13 @@ function MobileVoiceFeed({ writings }) {
 }
 
 export default async function Home() {
+  // Send authenticated users to their dashboard. A revoked session falls through
+  // to the public home (the client will sign them out from there).
+  const session = await getServerSession(authOptions);
+  if (session?.user?.role && !session.error) {
+    redirect(dashboardPathForRole(session.user.role));
+  }
+
   const {
     homeSpotlights,
     spotlightStories,

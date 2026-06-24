@@ -9,6 +9,7 @@ import {
 } from "react-icons/fa";
 import PravyoLogo from "@/components/brand/PravyoLogo";
 import { PUBLIC_NAV_LINKS } from "@/components/navigation/appNavigation";
+import PublicRegisterLink from "@/components/public/PublicRegisterLink";
 
 export default function PublicSiteNav({
   active = "home",
@@ -109,12 +110,9 @@ export default function PublicSiteNav({
             >
               Log in
             </Link>
-            <Link
-              href="/register"
-              className="public-primary-action inline-flex h-9 items-center justify-center rounded-lg bg-[var(--brand-primary)] px-4 text-sm font-semibold text-white shadow-[var(--button-shadow)] transition hover:bg-[var(--brand-primary-hover)]"
-            >
+            <PublicRegisterLink size="sm">
               Register
-            </Link>
+            </PublicRegisterLink>
           </div>
 
           {/* Mobile: search + hamburger */}
@@ -210,13 +208,13 @@ export default function PublicSiteNav({
               >
                 Log in
               </Link>
-              <Link
-                href="/register"
+              <PublicRegisterLink
+                size="lg"
                 onClick={() => setIsOpen(false)}
-                className="public-primary-action inline-flex min-h-11 items-center justify-center rounded-xl bg-[var(--brand-primary)] text-sm font-semibold text-white shadow-[var(--button-shadow)] transition hover:bg-[var(--brand-primary-hover)]"
+                className="rounded-xl"
               >
                 Register
-              </Link>
+              </PublicRegisterLink>
             </div>
           </div>
         )}

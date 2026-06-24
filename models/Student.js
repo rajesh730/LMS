@@ -2,15 +2,72 @@ import mongoose from "mongoose";
 
 /**
  * Student Schema
- * Represents a student enrolled in a school
+ * Represents a student as a persistent person across their whole journey.
+ *
+ * Identity is student-scoped, not school-scoped: the SAME document is reused when
+ * a student transfers schools, so all achievements/writings/results stay linked.
+ * Top-level `school` / `grade` / `rollNumber` are the CURRENT enrollment; the
+ * `enrollments[]` array is the full school + grade + academic-year history.
+ * See docs/ACADEMIC_YEAR_AND_PORTFOLIO.md.
  *
  * Status Management:
  * - ACTIVE: Currently enrolled and attending classes
  * - SUSPENDED: Temporarily inactive (disciplinary action)
- * - INACTIVE: No longer enrolled (transferred, dropped out)
+ * - INACTIVE: No longer enrolled (transferred out, dropped out)
+ * - ALUMNI / GRADUATED: passed out of the school's highest grade
  *
  * Soft Delete: Uses status instead of hard delete to preserve data
  */
+
+// One entry per school + grade + academic session a student has been part of.
+const studentEnrollmentSchema = new mongoose.Schema(
+  {
+    school: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    schoolNameSnapshot: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    grade: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    rollNumber: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    academicYear: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    // Canonical AD start year — cross-calendar sort key.
+    academicYearStart: {
+      type: Number,
+      default: null,
+    },
+    status: {
+      type: String,
+      enum: ["CURRENT", "PROMOTED", "RETAINED", "TRANSFERRED", "GRADUATED"],
+      default: "CURRENT",
+    },
+    startedAt: {
+      type: Date,
+      default: Date.now,
+    },
+    endedAt: {
+      type: Date,
+      default: null,
+    },
+  },
+  { _id: false }
+);
 const StudentSchema = new mongoose.Schema(
   {
     // Basic Student Information
@@ -144,8 +201,15 @@ const StudentSchema = new mongoose.Schema(
     // Student status management
     status: {
       type: String,
-      enum: ["ACTIVE", "SUSPENDED", "INACTIVE", "ALUMNI"],
+      enum: ["ACTIVE", "SUSPENDED", "INACTIVE", "ALUMNI", "GRADUATED"],
       default: "ACTIVE",
+    },
+
+    // Full school + grade + academic-year history. The CURRENT enrollment mirrors
+    // the top-level school/grade/rollNumber.
+    enrollments: {
+      type: [studentEnrollmentSchema],
+      default: [],
     },
     
     // Track when status was changed and by whom
@@ -201,8 +265,19 @@ StudentSchema.index({ school: 1, isDeleted: 1, username: 1 });
 StudentSchema.index({ school: 1, isDeleted: 1, platformStudentId: 1 });
 StudentSchema.index({ school: 1, isDeleted: 1, rollNumber: 1 });
 
-// Compound index: Roll Number must be unique within a specific Grade in a specific School
-StudentSchema.index({ school: 1, grade: 1, rollNumber: 1 }, { unique: true });
+// Roll number is unique within a grade + school, but ONLY among students who are
+// currently on the active roster. Graduated, transferred-out, or inactive
+// students release their roll number so the next promoted batch can reuse it
+// (e.g. last year's Grade 10 roll 1 graduates, this year a Grade 9 promotes into
+// Grade 10 roll 1). See docs/ACADEMIC_YEAR_AND_PORTFOLIO.md.
+StudentSchema.index(
+  { school: 1, grade: 1, rollNumber: 1 },
+  { unique: true, partialFilterExpression: { status: "ACTIVE" } }
+);
+
+// Find every student who has ever been enrolled at a school (e.g. an origin
+// school's "transferred out / past students" view).
+StudentSchema.index({ "enrollments.school": 1, "enrollments.academicYearStart": -1 });
 
 export default mongoose.models.Student ||
   mongoose.model("Student", StudentSchema);

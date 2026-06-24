@@ -23,6 +23,7 @@ import {
 } from "@/lib/participationPresentation";
 import { publishEventRealtimeUpdate } from "@/lib/eventRealtime";
 import { getRegistrationLockMessage } from "@/lib/eventWorkflow";
+import { isStudentSelfRegistrationAllowed } from "@/lib/eventInvitations";
 
 function normalizeParticipationFormat(event) {
   if (
@@ -359,13 +360,6 @@ export async function POST(req, { params }) {
     // CASE 1: STUDENT SELF-REGISTRATION
     // ==========================================
     if (session.user.role === "STUDENT") {
-      if (event.registrationMode !== "DIRECT") {
-        return errorResponse(
-          403,
-          "This event is registered by the school. Please contact your teacher or school admin."
-        );
-      }
-
       if (normalizeParticipationFormat(event) === "TEAM") {
         return errorResponse(
           400,
@@ -388,6 +382,24 @@ export async function POST(req, { params }) {
         String(event.school || "") !== String(schoolId)
       ) {
         return errorResponse(403, "This event is not available to your school.");
+      }
+
+      // Self-registration is gated per school: school events use the event-level
+      // registrationMode; platform events require the school to have approved the
+      // invitation AND enabled student self-registration.
+      const selfRegInvitation =
+        event.eventScope === "PLATFORM"
+          ? await EventSchoolInvitation.findOne({
+              event: event._id,
+              school: schoolId,
+            }).select("status studentSelfRegistration")
+          : null;
+
+      if (!isStudentSelfRegistrationAllowed(event, selfRegInvitation)) {
+        return errorResponse(
+          403,
+          "This event is registered by the school. Please contact your teacher or school admin."
+        );
       }
 
       if (event.eligibleGrades && event.eligibleGrades.length > 0) {

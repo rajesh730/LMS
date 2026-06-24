@@ -283,6 +283,12 @@ export async function PUT(req, props) {
           { status: 400 }
         );
       }
+      if (lifecycleStatus === "COMPLETED" && !event.resultsPublished) {
+        return NextResponse.json(
+          { message: "Events can be completed only after results are published." },
+          { status: 400 }
+        );
+      }
       event.lifecycleStatus = lifecycleStatus;
       if (lifecycleStatus === "ARCHIVED") {
         event.eventWorkflowStatus = "ARCHIVED";
@@ -295,6 +301,12 @@ export async function PUT(req, props) {
       if (nextWorkflowStatus === "ARCHIVED") {
         event.lifecycleStatus = "ARCHIVED";
       } else if (nextWorkflowStatus === "COMPLETED") {
+        if (!event.resultsPublished) {
+          return NextResponse.json(
+            { message: "Events can be completed only after results are published." },
+            { status: 400 }
+          );
+        }
         event.lifecycleStatus = "COMPLETED";
       }
       event.eventWorkflowStatus = nextWorkflowStatus;

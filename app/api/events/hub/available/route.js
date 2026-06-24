@@ -71,10 +71,16 @@ export async function GET(req) {
       school: student.school,
       status: "APPROVED",
     })
-      .select("event")
+      .select("event studentSelfRegistration")
       .lean();
     const approvedPlatformEventIds = approvedPlatformInvites.map(
       (invitation) => invitation.event
+    );
+    // Platform events whose school has opted students into self-registration.
+    const selfRegPlatformEventIds = new Set(
+      approvedPlatformInvites
+        .filter((invitation) => invitation.studentSelfRegistration)
+        .map((invitation) => String(invitation.event))
     );
 
     // Cancelled events the student was registered for stay visible (clearly
@@ -200,16 +206,29 @@ export async function GET(req) {
           : null,
       };
 
+      // A student may self-register when the event allows it for their school:
+      // school events use registrationMode; platform events use the per-school
+      // invitation opt-in. Team events stay school-managed.
+      const selfRegistrationAllowed =
+        !isTeamEventLike(event) &&
+        (event.eventScope === "SCHOOL"
+          ? event.registrationMode === "DIRECT"
+          : selfRegPlatformEventIds.has(String(event._id)));
+
       return {
         ...presentedEvent,
-        canRequest: event.registrationMode === "DIRECT" && gradeEligible,
+        canRequest: selfRegistrationAllowed && gradeEligible,
+        canWithdraw:
+          selfRegistrationAllowed &&
+          Boolean(activeRequest) &&
+          String(activeRequest.status || "").toUpperCase() !== "WITHDRAWN",
         isGradeEligible: gradeEligible,
         isEligible: gradeEligible,
         ineligibilityReason: gradeEligible
           ? null
           : `This event is for ${event.eligibleGrades.join(", ")}.`,
         registrationSupportMode:
-          event.registrationMode === "DIRECT" && gradeEligible
+          selfRegistrationAllowed && gradeEligible
             ? "STUDENT_DIRECT"
             : "SCHOOL_MANAGED",
         capacityInfo: getCapacityInfo(event, eventRequests),

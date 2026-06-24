@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import { notFound } from "next/navigation";
 import connectDB from "@/lib/db";
 import Student from "@/models/Student";
+import User from "@/models/User";
 import Achievement from "@/models/Achievement";
 import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
 import SchoolShowcaseProfile from "@/models/SchoolShowcaseProfile";
@@ -64,7 +65,7 @@ async function getPortfolioData(id) {
     isDeleted: { $ne: true },
     status: { $ne: "INACTIVE" },
   })
-    .select("name firstName lastName grade school createdAt")
+    .select("name firstName lastName grade school createdAt enrollments")
     .populate("school", "schoolName schoolLocation")
     .lean();
 
@@ -123,17 +124,52 @@ async function getPortfolioData(id) {
     achievements.map((a) => String(a.event?._id || a.event)).filter(Boolean)
   );
 
+  // Build the multi-school journey from enrollment history (newest first).
+  const enrollments = Array.isArray(student.enrollments)
+    ? student.enrollments
+    : [];
+  const enrollmentSchoolIds = Array.from(
+    new Set(enrollments.map((entry) => String(entry.school)).filter(Boolean))
+  );
+  const journeySchools = enrollmentSchoolIds.length
+    ? await User.find({ _id: { $in: enrollmentSchoolIds } })
+        .select("schoolName name")
+        .lean()
+    : [];
+  const journeySchoolNameById = new Map(
+    journeySchools.map((s) => [String(s._id), s.schoolName || s.name || "School"])
+  );
+  const journey = enrollments
+    .map((entry) => ({
+      schoolId: String(entry.school),
+      schoolName:
+        entry.schoolNameSnapshot ||
+        journeySchoolNameById.get(String(entry.school)) ||
+        "School",
+      grade: entry.grade,
+      academicYear: entry.academicYear,
+      academicYearStart: entry.academicYearStart ?? null,
+      status: entry.status,
+    }))
+    .sort(
+      (a, b) =>
+        (b.academicYearStart ?? 0) - (a.academicYearStart ?? 0)
+    );
+  const schoolsCount = enrollmentSchoolIds.length || (schoolObjectId ? 1 : 0);
+
   return {
     student,
     schoolProfile: schoolProfile || null,
     achievements,
     writings: writingsRaw,
+    journey,
     stats: {
       achievements: achievements.length,
       wins: achievements.filter((a) => a.placement === "WINNER").length,
       certificates: achievements.filter((a) => a.certificateUrl).length,
       writings: writingsRaw.length,
       competitions: eventIds.size,
+      schools: schoolsCount,
     },
   };
 }
@@ -244,7 +280,8 @@ export default async function StudentPortfolioPage({ params }) {
 
   if (!data) notFound();
 
-  const { student, schoolProfile, achievements, writings, stats } = data;
+  const { student, schoolProfile, achievements, writings, journey, stats } = data;
+  const hasJourney = Array.isArray(journey) && journey.length > 0;
   const name = student.name || "Student";
   const schoolId = student.school?._id ? String(student.school._id) : "";
   const schoolName = student.school?.schoolName || "School";
@@ -373,6 +410,47 @@ export default async function StudentPortfolioPage({ params }) {
           <StatTile icon={FaCertificate} accent="purple" label="Certificates" value={stats.certificates} />
           <StatTile icon={FaFeatherAlt} accent="purple" label="Published Writing" value={stats.writings} />
         </section>
+
+        {/* school journey */}
+        {hasJourney && journey.length > 1 && (
+          <section className="rounded-2xl border border-[#d7e2ef] bg-white p-5 shadow-sm sm:p-6">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 className="inline-flex items-center gap-2 text-lg font-black text-[#17120a]">
+                <FaGraduationCap className="text-[#1f4f7a]" />
+                School Journey
+              </h2>
+              <span className="rounded-full bg-[#eef5fb] px-3 py-1 text-xs font-black text-[#1f4f7a]">
+                {stats.schools} {stats.schools === 1 ? "school" : "schools"}
+              </span>
+            </div>
+            <ol className="mt-5 space-y-3">
+              {journey.map((entry, index) => (
+                <li
+                  key={`${entry.schoolId}-${entry.academicYearStart}-${index}`}
+                  className="flex items-start gap-3 rounded-xl border border-[#e1e8f4] bg-[#f8fbff] p-4"
+                >
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-[#1f4f7a] shadow-sm">
+                    <FaGraduationCap />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-black text-[#17120a]">
+                      {entry.schoolName}
+                    </p>
+                    <p className="mt-0.5 text-xs text-[#52657d]">
+                      {entry.grade}
+                      {entry.academicYear ? ` · ${entry.academicYear}` : ""}
+                    </p>
+                  </div>
+                  {entry.status === "CURRENT" && (
+                    <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-[10px] font-black uppercase text-emerald-700">
+                      Current
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ol>
+          </section>
+        )}
 
         {/* achievements */}
         <section className="rounded-2xl border border-[#d7e2ef] bg-white p-5 shadow-sm sm:p-6">

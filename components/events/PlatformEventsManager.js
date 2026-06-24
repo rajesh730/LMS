@@ -12,6 +12,8 @@ import {
   FaGlobe,
   FaSearch,
   FaTimesCircle,
+  FaToggleOff,
+  FaToggleOn,
   FaTrophy,
   FaUserPlus,
   FaUsers,
@@ -68,10 +70,7 @@ function isArchivedEvent(event) {
 }
 
 function isCompletedEvent(event) {
-  return Boolean(
-    event.resultsPublished ||
-      String(event.lifecycleStatus || "").toUpperCase() === "COMPLETED"
-  );
+  return Boolean(event.resultsPublished);
 }
 
 function isLiveEvent(event) {
@@ -207,6 +206,42 @@ export default function PlatformEventsManager() {
           type: "success",
           title: action === "approve" ? "Event joined" : "Event left",
           message: data.message || "Your school decision was saved.",
+        });
+        await loadEvents({ silent: true });
+      } catch (error) {
+        setFeedback({
+          type: "error",
+          title: "Action failed",
+          message: error.message || "Please retry.",
+        });
+      } finally {
+        setBusyId("");
+      }
+    },
+    [loadEvents]
+  );
+
+  const toggleSelfRegistration = useCallback(
+    async (event) => {
+      try {
+        setBusyId(event._id);
+        setFeedback(null);
+        const next = !event.studentSelfRegistration;
+        const res = await fetch(`/api/events/${event._id}/school-invitation`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ studentSelfRegistration: next }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(data.message || "Could not update this setting.");
+        }
+        setFeedback({
+          type: "success",
+          title: next
+            ? "Student registration enabled"
+            : "Student registration disabled",
+          message: data.message || "Your setting was saved.",
         });
         await loadEvents({ silent: true });
       } catch (error) {
@@ -610,7 +645,7 @@ export default function PlatformEventsManager() {
                     active: false,
                     complete:
                       event.resultsPublished ||
-                      ["COMPLETED", "ARCHIVED"].includes(
+                      ["ARCHIVED"].includes(
                         String(event.lifecycleStatus || "").toUpperCase()
                       ),
                   },
@@ -707,6 +742,19 @@ export default function PlatformEventsManager() {
                               </span>
                             ))}
                           </div>
+                          {isApproved && joinable && (
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                disabled={isBusy}
+                                onClick={() => setDeclineTarget(event)}
+                                className="inline-flex min-h-9 items-center gap-2 rounded-xl bg-white px-4 text-xs font-black text-rose-700 transition hover:bg-rose-50 disabled:opacity-50"
+                              >
+                                <FaTimesCircle />
+                                Leave Event
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </div>
 
@@ -743,15 +791,26 @@ export default function PlatformEventsManager() {
                                 View Event
                               </Link>
                             )}
-                            {joinable && (
+                            {joinable && !isTeamEvent && (
                               <button
                                 type="button"
                                 disabled={isBusy}
-                                onClick={() => setDeclineTarget(event)}
-                                className="inline-flex min-h-8 items-center justify-center gap-2 rounded-lg bg-white px-3 text-[11px] font-black text-rose-600 transition hover:bg-rose-50 disabled:opacity-50"
+                                onClick={() => toggleSelfRegistration(event)}
+                                title="When on, your eligible students can enroll themselves and withdraw. You still register students by default."
+                                className={`inline-flex min-h-8 items-center justify-center gap-1.5 rounded-lg border px-3 text-[11px] font-black transition disabled:opacity-50 ${
+                                  event.studentSelfRegistration
+                                    ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                                    : "border-[#dbe5f4] bg-white text-[#52657d] hover:bg-[#f8fbff]"
+                                }`}
                               >
-                                <FaTimesCircle />
-                                Leave Event
+                                {event.studentSelfRegistration ? (
+                                  <FaToggleOn />
+                                ) : (
+                                  <FaToggleOff />
+                                )}
+                                {event.studentSelfRegistration
+                                  ? "Self-enroll On"
+                                  : "Self-enroll Off"}
                               </button>
                             )}
                           </>

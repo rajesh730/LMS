@@ -188,8 +188,10 @@ export default function ManagementTabs({
           {selectedTab === "rounds" && (
             <RoundsTab
               event={event}
+              requests={allRequests}
               readOnly={isReadOnly}
               onAddNotice={() => setActiveTab("notices")}
+              onEventStarted={onDataChange}
               onCompetitionClosed={async () => {
                 await onDataChange?.();
                 setActiveTab("results");
@@ -212,9 +214,16 @@ export default function ManagementTabs({
               <EventResultsManager
                 fixedEventId={event.id || event._id}
                 embedded
-                readOnly={isReadOnly}
+                // Only the event's operator can edit results. For a platform
+                // event a participating school can view their own students'
+                // results, so it is read-only for them.
+                readOnly={isReadOnly || !canControlEventOperations}
                 title="Event Results & Certificates"
-                description="Review the final placements and publish school-issued digital certificates."
+                description={
+                  canControlEventOperations
+                    ? "Review the final placements and school-issued digital certificates."
+                    : "View your students' final placements and certificates when they are available."
+                }
               />
             )
           )}

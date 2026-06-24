@@ -1,6 +1,7 @@
 import connectDB from "@/lib/db";
 import User from "@/models/User";
 import Student from "@/models/Student";
+import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
 import SchoolShowcaseProfile from "@/models/SchoolShowcaseProfile";
 import { getActiveSchoolPromotions } from "@/lib/schoolPromotions";
 import PublicExplorePanel from "@/components/public/PublicExplorePanel";
@@ -57,6 +58,17 @@ function serializePromotion(promotion, studentCountMap) {
   };
 }
 
+function serializeActivity(activity) {
+  return {
+    publicPostCount: activity?.publicPostCount || 0,
+    schoolWallCount: activity?.schoolWallCount || 0,
+    magazineCount: activity?.magazineCount || 0,
+    globalWallCount: activity?.globalWallCount || 0,
+    recentPublicPostCount: activity?.recentPublicPostCount || 0,
+    lastPublicAt: activity?.lastPublicAt ? activity.lastPublicAt.toISOString() : "",
+  };
+}
+
 export default async function PublicSchoolsPage() {
   await connectDB();
 
@@ -75,7 +87,10 @@ export default async function PublicSchoolsPage() {
 
   const schoolIds = schools.map((school) => school._id);
 
-  const [profiles, studentCounts] = await Promise.all([
+  const recentActivitySince = new Date();
+  recentActivitySince.setDate(recentActivitySince.getDate() - 45);
+
+  const [profiles, studentCounts, writingActivity] = await Promise.all([
     SchoolShowcaseProfile.find({
       school: { $in: schoolIds },
       visibility: "PUBLIC",
@@ -92,6 +107,62 @@ export default async function PublicSchoolsPage() {
       },
       { $group: { _id: "$school", count: { $sum: 1 } } },
     ]),
+    SchoolMagazineArticle.aggregate([
+      {
+        $match: {
+          school: { $in: schoolIds },
+          isDeleted: { $ne: true },
+          $or: [
+            {
+              status: { $in: ["SUBMITTED", "APPROVED"] },
+              showOnSchoolWall: { $ne: false },
+            },
+            { isMagazinePublished: true },
+            { isGlobalWallPublished: true },
+          ],
+        },
+      },
+      {
+        $addFields: {
+          publicDate: {
+            $ifNull: [
+              "$publishedAt",
+              { $ifNull: ["$magazinePublishedAt", "$updatedAt"] },
+            ],
+          },
+        },
+      },
+      {
+        $group: {
+          _id: "$school",
+          publicPostCount: { $sum: 1 },
+          schoolWallCount: {
+            $sum: {
+              $cond: [
+                {
+                  $and: [
+                    { $in: ["$status", ["SUBMITTED", "APPROVED"]] },
+                    { $ne: ["$showOnSchoolWall", false] },
+                  ],
+                },
+                1,
+                0,
+              ],
+            },
+          },
+          magazineCount: {
+            $sum: { $cond: [{ $eq: ["$isMagazinePublished", true] }, 1, 0] },
+          },
+          globalWallCount: {
+            $sum: { $cond: [{ $eq: ["$isGlobalWallPublished", true] }, 1, 0] },
+          },
+          recentPublicPostCount: {
+            $sum: { $cond: [{ $gte: ["$publicDate", recentActivitySince] }, 1, 0] },
+          },
+          lastPublicAt: { $max: "$publicDate" },
+        },
+      },
+    ]),
   ]);
 
   const profileMap = new Map(
@@ -99,6 +170,15 @@ export default async function PublicSchoolsPage() {
   );
   const studentCountMap = new Map(
     studentCounts.map((item) => [String(item._id), item.count])
+  );
+  const activityMap = new Map(
+    writingActivity.map((item) => [String(item._id), item])
+  );
+  const spotlightMap = new Map(
+    spotlights.map((promotion) => [
+      String(promotion.school?.id || promotion.schoolId || promotion.school?.schoolId),
+      promotion,
+    ])
   );
 
   const publicSchools = schools
@@ -123,6 +203,14 @@ export default async function PublicSchoolsPage() {
         createdAt: school.createdAt ? school.createdAt.toISOString() : "",
         studentCount: studentCountMap.get(String(school._id)) || 0,
         profile: serializeProfile(profile),
+        activity: serializeActivity(activityMap.get(String(school._id))),
+        spotlight: spotlightMap.has(String(school._id))
+          ? {
+              id: spotlightMap.get(String(school._id)).id,
+              href: spotlightMap.get(String(school._id)).href,
+              priority: spotlightMap.get(String(school._id)).priority,
+            }
+          : null,
       };
     })
     .filter(Boolean);

@@ -1,5 +1,6 @@
 import connectDB from "../../../../lib/db.js";
 import Student from "../../../../models/Student.js";
+import AcademicYear from "../../../../models/AcademicYear.js";
 import { successResponse, errorResponse } from "../../../../lib/apiResponse.js";
 import {
   generatePlatformStudentId,
@@ -11,6 +12,10 @@ import {
   isActiveStudentQuery,
   requireApiSession,
 } from "../../../../lib/authz.js";
+import {
+  ensureActiveAcademicYear,
+  makeEnrollmentEntry,
+} from "../../../../lib/studentEnrollment.js";
 import bcrypt from "bcryptjs";
 
 export async function POST(req) {
@@ -35,6 +40,9 @@ export async function POST(req) {
       failed: [],
     };
     const reservedUsernames = new Set();
+    const academicYear = await ensureActiveAcademicYear(schoolId);
+    const schoolNameSnapshot =
+      session.user.schoolName || session.user.name || "";
 
     for (const studentData of students) {
       try {
@@ -59,12 +67,14 @@ export async function POST(req) {
         const plainPassword = `${cleanFirstName}@123`;
         const hashedPassword = await bcrypt.hash(plainPassword, 10);
 
-        // Check for duplicate roll number in the same grade
+        // Roll number is free if no on-roster student holds it (graduated/
+        // transferred/inactive students release their roll number).
         const existingRollNumber = await Student.findOne({
           school: schoolId,
           grade: normalizedGrade,
           rollNumber: normalizedRollNumber,
           isDeleted: { $ne: true },
+          status: { $nin: ["ALUMNI", "GRADUATED", "INACTIVE"] },
         });
 
         if (existingRollNumber) {
@@ -100,6 +110,15 @@ export async function POST(req) {
           parentName: studentData.parentName || "To be added",
           parentContactNumber: studentData.parentContactNumber || "To be added",
           parentEmail: studentData.parentEmail || undefined,
+          enrollments: [
+            makeEnrollmentEntry({
+              school: schoolId,
+              schoolName: schoolNameSnapshot,
+              grade: normalizedGrade,
+              rollNumber: normalizedRollNumber,
+              academicYear,
+            }),
+          ],
         });
 
         await newStudent.save();
@@ -116,6 +135,13 @@ export async function POST(req) {
           reason: error.message,
         });
       }
+    }
+
+    if (academicYear?._id && results.success.length > 0) {
+      await AcademicYear.updateOne(
+        { _id: academicYear._id },
+        { $inc: { "summary.admitted": results.success.length } }
+      );
     }
 
     return successResponse(200, "Bulk registration completed", results);

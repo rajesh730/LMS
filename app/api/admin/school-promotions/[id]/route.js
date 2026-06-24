@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import SchoolPromotion from "@/models/SchoolPromotion";
+import SchoolShowcaseProfile from "@/models/SchoolShowcaseProfile";
 import User from "@/models/User";
 import {
   PROMOTION_PLACEMENTS,
@@ -124,15 +125,27 @@ export async function PATCH(request, props) {
       );
     }
 
-    const school = await User.findOne({
-      _id: validation.data.school,
-      role: "SCHOOL_ADMIN",
-      status: { $in: ["APPROVED", "SUBSCRIBED"] },
-    }).select("_id");
+    const [school, showcaseProfile] = await Promise.all([
+      User.findOne({
+        _id: validation.data.school,
+        role: "SCHOOL_ADMIN",
+        status: { $in: ["APPROVED", "SUBSCRIBED"] },
+      }).select("_id"),
+      SchoolShowcaseProfile.findOne({
+        school: validation.data.school,
+        visibility: "PUBLIC",
+      }).select("_id"),
+    ]);
 
     if (!school) {
       return NextResponse.json(
         { message: "Selected school is not active" },
+        { status: 400 }
+      );
+    }
+    if (!showcaseProfile) {
+      return NextResponse.json(
+        { message: "Selected school must publish its public showcase first" },
         { status: 400 }
       );
     }

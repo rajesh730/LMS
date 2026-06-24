@@ -17,6 +17,13 @@ const EventSchoolInvitationSchema = new mongoose.Schema(
       enum: ["PENDING", "APPROVED", "DISAPPROVED", "WITHDRAWN"],
       default: "PENDING",
     },
+    // Per-school opt-in: when true, this school's eligible students may register
+    // themselves (and withdraw) for this PLATFORM event. The school still
+    // registers students by default; this only adds the student self-serve path.
+    studentSelfRegistration: {
+      type: Boolean,
+      default: false,
+    },
     notifiedAt: {
       type: Date,
       default: Date.now,

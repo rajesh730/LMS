@@ -9,6 +9,11 @@ import Student from "@/models/Student";
 const PERSISTENT_SESSION_MAX_AGE = 60 * 60 * 24 * 365; // 1 year
 const SESSION_REFRESH_INTERVAL = 60 * 60 * 24; // 1 day
 
+// Match NextAuth's own secure-cookie detection so the cookie name/flags stay
+// correct in both local (http) and production (https) environments.
+const useSecureCookies = (process.env.NEXTAUTH_URL || "").startsWith("https://");
+const cookiePrefix = useSecureCookies ? "__Secure-" : "";
+
 export const authOptions = {
   providers: [
     CredentialsProvider({
@@ -237,6 +242,22 @@ export const authOptions = {
   },
   jwt: {
     maxAge: PERSISTENT_SESSION_MAX_AGE,
+  },
+  // Explicitly persist the session cookie. Setting maxAge on the cookie itself
+  // writes a Max-Age into the Set-Cookie header, so the cookie survives tab and
+  // browser closes (instead of being a session-only cookie). The user stays
+  // logged in until they explicitly sign out or the year elapses.
+  cookies: {
+    sessionToken: {
+      name: `${cookiePrefix}next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: useSecureCookies,
+        maxAge: PERSISTENT_SESSION_MAX_AGE,
+      },
+    },
   },
   secret: process.env.NEXTAUTH_SECRET,
 };

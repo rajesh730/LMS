@@ -202,8 +202,7 @@ export default function SchoolOwnedEventsManager({
       completed: events.filter(
         (event) =>
           String(event.lifecycleStatus || "").toUpperCase() !== "ARCHIVED" &&
-          (String(event.lifecycleStatus || "").toUpperCase() === "COMPLETED" ||
-            event.resultsPublished)
+          event.resultsPublished
       ).length,
       archived: events.filter((event) => isTerminalState(event)).length,
       activeRecords: activeRecords.length,
@@ -220,11 +219,10 @@ export default function SchoolOwnedEventsManager({
         (activeFilter === "ACTIVE" &&
           isLiveEvent(event)) ||
         (activeFilter === "REGISTRATION" &&
-          isRegistrationOpen(event) &&
-          getRegisteredCount(event) === 0) ||
+          isRegistrationOpen(event)) ||
         (activeFilter === "COMPLETED" &&
           !terminal &&
-          (state === "COMPLETED" || event.resultsPublished)) ||
+          event.resultsPublished) ||
         (activeFilter === "ARCHIVED" && terminal);
       const matchesSearch =
         !needle ||
@@ -664,7 +662,6 @@ export default function SchoolOwnedEventsManager({
                     : "All grades";
                 const isFinished =
                   event.resultsPublished ||
-                  eventState === "COMPLETED" ||
                   eventState === "ARCHIVED";
                 const nextAction = getEventNextActionLabel(event);
                 const rowStats = [

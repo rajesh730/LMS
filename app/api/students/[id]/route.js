@@ -55,6 +55,7 @@ export async function PUT(req, { params }) {
                 grade: normalizedGrade,
                 rollNumber: normalizedRollNumber,
                 isDeleted: { $ne: true },
+                status: { $nin: ["ALUMNI", "GRADUATED", "INACTIVE"] },
                 _id: { $ne: id } // Exclude current student
             });
 

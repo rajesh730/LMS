@@ -10,6 +10,7 @@ import {
   FaEye,
   FaFilter,
   FaSearch,
+  FaSignOutAlt,
   FaTrophy,
   FaUsers,
 } from "react-icons/fa";
@@ -63,8 +64,7 @@ function isCancelled(event) {
 }
 
 function isCompleted(event) {
-  const state = String(event.lifecycleStatus || "ACTIVE").toUpperCase();
-  return Boolean(event.finalOutcomeReady || event.resultsPublished || state === "COMPLETED");
+  return Boolean(event.finalOutcomeReady || event.resultsPublished);
 }
 
 function isLive(event) {
@@ -191,6 +191,30 @@ export default function StudentEventsManager() {
       setFeedback({
         type: "error",
         title: "Enrollment failed",
+        message: error.message || "Please retry after checking registration rules.",
+      });
+    }
+  };
+
+  const withdraw = async (event) => {
+    try {
+      setFeedback(null);
+      const res = await fetch(`/api/events/${event._id}/participate`, {
+        method: "DELETE",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok)
+        throw new Error(data.error || data.message || "Withdrawal failed.");
+      setFeedback({
+        type: "success",
+        title: "Withdrawn",
+        message: `You have withdrawn from ${event.title}.`,
+      });
+      await loadEvents({ silent: true });
+    } catch (error) {
+      setFeedback({
+        type: "error",
+        title: "Withdrawal failed",
         message: error.message || "Please retry after checking registration rules.",
       });
     }
@@ -327,16 +351,6 @@ export default function StudentEventsManager() {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <h1 className="text-3xl font-black text-[#17120a]">Student Events</h1>
-          <p className="mt-2 text-base text-[#52657d]">
-            Track school events, registration status, notices, rounds, results,
-            and certificates from one place.
-          </p>
-        </div>
-      </div>
-
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {metricCards.map((card) => {
           const Icon = card.icon;
@@ -660,6 +674,16 @@ export default function StudentEventsManager() {
                             <FaEye />
                             {finished ? "View Result" : "View Event"}
                           </Link>
+                        )}
+                        {event.canWithdraw && !finished && !cancelled && (
+                          <button
+                            type="button"
+                            onClick={() => withdraw(event)}
+                            className="inline-flex min-h-8 items-center gap-2 rounded-lg bg-white px-3 text-[11px] font-black text-rose-600 transition hover:bg-rose-50"
+                          >
+                            <FaSignOutAlt />
+                            Withdraw
+                          </button>
                         )}
                         <Link
                           href={`/student/events/${event._id}?tab=notices`}

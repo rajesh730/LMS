@@ -1,7 +1,6 @@
 "use client";
 
-import { Suspense, useState, useEffect } from "react";
-import dynamic from "next/dynamic";
+import { Suspense, useMemo, useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -16,27 +15,22 @@ import EmptyState from "@/components/EmptyState";
 import SendEventForm from "./SendEventForm";
 import EventCard from "./EventCard";
 
-// Lazy load the participants view component
-const EventParticipantsView = dynamic(() => import("./EventParticipantsView"), {
-  loading: () => (
-    <LoadingState
-      title="Loading participants"
-      message="Preparing registrations and approval details."
-    />
-  ),
-});
-
 import {
+  FaBan,
   FaCalendarAlt,
+  FaCircle,
   FaToggleOn,
   FaToggleOff,
-  FaTrash,
   FaCheckCircle,
   FaTimesCircle,
+  FaFilter,
   FaKey,
   FaLayerGroup,
+  FaPlus,
   FaSearch,
+  FaUsers,
 } from "react-icons/fa";
+import { getEventWorkflowStatus, isRegistrationOpen } from "@/lib/eventWorkflow";
 
 const FETCH_TIMEOUT_MS = 10000;
 
@@ -70,6 +64,30 @@ function eventSortTime(event) {
 
 function newestEventsFirst(events = []) {
   return [...events].sort((a, b) => eventSortTime(b) - eventSortTime(a));
+}
+
+function isTerminalEvent(event) {
+  return ["ARCHIVED", "CANCELLED"].includes(
+    String(event.lifecycleStatus || "ACTIVE").toUpperCase()
+  );
+}
+
+function isCompletedEvent(event) {
+  return Boolean(event.resultsPublished);
+}
+
+function isLiveEvent(event) {
+  return (
+    !isTerminalEvent(event) &&
+    !isCompletedEvent(event) &&
+    ["REGISTRATION_CLOSED", "ROUND_ACTIVE", "RESULTS_DRAFT"].includes(
+      getEventWorkflowStatus(event)
+    )
+  );
+}
+
+function formatEventType(value) {
+  return String(value || "EVENT").replaceAll("_", " ");
 }
 
 async function fetchJsonWithTimeout(url) {
@@ -131,8 +149,13 @@ function AdminDashboardContent() {
   const [schoolDistrict, setSchoolDistrict] = useState("All Districts");
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
-  const [viewingEvent, setViewingEvent] = useState(null);
   const [eventWorkspaceTab, setEventWorkspaceTab] = useState("manage");
+  const [eventStatusFilter, setEventStatusFilter] = useState("ACTIVE");
+  const [eventSearch, setEventSearch] = useState("");
+  const [eventTypeFilter, setEventTypeFilter] = useState("");
+  const [eventGradeFilter, setEventGradeFilter] = useState("");
+  const [eventVisibilityFilter, setEventVisibilityFilter] = useState("");
+  const [showEventFilters, setShowEventFilters] = useState(true);
   const [deletingId, setDeletingId] = useState(null);
   const [lastError, setLastError] = useState(null);
   const [actionFeedback, setActionFeedback] = useState(null);
@@ -145,7 +168,6 @@ function AdminDashboardContent() {
 
   const closeOverlays = () => {
     setEditingEvent(null);
-    setViewingEvent(null);
   };
 
   useEffect(() => {
@@ -496,21 +518,127 @@ function AdminDashboardContent() {
   const platformEvents = events.filter(
     (event) => (event.eventScope || "PLATFORM") === "PLATFORM"
   );
-  const activeEvents = newestEventsFirst(
-    platformEvents.filter(
-      (event) => (event.lifecycleStatus || "ACTIVE") === "ACTIVE"
-    )
+  const eventTypes = useMemo(
+    () =>
+      Array.from(new Set(platformEvents.map((event) => event.eventType).filter(Boolean))),
+    [platformEvents]
   );
-  const completedEvents = newestEventsFirst(
-    platformEvents.filter(
-      (event) => (event.lifecycleStatus || "ACTIVE") === "COMPLETED"
-    )
+  const eventGradeOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          platformEvents
+            .flatMap((event) => event.eligibleGrades || [])
+            .filter(Boolean)
+        )
+      ),
+    [platformEvents]
   );
-  const archivedEvents = newestEventsFirst(
-    platformEvents.filter((event) =>
-      ["ARCHIVED", "CANCELLED"].includes(event.lifecycleStatus || "ACTIVE")
-    )
-  );
+  const eventMetrics = useMemo(() => {
+    const activeRecords = platformEvents.filter((event) => !isTerminalEvent(event));
+    return {
+      live: platformEvents.filter(isLiveEvent).length,
+      registrationOpen: platformEvents.filter(
+        (event) =>
+          !isTerminalEvent(event) &&
+          !isCompletedEvent(event) &&
+          isRegistrationOpen(event)
+      ).length,
+      completed: platformEvents.filter(
+        (event) => !isTerminalEvent(event) && isCompletedEvent(event)
+      ).length,
+      cancelled: platformEvents.filter(isTerminalEvent).length,
+      activeRecords: activeRecords.length,
+    };
+  }, [platformEvents]);
+  const filteredPlatformEvents = useMemo(() => {
+    const needle = eventSearch.trim().toLowerCase();
+    return newestEventsFirst(
+      platformEvents.filter((event) => {
+        const matchesStatus =
+          (eventStatusFilter === "ALL" && !isTerminalEvent(event)) ||
+          (eventStatusFilter === "ACTIVE" && isLiveEvent(event)) ||
+          (eventStatusFilter === "REGISTRATION" &&
+            !isTerminalEvent(event) &&
+            !isCompletedEvent(event) &&
+            isRegistrationOpen(event)) ||
+          (eventStatusFilter === "COMPLETED" &&
+            !isTerminalEvent(event) &&
+            isCompletedEvent(event)) ||
+          (eventStatusFilter === "ARCHIVED" && isTerminalEvent(event));
+        const searchable = [
+          event.title,
+          event.description,
+          event.eventType,
+          event.visibility,
+          ...(event.eligibleGrades || []),
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        return (
+          matchesStatus &&
+          (!needle || searchable.includes(needle)) &&
+          (!eventTypeFilter || event.eventType === eventTypeFilter) &&
+          (!eventGradeFilter || (event.eligibleGrades || []).includes(eventGradeFilter)) &&
+          (!eventVisibilityFilter || event.visibility === eventVisibilityFilter)
+        );
+      })
+    );
+  }, [
+    eventGradeFilter,
+    eventSearch,
+    eventStatusFilter,
+    eventTypeFilter,
+    eventVisibilityFilter,
+    platformEvents,
+  ]);
+  const eventMetricCards = [
+    {
+      key: "ACTIVE",
+      label: "Live",
+      value: eventMetrics.live,
+      note: "Rounds or results in progress",
+      icon: FaCalendarAlt,
+      tone: "blue",
+    },
+    {
+      key: "REGISTRATION",
+      label: "Registration Open",
+      value: eventMetrics.registrationOpen,
+      note: "Accepting school entries",
+      icon: FaUsers,
+      tone: "emerald",
+    },
+    {
+      key: "COMPLETED",
+      label: "Completed",
+      value: eventMetrics.completed,
+      note: "Results/certificates ready",
+      icon: FaCheckCircle,
+      tone: "blue",
+    },
+    {
+      key: "ARCHIVED",
+      label: "Cancelled",
+      value: eventMetrics.cancelled,
+      note: "Cancelled events",
+      icon: FaBan,
+      tone: "slate",
+    },
+  ];
+  const eventMetricTones = {
+    blue: "border-blue-100 bg-blue-50 text-[#0a2f66]",
+    emerald: "border-emerald-100 bg-emerald-50 text-emerald-700",
+    slate: "border-slate-100 bg-slate-50 text-slate-700",
+  };
+  const eventFilterTabs = [
+    ["ACTIVE", "Live", FaCircle, eventMetrics.live],
+    ["REGISTRATION", "Registration Open", FaUsers, eventMetrics.registrationOpen],
+    ["ALL", "All Events", FaCalendarAlt, eventMetrics.activeRecords],
+    ["COMPLETED", "Completed", FaCheckCircle, eventMetrics.completed],
+    ["ARCHIVED", "Cancelled", FaBan, eventMetrics.cancelled],
+  ];
 
   return (
     <DashboardLayout>
@@ -804,75 +932,190 @@ function AdminDashboardContent() {
 
       {activeTab === "events" && (
         <div className="space-y-6">
-          {viewingEvent ? (
-            <EventParticipantsView
-              event={viewingEvent}
-              onBack={() => setViewingEvent(null)}
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <h1 className="text-3xl font-black text-[#17120a]">Platform Events</h1>
+              <p className="mt-2 text-base text-[#52657d]">
+                Manage platform events, school registration, rounds, notices, results, and certificates.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setEventWorkspaceTab("create")}
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-purple-700 px-5 text-sm font-black text-white shadow-sm transition hover:bg-purple-800"
+            >
+              <FaPlus />
+              Create Platform Event
+            </button>
+          </div>
+
+          {eventWorkspaceTab === "create" ? (
+            <SendEventForm
+              onEventCreated={() => {
+                fetchData();
+                setEventWorkspaceTab("manage");
+              }}
+              initialData={null}
+              onCancel={() => setEventWorkspaceTab("manage")}
             />
           ) : (
             <>
-              <div className="rounded-2xl border border-[#e1e7f2] bg-white p-2 shadow-sm">
-                <div className="flex flex-wrap gap-2">
-                  {[
-                    { id: "manage", label: "Manage Events" },
-                    { id: "completed", label: "Completed Events" },
-                    { id: "archived", label: "Cancelled" },
-                    { id: "create", label: "Create Event" },
-                  ].map((tab) => (
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                {eventMetricCards.map((card) => {
+                  const Icon = card.icon;
+                  return (
                     <button
-                      key={tab.id}
+                      key={card.key}
                       type="button"
-                      onClick={() => setEventWorkspaceTab(tab.id)}
-                      className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
-                        eventWorkspaceTab === tab.id
-                          ? "bg-purple-700 text-white"
-                          : "text-[#24314d] hover:bg-[#f8fbff] hover:text-purple-700"
+                      onClick={() => setEventStatusFilter(card.key)}
+                      className={`rounded-2xl border border-[#e6eaf7] bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-purple-200 hover:shadow-md ${
+                        eventStatusFilter === card.key ? "ring-2 ring-purple-100" : ""
                       }`}
                     >
-                      {tab.label}
+                      <div className="flex items-center gap-4">
+                        <span
+                          className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border ${
+                            eventMetricTones[card.tone]
+                          }`}
+                        >
+                          <Icon />
+                        </span>
+                        <span className="min-w-0">
+                          <strong className="block text-2xl font-black text-[#17120a]">
+                            {card.value}
+                          </strong>
+                          <span className="block truncate text-sm font-black text-[#24314d]">
+                            {card.label}
+                          </span>
+                          <span className="mt-1 block text-xs font-bold text-[#52657d]">
+                            {card.note}
+                          </span>
+                        </span>
+                      </div>
                     </button>
-                  ))}
-                </div>
+                  );
+                })}
               </div>
 
-              {eventWorkspaceTab === "create" && (
-                <SendEventForm
-                  onEventCreated={() => {
-                    fetchData();
-                    setEventWorkspaceTab("manage");
-                  }}
-                  initialData={null}
-                />
+              {lastError && (
+                <AlertBanner type="error" title="Event action failed" message={lastError} />
               )}
 
-              {eventWorkspaceTab === "manage" && (
-                <div className="rounded-2xl border border-[#e1e7f2] bg-white p-6 shadow-[0_14px_34px_rgba(10,47,102,0.08)]">
-                {lastError && (
-                  <div className="mb-4">
-                    <AlertBanner type="error" title="Event action failed" message={lastError} />
+              <section className="overflow-hidden rounded-2xl border border-[#e1e7f2] bg-white shadow-[0_14px_34px_rgba(10,47,102,0.08)]">
+                <div className="border-b border-[#e1e7f2]">
+                  <div className="flex flex-wrap gap-0 px-4">
+                    {eventFilterTabs.map(([key, label, Icon, count]) => (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => setEventStatusFilter(key)}
+                        className={`relative inline-flex min-h-14 items-center gap-2 px-5 text-sm font-black transition ${
+                          eventStatusFilter === key
+                            ? "text-purple-700 after:absolute after:bottom-0 after:left-0 after:h-[3px] after:w-full after:rounded-full after:bg-purple-700"
+                            : "text-[#24314d] hover:bg-[#f8fbff] hover:text-purple-700"
+                        }`}
+                      >
+                        <Icon />
+                        {label}
+                        {count > 0 && (
+                          <span
+                            className={`ml-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-black ${
+                              eventStatusFilter === key
+                                ? "bg-purple-100 text-purple-700"
+                                : "bg-[#eef2f8] text-[#52657d]"
+                            }`}
+                          >
+                            {count}
+                          </span>
+                        )}
+                      </button>
+                    ))}
                   </div>
-                )}
 
-                <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-                  <div>
-                    <p className="text-xs font-bold uppercase tracking-normal text-[#75869b]">
-                      Active competitions
-                    </p>
-                    <h2 className="mt-2 text-2xl font-black text-[#17120a]">
-                      Platform Events
-                    </h2>
+                  <div className="grid gap-3 border-t border-[#e1e7f2] p-4 lg:grid-cols-[minmax(240px,1fr)_150px_150px_150px_auto_auto]">
+                    <div className="relative">
+                      <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-[#75869b]" />
+                      <input
+                        type="text"
+                        value={eventSearch}
+                        onChange={(event) => setEventSearch(event.target.value)}
+                        placeholder="Search events..."
+                        className="h-12 w-full rounded-xl border border-[#dbe5f4] bg-[#f8fbff] pl-11 pr-4 text-sm font-semibold outline-none transition focus:border-purple-300"
+                      />
+                    </div>
+                    <select
+                      value={eventTypeFilter}
+                      onChange={(event) => setEventTypeFilter(event.target.value)}
+                      className={`h-12 rounded-xl border border-[#dbe5f4] bg-white px-4 text-sm font-black text-[#24314d] outline-none transition focus:border-purple-300 ${
+                        showEventFilters ? "" : "hidden"
+                      }`}
+                    >
+                      <option value="">All Types</option>
+                      {eventTypes.map((type) => (
+                        <option key={type} value={type}>
+                          {formatEventType(type)}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      value={eventGradeFilter}
+                      onChange={(event) => setEventGradeFilter(event.target.value)}
+                      className={`h-12 rounded-xl border border-[#dbe5f4] bg-white px-4 text-sm font-black text-[#24314d] outline-none transition focus:border-purple-300 ${
+                        showEventFilters ? "" : "hidden"
+                      }`}
+                    >
+                      <option value="">All Grades</option>
+                      {eventGradeOptions.map((grade) => (
+                        <option key={grade} value={grade}>
+                          {grade}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      value={eventVisibilityFilter}
+                      onChange={(event) => setEventVisibilityFilter(event.target.value)}
+                      className={`h-12 rounded-xl border border-[#dbe5f4] bg-white px-4 text-sm font-black text-[#24314d] outline-none transition focus:border-purple-300 ${
+                        showEventFilters ? "" : "hidden"
+                      }`}
+                    >
+                      <option value="">All Visibility</option>
+                      <option value="INVITED">School Visible</option>
+                      <option value="PUBLIC">Public</option>
+                      <option value="PRIVATE">Private</option>
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEventSearch("");
+                        setEventTypeFilter("");
+                        setEventGradeFilter("");
+                        setEventVisibilityFilter("");
+                      }}
+                      className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-[#dbe5f4] bg-white px-4 text-sm font-black text-[#0a2f66] transition hover:bg-[#f8fbff]"
+                    >
+                      Clear
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowEventFilters((value) => !value)}
+                      className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-[#dbe5f4] bg-[#f8fbff] px-4 text-sm font-black text-[#0a2f66] transition hover:bg-white"
+                    >
+                      <FaFilter />
+                      Filters
+                    </button>
                   </div>
                 </div>
 
-                {activeEvents.length === 0 ? (
-                  <EmptyState
-                    icon={FaCalendarAlt}
-                    title="No active platform events"
-                    description="Create a platform event when you are ready to invite schools."
-                  />
-                ) : (
-                  <div className="space-y-4">
-                    {activeEvents.map((event) => (
+                <div className="p-4">
+                  {filteredPlatformEvents.length === 0 ? (
+                    <EmptyState
+                      icon={FaCalendarAlt}
+                      title="No platform events found"
+                      description="Create a platform event or adjust filters to see more records."
+                    />
+                  ) : (
+                    <div className="space-y-3">
+                      {filteredPlatformEvents.map((event) => (
                         <EventCard
                           key={event._id}
                           event={event}
@@ -880,93 +1123,20 @@ function AdminDashboardContent() {
                           onPermanentDelete={() => requestPermanentDeleteEvent(event)}
                           onUpdateStatus={updateEventStatus}
                           isDeleting={deletingId === event._id}
-                          onEdit={(e) => {
-                            setEditingEvent(e);
-                          }}
-                          onViewParticipants={(e) => setViewingEvent(e)}
-                          actionMode="manage"
+                          onEdit={(selectedEvent) => setEditingEvent(selectedEvent)}
+                          actionMode={
+                            isTerminalEvent(event)
+                              ? "archived"
+                              : isCompletedEvent(event)
+                              ? "completed"
+                              : "manage"
+                          }
                         />
-                    ))}
-                  </div>
-                )}
-                </div>
-              )}
-
-              {eventWorkspaceTab === "completed" && (
-                <div className="rounded-2xl border border-[#e1e7f2] bg-white p-6 shadow-[0_14px_34px_rgba(10,47,102,0.08)]">
-                  <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-                    <h2 className="text-xl font-black text-[#17120a]">
-                      Completed Platform Events
-                    </h2>
-                    <div className="rounded-lg border border-emerald-100 bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-700">
-                      Closed competitions with published or finalized results
-                    </div>
-                  </div>
-
-                  {completedEvents.length === 0 ? (
-                    <EmptyState
-                      icon={FaCheckCircle}
-                      title="No completed events yet"
-                      description="Completed platform events will appear here after competitions close."
-                    />
-                  ) : (
-                    <div className="space-y-4">
-                      {completedEvents.map((event) => (
-                          <EventCard
-                            key={event._id}
-                            event={event}
-                              onCancel={() => requestCancelEvent(event)}
-                            onPermanentDelete={() => requestPermanentDeleteEvent(event)}
-                            onUpdateStatus={updateEventStatus}
-                            isDeleting={deletingId === event._id}
-                            onViewParticipants={(e) => setViewingEvent(e)}
-                            actionMode="completed"
-                          />
                       ))}
                     </div>
                   )}
                 </div>
-              )}
-
-              {eventWorkspaceTab === "archived" && (
-                <div className="rounded-2xl border border-[#e1e7f2] bg-white p-6 shadow-[0_14px_34px_rgba(10,47,102,0.08)]">
-                  <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-                    <h2 className="text-xl font-black text-[#17120a]">
-                      Cancelled Events
-                    </h2>
-                    <div className="rounded-lg border border-blue-100 bg-blue-50 px-4 py-2 text-sm font-bold text-[#0a2f66]">
-                      Restore an event, or permanently delete it (results and
-                      certificates are always preserved).
-                    </div>
-                  </div>
-
-                  {archivedEvents.length === 0 ? (
-                    <EmptyState
-                      icon={FaTrash}
-                      title="No archived events"
-                      description="Archived events will appear here for historical review or cleanup."
-                    />
-                  ) : (
-                    <div className="space-y-4">
-                      {archivedEvents.map((event) => (
-                          <EventCard
-                            key={event._id}
-                            event={event}
-                              onCancel={() => requestCancelEvent(event)}
-                            onPermanentDelete={() => requestPermanentDeleteEvent(event)}
-                            onUpdateStatus={updateEventStatus}
-                            isDeleting={deletingId === event._id}
-                            onEdit={(e) => {
-                              setEditingEvent(e);
-                            }}
-                            onViewParticipants={(e) => setViewingEvent(e)}
-                            actionMode="archived"
-                          />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
+              </section>
             </>
           )}
         </div>

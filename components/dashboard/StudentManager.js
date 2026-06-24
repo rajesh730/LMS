@@ -26,6 +26,7 @@ import Modal from "@/components/Modal";
 import CredentialsModal from "@/components/CredentialsModal";
 import AlertBanner from "@/components/ui/AlertBanner";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import StudentTransferPanel from "@/components/dashboard/StudentTransferPanel";
 
 export default function StudentManager({ initialGrade, hideGradeFilter = false }) {
   // Data State
@@ -478,6 +479,13 @@ export default function StudentManager({ initialGrade, hideGradeFilter = false }
             </Link>
           </div>
         </div>
+      )}
+
+      {!hideGradeFilter && (
+        <StudentTransferPanel
+          grades={grades}
+          onChanged={() => fetchStudents(pagination.page)}
+        />
       )}
 
       {!hideGradeFilter && (

@@ -8,6 +8,7 @@ import {
   FaEllipsisH,
   FaEye,
   FaLayerGroup,
+  FaPlay,
   FaPlus,
   FaSave,
   FaSearch,
@@ -16,6 +17,7 @@ import {
   FaUsers,
 } from "react-icons/fa";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import { getEventStartState } from "@/lib/eventStartRules";
 
 const NON_FINAL_STATUS_BUTTONS = [
   { value: "SELECTED", label: "Selected" },
@@ -34,8 +36,6 @@ const FINAL_STATUS_BUTTONS = [
 
 const EMPTY_ROUND_FORM = {
   title: "",
-  date: "",
-  startTime: "",
   isFinal: false,
 };
 
@@ -59,8 +59,6 @@ function formatDate(value) {
 function buildRoundForm(round) {
   return {
     title: round?.title || "",
-    date: round?.date ? new Date(round.date).toISOString().split("T")[0] : "",
-    startTime: round?.startTime || "",
     isFinal: Boolean(round?.roundType === "FINAL" || round?.isFinal),
   };
 }
@@ -134,7 +132,14 @@ function summarizeTeamRoundParticipant(participant) {
   };
 }
 
-export default function RoundsTab({ event, readOnly = false, onCompetitionClosed, onAddNotice }) {
+export default function RoundsTab({
+  event,
+  requests = [],
+  readOnly = false,
+  onCompetitionClosed,
+  onEventStarted,
+  onAddNotice,
+}) {
   const eventId = event.id || event._id;
   const isTeamEvent =
     String(event?.participationFormat || "INDIVIDUAL").toUpperCase() === "TEAM";
@@ -154,6 +159,10 @@ export default function RoundsTab({ event, readOnly = false, onCompetitionClosed
   const [busyKey, setBusyKey] = useState("");
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [openRoundMenuId, setOpenRoundMenuId] = useState("");
+  const startState = useMemo(
+    () => getEventStartState(event, requests),
+    [event, requests]
+  );
 
   const fetchRounds = useCallback(async () => {
     try {
@@ -293,6 +302,33 @@ export default function RoundsTab({ event, readOnly = false, onCompetitionClosed
     setRoundModalOpen(true);
   };
 
+  const startEvent = async () => {
+    if (!startState.canStart || competitionLocked) {
+      setMessage(startState.reason || "This event cannot be started yet.");
+      return;
+    }
+
+    try {
+      setBusyKey("start-event");
+      const res = await fetch(`/api/events/${eventId}/start-competition`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to start event.");
+      }
+      setMessage(data.message || "Event started. Round 1 is ready.");
+      await fetchRounds();
+      await onEventStarted?.();
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setBusyKey("");
+    }
+  };
+
   const openEditRound = (round) => {
     if (competitionLocked) return;
     setEditingRoundId(round._id);
@@ -309,7 +345,7 @@ export default function RoundsTab({ event, readOnly = false, onCompetitionClosed
         : `/api/events/${eventId}/rounds`;
       const method = editingRoundId ? "PATCH" : "POST";
       const payload = {
-        ...roundForm,
+        title: roundForm.title,
         isFinal: Boolean(roundForm.isFinal),
       };
       const res = await fetch(url, {
@@ -496,10 +532,26 @@ export default function RoundsTab({ event, readOnly = false, onCompetitionClosed
             <p className="mt-1 text-sm text-[#52657d]">
               {readOnly
                 ? "View each round and its outcomes."
+                : rounds.length === 0
+                ? "Start the event to create Round 1 and freeze the participant list."
                 : "Manage each round and update outcomes. Selected entries can move forward."}
             </p>
           </div>
-          {!competitionLocked && !readOnly && (
+          {!competitionLocked && !readOnly && rounds.length === 0 && (
+            <button
+              type="button"
+              onClick={startEvent}
+              disabled={!startState.canStart || busyKey === "start-event"}
+              title={startState.canStart ? "Start Round 1" : startState.reason}
+              className="event-participant-selected-control inline-flex min-h-10 items-center gap-2 rounded-xl bg-[#0a2f66] px-4 text-sm font-black text-white hover:bg-[#123f7d] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <FaPlay />
+              <span className="event-participant-selected-label">
+                {busyKey === "start-event" ? "Starting..." : "Start Event"}
+              </span>
+            </button>
+          )}
+          {!competitionLocked && !readOnly && rounds.length > 0 && (
             <button
               type="button"
               onClick={openCreateRound}
@@ -537,8 +589,14 @@ export default function RoundsTab({ event, readOnly = false, onCompetitionClosed
               ) : rounds.length === 0 ? (
                 <tr>
                   <td colSpan="6" className="px-6 py-10 text-center text-[#52657d]">
-                    No rounds yet. Round 1 will be created automatically once a
-                    {isTeamEvent ? "team is approved." : "participant is approved."}
+                    <p className="font-bold text-[#17120a]">
+                      No rounds yet. Start the event to create Round 1.
+                    </p>
+                    <p className="mt-1 text-sm">
+                      {startState.canStart
+                        ? `${startState.entryCount} ${startState.unitLabel} ready.`
+                        : startState.reason}
+                    </p>
                   </td>
                 </tr>
               ) : (
@@ -1099,30 +1157,6 @@ export default function RoundsTab({ event, readOnly = false, onCompetitionClosed
                   }
                 />
                 Mark this as the final round
-              </label>
-              <label>
-                <div className="mb-1 text-sm font-medium text-slate-700">Date</div>
-                <input
-                  type="date"
-                  value={roundForm.date}
-                  onChange={(e) =>
-                    setRoundForm((current) => ({ ...current, date: e.target.value }))
-                  }
-                  className="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-slate-900 outline-none focus:border-blue-500"
-                />
-              </label>
-              <label>
-                <div className="mb-1 text-sm font-medium text-slate-700">Start Time</div>
-                <input
-                  value={roundForm.startTime}
-                  onChange={(e) =>
-                    setRoundForm((current) => ({
-                      ...current,
-                      startTime: e.target.value,
-                    }))
-                  }
-                  className="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-slate-900 outline-none focus:border-blue-500"
-                />
               </label>
             </div>
             <div className="mt-5 flex justify-end">

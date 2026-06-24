@@ -583,7 +583,8 @@ export default function EventEditorForm({
               </p>
             </div>
 
-            <div className={`grid gap-4 ${isSchoolOwnedFlow ? "md:grid-cols-3" : "md:grid-cols-4"}`}>
+            <div className="grid gap-4 md:grid-cols-3">
+          {isSchoolOwnedFlow && (
           <div>
             <label className="block text-slate-300 mb-1 text-sm">
               Registration Method
@@ -598,10 +599,7 @@ export default function EventEditorForm({
                 <input
                   type="checkbox"
                   checked={formData.registrationMode === "DIRECT"}
-                  disabled={
-                    formData.participationFormat === "TEAM" ||
-                    formData.eventScope !== "SCHOOL"
-                  }
+                  disabled={formData.participationFormat === "TEAM"}
                   onChange={(e) =>
                     setFormData((prev) => ({
                       ...prev,
@@ -616,15 +614,14 @@ export default function EventEditorForm({
               </label>
             </div>
             <p className="mt-1 text-xs text-slate-500">
-              {formData.eventScope !== "SCHOOL"
-                ? "Platform events stay school-managed so schools control their official participant lists."
-                : formData.participationFormat === "TEAM"
+              {formData.participationFormat === "TEAM"
                 ? "Team events are school-managed so the school controls the final group list."
                 : formData.registrationMode === "DIRECT"
-                ? "Eligible students will see Enroll in their dashboard. The school can still edit the participant list."
+                ? "Eligible students will see Enroll in their dashboard. You can still edit the participant list."
                 : "Teachers or school admins collect names and register students from the school dashboard."}
             </p>
           </div>
+          )}
           <div>
             <label className="block text-slate-300 mb-1 text-sm">
               Registration Deadline (optional)
@@ -772,7 +769,14 @@ export default function EventEditorForm({
                     : "Individual students",
                 ],
                 ["Visibility", "Public"],
-                ["Registration Method", "School registers students"],
+                [
+                  "Registration Method",
+                  isSchoolOwnedFlow
+                    ? formData.registrationMode === "DIRECT"
+                      ? "Students can enroll themselves"
+                      : "School registers students"
+                    : "School registers students (each school can let its students self-register)",
+                ],
                 ["Deadline", formData.registrationDeadline || "No deadline"],
                 ["Registration Grades", selectedGradesLabel],
                 [

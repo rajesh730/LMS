@@ -1,5 +1,6 @@
 import connectDB from "../../../../lib/db.js";
 import Student from "../../../../models/Student.js";
+import AcademicYear from "../../../../models/AcademicYear.js";
 import { hashPassword } from "../../../../lib/credentialGenerator.js";
 import { successResponse, errorResponse } from "../../../../lib/apiResponse.js";
 import {
@@ -12,6 +13,10 @@ import {
   generateUniqueStudentUsername,
 } from "../../../../lib/studentIdentity.js";
 import { normalizeGradeValue } from "../../../../lib/schoolGrades.js";
+import {
+  ensureActiveAcademicYear,
+  makeEnrollmentEntry,
+} from "../../../../lib/studentEnrollment.js";
 
 export async function POST(req) {
   try {
@@ -72,12 +77,14 @@ export async function POST(req) {
     // Hash password
     const hashedPassword = await hashPassword(password);
 
-    // Check if roll number already exists in the same grade
+    // Check if roll number is already used by an on-roster student in this grade.
+    // Graduated/transferred/inactive students release their roll number.
     const existingRollNumber = await Student.findOne({
       school: schoolId,
       grade: normalizedGrade,
       rollNumber: normalizedRollNumber,
       isDeleted: { $ne: true },
+      status: { $nin: ["ALUMNI", "GRADUATED", "INACTIVE"] },
     });
 
     if (existingRollNumber) {
@@ -103,6 +110,12 @@ export async function POST(req) {
       rollNumber: normalizedRollNumber,
       school: schoolId,
     });
+
+    // Stamp the first enrollment with the school's current academic year so the
+    // student's journey/history starts from registration.
+    const academicYear = await ensureActiveAcademicYear(schoolId);
+    const schoolNameSnapshot =
+      session.user.schoolName || session.user.name || "";
 
     // Create new student
     const newStudent = new Student({
@@ -137,9 +150,27 @@ export async function POST(req) {
 
       // Status
       status: "ACTIVE",
+
+      // Journey / history — first enrollment
+      enrollments: [
+        makeEnrollmentEntry({
+          school: schoolId,
+          schoolName: schoolNameSnapshot,
+          grade: normalizedGrade,
+          rollNumber: normalizedRollNumber,
+          academicYear,
+        }),
+      ],
     });
 
     await newStudent.save();
+
+    if (academicYear?._id) {
+      await AcademicYear.updateOne(
+        { _id: academicYear._id },
+        { $inc: { "summary.admitted": 1 } }
+      );
+    }
 
     return successResponse(
       200,

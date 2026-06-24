@@ -58,6 +58,78 @@ export async function GET(req, props) {
   }
 }
 
+// Toggle the per-school "let students register themselves" setting for a
+// PLATFORM event. Only an approved school may enable it; disabling keeps any
+// existing student self-registrations and simply blocks new ones.
+export async function PATCH(req, props) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session || session.user.role !== "SCHOOL_ADMIN") {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
+    const params = await props.params;
+    const body = await req.json().catch(() => ({}));
+    const enabled = Boolean(body.studentSelfRegistration);
+
+    await connectDB();
+
+    const invitation = await ensureSchoolInvitationForEvent(
+      params.id,
+      session.user.id
+    );
+
+    if (!invitation || invitation.status === "WITHDRAWN") {
+      return NextResponse.json(
+        { message: "Invitation not found" },
+        { status: 404 }
+      );
+    }
+
+    if (enabled && invitation.status !== "APPROVED") {
+      return NextResponse.json(
+        {
+          message:
+            "Approve this event for your school before letting students register themselves.",
+        },
+        { status: 400 }
+      );
+    }
+
+    invitation.studentSelfRegistration = enabled;
+    await invitation.save();
+
+    const event = await Event.findById(params.id).select(
+      "title eventScope lifecycleStatus status"
+    );
+
+    publishEventRealtimeUpdate("school-event-invitation-updated", {
+      event,
+      eventId: params.id,
+      schoolId: session.user.id,
+      eventScope: event?.eventScope,
+      status: invitation.status,
+    });
+
+    return NextResponse.json(
+      {
+        message: enabled
+          ? "Students at your school can now register themselves for this event."
+          : "Student self-registration turned off. Students already registered stay registered.",
+        studentSelfRegistration: invitation.studentSelfRegistration,
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("Toggle Student Self-Registration Error:", error);
+    return NextResponse.json(
+      { message: "Internal Server Error", error: error.message },
+      { status: 500 }
+    );
+  }
+}
+
 export async function PUT(req, props) {
   try {
     const session = await getServerSession(authOptions);
