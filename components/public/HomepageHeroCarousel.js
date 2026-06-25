@@ -10,6 +10,7 @@ import {
   FaShieldAlt,
   FaStar,
 } from "react-icons/fa";
+import SchoolLogoMark from "@/components/public/SchoolLogoMark";
 
 const SLIDE_TONES = [
   {
@@ -140,13 +141,39 @@ export default function HomepageHeroCarousel({ stories = [] }) {
               {getPreview(activeSlide.content, activeSlide.empty ? 180 : 150)}
             </p>
           )}
-          <Link
-            href={activeSlide.href || "/student-voices"}
-            className="mt-5 inline-flex w-fit items-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-[#1f4e79] shadow-sm transition hover:-translate-y-0.5 md:mt-6"
-          >
-            {activeSlide.empty ? "Explore Schools" : "Read Story"}
-            <FaArrowRight />
-          </Link>
+          <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center md:mt-6">
+            <Link
+              href={activeSlide.href || "/student-voices"}
+              className="inline-flex w-fit items-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-[#1f4e79] shadow-sm transition hover:-translate-y-0.5"
+            >
+              {activeSlide.empty ? "Explore Schools" : "Read Story"}
+              <FaArrowRight />
+            </Link>
+            {!activeSlide.empty && activeSlide.schoolHref && (
+              <Link
+                href={activeSlide.schoolHref}
+                className="inline-flex min-w-0 items-center gap-3 rounded-xl border border-white/20 bg-white/12 px-3 py-2 text-white backdrop-blur transition hover:bg-white/18"
+              >
+                <SchoolLogoMark
+                  imageUrl={activeSlide.schoolLogoUrl}
+                  name={activeSlide.schoolName}
+                  className="h-9 w-9"
+                  shapeClassName="rounded-lg"
+                />
+                <span className="min-w-0">
+                  <span className="block truncate text-xs font-semibold text-white/75">
+                    School Profile
+                  </span>
+                  <span className="block truncate text-sm font-bold">
+                    {activeSlide.schoolName || "School"}
+                  </span>
+                </span>
+                <span className="shrink-0 rounded-lg bg-white px-2.5 py-1.5 text-xs font-bold text-[#1f4e79]">
+                  See Profile
+                </span>
+              </Link>
+            )}
+          </div>
         </div>
 
         <div className="flex items-center justify-center gap-2">

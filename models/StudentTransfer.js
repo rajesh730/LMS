@@ -1,9 +1,10 @@
 import mongoose from "mongoose";
 
-// A claim-and-approve record for moving an existing student between schools.
-// The new school files the request (after verifying platformStudentId + DOB);
-// the origin school approves it. On approval the SAME Student document is reused
-// so all achievements/writings/results stay with the person.
+// A transfer record for moving an existing student between schools.
+// New flow: student requests release -> current school approves and issues a
+// transfer code -> student selects destination -> destination school admits.
+// The SAME Student document is reused so achievements/writings/results stay
+// linked to the person.
 
 const StudentTransferSchema = new mongoose.Schema(
   {
@@ -14,7 +15,7 @@ const StudentTransferSchema = new mongoose.Schema(
     },
     platformStudentId: {
       type: String,
-      required: true,
+      default: "",
       trim: true,
     },
     fromSchool: {
@@ -25,17 +26,49 @@ const StudentTransferSchema = new mongoose.Schema(
     toSchool: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+      default: null,
     },
     requestedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+      default: null,
+    },
+    requestedByStudent: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Student",
+      default: null,
     },
     status: {
       type: String,
-      enum: ["PENDING", "APPROVED", "REJECTED", "CANCELLED"],
-      default: "PENDING",
+      enum: [
+        "PENDING",
+        "APPROVED",
+        "PENDING_RELEASE",
+        "RELEASED",
+        "PENDING_ADMISSION",
+        "COMPLETED",
+        "REJECTED",
+        "CANCELLED",
+      ],
+      default: "PENDING_RELEASE",
+    },
+    transferCode: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    releasedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+    releasedAt: {
+      type: Date,
+      default: null,
+    },
+    targetSelectedAt: {
+      type: Date,
+      default: null,
     },
     // Where the new school will place the student.
     toGrade: {
@@ -93,11 +126,33 @@ const StudentTransferSchema = new mongoose.Schema(
 
 // Only one open (PENDING) transfer per student at a time.
 StudentTransferSchema.index(
-  { student: 1, status: 1 },
-  { unique: true, partialFilterExpression: { status: "PENDING" } }
+  { student: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      status: {
+        $in: ["PENDING", "PENDING_RELEASE", "RELEASED", "PENDING_ADMISSION"],
+      },
+    },
+  }
 );
 StudentTransferSchema.index({ toSchool: 1, status: 1, createdAt: -1 });
 StudentTransferSchema.index({ fromSchool: 1, status: 1, createdAt: -1 });
 
-export default mongoose.models.StudentTransfer ||
+const existingStudentTransferModel = mongoose.models.StudentTransfer;
+
+if (
+  existingStudentTransferModel &&
+  (!existingStudentTransferModel.schema.path("transferCode") ||
+    !existingStudentTransferModel.schema
+      .path("status")
+      ?.enumValues?.includes("PENDING_RELEASE"))
+) {
+  delete mongoose.models.StudentTransfer;
+}
+
+const StudentTransfer =
+  mongoose.models.StudentTransfer ||
   mongoose.model("StudentTransfer", StudentTransferSchema);
+
+export default StudentTransfer;

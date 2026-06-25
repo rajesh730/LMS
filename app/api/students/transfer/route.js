@@ -21,8 +21,6 @@ function sameDay(a, b) {
   );
 }
 
-// GET — transfers relevant to this school: incoming (we must approve a student
-// leaving us) and outgoing (we requested a student join us).
 export async function GET() {
   try {
     const { session, error } = await requireApiSession(["SCHOOL_ADMIN"]);
@@ -33,29 +31,56 @@ export async function GET() {
 
     await connectDB();
 
-    const [incoming, outgoing] = await Promise.all([
-      // Students leaving us — we approve.
-      StudentTransfer.find({ fromSchool: schoolId })
-        .sort({ createdAt: -1 })
-        .limit(50)
-        .populate("toSchool", "schoolName name")
-        .lean(),
-      // Students we are claiming — awaiting the origin school.
-      StudentTransfer.find({ toSchool: schoolId })
-        .sort({ createdAt: -1 })
-        .limit(50)
-        .populate("fromSchool", "schoolName name")
-        .lean(),
-    ]);
+    const [releaseRequests, releasedTransfers, admissionRequests, incoming, outgoing] =
+      await Promise.all([
+        StudentTransfer.find({ fromSchool: schoolId, status: "PENDING_RELEASE" })
+          .sort({ createdAt: -1 })
+          .limit(50)
+          .populate("student", "name grade rollNumber platformStudentId")
+          .populate("toSchool", "schoolName name")
+          .lean(),
+        StudentTransfer.find({
+          fromSchool: schoolId,
+          status: { $in: ["RELEASED", "PENDING_ADMISSION"] },
+        })
+          .sort({ releasedAt: -1, createdAt: -1 })
+          .limit(50)
+          .populate("student", "name grade rollNumber platformStudentId")
+          .populate("toSchool", "schoolName name")
+          .lean(),
+        StudentTransfer.find({ toSchool: schoolId, status: "PENDING_ADMISSION" })
+          .sort({ targetSelectedAt: -1, createdAt: -1 })
+          .limit(50)
+          .populate("student", "name grade rollNumber platformStudentId")
+          .populate("fromSchool", "schoolName name")
+          .lean(),
+        StudentTransfer.find({ fromSchool: schoolId, status: "PENDING" })
+          .sort({ createdAt: -1 })
+          .limit(50)
+          .populate("toSchool", "schoolName name")
+          .lean(),
+        StudentTransfer.find({ toSchool: schoolId, status: "PENDING" })
+          .sort({ createdAt: -1 })
+          .limit(50)
+          .populate("fromSchool", "schoolName name")
+          .lean(),
+      ]);
 
-    return successResponse(200, "Transfers loaded", { incoming, outgoing });
+    return successResponse(200, "Transfers loaded", {
+      releaseRequests,
+      releasedTransfers,
+      admissionRequests,
+      incoming,
+      outgoing,
+    });
   } catch (err) {
     console.error("GET /api/students/transfer error:", err);
     return internalServerError("Failed to load transfers");
   }
 }
 
-// POST — file a claim. Body: { platformStudentId, dateOfBirth, toGrade, toRollNumber }
+// Legacy school-initiated claim flow kept for compatibility. The new product
+// flow is student-initiated through /api/student/transfer.
 export async function POST(req) {
   try {
     const { session, error } = await requireApiSession(["SCHOOL_ADMIN"]);
@@ -100,8 +125,9 @@ export async function POST(req) {
 
     const existingPending = await StudentTransfer.findOne({
       student: student._id,
-      status: "PENDING",
+      status: { $in: ["PENDING", "PENDING_RELEASE", "RELEASED", "PENDING_ADMISSION"] },
     }).select("_id");
+
     if (existingPending) {
       return errorResponse(
         409,
@@ -109,8 +135,6 @@ export async function POST(req) {
       );
     }
 
-    // Roll number, if given, must be free among on-roster students in the
-    // target grade at our school.
     if (toRollNumber) {
       const clash = await Student.findOne({
         school: schoolId,

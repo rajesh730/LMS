@@ -28,7 +28,7 @@ const UserNotificationSchema = new mongoose.Schema(
     },
     category: {
       type: String,
-      enum: ["MAGAZINE", "ACHIEVEMENT"],
+      enum: ["MAGAZINE", "ACHIEVEMENT", "TRANSFER"],
       default: "MAGAZINE",
       index: true,
     },

@@ -249,7 +249,7 @@ function WritingTable({ articles, busyId, emptyState, mode, onRead, onAction }) 
           ? `Already used in ${getIssueLabel(article)}`
           : undefined,
       className:
-        "bg-emerald-600 text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500",
+        "publishing-desk-primary-button bg-[#1f4e79] text-white hover:bg-[#173f63] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500",
     },
     home: {
       actionLabel: (article) => (article.isPublished ? "Hide" : "Show"),
@@ -257,7 +257,7 @@ function WritingTable({ articles, busyId, emptyState, mode, onRead, onAction }) 
         article.isPublished ? "UNPUBLISH_HOMEPAGE" : "PUBLISH_HOMEPAGE",
       locked: () => false,
       title: () => undefined,
-      className: "bg-sky-700 text-white hover:bg-sky-800 disabled:opacity-60",
+      className: "publishing-desk-primary-button bg-[#1f4e79] text-white hover:bg-[#173f63] disabled:opacity-60",
     },
   }[mode];
 
@@ -300,7 +300,7 @@ function WritingTable({ articles, busyId, emptyState, mode, onRead, onAction }) 
               <button
                 type="button"
                 onClick={() => onRead(article)}
-                className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-[#dbe5f4] bg-white px-2.5 text-xs font-black text-[#0a2f66] hover:bg-[#f8fbff]"
+                className="publishing-desk-primary-button inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-[#1f4e79] px-4 text-sm font-black text-white transition hover:bg-[#173f63]"
               >
                 <FaEye />
                 Read
@@ -310,7 +310,7 @@ function WritingTable({ articles, busyId, emptyState, mode, onRead, onAction }) 
                 onClick={() => onAction(article, modeConfig.action(article))}
                 disabled={busyId === article.id || locked}
                 title={modeConfig.title(article)}
-                className={`inline-flex h-9 min-w-20 items-center justify-center rounded-lg px-2.5 text-xs font-black ${modeConfig.className}`}
+                className={`inline-flex min-h-10 min-w-20 items-center justify-center rounded-xl px-4 text-sm font-black transition ${modeConfig.className}`}
               >
                 {busyId === article.id ? "Updating..." : modeConfig.actionLabel(article)}
               </button>

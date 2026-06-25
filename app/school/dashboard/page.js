@@ -22,6 +22,14 @@ const StudentManager = dynamic(
     ),
   }
 );
+const StudentTransferPanel = dynamic(
+  () => import("@/components/dashboard/StudentTransferPanel"),
+  {
+    loading: () => (
+      <LoadingState title="Loading transfers" message="Preparing student transfer requests." />
+    ),
+  }
+);
 const TeacherManager = dynamic(
   () => import("@/components/dashboard/TeacherManager"),
   {
@@ -96,6 +104,7 @@ const SchoolMagazineManager = dynamic(
 );
 import {
   FaClock,
+  FaExchangeAlt,
   FaSchool,
   FaBars,
 } from "react-icons/fa";
@@ -151,6 +160,7 @@ function SchoolDashboardContent() {
   });
 
   const [schoolConfig, setSchoolConfig] = useState({ teacherRoles: [] });
+  const [schoolGrades, setSchoolGrades] = useState([]);
 
   const isPending = session?.user?.status === "PENDING";
   const isRestricted = isPending;
@@ -164,6 +174,9 @@ function SchoolDashboardContent() {
     try {
       const teachersRes = await fetch("/api/teachers", { cache: "no-store" });
       const configRes = await fetch("/api/school/config", {
+        cache: "no-store",
+      });
+      const gradesRes = await fetch("/api/school/grade-structure", {
         cache: "no-store",
       });
 
@@ -183,6 +196,18 @@ function SchoolDashboardContent() {
         );
       } else {
         setSchoolConfig({ teacherRoles: [] });
+      }
+
+      if (gradesRes.ok) {
+        const gradesData = await gradesRes.json();
+        const gradeOptions = gradesData.grades || gradesData.data?.grades || [];
+        setSchoolGrades(
+          gradeOptions
+            .map((grade) => grade?.name || grade?._id || grade)
+            .filter(Boolean)
+        );
+      } else {
+        setSchoolGrades([]);
       }
     } catch (error) {
       console.error("Error fetching data", error);
@@ -368,7 +393,7 @@ function SchoolDashboardContent() {
             {activeTab === "overview" && (
               <>
                 <PageHeader
-                  icon={FaSchool}
+                  icon={FaExchangeAlt}
                   eyebrow="School workspace"
                   title="School Overview"
                   description="Review your school's student, teacher, event, grade, and recent activity status from one place."
@@ -380,6 +405,23 @@ function SchoolDashboardContent() {
             )}
 
             {activeTab === "students" && <StudentManager />}
+
+            {activeTab === "student-transfers" && (
+              <>
+                <PageHeader
+                  icon={FaSchool}
+                  eyebrow="Student movement"
+                  title="Student Transfer"
+                  description="Approve student release requests, manage issued transfer codes, and admit released students joining your school."
+                />
+                <div className="mt-5">
+                  <StudentTransferPanel
+                    grades={schoolGrades}
+                    onChanged={() => router.refresh()}
+                  />
+                </div>
+              </>
+            )}
 
             {activeTab === "teachers" && <TeacherManager />}
             {activeTab === "showcase" && <ShowcaseProfileManager />}

@@ -7,6 +7,7 @@ import Student from "@/models/Student";
 import Achievement from "@/models/Achievement";
 import ParticipationRequest from "@/models/ParticipationRequest";
 import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
+import SchoolShowcaseProfile from "@/models/SchoolShowcaseProfile";
 import User from "@/models/User";
 
 function buildStudentLookup(session) {
@@ -46,9 +47,12 @@ export async function GET() {
       );
     }
 
-    const [school, achievements, participationRequests, writings] =
+    const [school, schoolProfile, achievements, participationRequests, writings] =
       await Promise.all([
         User.findById(student.school).select("schoolName schoolLocation").lean(),
+        SchoolShowcaseProfile.findOne({ school: student.school })
+          .select("coverImageUrl")
+          .lean(),
         Achievement.find({
           student: student._id,
           ...getActiveCertificateFilter(),
@@ -151,6 +155,7 @@ export async function GET() {
             email: student.email || "",
             schoolName: school?.schoolName || "School",
             schoolLocation: school?.schoolLocation || "",
+            schoolLogoUrl: schoolProfile?.coverImageUrl || "",
           },
           publicProfileAvailable,
           metrics: {

@@ -1,6 +1,13 @@
 import React, { useState } from "react";
 import { Download } from "lucide-react";
 import CSVUploader from "./CSVUploader";
+import {
+  buildNormalizedRow,
+  getRowValue,
+  friendlyUploadError,
+  buildFailedRowsCsv,
+  downloadTextFile,
+} from "@/lib/bulkUpload";
 
 const EnhancedTeacherRegistration = ({ schoolId, onSuccess }) => {
   const [activeTab, setActiveTab] = useState("single"); // 'single' or 'bulk'
@@ -98,6 +105,11 @@ const EnhancedTeacherRegistration = ({ schoolId, onSuccess }) => {
     }
   };
 
+  const scrollToTop = () => {
+    if (typeof window === "undefined") return;
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   const handleBulkUpload = async (parsedData) => {
     setLoading(true);
     setBulkResult(null);
@@ -105,51 +117,110 @@ const EnhancedTeacherRegistration = ({ schoolId, onSuccess }) => {
     setSuccess("");
 
     try {
-        // parsedData is the array of rows directly from CSVUploader
-        const teachers = parsedData.map(row => {
-            const fullName = (row['FullName*'] || row.Name || "").trim();
-            const nameParts = fullName.split(" ");
-            const firstName = nameParts[0];
-            
-            // Generate password
+        // 1. Map + validate every row in the browser first, tolerating header
+        //    differences and keeping the original CSV row for re-export.
+        const valid = [];
+        const invalid = [];
+
+        parsedData.forEach((row, index) => {
+            const rowNumber = index + 2; // +1 header line, +1 for 1-based
+            const normalizedRow = buildNormalizedRow(row);
+            const fullName = String(getRowValue(normalizedRow, ["fullname", "name"])).trim();
+            const email = String(getRowValue(normalizedRow, ["email", "emailaddress"])).trim();
+            const subject = String(getRowValue(normalizedRow, ["focusarea", "subject", "subjects", "area"])).trim();
+
+            const missing = [];
+            if (!fullName) missing.push("FullName");
+            if (!email) missing.push("Email");
+            if (!subject) missing.push("FocusArea");
+
+            if (missing.length > 0) {
+                invalid.push({
+                    name: fullName || "(no name)",
+                    rowNumber,
+                    reason: `Missing required value(s): ${missing.join(", ")}`,
+                    row,
+                });
+                return;
+            }
+
+            const firstName = fullName.split(" ").filter(Boolean)[0] || "";
             const password = `${firstName.toLowerCase()}@123`;
 
-            return {
+            valid.push({
+                _row: row,
+                _rowNumber: rowNumber,
                 name: fullName,
-                email: row['Email*'] || row.Email,
-                subject: row['FocusArea*'] || row.FocusArea || row['Subject*'] || row.Subject,
-                phone: row.Phone,
-                qualification: row.Qualification,
-                gender: row.Gender,
-                address: row.Address,
-                dateOfJoining: row.DateOfJoining,
-                designation: row.Designation,
-                experience: row.Experience,
-                bloodGroup: row.BloodGroup,
-                password: password
-            };
-        }).filter(t => t.name && t.email && t.subject);
+                email,
+                subject,
+                phone: getRowValue(normalizedRow, ["phone", "phonenumber", "contact"]),
+                qualification: getRowValue(normalizedRow, ["qualification", "qualifications"]),
+                gender: getRowValue(normalizedRow, ["gender"]),
+                address: getRowValue(normalizedRow, ["address"]),
+                dateOfJoining: getRowValue(normalizedRow, ["dateofjoining", "joiningdate", "doj"]),
+                designation: getRowValue(normalizedRow, ["designation", "role"]),
+                experience: getRowValue(normalizedRow, ["experience", "yearsofexperience"]),
+                bloodGroup: getRowValue(normalizedRow, ["bloodgroup", "blood"]),
+                password,
+            });
+        });
 
-        if (teachers.length === 0) {
-            throw new Error("No valid mentor records found. Please check mandatory fields (FullName, Email, FocusArea).");
+        // 2. Nothing usable: explain why (empty file vs. header/cell problems).
+        if (valid.length === 0) {
+            if (invalid.length === 0) {
+                throw new Error("Your file has no data rows. Add mentors below the header row and try again.");
+            }
+            setBulkResult({ success: [], failed: invalid });
+            setError("No mentors could be uploaded. Your column headers may not match the template, or required cells (FullName, Email, FocusArea) are empty. Use \"Download Template\" and compare your headings.");
+            scrollToTop();
+            return;
         }
 
+        // 3. Send only the valid rows.
+        const teachers = valid.map(({ _row, _rowNumber, ...clean }) => clean);
         const response = await fetch("/api/teachers/bulk-register", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ teachers, schoolId }),
         });
 
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.message);
-        
-        setBulkResult(data.data);
-        setSuccess(`Processed ${teachers.length} teachers. Success: ${data.data.success.length}, Failed: ${data.data.failed.length}`);
+        let data = {};
+        try { data = await response.json(); } catch { /* non-JSON error page */ }
+
+        if (!response.ok) {
+            throw new Error(friendlyUploadError(response.status, data.message, "teachers"));
+        }
+
+        const resultData = data.data || { success: [], failed: [] };
+
+        // 4. Combine browser-side invalid rows with server-side failures.
+        const serverFailed = (resultData.failed || []).map((f) => {
+            const match = valid.find((v) => v.email === f.teacher?.email);
+            return {
+                name: f.teacher?.name || "Unknown",
+                rowNumber: match?._rowNumber,
+                reason: f.reason,
+                row: match?._row,
+            };
+        });
+        const failed = [...invalid, ...serverFailed];
+
+        setBulkResult({ success: resultData.success || [], failed });
+        const total = valid.length + invalid.length;
+        setSuccess(`Processed ${total} row(s) — ${(resultData.success || []).length} added, ${failed.length} need attention.`);
+        scrollToTop();
+        if ((resultData.success || []).length > 0 && onSuccess) onSuccess();
     } catch (err) {
-        setError(err.message);
+        setError(err.message || "Something went wrong during the upload. Please try again.");
+        scrollToTop();
     } finally {
         setLoading(false);
     }
+  };
+
+  const downloadFailedRows = () => {
+    if (!bulkResult?.failed?.length) return;
+    downloadTextFile("teachers_failed_rows.csv", buildFailedRowsCsv(bulkResult.failed));
   };
 
   const downloadCsvTemplate = () => {
@@ -234,13 +305,24 @@ const EnhancedTeacherRegistration = ({ schoolId, onSuccess }) => {
             {/* Failed List */}
             {bulkResult.failed.length > 0 && (
                 <div className="bg-red-500/10 border border-red-500/50 rounded-lg p-4">
-                    <h4 className="text-red-400 font-medium mb-2">Failed to Register ({bulkResult.failed.length})</h4>
-                    <div className="max-h-40 overflow-y-auto pr-2 custom-scrollbar">
+                    <div className="flex items-center justify-between gap-3 mb-2">
+                        <h4 className="text-red-400 font-medium">Need attention ({bulkResult.failed.length})</h4>
+                        <button
+                            onClick={downloadFailedRows}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 border border-red-500/50 text-red-300 hover:bg-slate-700 rounded-lg text-xs font-medium transition shrink-0"
+                        >
+                            <Download size={14} /> Download failed rows
+                        </button>
+                    </div>
+                    <p className="text-xs text-red-300/80 mb-3">
+                        Fix these rows in the downloaded file, then upload it again. Already-added mentors are skipped automatically.
+                    </p>
+                    <div className="max-h-48 overflow-y-auto pr-2 custom-scrollbar">
                         <ul className="space-y-2 text-sm text-red-300">
                             {bulkResult.failed.map((f, i) => (
                                 <li key={i} className="border-b border-red-500/20 pb-2 last:border-0 last:pb-0">
                                     <div className="font-medium text-red-200">
-                                        {f.teacher.name || 'Unknown'}
+                                        {f.rowNumber ? `Row ${f.rowNumber}: ` : ""}{f.name || 'Unknown'}
                                     </div>
                                     <div className="text-xs opacity-80 mt-0.5">Reason: {f.reason}</div>
                                 </li>

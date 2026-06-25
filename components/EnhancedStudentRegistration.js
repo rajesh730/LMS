@@ -1,35 +1,18 @@
 import React, { useState, useEffect } from "react";
 import { Download } from "lucide-react";
 import CSVUploader from "./CSVUploader";
+import {
+  buildNormalizedRow,
+  getRowValue,
+  friendlyUploadError,
+  buildFailedRowsCsv,
+  downloadTextFile,
+} from "@/lib/bulkUpload";
 
 const EnhancedStudentRegistration = ({ schoolId, onSuccess }) => {
   const scrollToTop = () => {
     if (typeof window === "undefined") return;
     window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-  const normalizeHeaderKey = (key) =>
-    String(key || "")
-      .trim()
-      .replace(/^\ufeff/, "")
-      .toLowerCase()
-      .replace(/[\s\*\-_]/g, "");
-
-  const buildNormalizedRow = (row) => {
-    const normalized = {};
-    Object.keys(row || {}).forEach((key) => {
-      normalized[normalizeHeaderKey(key)] = row[key];
-    });
-    return normalized;
-  };
-
-  const getRowValue = (row, keys) => {
-    for (const key of keys) {
-      const value = row[key];
-      if (value !== undefined && value !== null && String(value).trim() !== "") {
-        return value;
-      }
-    }
-    return "";
   };
 
   const parseDateValue = (value) => {
@@ -44,6 +27,7 @@ const EnhancedStudentRegistration = ({ schoolId, onSuccess }) => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [bulkResult, setBulkResult] = useState(null);
+  const [bulkUploadStatus, setBulkUploadStatus] = useState(null);
   const [grades, setGrades] = useState([]);
   
   const [editingId, setEditingId] = useState(null);
@@ -231,81 +215,146 @@ const EnhancedStudentRegistration = ({ schoolId, onSuccess }) => {
     setError("");
     setSuccess("");
     setBulkResult(null);
+    setBulkUploadStatus({
+      label: "Checking CSV rows",
+      detail: `${parsedData.length} row(s) found in the selected file.`,
+    });
     try {
-        // parsedData is the array of rows directly from CSVUploader
-        const students = parsedData.map(row => {
+        // 1. Map + validate every row in the browser first, keeping the original
+        //    CSV row so failures can be exported and fixed.
+        const valid = [];
+        const invalid = [];
+
+        parsedData.forEach((row, index) => {
+            const rowNumber = index + 2; // +1 for header line, +1 for 1-based
             const normalizedRow = buildNormalizedRow(row);
-            const fullName = String(
-              getRowValue(normalizedRow, ["fullname", "name"])
-            ).trim();
+            const fullName = String(getRowValue(normalizedRow, ["fullname", "name"])).trim();
+            const rollNumber = String(getRowValue(normalizedRow, ["rollnumber", "rollno", "roll"])).trim();
+            const grade = String(getRowValue(normalizedRow, ["grade", "class"])).trim();
+
+            const missing = [];
+            if (!fullName) missing.push("FullName");
+            if (!rollNumber) missing.push("RollNumber");
+            if (!grade) missing.push("Grade");
+
+            if (missing.length > 0) {
+                invalid.push({
+                    name: fullName || "(no name)",
+                    rowNumber,
+                    reason: `Missing required value(s): ${missing.join(", ")}`,
+                    row,
+                });
+                return;
+            }
+
             const nameParts = fullName.split(" ").filter(Boolean);
             const firstName = nameParts[0] || "";
             const lastName = nameParts.slice(1).join(" ") || ".";
-            const rollNumber = String(
-              getRowValue(normalizedRow, ["rollnumber", "rollno", "roll"])
-            ).trim();
-            const grade = String(
-              getRowValue(normalizedRow, ["grade", "class"])
-            ).trim();
-            const dateOfBirthRaw = getRowValue(normalizedRow, ["dateofbirth", "dob"]);
-            const parsedDob = parseDateValue(dateOfBirthRaw);
-            
-            // Generate credentials for bulk
-            const username = fullName.toLowerCase().replace(/\s+/g, '');
+            const parsedDob = parseDateValue(getRowValue(normalizedRow, ["dateofbirth", "dob"]));
+            const username = fullName.toLowerCase().replace(/\s+/g, "");
             const password = `${firstName.toLowerCase()}${rollNumber}@123`;
-            const guardianRelationship = String(
-              getRowValue(normalizedRow, ["guardianrelationship", "relationship"])
-            )
-              .trim()
-              .toUpperCase() || "FATHER";
+            const guardianRelationship =
+                String(getRowValue(normalizedRow, ["guardianrelationship", "relationship"]))
+                    .trim()
+                    .toUpperCase() || "FATHER";
 
-            return {
+            valid.push({
+                _row: row,
+                _rowNumber: rowNumber,
                 firstName,
                 lastName,
                 username,
                 password,
-                email: getRowValue(normalizedRow, ["email"]) || "", // Optional
+                email: getRowValue(normalizedRow, ["email"]) || "",
                 grade,
                 rollNumber,
-                
-                // Optional Student Fields
                 phone: getRowValue(normalizedRow, ["phone", "phonenumber", "contact"]),
                 address: getRowValue(normalizedRow, ["address"]),
                 gender: getRowValue(normalizedRow, ["gender"]) || "OTHER",
                 dateOfBirth: parsedDob || new Date(),
                 bloodGroup: getRowValue(normalizedRow, ["bloodgroup", "blood"]),
-
-                // Parent Fields
                 guardianRelationship,
                 parentName: getRowValue(normalizedRow, ["guardianname", "parentname", "fathername", "mothername"]) || "To be added",
                 parentContactNumber: getRowValue(normalizedRow, ["guardianphone", "parentphone", "parentcontact", "guardiancontact"]) || "To be added",
                 parentEmail: getRowValue(normalizedRow, ["guardianemail", "parentemail"]) || "",
                 parentAlternativeContact: getRowValue(normalizedRow, ["guardianaltphone", "alternatephone", "secondaryphone"]),
-            };
-        }).filter(s => s.firstName && s.rollNumber && s.grade);
+            });
+        });
 
-        if (students.length === 0) {
-            throw new Error("No valid student records found. Please check mandatory fields (FullName, RollNumber, Grade).");
+        // 2. Nothing usable: explain why (empty file vs. header/cell problems).
+        if (valid.length === 0) {
+            if (invalid.length === 0) {
+                throw new Error("Your file has no data rows. Add students below the header row and try again.");
+            }
+            setBulkResult({ success: [], failed: invalid });
+            setError("No students could be uploaded. Your column headers may not match the template, or required cells (FullName, RollNumber, Grade) are empty. Use \"Download Template\" and compare your headings.");
+            scrollToTop();
+            return;
         }
 
+        // 3. Send only the valid rows.
+        setBulkUploadStatus({
+          label: "Creating student accounts",
+          detail:
+            invalid.length > 0
+              ? `${valid.length} valid row(s) are being uploaded. ${invalid.length} row(s) will need correction.`
+              : `${valid.length} valid row(s) are being uploaded.`,
+        });
+        const students = valid.map(({ _row, _rowNumber, ...clean }) => clean);
         const response = await fetch("/api/students/bulk-register", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ students, schoolId }),
         });
 
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.message);
-        
+        let data = {};
+        try { data = await response.json(); } catch { /* non-JSON error page */ }
+
+        if (!response.ok) {
+            throw new Error(friendlyUploadError(response.status, data.message, "students"));
+        }
+
+        setBulkUploadStatus({
+          label: "Preparing upload summary",
+          detail: "Reviewing successful rows and rows that need attention.",
+        });
         const resultData = data.data || { success: [], failed: [] };
-        setBulkResult(resultData);
-        setSuccess(`Processed ${students.length} students. Success: ${resultData.success.length}, Failed: ${resultData.failed.length}`);
+
+        // 4. Combine the browser-side invalid rows with any server-side failures,
+        //    recovering the original CSV row for each so they can be re-exported.
+        const serverFailed = (resultData.failed || []).map((f) => {
+            const match = valid.find(
+                (v) => v.firstName === f.student?.firstName && v.rollNumber === f.student?.rollNumber
+            );
+            const fullName = f.student
+                ? `${f.student.firstName || ""} ${f.student.lastName || ""}`.trim()
+                : "Unknown";
+            return {
+                name: fullName || "Unknown",
+                rowNumber: match?._rowNumber,
+                reason: f.reason,
+                row: match?._row,
+            };
+        });
+        const failed = [...invalid, ...serverFailed];
+
+        setBulkResult({ success: resultData.success || [], failed });
+        const total = valid.length + invalid.length;
+        setSuccess(`Processed ${total} row(s) — ${(resultData.success || []).length} added, ${failed.length} need attention.`);
         scrollToTop();
+        if ((resultData.success || []).length > 0 && onSuccess) onSuccess();
     } catch (err) {
-        setError(err.message);
+        setError(err.message || "Something went wrong during the upload. Please try again.");
+        scrollToTop();
     } finally {
+        setBulkUploadStatus(null);
         setLoading(false);
     }
+  };
+
+  const downloadFailedRows = () => {
+    if (!bulkResult?.failed?.length) return;
+    downloadTextFile("students_failed_rows.csv", buildFailedRowsCsv(bulkResult.failed));
   };
 
   const downloadCsvTemplate = () => {
@@ -403,6 +452,43 @@ const EnhancedStudentRegistration = ({ schoolId, onSuccess }) => {
         </div>
       )}
 
+      {bulkUploadStatus && activeTab === "bulk" && (
+        <div
+          className="mb-6 rounded-xl border border-[#dbe5f4] bg-[#f8fbff] p-4 shadow-sm"
+          role="status"
+          aria-live="polite"
+        >
+          <div className="flex items-start gap-3">
+            <span
+              className="pravyo-spinner mt-0.5 h-9 w-9 shrink-0 text-[#0a2f66]"
+              style={{ "--pravyo-ring": "4px" }}
+              aria-hidden="true"
+            />
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                <p className="font-black text-[#17120a]">
+                  {bulkUploadStatus.label}
+                </p>
+                <span className="inline-flex w-fit items-center gap-2 rounded-full border border-[#dbe5f4] bg-white px-3 py-1 text-xs font-black text-[#0a2f66]">
+                  <span className="pravyo-dots" aria-hidden="true">
+                    <span />
+                    <span />
+                    <span />
+                  </span>
+                  In progress
+                </span>
+              </div>
+              <p className="mt-1 text-sm font-semibold text-[#52657d]">
+                {bulkUploadStatus.detail}
+              </p>
+              <div className="pravyo-indeterminate-progress mt-4">
+                <span />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {bulkResult && activeTab === 'bulk' && (
         <div className="mb-6 space-y-4 animate-in fade-in slide-in-from-top-2">
             {/* Success List */}
@@ -425,13 +511,24 @@ const EnhancedStudentRegistration = ({ schoolId, onSuccess }) => {
             {/* Failed List */}
             {bulkResult.failed.length > 0 && (
                 <div className="bg-rose-50 border border-rose-200 rounded-lg p-4">
-                  <h4 className="text-rose-700 font-medium mb-2">Failed to Register ({bulkResult.failed.length})</h4>
-                    <div className="max-h-40 overflow-y-auto pr-2 custom-scrollbar">
+                  <div className="flex items-center justify-between gap-3 mb-2">
+                    <h4 className="text-rose-700 font-medium">Need attention ({bulkResult.failed.length})</h4>
+                    <button
+                      onClick={downloadFailedRows}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-rose-300 text-rose-700 hover:bg-rose-100 rounded-lg text-xs font-medium transition shrink-0"
+                    >
+                      <Download size={14} /> Download failed rows
+                    </button>
+                  </div>
+                  <p className="text-xs text-rose-700/80 mb-3">
+                    Fix these rows in the downloaded file, then upload it again. Already-added students are skipped automatically.
+                  </p>
+                    <div className="max-h-48 overflow-y-auto pr-2 custom-scrollbar">
                     <ul className="space-y-2 text-sm text-rose-700">
                             {bulkResult.failed.map((f, i) => (
                         <li key={i} className="border-b border-rose-200 pb-2 last:border-0 last:pb-0">
                           <div className="font-medium text-rose-800">
-                                        {f.student.firstName || 'Unknown'} {f.student.lastName || ''}
+                                        {f.rowNumber ? `Row ${f.rowNumber}: ` : ""}{f.name || 'Unknown'}
                                     </div>
                           <div className="text-xs opacity-80 mt-0.5 text-rose-700">Reason: {f.reason}</div>
                                 </li>
@@ -688,7 +785,10 @@ const EnhancedStudentRegistration = ({ schoolId, onSuccess }) => {
               </div>
             )}
             <div className="mt-6">
-              <CSVUploader onUpload={handleBulkUpload} />
+              <CSVUploader
+                onUpload={handleBulkUpload}
+                uploadingLabel="Uploading student rows"
+              />
             </div>
           </div>
         </div>

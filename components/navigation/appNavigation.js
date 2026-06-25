@@ -10,6 +10,7 @@ import {
   FaCog,
   FaCommentDots,
   FaFeatherAlt,
+  FaExchangeAlt,
   FaGlobe,
   FaGraduationCap,
   FaHeartbeat,
@@ -40,6 +41,7 @@ export const ADMIN_NAV_LINKS = [
 export const SCHOOL_NAV_LINKS = [
   { name: "Overview", href: "/school/dashboard", icon: FaChartPie },
   { name: "Students", href: "/school/dashboard?tab=students", icon: FaUsers },
+  { name: "Student Transfer", href: "/school/dashboard?tab=student-transfers", icon: FaExchangeAlt },
   { name: "Teachers", href: "/school/dashboard?tab=teachers", icon: FaChalkboardTeacher },
   { name: "School Events", href: "/school/dashboard?tab=school-events", icon: FaCalendarAlt },
   { name: "Platform Events", href: "/school/dashboard?tab=platform-events", icon: FaGlobe },
@@ -59,6 +61,7 @@ export const STUDENT_NAV_LINKS = [
   { name: "My Activity", href: "/student/dashboard", icon: FaSchool },
   { name: "Events", href: "/student/events", icon: FaCalendarAlt },
   { name: "Notices", href: "/student/notices", icon: FaBell },
+  { name: "Transfer", href: "/student/transfer", icon: FaExchangeAlt },
   { name: "My Writing", href: "/student/writing", icon: FaFeatherAlt },
   { name: "My Journey", href: "/student/journey", icon: FaGraduationCap },
   { name: "School Wall", href: "/student/school-wall", icon: FaSchool },

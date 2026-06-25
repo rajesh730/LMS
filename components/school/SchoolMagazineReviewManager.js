@@ -308,7 +308,7 @@ export default function SchoolMagazineReviewManager({
                     <button
                       type="button"
                       onClick={() => openSubmission(submission)}
-                      className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-[#dbe5f4] bg-white px-3 text-xs font-black text-[#0a2f66] hover:bg-[#f8fbff]"
+                      className="publishing-desk-primary-button inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-[#1f4e79] px-4 text-sm font-black text-white transition hover:bg-[#173f63]"
                     >
                       <FaEye />
                       Read
@@ -324,7 +324,7 @@ export default function SchoolMagazineReviewManager({
                             : "SHOW_SCHOOL_WALL"
                         )
                       }
-                      className="inline-flex h-9 items-center justify-center rounded-lg bg-purple-50 px-3 text-xs font-black text-purple-700 hover:bg-purple-100 disabled:opacity-60"
+                      className="publishing-desk-primary-button inline-flex min-h-10 items-center justify-center rounded-xl bg-[#1f4e79] px-4 text-sm font-black text-white transition hover:bg-[#173f63] disabled:opacity-60"
                     >
                       {submission.showOnSchoolWall ? "Hide" : "Show"}
                     </button>
@@ -391,7 +391,7 @@ export default function SchoolMagazineReviewManager({
                       : "SHOW_SCHOOL_WALL"
                   )
                 }
-                className="inline-flex h-10 items-center rounded-lg bg-purple-800 px-4 text-sm font-black text-white hover:bg-purple-900 disabled:opacity-60"
+                className="publishing-desk-primary-button inline-flex min-h-10 items-center rounded-xl bg-[#1f4e79] px-4 text-sm font-black text-white transition hover:bg-[#173f63] disabled:opacity-60"
               >
                 {selectedSubmission.showOnSchoolWall
                   ? "Hide from School Wall"

@@ -5,6 +5,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import Event from "@/models/Event";
 import SchoolPromotion from "@/models/SchoolPromotion";
+import SchoolShowcaseProfile from "@/models/SchoolShowcaseProfile";
 import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
 import MagazineIssue from "@/models/MagazineIssue";
 import { getActiveSchoolPromotions } from "@/lib/schoolPromotions";
@@ -71,6 +72,40 @@ function getInitials(value = "P") {
 function getCategoryLabel(value) {
   const label = String(value || "Writing").replaceAll("_", " ").toLowerCase();
   return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
+async function enrichItemsWithSchoolProfiles(items = []) {
+  const schoolIds = [
+    ...new Set(
+      items
+        .map((item) => item.schoolId)
+        .filter(Boolean)
+        .map(String)
+    ),
+  ];
+
+  if (schoolIds.length === 0) return items;
+
+  const profiles = await SchoolShowcaseProfile.find({
+    school: { $in: schoolIds },
+    visibility: "PUBLIC",
+  })
+    .select("school coverImageUrl")
+    .lean();
+
+  const profileMap = new Map(
+    profiles.map((profile) => [String(profile.school), profile])
+  );
+
+  return items.map((item) => {
+    const schoolId = String(item.schoolId || "");
+    const profile = profileMap.get(schoolId);
+    return {
+      ...item,
+      schoolHref: item.schoolHref || (schoolId ? `/schools/${schoolId}` : ""),
+      schoolLogoUrl: profile?.coverImageUrl || "",
+    };
+  });
 }
 
 async function getLatestStudentWritings() {
@@ -206,6 +241,7 @@ async function getHighRotationSpotlightStudentWritings() {
     author: article.authorStudent?.name || "Student",
     schoolName: article.school?.schoolName || "School",
     schoolHref: article.school?._id ? `/schools/${article.school._id}` : "",
+    schoolId: article.school?._id ? String(article.school._id) : "",
   }));
 }
 
@@ -259,8 +295,14 @@ async function getHomepageData() {
 
   return {
     homeSpotlights,
-    spotlightStories,
-    latestWritings: publicFeedItems,
+    spotlightStories: await enrichItemsWithSchoolProfiles(
+      diversifyBySchool(spotlightStories, {
+        limit: 5,
+        getSchoolKey: (item) => item.schoolId || item.schoolName,
+        getTime: (item) => item.date,
+      })
+    ),
+    latestWritings: await enrichItemsWithSchoolProfiles(publicFeedItems),
     upcomingEvents,
   };
 }

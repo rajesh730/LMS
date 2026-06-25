@@ -54,6 +54,8 @@ const SOCIAL_KEYS = [
   "twitter",
 ];
 
+const SCHOOL_STORY_MAX_LENGTH = 2000;
+
 function sanitizeSocialLinks(value = {}) {
   const source = value && typeof value === "object" ? value : {};
   return SOCIAL_KEYS.reduce((acc, key) => {
@@ -132,7 +134,7 @@ export async function PUT(req) {
       {
         $set: {
           tagline: sanitizeString(body.tagline, 160),
-          summary: sanitizeString(body.summary, 3000),
+          summary: sanitizeString(body.summary, SCHOOL_STORY_MAX_LENGTH),
           coverImageUrl: sanitizeString(body.coverImageUrl, 1000),
           websiteUrl: sanitizeString(body.websiteUrl, 1000),
           motto: sanitizeString(body.motto, 160),

@@ -23,6 +23,7 @@ import AlertBanner from "@/components/ui/AlertBanner";
 import EmptyState from "@/components/EmptyState";
 import LoadingState from "@/components/ui/LoadingState";
 import StatTile from "@/components/ui/StatTile";
+import SchoolLogoMark from "@/components/public/SchoolLogoMark";
 import { formatPlacement, formatDate } from "@/lib/displayFormat";
 
 const CELEBRATION_WINDOW_DAYS = 30;
@@ -99,6 +100,42 @@ function CelebrationBanner({ achievement, firstName, onDismiss }) {
             <FaDownload /> Download
           </Link>
         </div>
+      </div>
+    </section>
+  );
+}
+
+function SchoolIdentityCard({ student }) {
+  if (!student?.schoolName) return null;
+
+  const details = [
+    student.grade ? `Grade ${student.grade}` : "",
+    student.rollNumber ? `Roll ${student.rollNumber}` : "",
+    student.schoolLocation,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  return (
+    <section className="flex items-center gap-4 rounded-xl border border-[#e6eaf7] bg-white p-5 shadow-sm">
+      <SchoolLogoMark
+        imageUrl={student.schoolLogoUrl}
+        name={student.schoolName}
+        className="h-14 w-14"
+        shapeClassName="rounded-xl"
+      />
+      <div className="min-w-0">
+        <p className="text-xs font-black uppercase tracking-wide text-[#8a9ab1]">
+          School
+        </p>
+        <h2 className="truncate text-lg font-black text-[#10142f]">
+          {student.schoolName}
+        </h2>
+        {details && (
+          <p className="mt-0.5 truncate text-sm font-semibold text-[#526071]">
+            {details}
+          </p>
+        )}
       </div>
     </section>
   );
@@ -498,6 +535,8 @@ export default function StudentActivityOverview() {
 
   return (
     <div className="space-y-5">
+      <SchoolIdentityCard student={data?.student} />
+
       {celebration && (
         <CelebrationBanner
           achievement={celebration}

@@ -9,6 +9,15 @@ import Student from "@/models/Student";
 const PERSISTENT_SESSION_MAX_AGE = 60 * 60 * 24 * 365; // 1 year
 const SESSION_REFRESH_INTERVAL = 60 * 60 * 24; // 1 day
 
+// Resolve and cache a school's display name on the token. Looks it up only once
+// (when missing) since the school name rarely changes, keeping refresh cheap.
+async function resolveSchoolName(cached, schoolId) {
+  if (cached) return cached;
+  if (!schoolId) return null;
+  const school = await User.findById(schoolId).select("schoolName name").lean();
+  return school?.schoolName || school?.name || null;
+}
+
 // Match NextAuth's own secure-cookie detection so the cookie name/flags stay
 // correct in both local (http) and production (https) environments.
 const useSecureCookies = (process.env.NEXTAUTH_URL || "").startsWith("https://");
@@ -113,6 +122,8 @@ export const authOptions = {
               user.role === "SUPER_ADMIN"
                 ? user.name || user.email
                 : user.schoolName || "Admin",
+            schoolName:
+              user.role === "SUPER_ADMIN" ? null : user.schoolName || null,
             status: user.status,
             schoolId,
             authVersion: user.authVersion || 0,
@@ -159,6 +170,7 @@ export const authOptions = {
         token.id = user.id;
         token.status = user.status;
         token.schoolId = user.schoolId || null;
+        token.schoolName = user.schoolName || null;
         token.authVersion = user.authVersion || 0;
         delete token.error;
       } else if (token?.id) {
@@ -167,7 +179,7 @@ export const authOptions = {
 
         if (["SUPER_ADMIN", "SCHOOL_ADMIN"].includes(role)) {
           const currentUser = await User.findById(token.id).select(
-            "authVersion status role"
+            "authVersion status role schoolName"
           );
 
           if (!currentUser) {
@@ -176,6 +188,8 @@ export const authOptions = {
             delete token.schoolId;
           } else {
             token.status = currentUser.status;
+            token.schoolName =
+              role === "SUPER_ADMIN" ? null : currentUser.schoolName || null;
             if ((currentUser.authVersion || 0) !== (token.authVersion || 0)) {
               token.error = "SessionRevoked";
               delete token.role;
@@ -197,6 +211,10 @@ export const authOptions = {
             delete token.schoolId;
           } else {
             token.schoolId = currentTeacher.school?.toString() || null;
+            token.schoolName = await resolveSchoolName(
+              token.schoolName,
+              currentTeacher.school
+            );
           }
         } else if (role === "STUDENT") {
           const currentStudent = await Student.findById(token.id).select(
@@ -213,6 +231,10 @@ export const authOptions = {
             delete token.schoolId;
           } else {
             token.schoolId = currentStudent.school?.toString() || null;
+            token.schoolName = await resolveSchoolName(
+              token.schoolName,
+              currentStudent.school
+            );
           }
         }
       }
@@ -224,6 +246,7 @@ export const authOptions = {
         session.user.id = token.id;
         session.user.status = token.status;
         session.user.schoolId = token.schoolId || null;
+        session.user.schoolName = token.schoolName || null;
         session.user.authVersion = token.authVersion || 0;
         if (token.error) {
           session.error = token.error;

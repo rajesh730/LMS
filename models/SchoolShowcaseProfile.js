@@ -1,5 +1,7 @@
 import mongoose from "mongoose";
 
+const SCHOOL_STORY_MAX_LENGTH = 2000;
+
 const SchoolShowcaseProfileSchema = new mongoose.Schema(
   {
     school: {
@@ -18,7 +20,7 @@ const SchoolShowcaseProfileSchema = new mongoose.Schema(
       type: String,
       default: "",
       trim: true,
-      maxlength: 3000,
+      maxlength: SCHOOL_STORY_MAX_LENGTH,
     },
     coverImageUrl: {
       type: String,

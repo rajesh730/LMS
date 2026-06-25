@@ -1,10 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   FaArrowLeft,
   FaArrowRight,
-  FaBold,
   FaBookOpen,
   FaCalendarAlt,
   FaCheckCircle,
@@ -19,7 +18,6 @@ import {
   FaHeart,
   FaHome,
   FaImage,
-  FaItalic,
   FaLayerGroup,
   FaLightbulb,
   FaLock,
@@ -47,6 +45,8 @@ import {
   WRITING_CATEGORIES,
   normalizeWritingCategory,
 } from "@/lib/writingCategories";
+
+const MAX_WRITING_CHARACTERS = 50000;
 
 const CATEGORY_META = {
   BLOG_ARTICLE: {
@@ -547,40 +547,6 @@ function WritingWorkflowPanel({ libraryCounts, onSelectLibrary, onSelectStatus }
   );
 }
 
-function EditorToolbar({ onFormat }) {
-  const tools = [
-    ["bold", FaBold, "Bold"],
-    ["italic", FaItalic, "Italic"],
-    ["highlight", FaStar, "Highlight"],
-  ];
-
-  return (
-    <div className="flex flex-wrap items-center gap-3 border-y border-[#d8dfea] bg-[#f8fafc] px-3 py-2">
-      <span className="text-xs font-black uppercase tracking-[0.12em] text-[#475569]">
-        Format
-      </span>
-      <div className="flex flex-wrap items-center gap-2">
-        {tools.map(([command, Icon, label]) => (
-          <button
-            key={command}
-            type="button"
-            onMouseDown={(event) => {
-              event.preventDefault();
-              onFormat(command);
-            }}
-            className="inline-flex h-10 min-w-10 items-center justify-center gap-2 rounded-lg border border-[#c9d3e5] bg-white px-3 text-sm font-black text-[#3120c9] transition hover:border-[#4326e8] hover:bg-[#f4f1ff]"
-            aria-label={label}
-            title={label}
-          >
-            <Icon className="text-sm" />
-            <span className="hidden sm:inline">{label}</span>
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 function InlineFormattedText({ text }) {
   const pattern =
     /(\{\{highlight\}\}.*?\{\{\/highlight\}\}|\*\*[^*]+\*\*|_[^_]+_)/g;
@@ -704,38 +670,6 @@ function WritingEditor({
   onReset,
   resetLabel = "New",
 }) {
-  const textareaRef = useRef(null);
-
-  const applyFormat = useCallback(
-    (command) => {
-      const textarea = textareaRef.current;
-      if (!textarea) return;
-
-      const start = textarea.selectionStart || 0;
-      const end = textarea.selectionEnd || 0;
-      const before = form.content.slice(0, start);
-      const selected = form.content.slice(start, end);
-      const after = form.content.slice(end);
-      const fallback = selected || "text";
-      let replacement = fallback;
-
-      if (command === "bold") replacement = `**${fallback}**`;
-      if (command === "italic") replacement = `_${fallback}_`;
-      if (command === "highlight") {
-        replacement = `{{highlight}}${fallback}{{/highlight}}`;
-      }
-
-      const nextContent = `${before}${replacement}${after}`;
-      setForm((current) => ({ ...current, content: nextContent }));
-
-      window.requestAnimationFrame(() => {
-        textarea.focus();
-        textarea.setSelectionRange(start, start + replacement.length);
-      });
-    },
-    [form.content, setForm]
-  );
-
   return (
     <section className="student-writing-editor overflow-hidden rounded-xl border border-[#e7dcc8] bg-white shadow-sm">
       <div className="flex flex-col gap-3 border-b border-[#e7dcc8] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
@@ -787,24 +721,19 @@ function WritingEditor({
         </select>
       </div>
 
-      <div className="student-writing-format-tools">
-        <EditorToolbar onFormat={applyFormat} />
-      </div>
-
       {editorMode === "WRITE" ? (
         <div className="relative">
           <textarea
-            ref={textareaRef}
             placeholder="Start writing your amazing article here..."
             value={form.content}
             onChange={(event) =>
               setForm((current) => ({ ...current, content: event.target.value }))
             }
-            maxLength={5000}
+            maxLength={MAX_WRITING_CHARACTERS}
             className="min-h-[340px] w-full resize-y border-0 bg-white px-5 py-5 text-sm leading-7 text-[#17120a] outline-none"
           />
           <span className="absolute bottom-4 right-5 text-xs font-semibold text-[#75869b]">
-            {form.content.length} / 5000
+            {form.content.length} / {MAX_WRITING_CHARACTERS}
           </span>
         </div>
       ) : (
@@ -819,14 +748,14 @@ function WritingEditor({
         <div className="student-writing-extra-actions flex flex-wrap gap-2">
           <button
             type="button"
-            className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold text-purple-700 transition hover:bg-purple-50"
+            className="inline-flex min-h-10 items-center gap-2 rounded-full bg-purple-50 px-4 py-2 text-xs font-black text-purple-700 transition hover:bg-purple-100"
           >
             <FaImage />
             Add Cover Image
           </button>
           <button
             type="button"
-            className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold text-purple-700 transition hover:bg-purple-50"
+            className="inline-flex min-h-10 items-center gap-2 rounded-full bg-purple-50 px-4 py-2 text-xs font-black text-purple-700 transition hover:bg-purple-100"
           >
             <FaTags />
             Add Tags
@@ -838,7 +767,7 @@ function WritingEditor({
             type="button"
             disabled={saving}
             onClick={() => onSave("DRAFT")}
-            className="inline-flex items-center gap-2 rounded-lg border border-purple-200 bg-white px-4 py-2 text-sm font-bold text-purple-700 transition hover:bg-purple-50 disabled:opacity-60"
+            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full bg-purple-50 px-4 py-2 text-xs font-black text-purple-700 transition hover:bg-purple-100 disabled:opacity-60"
           >
             <FaEdit />
             {saving ? "Saving..." : form.id ? "Update Private" : "Save Private"}
@@ -847,7 +776,7 @@ function WritingEditor({
             type="button"
             disabled={saving}
             onClick={() => onSave("SUBMITTED")}
-            className="inline-flex items-center gap-2 rounded-lg bg-purple-700 px-4 py-2 text-sm font-bold text-white transition hover:bg-purple-600 disabled:opacity-60"
+            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full bg-purple-700 px-4 py-2 text-xs font-black text-white transition hover:bg-purple-800 disabled:opacity-60"
           >
             <FaPaperPlane />
             {saving
@@ -858,7 +787,7 @@ function WritingEditor({
             <button
               type="button"
               onClick={onReset}
-              className="inline-flex items-center gap-2 rounded-lg border border-[#e0d4bf] bg-white px-4 py-2 text-sm font-bold text-[#52657d] transition hover:bg-[#f8fbff]"
+              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-[#d7cdbb] bg-white px-4 py-2 text-xs font-black text-[#52657d] transition hover:bg-[#f8fbff]"
             >
               {resetLabel === "Cancel" ? <FaTimes /> : <FaPlus />}
               {resetLabel}

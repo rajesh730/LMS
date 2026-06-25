@@ -1,6 +1,8 @@
 import mongoose from "mongoose";
 import { ALL_WRITING_CATEGORIES } from "@/lib/writingCategories";
 
+const MAX_WRITING_CONTENT_LENGTH = 50000;
+
 const SchoolMagazineArticleSchema = new mongoose.Schema(
   {
     school: {
@@ -25,7 +27,7 @@ const SchoolMagazineArticleSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
-      maxlength: 12000,
+      maxlength: MAX_WRITING_CONTENT_LENGTH,
     },
     category: {
       type: String,

@@ -37,6 +37,7 @@ const SCHOOL_NAV_GROUPS = [
     names: [
       "Overview",
       "Students",
+      "Student Transfer",
       "Teachers",
       "School Events",
       "Platform Events",
@@ -127,7 +128,7 @@ export default function Sidebar({
               Pravyo
             </p>
             <p className="text-sm font-semibold text-[var(--brand-ink)] leading-tight mt-0.5 truncate">
-              School Platform
+              {session?.user?.schoolName || "School Platform"}
             </p>
           </div>
         </div>

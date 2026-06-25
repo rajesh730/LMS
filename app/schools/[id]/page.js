@@ -751,11 +751,10 @@ export default async function PublicSchoolPage({ params }) {
               id="story"
               className="scroll-mt-28 border border-[#e7dcc8] bg-white p-5 shadow-sm sm:rounded-2xl"
             >
-              <h2 className="inline-flex items-center gap-2 text-lg font-black text-[#17120a]">
-                <FaBookOpen className="text-purple-700" />
+              <h2 className="text-lg font-black text-[#17120a]">
                 School Story
               </h2>
-              <div className="mt-4 grid gap-5 md:grid-cols-[1fr_220px] md:items-end">
+              <div className="mt-4">
                 <ExpandableStoryText
                   text={
                     profile?.summary ||
@@ -763,9 +762,6 @@ export default async function PublicSchoolPage({ params }) {
                   }
                   limit={120}
                 />
-                <div className="pravyo-brand-panel relative h-32 overflow-hidden rounded-xl border">
-                  <FaSchool className="absolute bottom-5 right-6 text-5xl text-white/78" />
-                </div>
               </div>
             </section>
 

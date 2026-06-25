@@ -1,36 +1,30 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import {
-  FaExchangeAlt,
-  FaCheck,
-  FaTimes,
-  FaArrowRight,
-  FaUserPlus,
-} from "react-icons/fa";
+import { FaCheck, FaExchangeAlt, FaTimes } from "react-icons/fa";
 import AlertBanner from "@/components/ui/AlertBanner";
 
 function schoolName(school) {
-  return school?.schoolName || school?.name || "Another school";
+  return school?.schoolName || school?.name || "School";
+}
+
+function studentName(transfer) {
+  return transfer.student?.name || transfer.studentNameSnapshot || "Student";
 }
 
 export default function StudentTransferPanel({ grades = [], onChanged }) {
   const [open, setOpen] = useState(false);
-  const [transfers, setTransfers] = useState({ incoming: [], outgoing: [] });
+  const [transfers, setTransfers] = useState({
+    releaseRequests: [],
+    releasedTransfers: [],
+    admissionRequests: [],
+    incoming: [],
+    outgoing: [],
+  });
   const [busyId, setBusyId] = useState("");
   const [feedback, setFeedback] = useState(null);
-
-  // Claim modal
-  const [modalOpen, setModalOpen] = useState(false);
-  const [step, setStep] = useState("search");
-  const [form, setForm] = useState({
-    platformStudentId: "",
-    dateOfBirth: "",
-    toGrade: "",
-    toRollNumber: "",
-  });
-  const [found, setFound] = useState(null);
-  const [working, setWorking] = useState(false);
+  const [admissionDrafts, setAdmissionDrafts] = useState({});
+  const [rollInfo, setRollInfo] = useState({});
 
   const load = useCallback(async () => {
     try {
@@ -38,6 +32,9 @@ export default function StudentTransferPanel({ grades = [], onChanged }) {
       const json = await res.json();
       if (res.ok) {
         setTransfers({
+          releaseRequests: json.data?.releaseRequests || [],
+          releasedTransfers: json.data?.releasedTransfers || [],
+          admissionRequests: json.data?.admissionRequests || [],
           incoming: json.data?.incoming || [],
           outgoing: json.data?.outgoing || [],
         });
@@ -51,22 +48,30 @@ export default function StudentTransferPanel({ grades = [], onChanged }) {
     load();
   }, [load]);
 
-  const pendingIncoming = transfers.incoming.filter((t) => t.status === "PENDING");
-  const pendingOutgoing = transfers.outgoing.filter((t) => t.status === "PENDING");
-  const pendingCount = pendingIncoming.length + pendingOutgoing.length;
+  const releaseRequests = transfers.releaseRequests || [];
+  const releasedTransfers = transfers.releasedTransfers || [];
+  const admissionRequests = transfers.admissionRequests || [];
+  const legacyIncoming = (transfers.incoming || []).filter((t) => t.status === "PENDING");
+  const legacyOutgoing = (transfers.outgoing || []).filter((t) => t.status === "PENDING");
+  const pendingCount =
+    releaseRequests.length +
+    releasedTransfers.length +
+    admissionRequests.length +
+    legacyIncoming.length +
+    legacyOutgoing.length;
 
-  const decide = async (id, action) => {
+  const decide = async (id, action, body = {}) => {
     try {
       setBusyId(id);
       setFeedback(null);
       const res = await fetch(`/api/students/transfer/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action }),
+        body: JSON.stringify({ action, ...body }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.message || "Action failed");
-      setFeedback({ type: "success", title: "Done", message: json.message });
+      setFeedback({ type: "success", title: "Transfer updated", message: json.message });
       await load();
       onChanged?.();
     } catch (error) {
@@ -76,69 +81,66 @@ export default function StudentTransferPanel({ grades = [], onChanged }) {
     }
   };
 
-  const resetModal = () => {
-    setStep("search");
-    setForm({ platformStudentId: "", dateOfBirth: "", toGrade: "", toRollNumber: "" });
-    setFound(null);
+  const updateAdmissionDraft = (id, patch) => {
+    setAdmissionDrafts((prev) => ({
+      ...prev,
+      [id]: { ...(prev[id] || {}), ...patch },
+    }));
   };
 
-  const searchStudent = async () => {
+  // Ask the server for the next free roll number in a grade and prefill it,
+  // unless the admin has already typed one. Also stores the taken numbers so the
+  // UI can warn before submitting (instead of failing on the server).
+  const loadRollSuggestion = useCallback(async (transferId, grade) => {
+    if (!grade) return;
     try {
-      setWorking(true);
-      setFeedback(null);
-      const res = await fetch("/api/students/transfer/search", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          platformStudentId: form.platformStudentId.trim(),
-          dateOfBirth: form.dateOfBirth,
-        }),
-      });
+      const res = await fetch(
+        `/api/students/transfer/roll-suggestion?grade=${encodeURIComponent(grade)}`,
+        { cache: "no-store" }
+      );
       const json = await res.json();
-      if (!res.ok) throw new Error(json.message || "Lookup failed");
-      setFound(json.data.student);
-      setForm((prev) => ({ ...prev, toGrade: json.data.student.grade || "" }));
-      setStep("confirm");
-    } catch (error) {
-      setFeedback({ type: "error", title: "Not found", message: error.message });
-    } finally {
-      setWorking(false);
+      if (!res.ok) return;
+      const suggested = json.data?.suggestedRollNumber || "";
+      const taken = json.data?.takenRollNumbers || [];
+      setRollInfo((prev) => ({ ...prev, [transferId]: { suggested, taken } }));
+      setAdmissionDrafts((prev) => {
+        const current = prev[transferId] || {};
+        if (current.toRollNumber) return prev;
+        return { ...prev, [transferId]: { ...current, toRollNumber: suggested } };
+      });
+    } catch {
+      // non-fatal — admin can still type a roll number manually
     }
+  }, []);
+
+  const handleGradeChange = (transferId, grade) => {
+    updateAdmissionDraft(transferId, { toGrade: grade, toRollNumber: "" });
+    setRollInfo((prev) => {
+      const next = { ...prev };
+      delete next[transferId];
+      return next;
+    });
+    void loadRollSuggestion(transferId, grade);
   };
 
-  const submitClaim = async () => {
-    try {
-      setWorking(true);
-      setFeedback(null);
-      const res = await fetch("/api/students/transfer", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          platformStudentId: form.platformStudentId.trim(),
-          dateOfBirth: form.dateOfBirth,
-          toGrade: form.toGrade,
-          toRollNumber: form.toRollNumber.trim(),
-        }),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.message || "Request failed");
-      setFeedback({ type: "success", title: "Request sent", message: json.message });
-      setModalOpen(false);
-      resetModal();
-      await load();
-    } catch (error) {
-      setFeedback({ type: "error", title: "Request failed", message: error.message });
-    } finally {
-      setWorking(false);
-    }
-  };
+  // Prefill a suggestion for each incoming admission once it appears.
+  const admissionIds = admissionRequests.map((t) => t._id).join(",");
+  useEffect(() => {
+    admissionRequests.forEach((transfer) => {
+      if (rollInfo[transfer._id]) return;
+      const grade =
+        admissionDrafts[transfer._id]?.toGrade ?? transfer.student?.grade ?? "";
+      if (grade) void loadRollSuggestion(transfer._id, grade);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [admissionIds]);
 
   return (
     <div className="rounded-2xl border border-[#e1e7f2] bg-white p-4 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <button
           type="button"
-          onClick={() => setOpen((v) => !v)}
+          onClick={() => setOpen((value) => !value)}
           className="flex items-center gap-2 text-left"
         >
           <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]">
@@ -149,7 +151,7 @@ export default function StudentTransferPanel({ grades = [], onChanged }) {
               Student Transfers
             </span>
             <span className="block text-xs text-[#52657d]">
-              Bring in a student from another school, or approve students leaving.
+              Approve release requests and admit students joining your school.
             </span>
           </span>
           {pendingCount > 0 && (
@@ -157,17 +159,6 @@ export default function StudentTransferPanel({ grades = [], onChanged }) {
               {pendingCount}
             </span>
           )}
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            resetModal();
-            setModalOpen(true);
-          }}
-          className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-purple-700 px-4 text-sm font-black text-white shadow-sm transition hover:bg-purple-800"
-        >
-          <FaUserPlus />
-          Transfer in a student
         </button>
       </div>
 
@@ -178,48 +169,98 @@ export default function StudentTransferPanel({ grades = [], onChanged }) {
       )}
 
       {open && (
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
-          {/* Incoming: students leaving us — we approve */}
+        <div className="mt-4 grid gap-4 xl:grid-cols-2">
           <div className="rounded-xl border border-[#e1e7f2] bg-[#f8fbff] p-4">
             <p className="text-sm font-black text-[#17120a]">
-              Leaving your school ({pendingIncoming.length})
+              Transfer Approvals ({releaseRequests.length})
             </p>
             <p className="mt-1 text-xs text-[#52657d]">
-              Another school is claiming these students. Approve to release them.
+              Students from your school requesting a transfer code.
             </p>
             <div className="mt-3 space-y-2">
-              {pendingIncoming.length === 0 ? (
-                <p className="text-xs text-[#75869b]">No pending requests.</p>
+              {releaseRequests.length === 0 ? (
+                <p className="text-xs text-[#75869b]">No release requests.</p>
               ) : (
-                pendingIncoming.map((t) => (
+                releaseRequests.map((transfer) => (
                   <div
-                    key={t._id}
-                    className="flex items-center justify-between gap-2 rounded-lg border border-[#e1e7f2] bg-white p-2.5"
+                    key={transfer._id}
+                    className="rounded-lg border border-[#e1e7f2] bg-white p-3"
                   >
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-bold text-[#17120a]">
-                        {t.studentNameSnapshot || "Student"}
-                      </p>
-                      <p className="truncate text-xs text-[#52657d]">
-                        → {schoolName(t.toSchool)} · {t.toGrade}
-                      </p>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-bold text-[#17120a]">
+                          {studentName(transfer)}
+                        </p>
+                        <p className="mt-1 text-xs text-[#52657d]">
+                          {transfer.student?.grade || "Grade not set"} · Roll{" "}
+                          {transfer.student?.rollNumber || "not set"}
+                        </p>
+                        {transfer.reason && (
+                          <p className="mt-2 text-xs leading-5 text-[#52657d]">
+                            {transfer.reason}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex shrink-0 gap-1.5">
+                        <button
+                          type="button"
+                          disabled={busyId === transfer._id}
+                          onClick={() => decide(transfer._id, "approve_release")}
+                          className="inline-flex h-8 items-center gap-1 rounded-lg bg-emerald-600 px-2.5 text-xs font-black text-white hover:bg-emerald-500 disabled:opacity-50"
+                        >
+                          <FaCheck /> Approve
+                        </button>
+                        <button
+                          type="button"
+                          disabled={busyId === transfer._id}
+                          onClick={() => decide(transfer._id, "reject_release")}
+                          className="inline-flex h-8 items-center gap-1 rounded-lg border border-[#e1e7f2] bg-white px-2.5 text-xs font-black text-rose-600 hover:bg-rose-50 disabled:opacity-50"
+                        >
+                          <FaTimes /> Reject
+                        </button>
+                      </div>
                     </div>
-                    <div className="flex shrink-0 gap-1.5">
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-[#e1e7f2] bg-[#f8fbff] p-4">
+            <p className="text-sm font-black text-[#17120a]">
+              Released Transfers ({releasedTransfers.length})
+            </p>
+            <p className="mt-1 text-xs text-[#52657d]">
+              Transfer codes already issued. You can cancel until another school admits the student.
+            </p>
+            <div className="mt-3 space-y-2">
+              {releasedTransfers.length === 0 ? (
+                <p className="text-xs text-[#75869b]">No active released transfers.</p>
+              ) : (
+                releasedTransfers.map((transfer) => (
+                  <div
+                    key={transfer._id}
+                    className="rounded-lg border border-[#e1e7f2] bg-white p-3"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-bold text-[#17120a]">
+                          {studentName(transfer)}
+                        </p>
+                        <p className="mt-1 text-xs text-[#52657d]">
+                          Code {transfer.transferCode || "issued"} ·{" "}
+                          {transfer.status === "PENDING_ADMISSION"
+                            ? `Waiting for ${schoolName(transfer.toSchool)}`
+                            : "Waiting for student to choose school"}
+                        </p>
+                      </div>
                       <button
                         type="button"
-                        disabled={busyId === t._id}
-                        onClick={() => decide(t._id, "approve")}
-                        className="inline-flex h-8 items-center gap-1 rounded-lg bg-emerald-600 px-2.5 text-xs font-black text-white hover:bg-emerald-500 disabled:opacity-50"
+                        disabled={busyId === transfer._id}
+                        onClick={() => decide(transfer._id, "cancel")}
+                        className="inline-flex h-8 shrink-0 items-center gap-1 rounded-lg border border-[#e1e7f2] bg-white px-2.5 text-xs font-black text-rose-600 hover:bg-rose-50 disabled:opacity-50"
                       >
-                        <FaCheck /> Approve
-                      </button>
-                      <button
-                        type="button"
-                        disabled={busyId === t._id}
-                        onClick={() => decide(t._id, "reject")}
-                        className="inline-flex h-8 items-center gap-1 rounded-lg border border-[#e1e7f2] bg-white px-2.5 text-xs font-black text-rose-600 hover:bg-rose-50 disabled:opacity-50"
-                      >
-                        <FaTimes /> Reject
+                        Cancel Transfer
                       </button>
                     </div>
                   </div>
@@ -228,189 +269,165 @@ export default function StudentTransferPanel({ grades = [], onChanged }) {
             </div>
           </div>
 
-          {/* Outgoing: we are claiming — awaiting origin */}
           <div className="rounded-xl border border-[#e1e7f2] bg-[#f8fbff] p-4">
             <p className="text-sm font-black text-[#17120a]">
-              Coming to your school ({pendingOutgoing.length})
+              Incoming Admissions ({admissionRequests.length})
             </p>
             <p className="mt-1 text-xs text-[#52657d]">
-              Waiting for the current school to approve.
+              Released students asking to join your school.
             </p>
-            <div className="mt-3 space-y-2">
-              {pendingOutgoing.length === 0 ? (
-                <p className="text-xs text-[#75869b]">No pending requests.</p>
+            <div className="mt-3 space-y-3">
+              {admissionRequests.length === 0 ? (
+                <p className="text-xs text-[#75869b]">No admission requests.</p>
               ) : (
-                pendingOutgoing.map((t) => (
-                  <div
-                    key={t._id}
-                    className="flex items-center justify-between gap-2 rounded-lg border border-[#e1e7f2] bg-white p-2.5"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-bold text-[#17120a]">
-                        {t.studentNameSnapshot || "Student"}
-                      </p>
-                      <p className="truncate text-xs text-[#52657d]">
-                        from {schoolName(t.fromSchool)} · {t.toGrade}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      disabled={busyId === t._id}
-                      onClick={() => decide(t._id, "cancel")}
-                      className="inline-flex h-8 shrink-0 items-center gap-1 rounded-lg border border-[#e1e7f2] bg-white px-2.5 text-xs font-black text-[#52657d] hover:bg-[#f1f5fb] disabled:opacity-50"
+                admissionRequests.map((transfer) => {
+                  const draft = admissionDrafts[transfer._id] || {};
+                  const toGrade = draft.toGrade ?? transfer.student?.grade ?? "";
+                  const toRollNumber = draft.toRollNumber ?? "";
+                  const info = rollInfo[transfer._id];
+                  const trimmedRoll = String(toRollNumber).trim();
+                  const rollTaken = Boolean(
+                    info?.taken?.includes(trimmedRoll) && trimmedRoll
+                  );
+
+                  return (
+                    <div
+                      key={transfer._id}
+                      className="rounded-lg border border-[#e1e7f2] bg-white p-3"
                     >
-                      Cancel
-                    </button>
-                  </div>
-                ))
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-bold text-[#17120a]">
+                          {studentName(transfer)}
+                        </p>
+                        <p className="mt-1 text-xs text-[#52657d]">
+                          From {schoolName(transfer.fromSchool)} · Code{" "}
+                          {transfer.transferCode || "issued"}
+                        </p>
+                      </div>
+                      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                        {grades.length > 0 ? (
+                          <select
+                            value={toGrade}
+                            onChange={(e) =>
+                              handleGradeChange(transfer._id, e.target.value)
+                            }
+                            className="h-10 rounded-lg border border-[#dbe5f4] bg-white px-3 text-sm font-semibold text-[#17120a]"
+                          >
+                            <option value="">Select grade</option>
+                            {grades.map((grade) => (
+                              <option key={grade} value={grade}>
+                                {grade}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <input
+                            value={toGrade}
+                            onChange={(e) =>
+                              handleGradeChange(transfer._id, e.target.value)
+                            }
+                            placeholder="Grade"
+                            className="h-10 rounded-lg border border-[#dbe5f4] bg-white px-3 text-sm"
+                          />
+                        )}
+                        <input
+                          value={toRollNumber}
+                          onChange={(e) =>
+                            updateAdmissionDraft(transfer._id, {
+                              toRollNumber: e.target.value,
+                            })
+                          }
+                          placeholder="Roll number"
+                          className={`h-10 rounded-lg border bg-white px-3 text-sm ${
+                            rollTaken ? "border-rose-400" : "border-[#dbe5f4]"
+                          }`}
+                        />
+                      </div>
+                      {toGrade && (
+                        <div className="mt-2 text-xs">
+                          {rollTaken ? (
+                            <p className="font-semibold text-rose-600">
+                              Roll number {trimmedRoll} is already used in{" "}
+                              {toGrade}.{" "}
+                              {info?.suggested && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    updateAdmissionDraft(transfer._id, {
+                                      toRollNumber: info.suggested,
+                                    })
+                                  }
+                                  className="font-black text-purple-700 underline"
+                                >
+                                  Use {info.suggested}
+                                </button>
+                              )}
+                            </p>
+                          ) : (
+                            info?.suggested && (
+                              <p className="text-[#52657d]">
+                                Next available in {toGrade}:{" "}
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    updateAdmissionDraft(transfer._id, {
+                                      toRollNumber: info.suggested,
+                                    })
+                                  }
+                                  className="font-black text-purple-700 underline"
+                                >
+                                  {info.suggested}
+                                </button>
+                              </p>
+                            )
+                          )}
+                        </div>
+                      )}
+                      <div className="mt-3 flex justify-end gap-2">
+                        <button
+                          type="button"
+                          disabled={busyId === transfer._id}
+                          onClick={() => decide(transfer._id, "reject_admission")}
+                          className="inline-flex h-9 items-center gap-1 rounded-lg border border-[#e1e7f2] bg-white px-3 text-xs font-black text-rose-600 hover:bg-rose-50 disabled:opacity-50"
+                        >
+                          Reject
+                        </button>
+                        <button
+                          type="button"
+                          disabled={
+                            busyId === transfer._id ||
+                            !toGrade ||
+                            !trimmedRoll ||
+                            rollTaken
+                          }
+                          onClick={() =>
+                            decide(transfer._id, "approve_admission", {
+                              toGrade,
+                              toRollNumber: trimmedRoll,
+                            })
+                          }
+                          className="inline-flex h-9 items-center gap-1 rounded-lg bg-emerald-600 px-3 text-xs font-black text-white hover:bg-emerald-500 disabled:opacity-50"
+                        >
+                          Admit Student
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
               )}
             </div>
           </div>
-        </div>
-      )}
 
-      {/* Claim modal */}
-      {modalOpen && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-[rgba(16,20,47,0.5)] p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl border border-[#e1e7f2] bg-white p-5 shadow-2xl">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-black text-[#17120a]">
-                Transfer in a student
-              </h3>
-              <button
-                type="button"
-                onClick={() => setModalOpen(false)}
-                className="rounded-lg px-2 py-1 text-sm font-bold text-[#52657d] hover:bg-[#f1f5fb]"
-              >
-                <FaTimes />
-              </button>
+          {(legacyIncoming.length > 0 || legacyOutgoing.length > 0) && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 xl:col-span-2">
+              <p className="text-sm font-black text-amber-900">
+                Legacy transfer requests
+              </p>
+              <p className="mt-1 text-xs text-amber-800">
+                These were created before the student-initiated transfer flow.
+              </p>
             </div>
-
-            {feedback && (
-              <div className="mt-3">
-                <AlertBanner type={feedback.type} title={feedback.title} message={feedback.message} />
-              </div>
-            )}
-
-            {step === "search" ? (
-              <div className="mt-4 space-y-3">
-                <p className="text-xs text-[#52657d]">
-                  Ask the student for their Pravyo platform ID, then verify with
-                  their date of birth.
-                </p>
-                <div>
-                  <label className="mb-1 block text-xs font-bold text-[#27344a]">
-                    Platform student ID
-                  </label>
-                  <input
-                    value={form.platformStudentId}
-                    onChange={(e) =>
-                      setForm((p) => ({ ...p, platformStudentId: e.target.value }))
-                    }
-                    placeholder="STU-2025-123456"
-                    className="w-full rounded-xl border border-[#dbe5f4] bg-white px-3 py-2.5 text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-bold text-[#27344a]">
-                    Date of birth
-                  </label>
-                  <input
-                    type="date"
-                    value={form.dateOfBirth}
-                    onChange={(e) =>
-                      setForm((p) => ({ ...p, dateOfBirth: e.target.value }))
-                    }
-                    className="w-full rounded-xl border border-[#dbe5f4] bg-white px-3 py-2.5 text-sm"
-                  />
-                </div>
-                <button
-                  type="button"
-                  onClick={searchStudent}
-                  disabled={working || !form.platformStudentId || !form.dateOfBirth}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-purple-700 px-4 py-2.5 text-sm font-black text-white transition hover:bg-purple-800 disabled:opacity-50"
-                >
-                  {working ? "Searching..." : "Find student"}
-                  {!working && <FaArrowRight />}
-                </button>
-              </div>
-            ) : (
-              <div className="mt-4 space-y-3">
-                <div className="rounded-xl border border-[#e1e7f2] bg-[#f8fbff] p-3">
-                  <p className="text-sm font-black text-[#17120a]">{found?.name}</p>
-                  <p className="text-xs text-[#52657d]">
-                    Currently at {found?.currentSchoolName} · {found?.grade}
-                  </p>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="mb-1 block text-xs font-bold text-[#27344a]">
-                      Target grade
-                    </label>
-                    {grades.length > 0 ? (
-                      <select
-                        value={form.toGrade}
-                        onChange={(e) =>
-                          setForm((p) => ({ ...p, toGrade: e.target.value }))
-                        }
-                        className="w-full rounded-xl border border-[#dbe5f4] bg-white px-3 py-2.5 text-sm"
-                      >
-                        <option value="">Select grade</option>
-                        {grades.map((g) => (
-                          <option key={g} value={g}>
-                            {g}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <input
-                        value={form.toGrade}
-                        onChange={(e) =>
-                          setForm((p) => ({ ...p, toGrade: e.target.value }))
-                        }
-                        placeholder="Grade 10"
-                        className="w-full rounded-xl border border-[#dbe5f4] bg-white px-3 py-2.5 text-sm"
-                      />
-                    )}
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-xs font-bold text-[#27344a]">
-                      Roll number
-                    </label>
-                    <input
-                      value={form.toRollNumber}
-                      onChange={(e) =>
-                        setForm((p) => ({ ...p, toRollNumber: e.target.value }))
-                      }
-                      placeholder="Optional"
-                      className="w-full rounded-xl border border-[#dbe5f4] bg-white px-3 py-2.5 text-sm"
-                    />
-                  </div>
-                </div>
-                <p className="text-xs text-[#52657d]">
-                  Their current school must approve. Their achievements and writing
-                  stay on their profile.
-                </p>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setStep("search")}
-                    className="inline-flex flex-1 items-center justify-center rounded-xl border border-[#dbe5f4] bg-white px-4 py-2.5 text-sm font-black text-[#52657d] hover:bg-[#f1f5fb]"
-                  >
-                    Back
-                  </button>
-                  <button
-                    type="button"
-                    onClick={submitClaim}
-                    disabled={working || !form.toGrade}
-                    className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-purple-700 px-4 py-2.5 text-sm font-black text-white hover:bg-purple-800 disabled:opacity-50"
-                  >
-                    {working ? "Sending..." : "Send request"}
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
+          )}
         </div>
       )}
     </div>

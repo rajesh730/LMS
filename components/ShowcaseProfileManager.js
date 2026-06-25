@@ -58,6 +58,8 @@ const EMPTY_FORM = {
   featuredEvents: [],
 };
 
+const SCHOOL_STORY_MAX_LENGTH = 2000;
+
 function eventId(event) {
   return event?._id || event?.id || "";
 }
@@ -319,7 +321,7 @@ export default function ShowcaseProfileManager() {
               <div className="relative">
                 <textarea
                   value={profile.summary}
-                  maxLength={500}
+                  maxLength={SCHOOL_STORY_MAX_LENGTH}
                   onChange={(e) =>
                     setProfile((prev) => ({ ...prev, summary: e.target.value }))
                   }
@@ -327,7 +329,7 @@ export default function ShowcaseProfileManager() {
                   placeholder="Explain your school culture, activity strengths, and what families should know."
                 />
                 <span className="absolute bottom-3 right-3 text-[10px] font-bold text-[#52657d]">
-                  {wordCount(profile.summary)} words / {(profile.summary || "").length}/500
+                  {wordCount(profile.summary)} words / {(profile.summary || "").length}/{SCHOOL_STORY_MAX_LENGTH}
                 </span>
               </div>
               <p className="mt-2 text-xs font-semibold text-[#52657d]">
