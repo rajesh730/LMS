@@ -1,10 +1,26 @@
 import { withAuth } from 'next-auth/middleware';
 import { NextResponse } from 'next/server';
 
+const DASHBOARD_BY_ROLE = {
+    SUPER_ADMIN: '/admin/dashboard',
+    SCHOOL_ADMIN: '/school/dashboard',
+    TEACHER: '/teacher/dashboard',
+    STUDENT: '/student/dashboard',
+};
+
 export default withAuth(
     function proxy(req) {
         const { pathname } = req.nextUrl;
         const { token } = req.nextauth;
+
+        // Redirect authenticated users before rendering the public homepage.
+        // This keeps `/` cacheable and avoids a session-backed DB lookup.
+        if (pathname === '/' && token?.role && !token?.error) {
+            const destination = DASHBOARD_BY_ROLE[token.role];
+            if (destination) {
+                return NextResponse.redirect(new URL(destination, req.url));
+            }
+        }
 
         // Protect Admin Routes
         if (pathname.startsWith('/admin') && token?.role !== 'SUPER_ADMIN') {
@@ -49,6 +65,10 @@ export default withAuth(
         },
         callbacks: {
             authorized: ({ req, token }) => {
+                // The public homepage remains accessible without a session.
+                if (req.nextUrl.pathname === '/') {
+                    return true;
+                }
                 // Allow /student/login without authentication
                 if (req.nextUrl.pathname === '/student/login') {
                     return true;
@@ -61,5 +81,5 @@ export default withAuth(
 );
 
 export const config = {
-    matcher: ['/admin/:path*', '/school/:path*', '/teacher/:path*', '/student/:path*'],
+    matcher: ['/', '/admin/:path*', '/school/:path*', '/teacher/:path*', '/student/:path*'],
 };

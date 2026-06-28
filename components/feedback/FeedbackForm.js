@@ -90,7 +90,7 @@ export default function FeedbackForm({ audience = "school" }) {
         className="rounded-2xl border border-[#e6eaf7] bg-white p-5 shadow-sm"
       >
         <div className="mb-5">
-          <p className="text-xs font-black uppercase text-[#4326e8]">
+          <p className="text-xs font-black uppercase text-[#1f4e79]">
             Feedback
           </p>
           <h2 className="mt-2 text-2xl font-black text-[#17120a]">
@@ -110,7 +110,7 @@ export default function FeedbackForm({ audience = "school" }) {
             <select
               value={form.type}
               onChange={(event) => update("type", event.target.value)}
-              className="min-h-11 w-full rounded-lg border border-[#d7ddea] bg-white px-3 text-sm font-bold text-[#17120a] outline-none focus:border-[#4326e8] focus:ring-4 focus:ring-[#4326e8]/10"
+              className="min-h-11 w-full rounded-lg border border-[#d7ddea] bg-white px-3 text-sm font-bold text-[#17120a] outline-none focus:border-[#1f4e79] focus:ring-4 focus:ring-[#1f4e79]/10"
             >
               {TYPE_OPTIONS.map(([value, label]) => (
                 <option key={value} value={value}>
@@ -127,7 +127,7 @@ export default function FeedbackForm({ audience = "school" }) {
             <select
               value={form.rating}
               onChange={(event) => update("rating", event.target.value)}
-              className="min-h-11 w-full rounded-lg border border-[#d7ddea] bg-white px-3 text-sm font-bold text-[#17120a] outline-none focus:border-[#4326e8] focus:ring-4 focus:ring-[#4326e8]/10"
+              className="min-h-11 w-full rounded-lg border border-[#d7ddea] bg-white px-3 text-sm font-bold text-[#17120a] outline-none focus:border-[#1f4e79] focus:ring-4 focus:ring-[#1f4e79]/10"
             >
               <option value="">No rating</option>
               {[5, 4, 3, 2, 1].map((rating) => (
@@ -147,7 +147,7 @@ export default function FeedbackForm({ audience = "school" }) {
             value={form.title}
             onChange={(event) => update("title", event.target.value)}
             placeholder="Short feedback title"
-            className="min-h-11 w-full rounded-lg border border-[#d7ddea] bg-white px-3 text-sm font-semibold text-[#17120a] outline-none placeholder:text-[#8a9ab1] focus:border-[#4326e8] focus:ring-4 focus:ring-[#4326e8]/10"
+            className="min-h-11 w-full rounded-lg border border-[#d7ddea] bg-white px-3 text-sm font-semibold text-[#17120a] outline-none placeholder:text-[#8a9ab1] focus:border-[#1f4e79] focus:ring-4 focus:ring-[#1f4e79]/10"
           />
         </label>
 
@@ -159,7 +159,7 @@ export default function FeedbackForm({ audience = "school" }) {
             value={form.message}
             onChange={(event) => update("message", event.target.value)}
             placeholder="Write your feedback..."
-            className="min-h-36 w-full rounded-lg border border-[#d7ddea] bg-white px-3 py-3 text-sm font-semibold text-[#17120a] outline-none placeholder:text-[#8a9ab1] focus:border-[#4326e8] focus:ring-4 focus:ring-[#4326e8]/10"
+            className="min-h-36 w-full rounded-lg border border-[#d7ddea] bg-white px-3 py-3 text-sm font-semibold text-[#17120a] outline-none placeholder:text-[#8a9ab1] focus:border-[#1f4e79] focus:ring-4 focus:ring-[#1f4e79]/10"
           />
         </label>
 
@@ -167,7 +167,7 @@ export default function FeedbackForm({ audience = "school" }) {
           <button
             type="submit"
             disabled={saving}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#4326e8] px-5 text-sm font-black text-white shadow-lg shadow-[#4326e8]/15 transition hover:bg-[#3217d3] disabled:opacity-60"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#1f4e79] px-5 text-sm font-black text-white shadow-lg shadow-[#1f4e79]/15 transition hover:bg-[#173f63] disabled:opacity-60"
             style={{ color: "#ffffff" }}
           >
             <FaPaperPlane style={{ color: "#ffffff" }} />
@@ -198,7 +198,7 @@ export default function FeedbackForm({ audience = "school" }) {
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <h3 className="font-black text-[#17120a]">{item.title}</h3>
-                  <span className="rounded-full bg-[#f0edff] px-3 py-1 text-xs font-black text-[#4326e8]">
+                  <span className="rounded-full bg-[#f0edff] px-3 py-1 text-xs font-black text-[#1f4e79]">
                     {item.status}
                   </span>
                 </div>

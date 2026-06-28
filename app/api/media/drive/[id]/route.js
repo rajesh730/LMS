@@ -11,11 +11,19 @@ export async function GET(req, props) {
   const driveUrl = `https://drive.google.com/uc?export=view&id=${encodeURIComponent(
     id
   )}`;
-  const response = await fetch(driveUrl, {
-    headers: {
-      "User-Agent": "Mozilla/5.0",
-    },
-  });
+  let response;
+  try {
+    response = await fetch(driveUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0",
+      },
+      redirect: "follow",
+      // Don't let a slow/hung Drive response block the route indefinitely.
+      signal: AbortSignal.timeout(8000),
+    });
+  } catch {
+    return new Response("Image upstream timed out", { status: 504 });
+  }
 
   if (!response.ok) {
     return new Response("Image not found", { status: response.status });
@@ -30,7 +38,11 @@ export async function GET(req, props) {
     status: 200,
     headers: {
       "Content-Type": contentType,
-      "Cache-Control": "public, max-age=3600, stale-while-revalidate=86400",
+      // A Drive file id maps to immutable content, so cache it hard: a year in
+      // the browser and CDN, served as immutable so repeat views (and mobile
+      // re-scrolls) never re-hit this proxy or Google Drive.
+      "Cache-Control":
+        "public, max-age=31536000, s-maxage=31536000, immutable, stale-while-revalidate=86400",
     },
   });
 }

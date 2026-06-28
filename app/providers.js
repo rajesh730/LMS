@@ -1,7 +1,6 @@
 "use client";
 
 import { SessionProvider } from "next-auth/react";
-import { NotificationProvider } from "@/components/NotificationSystem";
 
 export function Providers({ children }) {
   // The session rarely changes and each refetch runs a DB query in the jwt
@@ -9,7 +8,7 @@ export function Providers({ children }) {
   // enough.
   return (
     <SessionProvider refetchInterval={600} refetchOnWindowFocus={false}>
-      <NotificationProvider>{children}</NotificationProvider>
+      {children}
     </SessionProvider>
   );
 }

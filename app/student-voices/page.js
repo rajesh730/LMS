@@ -90,14 +90,14 @@ function VoiceCard({ article, featured = false }) {
       }`}
     >
       <div className="flex items-start gap-3">
-        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#f1edff] text-sm font-black text-[#4326e8]">
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#f1edff] text-sm font-black text-[#1f4e79]">
           {getInitials(article.author)}
         </span>
         <div className="min-w-0 flex-1">
           {article.authorId ? (
             <Link
               href={`/students/${article.authorId}`}
-              className="block truncate text-sm font-black text-[#10142f] hover:text-[#4326e8]"
+              className="block truncate text-sm font-black text-[#10142f] hover:text-[#1f4e79]"
             >
               {article.author}
             </Link>
@@ -108,7 +108,7 @@ function VoiceCard({ article, featured = false }) {
           )}
           <Link
             href={article.schoolHref}
-            className="mt-1 inline-flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs font-bold text-[#526071] hover:text-[#4326e8]"
+            className="mt-1 inline-flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs font-bold text-[#526071] hover:text-[#1f4e79]"
           >
             <FaShieldAlt className="text-[#2f7fdb]" />
             <span>{article.schoolName}</span>
@@ -119,7 +119,7 @@ function VoiceCard({ article, featured = false }) {
             )}
           </Link>
         </div>
-        <span className="rounded-full bg-[#f1edff] px-3 py-1 text-[10px] font-black text-[#4326e8]">
+        <span className="rounded-full bg-[#f1edff] px-3 py-1 text-[10px] font-black text-[#1f4e79]">
           {getCategory(article.category)}
         </span>
       </div>
@@ -140,7 +140,7 @@ function VoiceCard({ article, featured = false }) {
         </span>
         <Link
           href={article.href}
-          className="inline-flex items-center gap-2 text-[#4326e8]"
+          className="inline-flex items-center gap-2 text-[#1f4e79]"
         >
           <FaShare />
           Share Story
@@ -149,7 +149,7 @@ function VoiceCard({ article, featured = false }) {
 
       <Link
         href={article.href}
-        className="mt-5 inline-flex min-h-10 items-center gap-2 rounded-lg bg-[#4326e8] px-4 text-sm font-black text-white public-primary-action"
+        className="mt-5 inline-flex min-h-10 items-center gap-2 rounded-lg bg-[#1f4e79] px-4 text-sm font-black text-white public-primary-action"
       >
         Read Story
         <FaArrowRight />
@@ -185,7 +185,7 @@ export default async function StudentVoicesPage({ searchParams }) {
 
         <div className="min-w-0 space-y-6">
           <section className="rounded-2xl border border-[#eceef8] bg-white p-6 shadow-sm">
-            <p className="text-xs font-black uppercase text-[#4326e8]">
+            <p className="text-xs font-black uppercase text-[#1f4e79]">
               Student Voices
             </p>
             <div className="mt-3 grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-end">
@@ -205,8 +205,8 @@ export default async function StudentVoicesPage({ searchParams }) {
                   [schoolCount, "Schools", FaSchool],
                   ["Public", "Reading", FaUserGraduate],
                 ].map(([value, label, Icon]) => (
-                  <div key={label} className="rounded-xl bg-[#f8f7ff] p-4 text-center">
-                    <Icon className="mx-auto text-[#4326e8]" />
+                  <div key={label} className="rounded-xl bg-[#eef4f8] p-4 text-center">
+                    <Icon className="mx-auto text-[#1f4e79]" />
                     <p className="mt-2 text-xl font-black text-[#10142f]">
                       {value}
                     </p>
@@ -223,7 +223,7 @@ export default async function StudentVoicesPage({ searchParams }) {
             <VoiceCard article={featured} featured />
           ) : (
             <section className="rounded-2xl border border-dashed border-[#d9dcf2] bg-white p-10 text-center">
-              <FaFeatherAlt className="mx-auto text-4xl text-[#4326e8]" />
+              <FaFeatherAlt className="mx-auto text-4xl text-[#1f4e79]" />
               <h2 className="mt-4 text-xl font-black text-[#10142f]">
                 No public stories yet
               </h2>

@@ -50,7 +50,7 @@ export default function PublicResultsTable({ achievements = [], resultsPublished
           Results
         </h2>
         {hasResults && (
-          <span className="rounded-full bg-[#f4f1ff] px-3 py-1 text-xs font-black text-[#4326e8]">
+          <span className="rounded-full bg-[#eef4f8] px-3 py-1 text-xs font-black text-[#1f4e79]">
             {filtered.length} of {achievements.length}
           </span>
         )}
@@ -73,14 +73,14 @@ export default function PublicResultsTable({ achievements = [], resultsPublished
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Search by student or school name..."
-                className="w-full rounded-lg border border-[#e6eaf7] bg-[#f8f9fd] py-2 pl-9 pr-3 text-sm font-semibold text-[#10142f] outline-none focus:border-[#4326e8]"
+                className="w-full rounded-lg border border-[#e6eaf7] bg-[#f8f9fd] py-2 pl-9 pr-3 text-sm font-semibold text-[#10142f] outline-none focus:border-[#1f4e79]"
               />
             </div>
             {placementOptions.length > 1 && (
               <select
                 value={placementFilter}
                 onChange={(e) => setPlacementFilter(e.target.value)}
-                className="rounded-lg border border-[#e6eaf7] bg-[#f8f9fd] px-3 py-2 text-sm font-semibold text-[#10142f] outline-none focus:border-[#4326e8] sm:w-48"
+                className="rounded-lg border border-[#e6eaf7] bg-[#f8f9fd] px-3 py-2 text-sm font-semibold text-[#10142f] outline-none focus:border-[#1f4e79] sm:w-48"
               >
                 <option value="all">All placements</option>
                 {placementOptions.map((placement) => (
@@ -119,7 +119,7 @@ export default function PublicResultsTable({ achievements = [], resultsPublished
                           {achievement.schoolId ? (
                             <Link
                               href={`/schools/${achievement.schoolId}`}
-                              className="font-semibold text-[#0a2f66] hover:text-[#4326e8]"
+                              className="font-semibold text-[#0a2f66] hover:text-[#1f4e79]"
                             >
                               {achievement.schoolName || "School"}
                             </Link>
@@ -142,7 +142,7 @@ export default function PublicResultsTable({ achievements = [], resultsPublished
                               href={achievement.certificateUrl}
                               target="_blank"
                               rel="noreferrer"
-                              className="inline-flex items-center gap-1 whitespace-nowrap text-xs font-black text-[#4326e8]"
+                              className="inline-flex items-center gap-1 whitespace-nowrap text-xs font-black text-[#1f4e79]"
                             >
                               View certificate
                               <FaExternalLinkAlt />
@@ -177,11 +177,11 @@ export default function PublicResultsTable({ achievements = [], resultsPublished
                       </span>
                     </div>
                     <div className="text-xs text-[#526071] flex items-center gap-1.5">
-                      <FaSchool className="text-[#4326e8] shrink-0" />
+                      <FaSchool className="text-[#1f4e79] shrink-0" />
                       {achievement.schoolId ? (
                         <Link
                           href={`/schools/${achievement.schoolId}`}
-                          className="font-semibold text-[#0a2f66] hover:text-[#4326e8] truncate"
+                          className="font-semibold text-[#0a2f66] hover:text-[#1f4e79] truncate"
                         >
                           {achievement.schoolName || "School"}
                         </Link>
@@ -195,7 +195,7 @@ export default function PublicResultsTable({ achievements = [], resultsPublished
                           href={achievement.certificateUrl}
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex items-center gap-1.5 text-xs font-black text-[#4326e8]"
+                          className="inline-flex items-center gap-1.5 text-xs font-black text-[#1f4e79]"
                         >
                           View certificate
                           <FaExternalLinkAlt className="text-[10px]" />

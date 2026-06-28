@@ -97,7 +97,7 @@ function SchoolMark({ school, size = "h-12 w-12" }) {
   const initial = (school.name || "S").charAt(0).toUpperCase();
   return (
     <span
-      className={`flex shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#f4f1ff] text-lg font-black text-[#4326e8] ${size}`.trim()}
+      className={`flex shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#eef4f8] text-lg font-black text-[#1f4e79] ${size}`.trim()}
     >
       {image && !imageFailed ? (
         // eslint-disable-next-line @next/next/no-img-element

@@ -22,7 +22,7 @@ function NotificationRow({ notification, unread, onClick }) {
         type="button"
         onClick={(event) => onClick(event, notification)}
         className={`flex w-full items-start gap-3 px-4 py-3 text-left transition hover:bg-[#f7f8fc] ${
-          unread ? "bg-[#f4f1ff]" : "bg-white"
+          unread ? "bg-[#eef4f8]" : "bg-white"
         }`}
       >
         <span
@@ -234,7 +234,7 @@ export default function NotificationBell({
               <button
                 type="button"
                 onClick={() => void markNotificationsRead(notifications)}
-                className="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-black text-[var(--brand-primary)] transition hover:bg-[#f4f1ff]"
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-black text-[var(--brand-primary)] transition hover:bg-[#eef4f8]"
               >
                 <FaCheckDouble className="text-[11px]" />
                 Mark all read
@@ -274,7 +274,7 @@ export default function NotificationBell({
                 <a
                   href={viewAllHref}
                   onClick={handleViewAll}
-                  className="block border-t border-[#f0f2f8] px-4 py-3 text-center text-sm font-black text-[var(--brand-primary)] transition hover:bg-[#f4f1ff]"
+                  className="block border-t border-[#f0f2f8] px-4 py-3 text-center text-sm font-black text-[var(--brand-primary)] transition hover:bg-[#eef4f8]"
                 >
                   {viewAllLabel}
                 </a>

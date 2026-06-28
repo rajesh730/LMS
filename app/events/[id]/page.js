@@ -56,7 +56,7 @@ function FactItem({ icon: Icon, label: title, value, className = "" }) {
   return (
     <div className={`rounded-lg border border-[#e6eaf7] bg-[#f8f9fd] p-3 sm:p-4 ${className}`}>
       <div className="flex items-center gap-2 sm:gap-3">
-        <span className="flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-lg bg-[#f4f1ff] text-[#4326e8] text-sm sm:text-base">
+        <span className="flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-lg bg-[#eef4f8] text-[#1f4e79] text-sm sm:text-base">
           <Icon />
         </span>
         <span className="min-w-0 flex-1">
@@ -199,7 +199,7 @@ export default async function PublicEventPage({ params }) {
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <Link
                 href="/events"
-                className="inline-flex items-center gap-2 text-sm font-black text-[#4326e8]"
+                className="inline-flex items-center gap-2 text-sm font-black text-[#1f4e79]"
               >
                 <FaArrowLeft />
                 Back to Events
@@ -208,13 +208,13 @@ export default async function PublicEventPage({ params }) {
                 href={`/events/${event._id}`}
                 title={event.title}
                 label="Share Event"
-                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-[#d9dcf2] bg-white px-4 text-sm font-black text-[#4326e8] transition hover:bg-[#f8f7ff]"
+                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-[#d9dcf2] bg-white px-4 text-sm font-black text-[#1f4e79] transition hover:bg-[#eef4f8]"
               />
             </div>
 
             <div className="mt-8 max-w-4xl">
               <div className="flex flex-wrap gap-2">
-                <span className="rounded-full bg-[#f4f1ff] px-3 py-1 text-xs font-black uppercase text-[#4326e8]">
+                <span className="rounded-full bg-[#eef4f8] px-3 py-1 text-xs font-black uppercase text-[#1f4e79]">
                   {label(event.eventType)}
                 </span>
                 <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-black uppercase text-emerald-800">
@@ -271,7 +271,7 @@ export default async function PublicEventPage({ params }) {
 
           <section className="hidden sm:block rounded-xl border border-[#e6eaf7] bg-white p-5 shadow-sm">
             <h2 className="inline-flex items-center gap-2 text-base font-black text-[#10142f]">
-              <FaSchool className="text-[#4326e8]" />
+              <FaSchool className="text-[#1f4e79]" />
               Participating Schools
             </h2>
             {isInternalEvent ? (
@@ -317,13 +317,13 @@ export default async function PublicEventPage({ params }) {
               <div className="flex flex-wrap gap-2">
                 <Link
                   href="/login"
-                  className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#d9dcf2] bg-white px-4 text-sm font-black text-[#4326e8] transition hover:bg-[#f8f7ff]"
+                  className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#d9dcf2] bg-white px-4 text-sm font-black text-[#1f4e79] transition hover:bg-[#eef4f8]"
                 >
                   Login
                 </Link>
                 <Link
                   href="/register"
-                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-[#4326e8] px-4 text-sm font-black text-white public-primary-action transition hover:bg-[#3217d3]"
+                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-[#1f4e79] px-4 text-sm font-black text-white public-primary-action transition hover:bg-[#173f63]"
                 >
                   Register School
                   <FaArrowRight />

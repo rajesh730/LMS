@@ -552,7 +552,7 @@ export default function ShowcaseProfileManager() {
           <section className="rounded-lg border border-[#e1e7f2] bg-white p-4 shadow-sm">
             <h2 className="text-sm font-black text-[#17120a]">Profile Preview</h2>
             <div className="mt-4 overflow-hidden rounded-lg border border-[#e1e7f2] bg-white">
-              <div className="bg-[#f8f7ff] p-4">
+              <div className="bg-[#eef4f8] p-4">
                 <div className="flex items-start gap-3">
                   <SchoolLogoMark
                     imageUrl={logoImage}

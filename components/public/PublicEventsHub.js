@@ -71,7 +71,7 @@ function FeaturedEvent({ event }) {
   if (!event) {
     return (
       <section className="rounded-xl border border-[#e6eaf7] bg-white p-6 shadow-sm">
-        <p className="text-[11px] font-black uppercase text-[#4326e8]">
+        <p className="text-[11px] font-black uppercase text-[#1f4e79]">
           Events
         </p>
         <h1 className="mt-2 text-2xl font-black text-[#17120a]">
@@ -89,12 +89,12 @@ function FeaturedEvent({ event }) {
   return (
     <section className="rounded-xl border border-[#e6eaf7] bg-white p-5 shadow-sm">
       <div className="grid gap-5 lg:grid-cols-[92px_minmax(0,1fr)_auto] lg:items-center">
-        <div className="hidden sm:flex h-20 w-20 items-center justify-center rounded-2xl bg-[#f4f1ff] text-3xl text-[#4326e8]">
+        <div className="hidden sm:flex h-20 w-20 items-center justify-center rounded-2xl bg-[#eef4f8] text-3xl text-[#1f4e79]">
           <EventTypeIcon eventType={event.eventType} />
         </div>
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full bg-[#f4f1ff] px-3 py-1 text-[10px] font-black uppercase text-[#4326e8]">
+            <span className="rounded-full bg-[#eef4f8] px-3 py-1 text-[10px] font-black uppercase text-[#1f4e79]">
               Featured Event
             </span>
             <span className={`rounded-full px-3 py-1 text-[10px] font-black uppercase ${status.className}`}>
@@ -109,22 +109,22 @@ function FeaturedEvent({ event }) {
           </p>
           <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-xs font-bold text-[#52657d]">
             <span className="inline-flex items-center gap-2">
-              <FaCalendarAlt className="text-[#4326e8]" />
+              <FaCalendarAlt className="text-[#1f4e79]" />
               {formatEventDate(event.date)}
             </span>
             <span className="inline-flex items-center gap-2">
-              <FaMapMarkerAlt className="text-[#4326e8]" />
+              <FaMapMarkerAlt className="text-[#1f4e79]" />
               {event.schoolName || "Pravyo"}
             </span>
             <span className="hidden sm:inline-flex items-center gap-2">
-              <FaUsers className="text-[#4326e8]" />
+              <FaUsers className="text-[#1f4e79]" />
               {event.participantCount}+ participants
             </span>
           </div>
         </div>
         <Link
           href={event.href}
-          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#4326e8] px-5 text-sm font-black text-white transition hover:bg-[#3217d3]"
+          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#1f4e79] px-5 text-sm font-black text-white transition hover:bg-[#173f63]"
         >
           View Details
           <FaArrowRight />
@@ -197,7 +197,7 @@ function EventRow({ event }) {
       href={event.href}
       className="group flex gap-3.5 items-start rounded-xl border border-[#e6eaf7] bg-white p-4 shadow-sm transition hover:border-[#cfc4ff] hover:shadow-md sm:grid sm:grid-cols-[72px_minmax(0,1fr)_auto] sm:gap-4 sm:items-center"
     >
-      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#f4f1ff] text-xl text-[#4326e8] sm:h-14 sm:w-14 sm:rounded-2xl sm:text-2xl">
+      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#eef4f8] text-xl text-[#1f4e79] sm:h-14 sm:w-14 sm:rounded-2xl sm:text-2xl">
         <EventTypeIcon eventType={event.eventType} />
       </div>
       <div className="min-w-0 flex-1">
@@ -209,7 +209,7 @@ function EventRow({ event }) {
             {event.eventType}
           </span>
         </div>
-        <h3 className="mt-2 line-clamp-2 text-base font-black text-[#17120a] group-hover:text-[#4326e8]">
+        <h3 className="mt-2 line-clamp-2 text-base font-black text-[#17120a] group-hover:text-[#1f4e79]">
           {event.title}
         </h3>
         <p className="hidden sm:block mt-1 line-clamp-2 text-sm leading-5 text-[#52657d]">
@@ -217,23 +217,23 @@ function EventRow({ event }) {
         </p>
         <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs font-semibold text-[#52657d]">
           <span className="inline-flex items-center gap-1.5">
-            <FaCalendarAlt className="text-[#4326e8]" />
+            <FaCalendarAlt className="text-[#1f4e79]" />
             {formatEventDate(event.date)}
           </span>
           <span className="inline-flex items-center gap-1.5">
-            <FaSchool className="text-[#4326e8]" />
+            <FaSchool className="text-[#1f4e79]" />
             {event.schoolName || "Pravyo"}
           </span>
           <span className="hidden sm:inline-flex items-center gap-1.5">
-            <FaUsers className="text-[#4326e8]" />
+            <FaUsers className="text-[#1f4e79]" />
             {event.schoolCount} schools / {event.participantCount}+ students
           </span>
         </div>
       </div>
       <div className="self-center text-[#8a9ab1] sm:hidden shrink-0 pl-1">
-        <FaArrowRight className="text-xs text-[#4326e8] group-hover:translate-x-0.5 transition-transform" />
+        <FaArrowRight className="text-xs text-[#1f4e79] group-hover:translate-x-0.5 transition-transform" />
       </div>
-      <span className="hidden sm:inline-flex min-h-10 items-center justify-center gap-2 self-center rounded-lg border border-[#e6eaf7] px-4 text-sm font-black text-[#4326e8] transition group-hover:bg-[#f4f1ff]">
+      <span className="hidden sm:inline-flex min-h-10 items-center justify-center gap-2 self-center rounded-lg border border-[#e6eaf7] px-4 text-sm font-black text-[#1f4e79] transition group-hover:bg-[#eef4f8]">
         {hasPublicResults ? "View Results" : "View Details"}
         <FaArrowRight />
       </span>
@@ -321,7 +321,7 @@ export default function PublicEventsHub({ initialData }) {
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="Search events or schools..."
-                className="min-h-11 w-full rounded-lg border border-[#e6eaf7] bg-[#f8f9fd] pl-11 pr-4 text-sm font-semibold text-[#24314d] outline-none transition placeholder:text-[#8a9ab1] focus:border-[#4326e8] focus:bg-white focus:ring-4 focus:ring-[#4326e8]/10"
+                className="min-h-11 w-full rounded-lg border border-[#e6eaf7] bg-[#f8f9fd] pl-11 pr-4 text-sm font-semibold text-[#24314d] outline-none transition placeholder:text-[#8a9ab1] focus:border-[#1f4e79] focus:bg-white focus:ring-4 focus:ring-[#1f4e79]/10"
               />
             </label>
             <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -332,8 +332,8 @@ export default function PublicEventsHub({ initialData }) {
                   onClick={() => setActiveView(id)}
                   className={`min-h-10 shrink-0 rounded-full px-4 text-xs font-black transition ${
                     activeView === id
-                      ? "bg-[#4326e8] text-white"
-                      : "border border-[#e6eaf7] bg-white text-[#24314d] hover:bg-[#f4f1ff] hover:text-[#4326e8]"
+                      ? "bg-[#1f4e79] text-white"
+                      : "border border-[#e6eaf7] bg-white text-[#24314d] hover:bg-[#eef4f8] hover:text-[#1f4e79]"
                   }`}
                 >
                   {label}

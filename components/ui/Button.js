@@ -1,13 +1,13 @@
 import clsx from "clsx";
 
 const VARIANTS = {
-  primary: "pravyo-btn-primary bg-[#4326e8] text-white hover:bg-[#3217d3]",
+  primary: "pravyo-btn-primary bg-[#1f4e79] text-white hover:bg-[#173f63]",
   secondary:
-    "pravyo-btn-secondary border border-[#e6eaf7] bg-white text-[#27344a] hover:bg-[#f4f1ff]",
-  ghost: "border border-transparent bg-transparent text-[#27344a] hover:bg-[#f4f1ff]",
+    "pravyo-btn-secondary border border-[#e6eaf7] bg-white text-[#27344a] hover:bg-[#eef4f8]",
+  ghost: "border border-transparent bg-transparent text-[#27344a] hover:bg-[#eef4f8]",
   danger: "pravyo-btn-danger bg-[#b42318] text-white hover:bg-[#9f1f14]",
   outline:
-    "pravyo-btn-outline border border-[#d9dcf2] bg-white text-[#4326e8] hover:bg-[#f4f1ff]",
+    "pravyo-btn-outline border border-[#d9dcf2] bg-white text-[#1f4e79] hover:bg-[#eef4f8]",
 };
 
 const SIZES = {

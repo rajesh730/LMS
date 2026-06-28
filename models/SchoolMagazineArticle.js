@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { ALL_WRITING_CATEGORIES } from "@/lib/writingCategories";
+import { ALL_WRITING_CATEGORIES } from "../lib/writingCategories.js";
 
 const MAX_WRITING_CONTENT_LENGTH = 50000;
 
@@ -205,6 +205,20 @@ SchoolMagazineArticleSchema.index({
   isDeleted: 1,
   isPublished: 1,
   publishedAt: -1,
+});
+SchoolMagazineArticleSchema.index({
+  status: 1,
+  isPublished: 1,
+  isDeleted: 1,
+  publishedAt: -1,
+  updatedAt: -1,
+});
+SchoolMagazineArticleSchema.index({
+  magazineIssue: 1,
+  isMagazinePublished: 1,
+  isDeleted: 1,
+  magazinePublishedAt: 1,
+  updatedAt: 1,
 });
 SchoolMagazineArticleSchema.index({
   challenge: 1,

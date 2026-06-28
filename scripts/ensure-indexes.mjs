@@ -9,6 +9,7 @@ import EventNotice from "../models/EventNotice.js";
 import EventRound from "../models/EventRound.js";
 import EventSchoolInvitation from "../models/EventSchoolInvitation.js";
 import FAQ from "../models/FAQ.js";
+import MagazineIssue from "../models/MagazineIssue.js";
 import Notice from "../models/Notice.js";
 import ParticipationRequest from "../models/ParticipationRequest.js";
 import RoundParticipant from "../models/RoundParticipant.js";
@@ -34,6 +35,7 @@ const models = [
   EventRound,
   EventSchoolInvitation,
   FAQ,
+  MagazineIssue,
   Notice,
   ParticipationRequest,
   RoundParticipant,

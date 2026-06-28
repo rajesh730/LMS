@@ -121,7 +121,7 @@ function SearchBar({ q }) {
   return (
     <form
       action="/search"
-      className="flex h-12 items-center gap-3 rounded-xl border border-[#e4e7f2] bg-white px-4 shadow-sm focus-within:border-[#4326e8] focus-within:shadow-[0_0_0_3px_rgba(67,38,232,0.1)]"
+      className="flex h-12 items-center gap-3 rounded-xl border border-[#e4e7f2] bg-white px-4 shadow-sm focus-within:border-[#1f4e79] focus-within:shadow-[0_0_0_3px_rgba(67,38,232,0.1)]"
     >
       <FaSearch className="shrink-0 text-[#9aa3b5]" />
       <input
@@ -134,7 +134,7 @@ function SearchBar({ q }) {
       />
       <button
         type="submit"
-        className="rounded-lg bg-[#4326e8] px-4 py-1.5 text-sm font-black text-white"
+        className="rounded-lg bg-[#1f4e79] px-4 py-1.5 text-sm font-black text-white"
       >
         Search
       </button>
@@ -157,7 +157,7 @@ export default async function SearchPage({ searchParams }) {
 
         <div className="min-w-0 space-y-6">
           <section className="rounded-2xl border border-[#eceef8] bg-white p-6 shadow-sm">
-            <p className="text-xs font-black uppercase text-[#4326e8]">Search</p>
+            <p className="text-xs font-black uppercase text-[#1f4e79]">Search</p>
             <h1 className="mt-2 text-3xl font-black text-[#10142f]">
               Find students &amp; schools
             </h1>
@@ -173,7 +173,7 @@ export default async function SearchPage({ searchParams }) {
 
           {q && total === 0 && (
             <section className="rounded-2xl border border-dashed border-[#d9dcf2] bg-white p-10 text-center">
-              <FaSearch className="mx-auto text-3xl text-[#4326e8]" />
+              <FaSearch className="mx-auto text-3xl text-[#1f4e79]" />
               <h2 className="mt-4 text-xl font-black text-[#10142f]">
                 No matches for “{q}”
               </h2>
@@ -187,7 +187,7 @@ export default async function SearchPage({ searchParams }) {
           {results.students.length > 0 && (
             <section className="rounded-2xl border border-[#eceef8] bg-white p-5 shadow-sm sm:p-6">
               <h2 className="inline-flex items-center gap-2 text-lg font-black text-[#10142f]">
-                <FaUserGraduate className="text-[#4326e8]" />
+                <FaUserGraduate className="text-[#1f4e79]" />
                 Students
               </h2>
               <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -195,9 +195,9 @@ export default async function SearchPage({ searchParams }) {
                   <Link
                     key={student.id}
                     href={`/students/${student.id}`}
-                    className="flex items-center gap-3 rounded-xl border border-[#e6eaf7] bg-[#fbfcff] p-4 transition hover:border-[#cfc7ff] hover:bg-[#f8f7ff]"
+                    className="flex items-center gap-3 rounded-xl border border-[#e6eaf7] bg-[#fbfcff] p-4 transition hover:border-[#cfc7ff] hover:bg-[#eef4f8]"
                   >
-                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#f1edff] text-sm font-black text-[#4326e8]">
+                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#f1edff] text-sm font-black text-[#1f4e79]">
                       {getInitials(student.name)}
                     </span>
                     <span className="min-w-0 flex-1">
@@ -226,7 +226,7 @@ export default async function SearchPage({ searchParams }) {
                   <Link
                     key={school.id}
                     href={`/schools/${school.id}`}
-                    className="flex items-center gap-3 rounded-xl border border-[#e6eaf7] bg-[#fbfcff] p-4 transition hover:border-[#cfc7ff] hover:bg-[#f8f7ff]"
+                    className="flex items-center gap-3 rounded-xl border border-[#e6eaf7] bg-[#fbfcff] p-4 transition hover:border-[#cfc7ff] hover:bg-[#eef4f8]"
                   >
                     <SchoolLogoMark
                       imageUrl={school.cover}

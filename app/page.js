@@ -1,7 +1,4 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import Event from "@/models/Event";
 import SchoolPromotion from "@/models/SchoolPromotion";
@@ -30,20 +27,9 @@ import {
 import "@/models/Student";
 import "@/models/User";
 
-export const dynamic = "force-dynamic";
-
-// Logged-in users land straight in their dashboard (Facebook-style) instead of
-// the public marketing home. They can still reach public pages via direct links.
-const DASHBOARD_BY_ROLE = {
-  SUPER_ADMIN: "/admin/dashboard",
-  SCHOOL_ADMIN: "/school/dashboard",
-  TEACHER: "/teacher/dashboard",
-  STUDENT: "/student/dashboard",
-};
-
-function dashboardPathForRole(role) {
-  return DASHBOARD_BY_ROLE[role] || "/school/dashboard";
-}
+// Public content can be served immediately from the route cache. The proxy
+// handles authenticated-user redirects without making the homepage dynamic.
+export const revalidate = 60;
 
 
 function getPreview(value = "", maxLength = 120) {
@@ -105,7 +91,7 @@ async function getLatestStudentWritings() {
   const articles = await SchoolMagazineArticle.find({
     status: "APPROVED",
     isPublished: true,
-    isDeleted: { $ne: true },
+    isDeleted: false,
   })
     .select("title content category publishedAt updatedAt")
     .sort({ publishedAt: -1, updatedAt: -1 })
@@ -151,7 +137,7 @@ async function getHomeMagazineIssues() {
   const articles = await SchoolMagazineArticle.find({
     magazineIssue: { $in: issueIds },
     isMagazinePublished: true,
-    isDeleted: { $ne: true },
+    isDeleted: false,
   })
     .select("title content category magazineIssue magazinePublishedAt updatedAt")
     .sort({ magazinePublishedAt: 1, updatedAt: 1 })
@@ -215,11 +201,12 @@ async function getHighRotationSpotlightStudentWritings() {
   const articles = await SchoolMagazineArticle.find({
     status: "APPROVED",
     isPublished: true,
-    isDeleted: { $ne: true },
+    isDeleted: false,
     school: { $in: highRotationSchoolIds },
   })
     .select("title content category publishedAt updatedAt")
     .sort({ publishedAt: -1, updatedAt: -1 })
+    .limit(40)
     .populate("authorStudent", "name grade")
     .populate("school", "schoolName")
     .lean();
@@ -286,16 +273,23 @@ async function getHomepageData() {
     }
   );
 
-  return {
-    homeSpotlights,
-    spotlightStories: await enrichItemsWithSchoolProfiles(
+  // Enrich both feeds in parallel — each makes its own DB round-trip, so running
+  // them together (instead of two sequential awaits) saves a full round-trip.
+  const [enrichedSpotlights, enrichedWritings] = await Promise.all([
+    enrichItemsWithSchoolProfiles(
       diversifyBySchool(spotlightStories, {
         limit: 5,
         getSchoolKey: (item) => item.schoolId || item.schoolName,
         getTime: (item) => item.date,
       })
     ),
-    latestWritings: await enrichItemsWithSchoolProfiles(publicFeedItems),
+    enrichItemsWithSchoolProfiles(publicFeedItems),
+  ]);
+
+  return {
+    homeSpotlights,
+    spotlightStories: enrichedSpotlights,
+    latestWritings: enrichedWritings,
     upcomingEvents,
   };
 }
@@ -578,13 +572,6 @@ function MobileVoiceFeed({ writings }) {
 }
 
 export default async function Home() {
-  // Send authenticated users to their dashboard. A revoked session falls through
-  // to the public home (the client will sign them out from there).
-  const session = await getServerSession(authOptions);
-  if (session?.user?.role && !session.error) {
-    redirect(dashboardPathForRole(session.user.role));
-  }
-
   const {
     homeSpotlights,
     spotlightStories,
@@ -650,7 +637,7 @@ export default async function Home() {
                       </span>
                       <Link
                         href={activeEvent.href}
-                        className="inline-flex h-10 items-center rounded-lg bg-white px-5 text-xs font-black text-[#4326e8]"
+                        className="inline-flex h-10 items-center rounded-lg bg-white px-5 text-xs font-black text-[#1f4e79]"
                       >
                         View Event
                       </Link>

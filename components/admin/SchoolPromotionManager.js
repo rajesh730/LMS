@@ -243,7 +243,7 @@ export default function SchoolPromotionManager() {
               onClick={() => setPlacement(key)}
               className={`inline-flex min-h-10 items-center justify-center rounded-lg px-4 text-sm font-black transition ${
                 placement === key
-                  ? "bg-[#4326e8] text-white"
+                  ? "bg-[#1f4e79] text-white"
                   : "border border-[#e6eaf7] text-[#24314d] hover:bg-[#f8f9fd]"
               }`}
             >
@@ -255,14 +255,14 @@ export default function SchoolPromotionManager() {
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
           <label className="block min-w-0 lg:flex-1">
             <span className="mb-1.5 flex items-center gap-2 text-[10px] font-black uppercase text-[#52657d]">
-              <FaSearch className="text-[#4326e8]" />
+              <FaSearch className="text-[#1f4e79]" />
               Search school
             </span>
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search school, principal, email, status, or location..."
-              className="min-h-11 w-full rounded-lg border border-[#d2dcf2] bg-[#f8f9fd] px-4 text-sm font-semibold text-[#24314d] outline-none transition placeholder:text-[#75869b] focus:border-[#4326e8] focus:bg-white focus:ring-4 focus:ring-[#4326e8]/10"
+              className="min-h-11 w-full rounded-lg border border-[#d2dcf2] bg-[#f8f9fd] px-4 text-sm font-semibold text-[#24314d] outline-none transition placeholder:text-[#75869b] focus:border-[#1f4e79] focus:bg-white focus:ring-4 focus:ring-[#1f4e79]/10"
             />
           </label>
           <label className="block min-w-0 lg:w-72">
@@ -275,7 +275,7 @@ export default function SchoolPromotionManager() {
                 setSchoolProvince(event.target.value);
                 setSchoolDistrict("All Districts");
               }}
-              className="min-h-11 w-full rounded-lg border border-[#d2dcf2] bg-white px-3 text-sm font-bold text-[#24314d] outline-none transition focus:border-[#4326e8] focus:ring-4 focus:ring-[#4326e8]/10"
+              className="min-h-11 w-full rounded-lg border border-[#d2dcf2] bg-white px-3 text-sm font-bold text-[#24314d] outline-none transition focus:border-[#1f4e79] focus:ring-4 focus:ring-[#1f4e79]/10"
             >
               {provinceOptions.map((province) => (
                 <option key={province}>{province}</option>
@@ -289,7 +289,7 @@ export default function SchoolPromotionManager() {
             <select
               value={schoolDistrict}
               onChange={(event) => setSchoolDistrict(event.target.value)}
-              className="min-h-11 w-full rounded-lg border border-[#d2dcf2] bg-white px-3 text-sm font-bold text-[#24314d] outline-none transition focus:border-[#4326e8] focus:ring-4 focus:ring-[#4326e8]/10"
+              className="min-h-11 w-full rounded-lg border border-[#d2dcf2] bg-white px-3 text-sm font-bold text-[#24314d] outline-none transition focus:border-[#1f4e79] focus:ring-4 focus:ring-[#1f4e79]/10"
             >
               {districtOptions.map((district) => (
                 <option key={district}>{district}</option>
@@ -380,8 +380,8 @@ export default function SchoolPromotionManager() {
                           }
                           className={`inline-flex min-h-10 items-center gap-2 rounded-lg px-4 text-sm font-black transition disabled:cursor-wait disabled:opacity-60 ${
                             priority === "PREMIUM"
-                              ? "bg-[#4326e8] text-white shadow-sm hover:bg-[#3217d3]"
-                              : "border border-[#d2dcf2] bg-[#f8f9fd] text-[#4326e8] shadow-sm hover:border-[#4326e8]/35 hover:bg-[#efe9ff]"
+                              ? "bg-[#1f4e79] text-white shadow-sm hover:bg-[#173f63]"
+                              : "border border-[#d2dcf2] bg-[#f8f9fd] text-[#1f4e79] shadow-sm hover:border-[#1f4e79]/35 hover:bg-[#efe9ff]"
                           }`}
                         >
                           <FaStar />
@@ -410,7 +410,7 @@ export default function SchoolPromotionManager() {
                                   priority: "STANDARD",
                                 })
                               }
-                              className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-[#efe9ff] px-4 text-sm font-black text-[#4326e8] transition hover:bg-[#e6ddff] disabled:cursor-wait disabled:opacity-60"
+                              className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-[#efe9ff] px-4 text-sm font-black text-[#1f4e79] transition hover:bg-[#e6ddff] disabled:cursor-wait disabled:opacity-60"
                             >
                               <FaPause />
                               Pause
@@ -424,7 +424,7 @@ export default function SchoolPromotionManager() {
                                   status: "ACTIVE",
                                 })
                               }
-                              className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-[#4326e8] px-4 text-sm font-black text-white transition hover:bg-[#3217d3] disabled:cursor-wait disabled:opacity-60"
+                              className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-[#1f4e79] px-4 text-sm font-black text-white transition hover:bg-[#173f63] disabled:cursor-wait disabled:opacity-60"
                             >
                               <FaPlay />
                               Activate

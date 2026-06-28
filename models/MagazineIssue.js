@@ -69,6 +69,14 @@ const MagazineIssueSchema = new mongoose.Schema(
 );
 
 MagazineIssueSchema.index({ school: 1, year: -1, month: -1, weekNumber: -1 });
+MagazineIssueSchema.index({
+  status: 1,
+  showOnHome: 1,
+  homeShownAt: -1,
+  publishedAt: -1,
+  weekStart: -1,
+  createdAt: -1,
+});
 
 export default mongoose.models.MagazineIssue ||
   mongoose.model("MagazineIssue", MagazineIssueSchema);

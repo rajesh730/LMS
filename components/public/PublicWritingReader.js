@@ -69,7 +69,7 @@ export default function PublicWritingReader({
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <Link
                 href={backHref}
-                className="inline-flex items-center gap-2 text-sm font-black text-[#4326e8]"
+                className="inline-flex items-center gap-2 text-sm font-black text-[#1f4e79]"
               >
                 <FaArrowLeft />
                 {backLabel}
@@ -78,12 +78,12 @@ export default function PublicWritingReader({
                 href={shareHref}
                 title={article.title}
                 label="Share Story"
-                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-[#d9dcf2] bg-white px-4 text-sm font-black text-[#4326e8] transition hover:bg-[#f8f7ff]"
+                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-[#d9dcf2] bg-white px-4 text-sm font-black text-[#1f4e79] transition hover:bg-[#eef4f8]"
               />
             </div>
 
             <div className="mt-8 max-w-4xl">
-              <span className="rounded-full bg-[#f4f1ff] px-3 py-1 text-xs font-black uppercase text-[#4326e8]">
+              <span className="rounded-full bg-[#eef4f8] px-3 py-1 text-xs font-black uppercase text-[#1f4e79]">
                 {getCategoryLabel(article.category)}
               </span>
               <h1 className="mt-4 break-words text-4xl font-black leading-tight text-[#10142f] md:text-5xl">
@@ -97,14 +97,14 @@ export default function PublicWritingReader({
                 {author.id ? (
                   <Link
                     href={`/students/${author.id}`}
-                    className="inline-flex items-center gap-2 text-base font-black text-[#10142f] hover:text-[#4326e8]"
+                    className="inline-flex items-center gap-2 text-base font-black text-[#10142f] hover:text-[#1f4e79]"
                   >
-                    <FaUser className="text-[#4326e8]" />
+                    <FaUser className="text-[#1f4e79]" />
                     {author.name || "Student"}
                   </Link>
                 ) : (
                   <span className="inline-flex items-center gap-2 text-base font-black text-[#10142f]">
-                    <FaUser className="text-[#4326e8]" />
+                    <FaUser className="text-[#1f4e79]" />
                     {author.name || "Student"}
                   </span>
                 )}
@@ -112,7 +112,7 @@ export default function PublicWritingReader({
                   (currentSchoolId ? (
                     <Link
                       href={`/schools/${currentSchoolId}`}
-                      className="inline-flex items-center gap-2 hover:text-[#4326e8]"
+                      className="inline-flex items-center gap-2 hover:text-[#1f4e79]"
                     >
                       <SchoolLogoMark
                         imageUrl={author.currentSchoolLogoUrl}
@@ -136,11 +136,11 @@ export default function PublicWritingReader({
                     </span>
                   ))}
                 <span className="inline-flex items-center gap-2">
-                  <FaCalendarAlt className="text-[#4326e8]" />
+                  <FaCalendarAlt className="text-[#1f4e79]" />
                   <AppDate value={article.publishedAt} />
                 </span>
                 <span className="inline-flex items-center gap-2">
-                  <FaClock className="text-[#4326e8]" />
+                  <FaClock className="text-[#1f4e79]" />
                   {getReadTime(article.content)} min read
                 </span>
               </div>
@@ -157,7 +157,7 @@ export default function PublicWritingReader({
             <div className="mt-10 flex flex-col gap-4 border-t border-[#edf0f7] pt-5 sm:flex-row sm:items-center sm:justify-between">
               <Link
                 href={schoolHref}
-                className="group flex min-w-0 items-center gap-3 rounded-xl border border-[#e6eaf7] bg-[#fbfcff] p-3 pr-5 transition hover:border-[#cfc7ff] hover:bg-[#f8f7ff]"
+                className="group flex min-w-0 items-center gap-3 rounded-xl border border-[#e6eaf7] bg-[#fbfcff] p-3 pr-5 transition hover:border-[#cfc7ff] hover:bg-[#eef4f8]"
               >
                 <SchoolLogoMark
                   imageUrl={school.profile?.coverImageUrl}
@@ -170,7 +170,7 @@ export default function PublicWritingReader({
                   <span className="block text-xs font-black uppercase text-[#6f7890]">
                     Written at
                   </span>
-                  <span className="block truncate text-base font-black text-[#10142f] group-hover:text-[#4326e8]">
+                  <span className="block truncate text-base font-black text-[#10142f] group-hover:text-[#1f4e79]">
                     {schoolName}
                   </span>
                   {authoredEra && (
@@ -183,14 +183,14 @@ export default function PublicWritingReader({
               <div className="flex flex-wrap gap-2">
                 <Link
                   href={schoolHref}
-                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-[#d9dcf2] bg-white px-4 text-sm font-black text-[#4326e8] transition hover:bg-[#f8f7ff]"
+                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-[#d9dcf2] bg-white px-4 text-sm font-black text-[#1f4e79] transition hover:bg-[#eef4f8]"
                 >
                   School Profile
                   <FaArrowRight />
                 </Link>
                 <Link
                   href="/"
-                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-[#4326e8] px-4 text-sm font-black text-white public-primary-action transition hover:bg-[#3217d3]"
+                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-[#1f4e79] px-4 text-sm font-black text-white public-primary-action transition hover:bg-[#173f63]"
                 >
                   More Stories
                   <FaArrowRight />
@@ -205,7 +205,7 @@ export default function PublicWritingReader({
                 <h2 className="text-base font-black text-[#10142f]">
                   More from this school
                 </h2>
-                <Link href={schoolHref} className="text-sm font-black text-[#4326e8]">
+                <Link href={schoolHref} className="text-sm font-black text-[#1f4e79]">
                   View school
                 </Link>
               </div>
@@ -216,7 +216,7 @@ export default function PublicWritingReader({
                     href={`${relatedHrefPrefix}${item.id}`}
                     className="rounded-lg border border-[#e6eaf7] bg-[#f8f9fd] p-4 transition hover:bg-white"
                   >
-                    <span className="text-xs font-black uppercase text-[#4326e8]">
+                    <span className="text-xs font-black uppercase text-[#1f4e79]">
                       {getCategoryLabel(item.category)}
                     </span>
                     <h3 className="mt-2 line-clamp-2 text-sm font-black text-[#10142f]">

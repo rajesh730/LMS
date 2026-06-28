@@ -18,7 +18,7 @@ export default function SchoolLogoMark({
 
   return (
     <span
-      className={`flex shrink-0 items-center justify-center overflow-hidden border border-[#edf0f7] bg-white text-[#4326e8] ${shapeClassName} ${className}`.trim()}
+      className={`flex shrink-0 items-center justify-center overflow-hidden border border-[#edf0f7] bg-white text-[#1f4e79] ${shapeClassName} ${className}`.trim()}
     >
       {image && !failed ? (
         // eslint-disable-next-line @next/next/no-img-element

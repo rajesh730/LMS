@@ -89,7 +89,7 @@ export default function DashboardLayout({ children }) {
           isHeaderHidden && !isNavOpen ? 'dashboard-mobile-header-hidden' : ''
         }`}
         style={{
-          background: 'linear-gradient(135deg, #ffffff 60%, #f4f1ff 100%)',
+          background: 'linear-gradient(135deg, #ffffff 60%, #eef4f8 100%)',
           borderBottom: '1px solid var(--brand-border)',
           boxShadow: '0 1px 12px rgba(67, 38, 232, 0.06)',
         }}

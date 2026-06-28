@@ -124,7 +124,10 @@ export default function HomepageHeroCarousel({ stories = [] }) {
             <FaBookOpen />
             {activeSlide.category}
           </p>
-          <h1 className="home-mobile-hero-title max-w-4xl text-xl font-semibold leading-tight text-white md:text-4xl md:font-bold">
+          <h1
+            className="home-mobile-hero-title line-clamp-2 max-w-4xl text-balance text-xl font-semibold leading-tight text-white md:text-4xl md:font-bold"
+            title={activeSlide.title}
+          >
             {activeSlide.title}
           </h1>
           {!activeSlide.empty && (
@@ -141,7 +144,7 @@ export default function HomepageHeroCarousel({ stories = [] }) {
               {getPreview(activeSlide.content, activeSlide.empty ? 180 : 150)}
             </p>
           )}
-          <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center md:mt-6">
+          <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-3 md:mt-6">
             <Link
               href={activeSlide.href || "/student-voices"}
               className="inline-flex w-fit items-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-[#1f4e79] shadow-sm transition hover:-translate-y-0.5"
@@ -176,7 +179,7 @@ export default function HomepageHeroCarousel({ stories = [] }) {
           </div>
         </div>
 
-        <div className="flex items-center justify-center gap-2">
+        <div className="mt-5 flex items-center justify-center gap-2 md:mt-6">
           {slides.map((slide, index) => (
             <button
               key={slide.id || slide.title}

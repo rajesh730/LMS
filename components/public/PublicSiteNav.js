@@ -70,25 +70,6 @@ export default function PublicSiteNav({
             </span>
           </Link>
 
-          {/* Desktop navigation links */}
-          <nav
-            aria-label="Main navigation"
-            className="hidden items-center gap-0.5 md:flex"
-          >
-            {PUBLIC_NAV_LINKS.map((item) => {
-              const isActive = active === item.key;
-              return (
-                <Link
-                  key={item.key}
-                  href={item.href}
-                  className={`public-nav-link${isActive ? " active" : ""}`}
-                >
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
-
           {/* Desktop search */}
           <form
             action={searchAction}
@@ -116,8 +97,8 @@ export default function PublicSiteNav({
             </PublicRegisterLink>
           </div>
 
-          {/* Mobile: search + hamburger */}
-          <div className="ml-auto flex items-center gap-2 md:hidden">
+          {/* Navigation trigger for screens where the public sidebar is hidden */}
+          <div className="ml-auto flex items-center gap-2 xl:hidden">
             {/* Compact search pill */}
             <form
               action={searchAction}
@@ -167,7 +148,7 @@ export default function PublicSiteNav({
         {isOpen && (
           <div
             id="public-mobile-menu"
-            className="public-mobile-menu border-t border-[var(--brand-border)] bg-white px-2 pb-5 pt-3 md:hidden"
+            className="public-mobile-menu border-t border-[var(--brand-border)] bg-white px-2 pb-5 pt-3 xl:hidden"
           >
             {/* Nav links grid */}
             <div className="grid gap-1 rounded-2xl border border-[var(--brand-border)] bg-[#f8f9fd] p-2">
@@ -224,7 +205,7 @@ export default function PublicSiteNav({
       {/* Backdrop */}
       {isOpen && (
         <div
-          className="fixed inset-0 z-40 md:hidden"
+          className="fixed inset-0 z-40 xl:hidden"
           style={{ background: "rgba(16,20,47,0.25)", backdropFilter: "blur(4px)" }}
           onClick={() => setIsOpen(false)}
           aria-hidden="true"

@@ -735,14 +735,14 @@ function AdminDashboardContent() {
           <div className="mb-4 flex flex-col gap-3 rounded-xl border border-[#e6eaf7] bg-white p-4 md:flex-row md:items-end">
             <label className="block min-w-0 flex-1">
               <span className="mb-1.5 flex items-center gap-2 text-[10px] font-black uppercase text-[#52657d]">
-                <FaSearch className="text-[#4326e8]" />
+                <FaSearch className="text-[#1f4e79]" />
                 Search school
               </span>
               <input
                 value={schoolSearch}
                 onChange={(event) => setSchoolSearch(event.target.value)}
                 placeholder="Search school, principal, email, status, or location..."
-                className="min-h-11 w-full rounded-lg border border-[#e6eaf7] bg-[#f8f9fd] px-4 text-sm font-semibold text-[#24314d] outline-none transition placeholder:text-[#8a9ab1] focus:border-[#4326e8] focus:bg-white focus:ring-4 focus:ring-[#4326e8]/10"
+                className="min-h-11 w-full rounded-lg border border-[#e6eaf7] bg-[#f8f9fd] px-4 text-sm font-semibold text-[#24314d] outline-none transition placeholder:text-[#8a9ab1] focus:border-[#1f4e79] focus:bg-white focus:ring-4 focus:ring-[#1f4e79]/10"
               />
             </label>
             <label className="block min-w-0 md:w-56">
@@ -755,7 +755,7 @@ function AdminDashboardContent() {
                   setSchoolProvince(event.target.value);
                   setSchoolDistrict("All Districts");
                 }}
-                className="min-h-11 w-full rounded-lg border border-[#e6eaf7] bg-white px-3 text-sm font-bold text-[#24314d] outline-none transition focus:border-[#4326e8] focus:ring-4 focus:ring-[#4326e8]/10"
+                className="min-h-11 w-full rounded-lg border border-[#e6eaf7] bg-white px-3 text-sm font-bold text-[#24314d] outline-none transition focus:border-[#1f4e79] focus:ring-4 focus:ring-[#1f4e79]/10"
               >
                 {schoolProvinceOptions.map((province) => (
                   <option key={province}>{province}</option>
@@ -769,7 +769,7 @@ function AdminDashboardContent() {
               <select
                 value={schoolDistrict}
                 onChange={(event) => setSchoolDistrict(event.target.value)}
-                className="min-h-11 w-full rounded-lg border border-[#e6eaf7] bg-white px-3 text-sm font-bold text-[#24314d] outline-none transition focus:border-[#4326e8] focus:ring-4 focus:ring-[#4326e8]/10"
+                className="min-h-11 w-full rounded-lg border border-[#e6eaf7] bg-white px-3 text-sm font-bold text-[#24314d] outline-none transition focus:border-[#1f4e79] focus:ring-4 focus:ring-[#1f4e79]/10"
               >
                 {schoolDistrictOptions.map((district) => (
                   <option key={district}>{district}</option>

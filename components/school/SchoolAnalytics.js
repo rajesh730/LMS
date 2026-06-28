@@ -103,7 +103,7 @@ function Panel({ id, title, icon: Icon, children, sectionRef }) {
       className="scroll-mt-24 rounded-2xl border border-[#e6eaf7] bg-white p-5 shadow-sm"
     >
       <div className="flex items-center gap-3">
-        <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#f4f1ff] text-[var(--brand-primary)]">
+        <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#eef4f8] text-[var(--brand-primary)]">
           <Icon />
         </span>
         <h2 className="text-lg font-black text-[#10142f]">{title}</h2>

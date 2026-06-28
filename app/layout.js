@@ -56,11 +56,16 @@ export const metadata = {
     description: siteDescription,
     images: ["/pravyo-og.png"],
   },
+  // The `?v=2` query busts aggressively-cached favicons/app icons so browsers
+  // and installed PWAs pick up the new logo instead of flashing the old one.
+  // Bump this whenever the logo assets change.
   icons: {
     icon: [
-      { url: "/pravyo-icon.png", type: "image/png", sizes: "512x512" },
+      { url: "/favicon.ico?v=2", sizes: "any" },
+      { url: "/pravyo-icon.png?v=2", type: "image/png", sizes: "512x512" },
     ],
-    apple: [{ url: "/apple-icon.png", type: "image/png", sizes: "180x180" }],
+    shortcut: [{ url: "/favicon.ico?v=2" }],
+    apple: [{ url: "/apple-icon.png?v=2", type: "image/png", sizes: "180x180" }],
   },
   manifest: "/manifest.webmanifest",
 };
@@ -68,7 +73,9 @@ export const metadata = {
 export const viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#4326e8",
+  // Navy brand color from the new logo. (Was the old purple #4326e8, which still
+  // tinted the mobile address bar / PWA status bar — an "old logo" leftover.)
+  themeColor: "#071833",
 };
 
 export default function RootLayout({ children }) {

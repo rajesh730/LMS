@@ -1068,7 +1068,7 @@ function WritingListItem({
         <button
           type="button"
           onClick={() => onRead(writing)}
-          className="student-writing-read-more mt-3 inline-flex items-center gap-2 text-sm font-black text-[#4326e8]"
+          className="student-writing-read-more mt-3 inline-flex items-center gap-2 text-sm font-black text-[#1f4e79]"
         >
           Read More
           <FaArrowRight />

@@ -83,7 +83,7 @@ function WinnerCard({ winner, featured = false }) {
           </p>
           <Link
             href={winner.schoolHref}
-            className="mt-2 inline-flex items-center gap-2 text-xs font-black text-[#4326e8]"
+            className="mt-2 inline-flex items-center gap-2 text-xs font-black text-[#1f4e79]"
           >
             <FaSchool />
             {winner.schoolName}
@@ -105,7 +105,7 @@ function WinnerCard({ winner, featured = false }) {
         <div className="flex items-end justify-start gap-2 sm:justify-end">
           <Link
             href={winner.eventHref}
-            className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#d9dcf2] px-3 text-xs font-black text-[#4326e8]"
+            className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#d9dcf2] px-3 text-xs font-black text-[#1f4e79]"
           >
             Event
           </Link>
@@ -114,7 +114,7 @@ function WinnerCard({ winner, featured = false }) {
               href={winner.certificateHref}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex min-h-10 items-center justify-center rounded-lg bg-[#4326e8] px-3 text-xs font-black text-white public-primary-action"
+              className="inline-flex min-h-10 items-center justify-center rounded-lg bg-[#1f4e79] px-3 text-xs font-black text-white public-primary-action"
             >
               Certificate
             </a>
@@ -139,7 +139,7 @@ export default async function WinnersPage() {
 
         <div className="min-w-0 space-y-6">
           <section className="rounded-2xl border border-[#eceef8] bg-white p-6 shadow-sm">
-            <p className="text-xs font-black uppercase text-[#4326e8]">
+            <p className="text-xs font-black uppercase text-[#1f4e79]">
               Winners
             </p>
             <div className="mt-3 grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-end">
@@ -158,8 +158,8 @@ export default async function WinnersPage() {
                   [schools, "Schools", FaSchool],
                   ["Public", "Certificates", FaCertificate],
                 ].map(([value, label, Icon]) => (
-                  <div key={label} className="rounded-xl bg-[#f8f7ff] p-4 text-center">
-                    <Icon className="mx-auto text-[#4326e8]" />
+                  <div key={label} className="rounded-xl bg-[#eef4f8] p-4 text-center">
+                    <Icon className="mx-auto text-[#1f4e79]" />
                     <p className="mt-2 text-xl font-black text-[#10142f]">{value}</p>
                     <p className="text-[10px] font-black uppercase text-[#667085]">
                       {label}
@@ -183,7 +183,7 @@ export default async function WinnersPage() {
               </p>
               <Link
                 href="/events"
-                className="mt-5 inline-flex min-h-10 items-center gap-2 rounded-lg bg-[#4326e8] px-4 text-sm font-black text-white public-primary-action"
+                className="mt-5 inline-flex min-h-10 items-center gap-2 rounded-lg bg-[#1f4e79] px-4 text-sm font-black text-white public-primary-action"
               >
                 Explore Events
                 <FaArrowRight />

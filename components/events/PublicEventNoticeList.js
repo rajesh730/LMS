@@ -1,11 +1,28 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useNotification } from "@/components/NotificationSystem";
+import {
+  NotificationProvider,
+  useNotification,
+} from "@/components/NotificationSystem";
 import useRealtimeChannel from "@/lib/useRealtimeChannel";
 import AppDate from "@/components/common/AppDate";
 
 export default function PublicEventNoticeList({
+  eventId,
+  initialNotices = [],
+}) {
+  return (
+    <NotificationProvider>
+      <PublicEventNoticeListContent
+        eventId={eventId}
+        initialNotices={initialNotices}
+      />
+    </NotificationProvider>
+  );
+}
+
+function PublicEventNoticeListContent({
   eventId,
   initialNotices = [],
 }) {

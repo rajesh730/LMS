@@ -10,6 +10,14 @@ import { applyRateLimit } from "@/lib/rateLimit";
 const PERSISTENT_SESSION_MAX_AGE = 60 * 60 * 24 * 365; // 1 year
 const SESSION_REFRESH_INTERVAL = 60 * 60 * 24; // 1 day
 
+// How long a token's DB-backed checks (status/authVersion/school/calendar) stay
+// trusted before we re-query. Without this, every getServerSession() — and we
+// call it on essentially every authenticated render — fired a findById, adding a
+// DB round trip to each request. Revalidating at most once per minute keeps
+// revocation effectively immediate (≤60s) while cutting the vast majority of
+// those queries. A client session.update() bypasses it for instant refreshes.
+const TOKEN_REVALIDATE_MS = 60 * 1000;
+
 // Look up a school's display name by id. Pure fetch — call sites decide when to
 // re-resolve (e.g. when the user's school changes on transfer) vs. reuse cache.
 async function fetchSchoolName(schoolId) {
@@ -197,7 +205,7 @@ export const authOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       if (user) {
         token.role = user.role;
         token.id = user.id;
@@ -206,9 +214,18 @@ export const authOptions = {
         token.schoolName = user.schoolName || null;
         token.authVersion = user.authVersion || 0;
         token.calendarPreference = user.calendarPreference || "BS";
+        token.lastValidatedAt = Date.now();
         delete token.error;
-      } else if (token?.id) {
+      } else if (
+        token?.id &&
+        // Skip the DB revalidation when we checked recently — unless the client
+        // explicitly asked for a refresh via session.update().
+        (trigger === "update" ||
+          !token.lastValidatedAt ||
+          Date.now() - token.lastValidatedAt >= TOKEN_REVALIDATE_MS)
+      ) {
         await connectDB();
+        token.lastValidatedAt = Date.now();
         const role = String(token.role || "");
 
         if (["SUPER_ADMIN", "SCHOOL_ADMIN"].includes(role)) {

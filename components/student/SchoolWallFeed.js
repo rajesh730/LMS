@@ -88,7 +88,7 @@ export default function SchoolWallFeed() {
             <FaFeatherAlt />
           </span>
           <div>
-            <p className="text-xs font-black uppercase tracking-wide text-[#4326e8]">
+            <p className="text-xs font-black uppercase tracking-wide text-[#1f4e79]">
               Live student writing
             </p>
             <h1 className="mt-1 text-2xl font-bold text-[#17120a] sm:text-3xl">
@@ -115,8 +115,8 @@ export default function SchoolWallFeed() {
               onClick={() => setCategory("ALL")}
               className={`rounded-full px-4 py-2 text-xs font-black ${
                 category === "ALL"
-                  ? "bg-[#4326e8] text-white"
-                  : "bg-[#f0edff] text-[#4326e8]"
+                  ? "bg-[#1f4e79] text-white"
+                  : "bg-[#f0edff] text-[#1f4e79]"
               }`}
             >
               All {items.length}
@@ -128,8 +128,8 @@ export default function SchoolWallFeed() {
                 onClick={() => setCategory(value)}
                 className={`rounded-full px-4 py-2 text-xs font-black ${
                   category === value
-                    ? "bg-[#4326e8] text-white"
-                    : "bg-[#f0edff] text-[#4326e8]"
+                    ? "bg-[#1f4e79] text-white"
+                    : "bg-[#f0edff] text-[#1f4e79]"
                 }`}
               >
                 {CATEGORIES[value]}
@@ -153,7 +153,7 @@ export default function SchoolWallFeed() {
                     className="rounded-2xl border border-[#edf0f7] bg-white p-4 shadow-sm sm:p-5"
                   >
                     <div className="flex items-center gap-3">
-                      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#f0edff] text-sm font-black text-[#4326e8]">
+                      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#f0edff] text-sm font-black text-[#1f4e79]">
                         {initials(author)}
                       </span>
                       <div className="min-w-0 flex-1">
@@ -171,7 +171,7 @@ export default function SchoolWallFeed() {
                           )}
                         </p>
                       </div>
-                      <span className="rounded-full bg-[#f0edff] px-3 py-1 text-[10px] font-black text-[#4326e8]">
+                      <span className="rounded-full bg-[#f0edff] px-3 py-1 text-[10px] font-black text-[#1f4e79]">
                         {CATEGORIES[normalizeWritingCategory(article.category)] ||
                           "Writing"}
                       </span>
@@ -186,7 +186,7 @@ export default function SchoolWallFeed() {
                     />
                     <Link
                       href={`/student/school-wall/${article.id}`}
-                      className="mt-3 inline-flex items-center gap-2 text-sm font-black text-[#4326e8]"
+                      className="mt-3 inline-flex items-center gap-2 text-sm font-black text-[#1f4e79]"
                     >
                       Read writing <FaChevronRight />
                     </Link>

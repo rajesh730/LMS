@@ -56,7 +56,7 @@ export default function StudentMagazineLibrary() {
             <FaBookOpen />
           </span>
           <div>
-            <p className="text-xs font-black uppercase tracking-wide text-[#4326e8]">
+            <p className="text-xs font-black uppercase tracking-wide text-[#1f4e79]">
               Curated by your school
             </p>
             <h1 className="mt-1 text-2xl font-bold text-[#17120a] sm:text-3xl">

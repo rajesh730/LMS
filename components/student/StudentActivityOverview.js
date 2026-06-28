@@ -52,7 +52,7 @@ function CelebrationBanner({ achievement, firstName, onDismiss }) {
   );
 
   return (
-    <section className="relative overflow-hidden rounded-2xl border border-[#d6c7ff] bg-gradient-to-br from-[#4326e8] via-[#5b3bf0] to-[#7c4dff] p-5 text-white shadow-[0_18px_50px_rgba(67,38,232,0.28)] sm:p-6">
+    <section className="relative overflow-hidden rounded-2xl border border-[#d6c7ff] bg-gradient-to-br from-[#1f4e79] via-[#5b3bf0] to-[#7c4dff] p-5 text-white shadow-[0_18px_50px_rgba(67,38,232,0.28)] sm:p-6">
       <div className="pointer-events-none absolute -right-6 -top-8 text-[120px] opacity-15">
         🎉
       </div>
@@ -87,7 +87,7 @@ function CelebrationBanner({ achievement, firstName, onDismiss }) {
             href={achievement.certificateUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-white px-4 text-sm font-black text-[#4326e8] transition hover:bg-[#f4f1ff]"
+            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-white px-4 text-sm font-black text-[#1f4e79] transition hover:bg-[#eef4f8]"
           >
             <FaCertificate /> View
           </Link>
@@ -159,7 +159,7 @@ function PublicProfileCard({ studentId, name }) {
   return (
     <section className="flex flex-col gap-4 rounded-xl border border-[#e6eaf7] bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-start gap-3">
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#f4f1ff] text-xl text-[#4326e8]">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#eef4f8] text-xl text-[#1f4e79]">
           <FaUserCircle />
         </span>
         <div>
@@ -177,7 +177,7 @@ function PublicProfileCard({ studentId, name }) {
           href={href}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-[#4326e8] px-4 text-sm font-black text-white transition hover:bg-[#3217d3]"
+          className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-[#1f4e79] px-4 text-sm font-black text-white transition hover:bg-[#173f63]"
         >
           <FaExternalLinkAlt /> View profile
         </Link>
@@ -198,7 +198,7 @@ function CertificatesAndAchievements({ achievements }) {
   return (
     <section className="rounded-xl border border-[#e6eaf7] bg-white p-5 shadow-sm">
       <div className="flex items-center gap-3">
-        <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#f4f1ff] text-[#4326e8]">
+        <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#eef4f8] text-[#1f4e79]">
           <FaCertificate />
         </span>
         <div>
@@ -230,7 +230,7 @@ function CertificatesAndAchievements({ achievements }) {
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white text-xl text-[#d98b00] shadow-sm">
                   🎓
                 </span>
-                <span className="rounded-full bg-[#f4f1ff] px-2.5 py-1 text-[10px] font-black uppercase text-[#4326e8]">
+                <span className="rounded-full bg-[#eef4f8] px-2.5 py-1 text-[10px] font-black uppercase text-[#1f4e79]">
                   {formatPlacement(certificate.placement)}
                 </span>
               </div>
@@ -239,7 +239,7 @@ function CertificatesAndAchievements({ achievements }) {
                   {certificate.event?.title || certificate.title}
                 </h3>
                 <p className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-[#526071]">
-                  <FaCalendarAlt className="text-[#4326e8]" />
+                  <FaCalendarAlt className="text-[#1f4e79]" />
                   {formatDate(certificate.certificateIssuedAt || certificate.awardedAt)}
                 </p>
                 {certificate.certificateCode ? (
@@ -259,7 +259,7 @@ function CertificatesAndAchievements({ achievements }) {
                       href={certificate.certificateUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex min-h-9 flex-1 items-center justify-center gap-1.5 rounded-lg bg-[#4326e8] px-3 text-xs font-black text-white transition hover:bg-[#3217d3]"
+                      className="inline-flex min-h-9 flex-1 items-center justify-center gap-1.5 rounded-lg bg-[#1f4e79] px-3 text-xs font-black text-white transition hover:bg-[#173f63]"
                     >
                       <FaCertificate /> View Certificate
                     </Link>
@@ -290,7 +290,7 @@ function WritingInsightTile({ icon: Icon, label, value, description }) {
   return (
     <div className="min-w-0 rounded-xl border border-[#e6eaf7] bg-[#f8f9fd] p-4">
       <div className="flex min-w-0 items-start gap-3">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white text-[#4326e8] shadow-sm">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white text-[#1f4e79] shadow-sm">
           <Icon />
         </span>
         <div className="min-w-0">
@@ -322,7 +322,7 @@ function WritingActivityInsights({ summary }) {
     <section className="rounded-xl border border-[#e6eaf7] bg-white p-5 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#f4f1ff] text-[#4326e8]">
+          <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#eef4f8] text-[#1f4e79]">
             <FaPenNib />
           </span>
           <div>
@@ -334,7 +334,7 @@ function WritingActivityInsights({ summary }) {
             </p>
           </div>
         </div>
-        <span className="rounded-full bg-[#f4f1ff] px-3 py-1 text-xs font-black text-[#4326e8]">
+        <span className="rounded-full bg-[#eef4f8] px-3 py-1 text-xs font-black text-[#1f4e79]">
           {safeSummary.total || 0} total writings
         </span>
       </div>

@@ -323,7 +323,7 @@ export default async function CertificatePage({ params, searchParams }) {
             {achievement.certificateCode && (
               <Link
                 href={`/verify?code=${encodeURIComponent(achievement.certificateCode)}`}
-                className="rounded-lg border border-[#dbe5f4] bg-white px-4 py-2 text-sm font-bold text-[#0a2f66] hover:bg-[#f4f1ff]"
+                className="rounded-lg border border-[#dbe5f4] bg-white px-4 py-2 text-sm font-bold text-[#0a2f66] hover:bg-[#eef4f8]"
               >
                 Verify
               </Link>
@@ -331,7 +331,7 @@ export default async function CertificatePage({ params, searchParams }) {
             {eventHref && (
               <Link
                 href={eventHref}
-                className="rounded-lg bg-[#4326e8] px-4 py-2 text-sm font-bold text-white"
+                className="rounded-lg bg-[#1f4e79] px-4 py-2 text-sm font-bold text-white"
               >
                 View public event
               </Link>

@@ -1,7 +1,7 @@
 // Canonical compact stat tile shared across roles (dashboards, portfolios).
 // Plain presentational component — safe in both server and client components.
 const ACCENTS = {
-  indigo: "bg-[#f4f1ff] text-[#4326e8]",
+  indigo: "bg-[#eef4f8] text-[#1f4e79]",
   amber: "bg-amber-50 text-amber-600",
   emerald: "bg-emerald-50 text-emerald-700",
   purple: "bg-purple-50 text-purple-700",

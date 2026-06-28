@@ -11,6 +11,13 @@ const nextConfig = {
     formats: ["image/avif", "image/webp"],
   },
 
+  // Tree-shake large icon libraries so each route ships only the icons it uses
+  // (react-icons/fa is imported in ~90 files). Smaller bundles = faster loads,
+  // especially on mobile, plus faster dev compiles.
+  experimental: {
+    optimizePackageImports: ["react-icons", "react-icons/fa", "react-icons/fi"],
+  },
+
   // Production optimizations
   poweredByHeader: false, // Remove X-Powered-By header for security
 

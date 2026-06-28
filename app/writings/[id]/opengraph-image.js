@@ -78,14 +78,14 @@ export default async function Image({ params }) {
             justifyContent: "space-between",
           }}
         >
-          <div style={{ display: "flex", fontSize: 34, fontWeight: 800, letterSpacing: 3, color: "#4326e8" }}>
+          <div style={{ display: "flex", fontSize: 34, fontWeight: 800, letterSpacing: 3, color: "#1f4e79" }}>
             PRAVYO
           </div>
           <div
             style={{
               display: "flex",
               background: "#f1edff",
-              color: "#4326e8",
+              color: "#1f4e79",
               padding: "10px 24px",
               borderRadius: 999,
               fontSize: 22,
@@ -120,7 +120,7 @@ export default async function Image({ params }) {
           <div style={{ display: "flex", fontSize: 28, fontWeight: 700, color: "#526071" }}>
             {byline}
           </div>
-          <div style={{ display: "flex", fontSize: 26, fontWeight: 800, color: "#4326e8" }}>
+          <div style={{ display: "flex", fontSize: 26, fontWeight: 800, color: "#1f4e79" }}>
             Read on Pravyo
           </div>
         </div>
