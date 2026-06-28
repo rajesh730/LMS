@@ -2,7 +2,7 @@ import './globals.css';
 import { Providers } from './providers';
 
 const siteUrl =
-  process.env.NEXT_PUBLIC_SITE_URL || "https://pravyo.infobytesnepal.com";
+  process.env.NEXT_PUBLIC_SITE_URL || "https://pratyo.infobytesnepal.com";
 
 const siteDescription =
   "School events, results, magazines, certificates, notices, and student writing in one connected platform.";

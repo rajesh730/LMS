@@ -43,9 +43,18 @@ async function syncSchoolOnToken(token, nextSchoolId) {
   token.schoolId = newSchoolId;
 }
 
-// Match NextAuth's own secure-cookie detection so the cookie name/flags stay
-// correct in both local (http) and production (https) environments.
-const useSecureCookies = (process.env.NEXTAUTH_URL || "").startsWith("https://");
+// Match NextAuth's own secure-cookie detection EXACTLY. We override the session
+// cookie below (only to give it a long maxAge), so the name we WRITE must equal
+// the name NextAuth/getToken READ back. NextAuth treats cookies as secure when
+// NEXTAUTH_URL is https, and otherwise FALLS BACK to "secure on Vercel".
+//
+// The old check looked only at NEXTAUTH_URL. On Vercel with NEXTAUTH_URL unset,
+// the reader expected the `__Secure-` name while we wrote the plain name — the
+// token was never found and login silently failed (page just reloads). Setting
+// NEXTAUTH_URL to the production https URL is still recommended, but this keeps
+// the names aligned even if it isn't.
+const useSecureCookies =
+  process.env.NEXTAUTH_URL?.startsWith("https://") ?? !!process.env.VERCEL;
 const cookiePrefix = useSecureCookies ? "__Secure-" : "";
 
 export const authOptions = {
