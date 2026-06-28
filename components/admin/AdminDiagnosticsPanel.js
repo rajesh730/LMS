@@ -11,6 +11,9 @@ import {
   FaSatelliteDish,
 } from "react-icons/fa";
 import useRealtimeChannel from "@/lib/useRealtimeChannel";
+import useCalendarPreference from "@/lib/useCalendarPreference";
+import { formatDateTime as formatCalendarDateTime } from "@/lib/nepaliDate";
+import AppDate from "@/components/common/AppDate";
 
 const DIAGNOSTIC_CHANNELS = [
   {
@@ -35,17 +38,8 @@ const DIAGNOSTIC_CHANNELS = [
   },
 ];
 
-function formatDateTime(value) {
-  if (!value) return "Not available";
-  return new Date(value).toLocaleString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
-}
+const formatDateTime = (value, calendar) =>
+  value ? formatCalendarDateTime(value, calendar) : "Not available";
 
 function StatCard({ icon: Icon, label, value, tone = "blue" }) {
   const toneClasses = {
@@ -108,7 +102,7 @@ function ChannelPingRow({ channel, lastPing, pending, onPing }) {
         <p className="mt-2 text-xs text-[#52657d]">
           Last received:{" "}
           <span className="font-semibold text-[#17120a]">
-            {lastPing ? formatDateTime(lastPing.timestamp) : "Not yet"}
+            {lastPing ? <AppDate value={lastPing.timestamp} mode="dateTime" /> : "Not yet"}
           </span>
         </p>
       </div>
@@ -126,6 +120,7 @@ function ChannelPingRow({ channel, lastPing, pending, onPing }) {
 }
 
 export default function AdminDiagnosticsPanel() {
+  const { calendar } = useCalendarPreference();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [summary, setSummary] = useState(null);
@@ -246,11 +241,11 @@ export default function AdminDiagnosticsPanel() {
         label: "Round-trip ping",
         ok: Boolean(lastPing),
         detail: lastPing
-          ? `Last ping received at ${formatDateTime(lastPing.timestamp)}.`
+          ? `Last ping received at ${formatDateTime(lastPing.timestamp, calendar)}.`
           : "No diagnostics ping received yet in this session.",
       },
     ];
-  }, [lastPing, streamConnected, summary]);
+  }, [calendar, lastPing, streamConnected, summary]);
 
   return (
     <div className="space-y-6">
@@ -348,7 +343,7 @@ export default function AdminDiagnosticsPanel() {
                 <p>
                   Diagnostics generated:{" "}
                   <span className="font-semibold text-[#17120a]">
-                    {formatDateTime(summary.generatedAt)}
+                    <AppDate value={summary.generatedAt} mode="dateTime" fallback="Not available" />
                   </span>
                 </p>
                 <p className="mt-2">

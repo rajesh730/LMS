@@ -4,7 +4,9 @@ import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
 import PublicExplorePanel from "@/components/public/PublicExplorePanel";
 import PublicSiteNav from "@/components/public/PublicSiteNav";
 import { WritingPreview } from "@/components/WritingContent";
+import AppDate from "@/components/common/AppDate";
 import { diversifyBySchool } from "@/lib/schoolDiversifiedFeed";
+import { getAuthoredSchoolName, formatAuthoredEra } from "@/lib/writingProvenance";
 import {
   FaArrowRight,
   FaCalendarAlt,
@@ -24,14 +26,6 @@ export const metadata = {
   description: "Read public student writing and featured school stories on Pravyo.",
 };
 
-function formatDate(value) {
-  if (!value) return "Recently";
-  return new Intl.DateTimeFormat("en", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(new Date(value));
-}
 
 function getCategory(value) {
   const label = String(value || "Essay").replaceAll("_", " ").toLowerCase();
@@ -56,7 +50,9 @@ async function getStudentVoices() {
     isPublished: true,
     isDeleted: { $ne: true },
   })
-    .select("title content category publishedAt updatedAt")
+    .select(
+      "title content category publishedAt updatedAt authorSchoolNameSnapshot authorGrade authorAcademicYear"
+    )
     .populate("authorStudent", "name grade")
     .populate("school", "schoolName schoolLocation")
     .sort({ publishedAt: -1, updatedAt: -1 })
@@ -72,7 +68,8 @@ async function getStudentVoices() {
     author: article.authorStudent?.name || "Student",
     authorId: article.authorStudent?._id ? String(article.authorStudent._id) : "",
     grade: article.authorStudent?.grade || "",
-    schoolName: article.school?.schoolName || "School",
+    schoolName: getAuthoredSchoolName(article, article.school?.schoolName),
+    authoredEra: formatAuthoredEra(article),
     schoolHref: article.school?._id ? `/schools/${article.school._id}` : "/schools",
     schoolId: article.school?._id ? String(article.school._id) : "",
     href: `/writings/${article._id}`,
@@ -111,10 +108,15 @@ function VoiceCard({ article, featured = false }) {
           )}
           <Link
             href={article.schoolHref}
-            className="mt-1 inline-flex items-center gap-1 text-xs font-bold text-[#526071] hover:text-[#4326e8]"
+            className="mt-1 inline-flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs font-bold text-[#526071] hover:text-[#4326e8]"
           >
             <FaShieldAlt className="text-[#2f7fdb]" />
-            {article.schoolName}
+            <span>{article.schoolName}</span>
+            {article.authoredEra && (
+              <span className="font-semibold text-[#8a93a6]">
+                · {article.authoredEra}
+              </span>
+            )}
           </Link>
         </div>
         <span className="rounded-full bg-[#f1edff] px-3 py-1 text-[10px] font-black text-[#4326e8]">
@@ -134,7 +136,7 @@ function VoiceCard({ article, featured = false }) {
       <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-[#f0f2f8] pt-4 text-xs font-bold text-[#526071]">
         <span className="inline-flex items-center gap-2">
           <FaCalendarAlt />
-          {formatDate(article.date)}
+          <AppDate value={article.date} fallback="Recently" />
         </span>
         <Link
           href={article.href}
@@ -172,7 +174,11 @@ export default async function StudentVoicesPage({ searchParams }) {
 
   return (
     <main className="min-h-screen bg-[#fbfcff] text-[#10142f]">
-      <PublicSiteNav active="home" searchPlaceholder="Search student voices..." />
+      <PublicSiteNav
+        active="home"
+        searchPlaceholder="Search student voices..."
+        searchAction="/student-voices"
+      />
 
       <div className="mx-auto grid max-w-[1500px] gap-6 px-4 py-6 pb-16 sm:px-6 xl:grid-cols-[230px_minmax(0,1fr)]">
         <PublicExplorePanel active="home" />

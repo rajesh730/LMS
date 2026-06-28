@@ -10,15 +10,11 @@ import PublicExplorePanel from "@/components/public/PublicExplorePanel";
 import PublicShareButton from "@/components/public/PublicShareButton";
 import SchoolLogoMark from "@/components/public/SchoolLogoMark";
 import WritingContent, { stripWritingMarkup } from "@/components/WritingContent";
-
-function formatDate(value) {
-  if (!value) return "";
-  return new Intl.DateTimeFormat("en", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(new Date(value));
-}
+import AppDate from "@/components/common/AppDate";
+import {
+  getAuthoredSchoolName,
+  formatAuthoredEra,
+} from "@/lib/writingProvenance";
 
 function getReadTime(content = "") {
   const words = String(content || "").trim().split(/\s+/).filter(Boolean).length;
@@ -50,7 +46,18 @@ export default function PublicWritingReader({
   const schoolHref = school.id ? `/schools/${school.id}` : "/schools";
   const shareHref = currentHref || `/writings/${article.id}`;
   const moreItems = moreFromSchool.length > 0 ? moreFromSchool : relatedArticles;
-  const schoolName = school.schoolName || "School";
+  // Label by where + when it was written (authoring-era snapshot), so a piece
+  // reads as history after the author transfers. The link still points to the
+  // origin school that owns it.
+  const schoolName = getAuthoredSchoolName(article, school.schoolName);
+  const authoredEra = formatAuthoredEra(article);
+  const currentSchoolId = author.currentSchoolId || "";
+  // Only surface "now at X" when the author has moved on — otherwise it just
+  // repeats the "written at X" provenance shown in the footer.
+  const currentSchoolName =
+    currentSchoolId && currentSchoolId !== school.id
+      ? author.currentSchoolName || ""
+      : "";
 
   return (
     <div className="public-reader-shell mx-auto max-w-[1500px] px-0 py-5 pb-16 sm:px-6">
@@ -83,52 +90,59 @@ export default function PublicWritingReader({
                 {article.title}
               </h1>
 
-              <div className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-center">
-                <Link
-                  href={schoolHref}
-                  className="group flex min-w-0 items-center gap-3 rounded-xl border border-[#e6eaf7] bg-[#fbfcff] p-3 pr-5 transition hover:border-[#cfc7ff] hover:bg-[#f8f7ff]"
-                >
-                  <SchoolLogoMark
-                    imageUrl={school.profile?.coverImageUrl}
-                    name={schoolName}
-                    className="h-16 w-16"
-                    iconClassName="text-2xl"
-                    shapeClassName="rounded-xl"
-                  />
-                  <span className="min-w-0">
-                    <span className="block text-xs font-black uppercase text-[#6f7890]">
-                      Published by
-                    </span>
-                    <span className="block truncate text-lg font-black text-[#10142f] group-hover:text-[#4326e8]">
-                      {schoolName}
-                    </span>
+              {/* Author-first byline: the piece is the person's, so the person
+                  leads. Their current school is their identity ("now at"); the
+                  school it was written at is provenance, shown at the bottom. */}
+              <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm font-bold text-[#526071]">
+                {author.id ? (
+                  <Link
+                    href={`/students/${author.id}`}
+                    className="inline-flex items-center gap-2 text-base font-black text-[#10142f] hover:text-[#4326e8]"
+                  >
+                    <FaUser className="text-[#4326e8]" />
+                    {author.name || "Student"}
+                  </Link>
+                ) : (
+                  <span className="inline-flex items-center gap-2 text-base font-black text-[#10142f]">
+                    <FaUser className="text-[#4326e8]" />
+                    {author.name || "Student"}
                   </span>
-                </Link>
-
-                <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm font-bold text-[#526071]">
-                  {author.id ? (
+                )}
+                {currentSchoolName &&
+                  (currentSchoolId ? (
                     <Link
-                      href={`/students/${author.id}`}
+                      href={`/schools/${currentSchoolId}`}
                       className="inline-flex items-center gap-2 hover:text-[#4326e8]"
                     >
-                      <FaUser className="text-[#4326e8]" />
-                      {author.name || "Student"}
+                      <SchoolLogoMark
+                        imageUrl={author.currentSchoolLogoUrl}
+                        name={currentSchoolName}
+                        className="h-6 w-6"
+                        iconClassName="text-xs"
+                        shapeClassName="rounded-md"
+                      />
+                      Now at {currentSchoolName}
                     </Link>
                   ) : (
                     <span className="inline-flex items-center gap-2">
-                      <FaUser className="text-[#4326e8]" />
-                      {author.name || "Student"}
+                      <SchoolLogoMark
+                        imageUrl={author.currentSchoolLogoUrl}
+                        name={currentSchoolName}
+                        className="h-6 w-6"
+                        iconClassName="text-xs"
+                        shapeClassName="rounded-md"
+                      />
+                      Now at {currentSchoolName}
                     </span>
-                  )}
-                  <span className="inline-flex items-center gap-2">
-                    <FaCalendarAlt className="text-[#4326e8]" />
-                    {formatDate(article.publishedAt)}
-                  </span>
-                  <span className="inline-flex items-center gap-2">
-                    <FaClock className="text-[#4326e8]" />
-                    {getReadTime(article.content)} min read
-                  </span>
-                </div>
+                  ))}
+                <span className="inline-flex items-center gap-2">
+                  <FaCalendarAlt className="text-[#4326e8]" />
+                  <AppDate value={article.publishedAt} />
+                </span>
+                <span className="inline-flex items-center gap-2">
+                  <FaClock className="text-[#4326e8]" />
+                  {getReadTime(article.content)} min read
+                </span>
               </div>
             </div>
 
@@ -137,10 +151,35 @@ export default function PublicWritingReader({
               className="public-reader-content mx-auto mt-10 max-w-3xl text-lg leading-7 text-[#27344a]"
             />
 
-            <div className="mt-10 flex flex-col gap-3 border-t border-[#edf0f7] pt-5 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm font-semibold text-[#526071]">
-                Published by {schoolName}.
-              </p>
+            {/* Provenance footer: where + when this piece was written. Links to
+                the origin school that owns it — kept distinct from the author's
+                current school shown in the byline above. */}
+            <div className="mt-10 flex flex-col gap-4 border-t border-[#edf0f7] pt-5 sm:flex-row sm:items-center sm:justify-between">
+              <Link
+                href={schoolHref}
+                className="group flex min-w-0 items-center gap-3 rounded-xl border border-[#e6eaf7] bg-[#fbfcff] p-3 pr-5 transition hover:border-[#cfc7ff] hover:bg-[#f8f7ff]"
+              >
+                <SchoolLogoMark
+                  imageUrl={school.profile?.coverImageUrl}
+                  name={schoolName}
+                  className="h-14 w-14"
+                  iconClassName="text-2xl"
+                  shapeClassName="rounded-xl"
+                />
+                <span className="min-w-0">
+                  <span className="block text-xs font-black uppercase text-[#6f7890]">
+                    Written at
+                  </span>
+                  <span className="block truncate text-base font-black text-[#10142f] group-hover:text-[#4326e8]">
+                    {schoolName}
+                  </span>
+                  {authoredEra && (
+                    <span className="block truncate text-xs font-bold text-[#6f7890]">
+                      {authoredEra}
+                    </span>
+                  )}
+                </span>
+              </Link>
               <div className="flex flex-wrap gap-2">
                 <Link
                   href={schoolHref}

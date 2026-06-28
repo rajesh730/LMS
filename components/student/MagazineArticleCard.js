@@ -6,13 +6,16 @@ import {
   FaCalendarAlt,
   FaClock,
   FaFeatherAlt,
+  FaGraduationCap,
   FaLayerGroup,
   FaPenNib,
   FaStar,
   FaUser,
 } from "react-icons/fa";
 import { WritingPreview } from "@/components/WritingContent";
+import AppDate from "@/components/common/AppDate";
 import { normalizeWritingCategory } from "@/lib/writingCategories";
+import { formatAuthoredEra } from "@/lib/writingProvenance";
 
 const CATEGORY_META = {
   BLOG_ARTICLE: {
@@ -65,15 +68,23 @@ export function MagazineArticleMeta({
   className = "",
   showIssue = false,
 }) {
+  const authoredEra = formatAuthoredEra(article);
+
   return (
     <div className={`flex flex-wrap items-center gap-3 text-xs font-bold text-[#607089] ${className}`}>
       <span className="inline-flex items-center gap-1.5">
         <FaUser />
         {article.authorStudent?.name || "Student"}
       </span>
+      {authoredEra && (
+        <span className="inline-flex items-center gap-1.5">
+          <FaGraduationCap />
+          {authoredEra}
+        </span>
+      )}
       <span className="inline-flex items-center gap-1.5">
         <FaCalendarAlt />
-        {formatMagazineDate(article.publishedAt)}
+        <AppDate value={article.publishedAt} />
       </span>
       <span className="inline-flex items-center gap-1.5">
         <FaClock />

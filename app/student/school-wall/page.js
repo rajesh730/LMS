@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import DashboardLayout from "@/components/DashboardLayout";
-import StudentSchoolMagazine from "@/components/student/StudentSchoolMagazine";
+import SchoolWallFeed from "@/components/student/SchoolWallFeed";
 
 export const metadata = {
   title: "School Wall",
@@ -23,7 +23,7 @@ export default async function StudentSchoolWallPage() {
   return (
     <DashboardLayout>
       <div className="max-w-7xl mx-auto">
-        <StudentSchoolMagazine initialView="school-wall" lockedView />
+        <SchoolWallFeed />
       </div>
     </DashboardLayout>
   );

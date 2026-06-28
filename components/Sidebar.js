@@ -1,12 +1,16 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   FaSignOutAlt,
   FaSchool,
   FaTimes,
+  FaExchangeAlt,
+  FaCalendarAlt,
+  FaUserGraduate,
 } from "react-icons/fa";
 import PravyoLogo from "@/components/brand/PravyoLogo";
 import NavItemLink from "@/components/navigation/NavItemLink";
@@ -18,6 +22,7 @@ const HREF_INDICATOR_KEYS = {
   "/admin/dashboard?tab=events": "admin.events",
   "/admin/feedback": "admin.feedback",
   "/admin/dashboard?tab=spotlight": "admin.spotlight",
+  "/school/dashboard?tab=student-transfers": "school.studentTransfers",
   "/school/dashboard?tab=school-events": "school.schoolEvents",
   "/school/dashboard?tab=platform-events": "school.platformEvents",
   "/school/dashboard?tab=student-notices": "school.studentNotices",
@@ -30,6 +35,26 @@ const HREF_INDICATOR_KEYS = {
 };
 
 const HREF_SEEN_SURFACES = {};
+
+// Quick links to the School Overview analytics sections, surfaced as a popup
+// when the admin hovers their school card.
+const SCHOOL_ANALYTICS_LINKS = [
+  {
+    name: "Students In / Out",
+    href: "/school/dashboard?tab=overview&section=students",
+    icon: FaUserGraduate,
+  },
+  {
+    name: "Transfer History",
+    href: "/school/dashboard?tab=overview&section=transfers",
+    icon: FaExchangeAlt,
+  },
+  {
+    name: "Event History",
+    href: "/school/dashboard?tab=overview&section=events",
+    icon: FaCalendarAlt,
+  },
+];
 
 const SCHOOL_NAV_GROUPS = [
   {
@@ -85,12 +110,35 @@ export default function Sidebar({
   const { getIndicator, markSurfaceSeen } = useWorkIndicators({
     enabled: Boolean(role && !isPending),
   });
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const accountMenuRef = useRef(null);
 
   useEffect(() => {
     if (session?.error === "SessionRevoked") {
       signOut({ callbackUrl: "/login" });
     }
   }, [session]);
+
+  // Close the account analytics menu on outside click or Escape.
+  useEffect(() => {
+    if (!accountMenuOpen) return;
+
+    const handlePointer = (event) => {
+      if (accountMenuRef.current && !accountMenuRef.current.contains(event.target)) {
+        setAccountMenuOpen(false);
+      }
+    };
+    const handleKey = (event) => {
+      if (event.key === "Escape") setAccountMenuOpen(false);
+    };
+
+    document.addEventListener("mousedown", handlePointer);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handlePointer);
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, [accountMenuOpen]);
 
   let links = getRoleNavigationLinks(role);
 
@@ -192,16 +240,65 @@ export default function Sidebar({
         style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}
       >
         {session?.user && (
-          <div className="sidebar-user-card mb-2">
-            <div className="sidebar-avatar">{initials}</div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold text-[var(--brand-ink)] leading-tight">
-                {userName}
-              </p>
-              <p className="mt-0.5 truncate text-[11px] font-medium uppercase tracking-wide text-[var(--brand-muted)]">
-                {getRoleLabel(userRole)}
-              </p>
-            </div>
+          <div className="relative mb-2" ref={accountMenuRef}>
+            {userRole === "SCHOOL_ADMIN" ? (
+              <button
+                type="button"
+                onClick={() => setAccountMenuOpen((open) => !open)}
+                aria-expanded={accountMenuOpen}
+                aria-haspopup="menu"
+                className="sidebar-user-card w-full text-left"
+              >
+                <div className="sidebar-avatar">{initials}</div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-[var(--brand-ink)] leading-tight">
+                    {userName}
+                  </p>
+                  <p className="mt-0.5 truncate text-[11px] font-medium uppercase tracking-wide text-[var(--brand-muted)]">
+                    {getRoleLabel(userRole)}
+                  </p>
+                </div>
+              </button>
+            ) : (
+              <div className="sidebar-user-card">
+                <div className="sidebar-avatar">{initials}</div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-[var(--brand-ink)] leading-tight">
+                    {userName}
+                  </p>
+                  <p className="mt-0.5 truncate text-[11px] font-medium uppercase tracking-wide text-[var(--brand-muted)]">
+                    {getRoleLabel(userRole)}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {userRole === "SCHOOL_ADMIN" && accountMenuOpen && (
+              <div className="absolute bottom-full left-0 right-0 z-50 mb-2">
+                <div className="overflow-hidden rounded-2xl border border-[var(--brand-border)] bg-white p-1.5 shadow-[0_20px_50px_rgba(67,38,232,0.18)]">
+                  <p className="pravyo-muted px-3 pb-1.5 pt-2 text-[10px] font-black uppercase tracking-widest">
+                    Analytics
+                  </p>
+                  {SCHOOL_ANALYTICS_LINKS.map((link) => {
+                    const Icon = link.icon;
+                    return (
+                      <Link
+                        key={link.href}
+                        href={link.href}
+                        onClick={() => {
+                          setAccountMenuOpen(false);
+                          onNavigate?.();
+                        }}
+                        className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold"
+                      >
+                        <Icon className="pravyo-sidebar-icon text-base" />
+                        <span className="pravyo-sidebar-label">{link.name}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         )}
         <button

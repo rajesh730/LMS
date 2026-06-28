@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import DashboardLayout from "@/components/DashboardLayout";
-import StudentSchoolMagazine from "@/components/student/StudentSchoolMagazine";
+import StudentMagazineLibrary from "@/components/student/StudentMagazineLibrary";
 
 export const metadata = {
   title: "School Magazine",
@@ -23,7 +23,7 @@ export default async function StudentMagazinePage() {
   return (
     <DashboardLayout>
       <div className="max-w-7xl mx-auto">
-        <StudentSchoolMagazine initialView="magazine" lockedView />
+        <StudentMagazineLibrary />
       </div>
     </DashboardLayout>
   );

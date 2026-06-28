@@ -4,17 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { FaCheckCircle, FaFilter, FaStar } from "react-icons/fa";
 import AlertBanner from "@/components/ui/AlertBanner";
 import LoadingState from "@/components/ui/LoadingState";
-
-function formatDate(value) {
-  if (!value) return "";
-  return new Date(value).toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
+import AppDate from "@/components/common/AppDate";
 
 export default function AdminFeedbackDashboard() {
   const [feedback, setFeedback] = useState([]);
@@ -183,7 +173,7 @@ export default function AdminFeedbackDashboard() {
                         {item.rating}
                       </span>
                     )}
-                    <span>{formatDate(item.createdAt)}</span>
+                    <span><AppDate value={item.createdAt} mode="dateTime" /></span>
                   </div>
                 </div>
                 {item.status === "NEW" && (

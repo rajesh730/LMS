@@ -17,6 +17,7 @@ import {
   makeEnrollmentEntry,
 } from "../../../../lib/studentEnrollment.js";
 import bcrypt from "bcryptjs";
+import { generateStrongPassword } from "../../../../lib/passwordGenerator.js";
 
 export async function POST(req) {
   try {
@@ -52,7 +53,6 @@ export async function POST(req) {
         }
 
         // Generate credentials
-        const cleanFirstName = studentData.firstName.replace(/[^a-zA-Z0-9]/g, "") || "Student";
         const normalizedGrade = normalizeGradeValue(studentData.grade);
         const normalizedRollNumber = String(studentData.rollNumber).trim();
         const username = await generateUniqueStudentUsername(Student, {
@@ -63,8 +63,9 @@ export async function POST(req) {
           reserved: reservedUsernames,
         });
         
-        // Password: FirstName@123
-        const plainPassword = `${cleanFirstName}@123`;
+        // Random per-student password, surfaced once in the response so the
+        // school can distribute it. Not stored in plaintext.
+        const plainPassword = generateStrongPassword();
         const hashedPassword = await bcrypt.hash(plainPassword, 10);
 
         // Roll number is free if no on-roster student holds it (graduated/
@@ -99,7 +100,6 @@ export async function POST(req) {
           name: `${studentData.firstName} ${studentData.lastName}`,
           username,
           password: hashedPassword,
-          visiblePassword: plainPassword,
           school: schoolId,
           grade: normalizedGrade,
           rollNumber: normalizedRollNumber,

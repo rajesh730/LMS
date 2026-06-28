@@ -1,15 +1,6 @@
 "use client";
 
-function formatWhen(value) {
-  if (!value) return "Unknown time";
-  return new Date(value).toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
+import AppDate from "@/components/common/AppDate";
 
 function summarizeChanges(before, after) {
   if (!before || !after) return "Updated settings";
@@ -88,7 +79,7 @@ export default function SettingsAuditPanel({
                     </p>
                   </div>
                   <p className="text-xs text-slate-500">
-                    {formatWhen(entry.createdAt)}
+                    <AppDate value={entry.createdAt} mode="dateTime" fallback="Unknown time" />
                   </p>
                 </div>
 

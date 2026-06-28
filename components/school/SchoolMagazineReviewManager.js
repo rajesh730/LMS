@@ -8,17 +8,7 @@ import EmptyState from "@/components/EmptyState";
 import PaginationControls from "@/components/PaginationControls";
 import WritingContent from "@/components/WritingContent";
 import { getWritingCategoryLabel } from "@/lib/writingCategories";
-
-function formatDate(value) {
-  if (!value) return "";
-  return new Date(value).toLocaleString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
+import AppDate from "@/components/common/AppDate";
 
 
 function categoryTone(category = "") {
@@ -93,6 +83,10 @@ export default function SchoolMagazineReviewManager({
   );
 
   useEffect(() => {
+    // When the parent already supplies grade options, don't refetch them here —
+    // that's a wasted request and the result would be ignored anyway.
+    if (providedGradeOptions.length > 0) return;
+
     async function loadGrades() {
       try {
         const res = await fetch("/api/school/grade-structure", {
@@ -109,7 +103,7 @@ export default function SchoolMagazineReviewManager({
     }
 
     void loadGrades();
-  }, []);
+  }, [providedGradeOptions.length]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -283,9 +277,11 @@ export default function SchoolMagazineReviewManager({
                       )}
                     </div>
                     <p className="mt-1 text-[11px] font-semibold text-[#52657d]">
-                      Posted {formatDate(
-                        submission.submittedAt || submission.updatedAt
-                      )}
+                      Posted{" "}
+                      <AppDate
+                        value={submission.submittedAt || submission.updatedAt}
+                        mode="dateTime"
+                      />
                     </p>
                   </div>
                   <span className="truncate font-bold text-[#17120a]">

@@ -1,6 +1,4 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import Event from "@/models/Event";
 import { syncEventSchoolInvitations } from "@/lib/eventInvitations";
@@ -10,6 +8,7 @@ import { validateEventCapacity } from "@/lib/eventCapacity";
 import { normalizeGradeValue } from "@/lib/schoolGrades";
 import { publishEventRealtimeUpdate } from "@/lib/eventRealtime";
 import { normalizeEventWorkflowStatus } from "@/lib/eventWorkflow";
+import { canManageEventRecord, requireApiSession } from "@/lib/authz";
 
 function normalizeParticipationFormat(value) {
   return value === "TEAM" ? "TEAM" : "INDIVIDUAL";
@@ -53,44 +52,14 @@ function validateTeamRules({ participationFormat, minTeamSize, maxTeamSize }) {
   return null;
 }
 
-function canManageEvent(session, event) {
-  if (!session?.user || !event) return false;
-
-  if (session.user.role === "SUPER_ADMIN") {
-    return true;
-  }
-
-  if (session.user.role === "SCHOOL_ADMIN") {
-    const schoolId = session.user.schoolId || session.user.id;
-    return (
-      event.eventScope === "SCHOOL" &&
-      event.school &&
-      String(event.school) === String(schoolId)
-    );
-  }
-
-  if (session.user.role === "TEACHER") {
-    const schoolId = session.user.schoolId || null;
-    return (
-      event.eventScope === "SCHOOL" &&
-      event.school &&
-      String(event.school) === String(schoolId) &&
-      String(event.createdBy) === String(session.user.id)
-    );
-  }
-
-  return false;
-}
-
 export async function PUT(req, props) {
   try {
-    const session = await getServerSession(authOptions);
-    if (
-      !session ||
-      !["SUPER_ADMIN", "SCHOOL_ADMIN", "TEACHER"].includes(session.user.role)
-    ) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    }
+    const { session, error } = await requireApiSession([
+      "SUPER_ADMIN",
+      "SCHOOL_ADMIN",
+      "TEACHER",
+    ]);
+    if (error) return error;
 
     const params = await props.params;
     const id = params.id;
@@ -122,7 +91,7 @@ export async function PUT(req, props) {
       return NextResponse.json({ message: "Event not found" }, { status: 404 });
     }
 
-    if (!canManageEvent(session, event)) {
+    if (!canManageEventRecord(session, event)) {
       return NextResponse.json({ message: "Forbidden" }, { status: 403 });
     }
 
@@ -341,13 +310,12 @@ export async function PUT(req, props) {
 
 export async function DELETE(req, props) {
   try {
-    const session = await getServerSession(authOptions);
-    if (
-      !session ||
-      !["SUPER_ADMIN", "SCHOOL_ADMIN", "TEACHER"].includes(session.user.role)
-    ) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    }
+    const { session, error } = await requireApiSession([
+      "SUPER_ADMIN",
+      "SCHOOL_ADMIN",
+      "TEACHER",
+    ]);
+    if (error) return error;
 
     // Next.js 15: props.params is a Promise
     const params = await props.params;
@@ -360,7 +328,7 @@ export async function DELETE(req, props) {
       return NextResponse.json({ message: "Event not found" }, { status: 404 });
     }
 
-    if (!canManageEvent(session, event)) {
+    if (!canManageEventRecord(session, event)) {
       return NextResponse.json({ message: "Forbidden" }, { status: 403 });
     }
 

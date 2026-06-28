@@ -5,17 +5,34 @@ import connectDB from "@/lib/db";
 import User from "@/models/User";
 import Teacher from "@/models/Teacher";
 import Student from "@/models/Student";
+import { applyRateLimit } from "@/lib/rateLimit";
 
 const PERSISTENT_SESSION_MAX_AGE = 60 * 60 * 24 * 365; // 1 year
 const SESSION_REFRESH_INTERVAL = 60 * 60 * 24; // 1 day
 
-// Resolve and cache a school's display name on the token. Looks it up only once
-// (when missing) since the school name rarely changes, keeping refresh cheap.
-async function resolveSchoolName(cached, schoolId) {
-  if (cached) return cached;
+// Look up a school's display name by id. Pure fetch — call sites decide when to
+// re-resolve (e.g. when the user's school changes on transfer) vs. reuse cache.
+async function fetchSchoolName(schoolId) {
   if (!schoolId) return null;
   const school = await User.findById(schoolId).select("schoolName name").lean();
   return school?.schoolName || school?.name || null;
+}
+
+// Keep the token's cached schoolName in sync with its current school. Tracks
+// which school the cached name belongs to (`schoolNameForId`) and re-fetches only
+// when that no longer matches the current school — so routine refreshes stay
+// cheap, but a transferred student's name updates (including students who were
+// already transferred before this tracking existed).
+async function syncSchoolOnToken(token, nextSchoolId) {
+  const newSchoolId = nextSchoolId?.toString() || null;
+  if (!newSchoolId) {
+    token.schoolName = null;
+    token.schoolNameForId = null;
+  } else if (newSchoolId !== token.schoolNameForId || !token.schoolName) {
+    token.schoolName = await fetchSchoolName(newSchoolId);
+    token.schoolNameForId = newSchoolId;
+  }
+  token.schoolId = newSchoolId;
 }
 
 // Match NextAuth's own secure-cookie detection so the cookie name/flags stay
@@ -31,7 +48,23 @@ export const authOptions = {
         email: { label: "Email/Username", type: "text" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
+        // Throttle credential attempts per client IP to blunt brute-forcing.
+        const ip =
+          String(req?.headers?.["x-forwarded-for"] || "")
+            .split(",")[0]
+            .trim() || "unknown";
+        const rate = await applyRateLimit({
+          key: `login:${ip}`,
+          windowMs: 10 * 60 * 1000,
+          max: 15,
+        });
+        if (!rate.ok) {
+          throw new Error(
+            `Too many login attempts. Try again in ${rate.retryAfter}s.`
+          );
+        }
+
         await connectDB();
 
         // 1. Try Teacher collection FIRST (Clean Architecture)
@@ -50,16 +83,14 @@ export const authOptions = {
               teacher.password,
             );
           } else {
-            // Fallback: Try User collection or visiblePassword
+            // Fallback: a legacy teacher whose credentials live in the User
+            // collection. Hashed compare only — no plaintext path.
             const user = await User.findOne({ email: credentials.email });
             if (user && user.password) {
               isValid = await bcrypt.compare(
                 credentials.password,
                 user.password,
               );
-            } else if (teacher.visiblePassword) {
-              // Last resort: Plain text comparison (for legacy data)
-              isValid = credentials.password === teacher.visiblePassword;
             }
           }
 
@@ -127,6 +158,7 @@ export const authOptions = {
             status: user.status,
             schoolId,
             authVersion: user.authVersion || 0,
+            calendarPreference: user.calendarPreference || "BS",
           };
         }
 
@@ -156,6 +188,7 @@ export const authOptions = {
             name: student.name,
             status: "ACTIVE", // Default to active as status management is removed
             schoolId: student.school?.toString(),
+            calendarPreference: student.calendarPreference || "BS",
           };
         }
 
@@ -172,6 +205,7 @@ export const authOptions = {
         token.schoolId = user.schoolId || null;
         token.schoolName = user.schoolName || null;
         token.authVersion = user.authVersion || 0;
+        token.calendarPreference = user.calendarPreference || "BS";
         delete token.error;
       } else if (token?.id) {
         await connectDB();
@@ -179,7 +213,7 @@ export const authOptions = {
 
         if (["SUPER_ADMIN", "SCHOOL_ADMIN"].includes(role)) {
           const currentUser = await User.findById(token.id).select(
-            "authVersion status role schoolName"
+            "authVersion status role schoolName calendarPreference"
           );
 
           if (!currentUser) {
@@ -188,6 +222,7 @@ export const authOptions = {
             delete token.schoolId;
           } else {
             token.status = currentUser.status;
+            token.calendarPreference = currentUser.calendarPreference || "BS";
             token.schoolName =
               role === "SUPER_ADMIN" ? null : currentUser.schoolName || null;
             if ((currentUser.authVersion || 0) !== (token.authVersion || 0)) {
@@ -210,15 +245,11 @@ export const authOptions = {
             delete token.role;
             delete token.schoolId;
           } else {
-            token.schoolId = currentTeacher.school?.toString() || null;
-            token.schoolName = await resolveSchoolName(
-              token.schoolName,
-              currentTeacher.school
-            );
+            await syncSchoolOnToken(token, currentTeacher.school);
           }
         } else if (role === "STUDENT") {
           const currentStudent = await Student.findById(token.id).select(
-            "status isDeleted school"
+            "status isDeleted school calendarPreference"
           );
 
           if (
@@ -230,11 +261,8 @@ export const authOptions = {
             delete token.role;
             delete token.schoolId;
           } else {
-            token.schoolId = currentStudent.school?.toString() || null;
-            token.schoolName = await resolveSchoolName(
-              token.schoolName,
-              currentStudent.school
-            );
+            token.calendarPreference = currentStudent.calendarPreference || "BS";
+            await syncSchoolOnToken(token, currentStudent.school);
           }
         }
       }
@@ -248,6 +276,7 @@ export const authOptions = {
         session.user.schoolId = token.schoolId || null;
         session.user.schoolName = token.schoolName || null;
         session.user.authVersion = token.authVersion || 0;
+        session.user.calendarPreference = token.calendarPreference || "BS";
         if (token.error) {
           session.error = token.error;
         }

@@ -9,6 +9,12 @@ import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
 import SchoolShowcaseProfile from "@/models/SchoolShowcaseProfile";
 import { getActiveCertificateFilter } from "@/lib/certificates";
 import { WritingPreview } from "@/components/WritingContent";
+import AppDate from "@/components/common/AppDate";
+import EnrollmentRange from "@/components/common/EnrollmentRange";
+import {
+  formatAuthoredEra,
+  getAuthoredSchoolName,
+} from "@/lib/writingProvenance";
 import PublicSiteNav from "@/components/public/PublicSiteNav";
 import PublicShareButton from "@/components/public/PublicShareButton";
 import SchoolLogoMark from "@/components/public/SchoolLogoMark";
@@ -27,23 +33,6 @@ import {
 
 export const dynamic = "force-dynamic";
 
-function formatDate(value) {
-  if (!value) return "";
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(new Date(value));
-}
-
-function formatMonthYear(value) {
-  if (!value) return "";
-  return new Intl.DateTimeFormat("en-US", {
-    month: "long",
-    year: "numeric",
-  }).format(new Date(value));
-}
-
 function formatPlacement(value) {
   if (value === "RUNNER_UP") return "1st Runner Up";
   if (value === "THIRD_PLACE") return "2nd Runner Up";
@@ -53,6 +42,39 @@ function formatPlacement(value) {
 function getCategoryLabel(value) {
   const label = String(value || "Writing").replaceAll("_", " ").toLowerCase();
   return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
+// Group a student's writings by the school they were authored at, ordered to
+// match the school-journey timeline (current/most-recent era first). Each piece
+// stays owned by its origin school; this just organizes the portfolio so a
+// transferred student's work reads as distinct chapters per school.
+function groupWritingsBySchool(writings = [], journey = []) {
+  const order = new Map(
+    journey.map((entry, index) => [String(entry.schoolId), index])
+  );
+  const groups = new Map();
+
+  for (const writing of writings) {
+    const schoolId = writing.school?._id ? String(writing.school._id) : "";
+    const key = schoolId || getAuthoredSchoolName(writing, "");
+    if (!groups.has(key)) {
+      groups.set(key, {
+        key,
+        schoolId,
+        schoolName: getAuthoredSchoolName(writing, writing.school?.schoolName),
+        writings: [],
+      });
+    }
+    groups.get(key).writings.push(writing);
+  }
+
+  // Schools present in the journey sort by their timeline position; any others
+  // (e.g. origin school missing from enrollment history) fall to the end.
+  return [...groups.values()].sort((a, b) => {
+    const ai = order.has(a.schoolId) ? order.get(a.schoolId) : Number.MAX_SAFE_INTEGER;
+    const bi = order.has(b.schoolId) ? order.get(b.schoolId) : Number.MAX_SAFE_INTEGER;
+    return ai - bi;
+  });
 }
 
 async function getPortfolioData(id) {
@@ -95,7 +117,10 @@ async function getPortfolioData(id) {
       isPublished: true,
       isDeleted: { $ne: true },
     })
-      .select("title content category publishedAt updatedAt")
+      .select(
+        "title content category publishedAt updatedAt authorSchoolNameSnapshot authorGrade authorAcademicYear"
+      )
+      .populate("school", "schoolName")
       .sort({ publishedAt: -1, updatedAt: -1 })
       .limit(24)
       .lean(),
@@ -150,6 +175,8 @@ async function getPortfolioData(id) {
       academicYear: entry.academicYear,
       academicYearStart: entry.academicYearStart ?? null,
       status: entry.status,
+      startedAt: entry.startedAt || null,
+      endedAt: entry.endedAt || null,
     }))
     .sort(
       (a, b) =>
@@ -181,9 +208,34 @@ export async function generateMetadata({ params }) {
 
   const name = data.student.name || "Student";
   const school = data.student.school?.schoolName || "their school";
+  const { achievements, writings, wins } = data.stats;
+  const highlights = [
+    achievements ? `${achievements} achievement${achievements === 1 ? "" : "s"}` : "",
+    wins ? `${wins} win${wins === 1 ? "" : "s"}` : "",
+    writings ? `${writings} published piece${writings === 1 ? "" : "s"}` : "",
+  ].filter(Boolean);
+  const title = `${name} — Verified Student Portfolio`;
+  const description = highlights.length
+    ? `${name} at ${school}: ${highlights.join(", ")} — verified on Pravyo.`
+    : `Verified achievements, certificates, and writing by ${name} at ${school}, on Pravyo.`;
+  const url = `/students/${resolvedParams.id}`;
+
   return {
-    title: `${name} — Student Portfolio`,
-    description: `Verified achievements, certificates, and writing by ${name} at ${school}, on Pravyo.`,
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      title,
+      description,
+      url,
+      type: "profile",
+      siteName: "Pravyo",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+    },
   };
 }
 
@@ -227,7 +279,7 @@ function AchievementRow({ achievement }) {
           {achievement.title}
         </h3>
         <p className="mt-1 text-xs text-[#75869b]">
-          {formatDate(achievement.awardedAt || achievement.event?.date)}
+          <AppDate value={achievement.awardedAt || achievement.event?.date} />
         </p>
         {achievement.certificateUrl && (
           <a
@@ -262,6 +314,12 @@ function WritingCard({ writing }) {
       <h3 className="mt-2 line-clamp-2 text-sm font-black text-[#17120a]">
         {writing.title}
       </h3>
+      {formatAuthoredEra(writing) && (
+        <p className="mt-1.5 inline-flex items-center gap-1.5 text-[11px] font-bold text-[#75869b]">
+          <FaGraduationCap className="text-[#1f4f7a]" />
+          {formatAuthoredEra(writing)}
+        </p>
+      )}
       <WritingPreview
         content={writing.content}
         maxLength={140}
@@ -282,6 +340,9 @@ export default async function StudentPortfolioPage({ params }) {
 
   const { student, schoolProfile, achievements, writings, journey, stats } = data;
   const hasJourney = Array.isArray(journey) && journey.length > 0;
+  const writingGroups = groupWritingsBySchool(writings, journey);
+  // Only split into per-school chapters when the work actually spans schools.
+  const groupWritings = writingGroups.length > 1;
   const name = student.name || "Student";
   const schoolId = student.school?._id ? String(student.school._id) : "";
   const schoolName = student.school?.schoolName || "School";
@@ -389,7 +450,10 @@ export default async function StudentPortfolioPage({ params }) {
                       </span>
                     )}
                     {student.createdAt && (
-                      <span>On Pravyo since {formatMonthYear(student.createdAt)}</span>
+                      <span>
+                        On Pravyo since{" "}
+                        <AppDate value={student.createdAt} mode="monthYear" />
+                      </span>
                     )}
                   </div>
                   <p className="mt-4 max-w-3xl text-sm leading-6 text-[#52657d]">
@@ -423,31 +487,46 @@ export default async function StudentPortfolioPage({ params }) {
                 {stats.schools} {stats.schools === 1 ? "school" : "schools"}
               </span>
             </div>
-            <ol className="mt-5 space-y-3">
-              {journey.map((entry, index) => (
-                <li
-                  key={`${entry.schoolId}-${entry.academicYearStart}-${index}`}
-                  className="flex items-start gap-3 rounded-xl border border-[#e1e8f4] bg-[#f8fbff] p-4"
-                >
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-[#1f4f7a] shadow-sm">
-                    <FaGraduationCap />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-black text-[#17120a]">
-                      {entry.schoolName}
-                    </p>
-                    <p className="mt-0.5 text-xs text-[#52657d]">
-                      {entry.grade}
-                      {entry.academicYear ? ` · ${entry.academicYear}` : ""}
-                    </p>
-                  </div>
-                  {entry.status === "CURRENT" && (
-                    <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-[10px] font-black uppercase text-emerald-700">
-                      Current
-                    </span>
-                  )}
-                </li>
-              ))}
+            <ol className="relative mt-6 space-y-4 border-l-2 border-[#e1e8f4] pl-6">
+              {journey.map((entry, index) => {
+                const isCurrent = entry.status === "CURRENT";
+                return (
+                  <li
+                    key={`${entry.schoolId}-${entry.academicYearStart}-${index}`}
+                    className="relative"
+                  >
+                    <span
+                      className={`absolute top-1.5 flex h-4 w-4 items-center justify-center rounded-full border-2 border-white shadow ${
+                        isCurrent ? "bg-emerald-500" : "bg-[#1f4f7a]"
+                      }`}
+                      style={{ left: "-31px" }}
+                    />
+                    <div className="flex items-start gap-3 rounded-xl border border-[#e1e8f4] bg-[#f8fbff] p-4">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-[#1f4f7a] shadow-sm">
+                        <FaGraduationCap />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-black text-[#17120a]">
+                          {entry.schoolName}
+                        </p>
+                        <p className="mt-0.5 text-xs text-[#52657d]">
+                          {entry.grade}
+                          {entry.academicYear ? ` · ${entry.academicYear}` : ""}
+                        </p>
+                        <EnrollmentRange
+                          entry={entry}
+                          className="mt-1 block text-xs font-bold text-[#1f4f7a]"
+                        />
+                      </div>
+                      {isCurrent && (
+                        <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-[10px] font-black uppercase text-emerald-700">
+                          Current
+                        </span>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
             </ol>
           </section>
         )}
@@ -504,6 +583,27 @@ export default async function StudentPortfolioPage({ params }) {
                 description="Approved and published articles by this student will appear here."
               />
             </div>
+          ) : groupWritings ? (
+            <div className="mt-5 space-y-6">
+              {writingGroups.map((group) => (
+                <div key={group.key}>
+                  <div className="flex items-center gap-2 border-b border-[#eef2f8] pb-2">
+                    <FaGraduationCap className="text-[#1f4f7a]" />
+                    <h3 className="text-sm font-black text-[#17120a]">
+                      {group.schoolName}
+                    </h3>
+                    <span className="rounded-full bg-[#eef5fb] px-2.5 py-0.5 text-[10px] font-black text-[#1f4f7a]">
+                      {group.writings.length}
+                    </span>
+                  </div>
+                  <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {group.writings.map((writing) => (
+                      <WritingCard key={String(writing._id)} writing={writing} />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
           ) : (
             <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {writings.map((writing) => (
@@ -526,8 +626,8 @@ export default async function StudentPortfolioPage({ params }) {
                   Every achievement here is verified by Pravyo
                 </h2>
                 <p className="student-portfolio-brand-muted mt-1 text-sm font-semibold leading-6">
-                  Results, certificates, and writing are published through {schoolName} and
-                  recognized on the Pravyo platform.
+                  Results, certificates, and writing are published through their
+                  schools and recognized on the Pravyo platform.
                 </p>
               </div>
             </div>

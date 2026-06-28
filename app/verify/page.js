@@ -4,6 +4,7 @@ import Achievement from "@/models/Achievement";
 import { getActiveCertificateFilter } from "@/lib/certificates";
 import { formatPlacementLabel } from "@/lib/results";
 import PublicSiteNav from "@/components/public/PublicSiteNav";
+import AppDate from "@/components/common/AppDate";
 import {
   FaArrowRight,
   FaCheckCircle,
@@ -18,15 +19,6 @@ export const metadata = {
   description:
     "Confirm the authenticity of a Pravyo certificate using its certificate code.",
 };
-
-function formatDate(value) {
-  if (!value) return "";
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(new Date(value));
-}
 
 async function verifyCode(rawCode) {
   const code = String(rawCode || "").trim().toUpperCase();
@@ -145,7 +137,7 @@ export default async function VerifyCertificatePage({ searchParams }) {
               <Field label="Position" value={result.certificate.placement} />
               <Field label="Event" value={result.certificate.event} />
               <Field label="School" value={result.certificate.school} />
-              <Field label="Issued On" value={formatDate(result.certificate.issuedAt)} />
+              <Field label="Issued On" value={<AppDate value={result.certificate.issuedAt} />} />
               <Field label="Certificate Code" value={result.code} />
             </div>
             {result.certificate.certificateUrl && (

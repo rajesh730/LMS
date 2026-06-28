@@ -1,16 +1,22 @@
 import crypto from "crypto";
+import mongoose from "mongoose";
 import connectDB from "@/lib/db";
 import Student from "@/models/Student";
 import User from "@/models/User";
 import AcademicYear from "@/models/AcademicYear";
 import StudentTransfer from "@/models/StudentTransfer";
+import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
 import {
   successResponse,
   errorResponse,
   internalServerError,
 } from "@/lib/apiResponse";
 import { requireApiSession, getSessionSchoolId } from "@/lib/authz";
-import { notifyTransferRejected } from "@/lib/transferNotifications";
+import {
+  notifyTransferRejected,
+  notifyReleaseApproved,
+  notifyAdmissionApproved,
+} from "@/lib/transferNotifications";
 import { normalizeGradeValue } from "@/lib/schoolGrades";
 import { generateUniqueStudentUsername } from "@/lib/studentIdentity";
 import {
@@ -106,8 +112,6 @@ async function moveStudent({ transfer, session, toGrade, toRollNumber }) {
   student.statusChangedBy = session.user.id;
   student.statusReason = "Transferred to a new school";
 
-  await student.save();
-
   transfer.toGrade = targetGrade;
   transfer.toRollNumber = rollNumber;
   transfer.toAcademicYear = toYear?.year || "";
@@ -115,22 +119,46 @@ async function moveStudent({ transfer, session, toGrade, toRollNumber }) {
   transfer.status = transfer.status === "PENDING" ? "APPROVED" : "COMPLETED";
   transfer.decidedBy = session.user.id;
   transfer.decidedAt = new Date();
-  await transfer.save();
 
-  await Promise.all([
-    fromYear?._id
-      ? AcademicYear.updateOne(
+  // Move the student, complete the transfer, and adjust the year counters as a
+  // single atomic unit so a mid-way failure can't leave the data inconsistent.
+  const dbSession = await mongoose.startSession();
+  try {
+    await dbSession.withTransaction(async () => {
+      await student.save({ session: dbSession });
+      await transfer.save({ session: dbSession });
+      // Her writing stays hers and stays in her portfolio (labelled "written at
+      // the origin school"), but it must stop appearing as the origin school's
+      // *live* content — detach it from that school's student wall and the
+      // cross-school global wall. Public/portfolio visibility (`isPublished`) and
+      // any published magazine archive are intentionally left intact.
+      await SchoolMagazineArticle.updateMany(
+        {
+          authorStudent: student._id,
+          school: transfer.fromSchool,
+          isDeleted: { $ne: true },
+        },
+        { $set: { showOnSchoolWall: false, isGlobalWallPublished: false } },
+        { session: dbSession }
+      );
+      if (fromYear?._id) {
+        await AcademicYear.updateOne(
           { _id: fromYear._id },
-          { $inc: { "summary.transferredOut": 1 } }
-        )
-      : Promise.resolve(),
-    toYear?._id
-      ? AcademicYear.updateOne(
+          { $inc: { "summary.transferredOut": 1 } },
+          { session: dbSession }
+        );
+      }
+      if (toYear?._id) {
+        await AcademicYear.updateOne(
           { _id: toYear._id },
-          { $inc: { "summary.transferredIn": 1 } }
-        )
-      : Promise.resolve(),
-  ]);
+          { $inc: { "summary.transferredIn": 1 } },
+          { session: dbSession }
+        );
+      }
+    });
+  } finally {
+    await dbSession.endSession();
+  }
 
   return { newUsername };
 }
@@ -189,6 +217,7 @@ export async function PUT(req, { params }) {
         toRollNumber: transfer.toRollNumber,
       });
       if (result.error) return result.error;
+      await notifyAdmissionApproved({ transfer });
       return successResponse(200, "Transfer approved. The student has moved.", {
         newUsername: result.newUsername,
       });
@@ -220,6 +249,7 @@ export async function PUT(req, { params }) {
       transfer.releasedBy = session.user.id;
       transfer.releasedAt = new Date();
       await transfer.save();
+      await notifyReleaseApproved({ transfer });
       return successResponse(200, "Transfer release approved. Code issued.", {
         transferCode: transfer.transferCode,
       });
@@ -253,6 +283,7 @@ export async function PUT(req, { params }) {
         toRollNumber: body.toRollNumber,
       });
       if (result.error) return result.error;
+      await notifyAdmissionApproved({ transfer });
       return successResponse(200, "Admission approved. The student has moved.", {
         newUsername: result.newUsername,
       });

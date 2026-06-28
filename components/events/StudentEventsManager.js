@@ -8,8 +8,6 @@ import {
   FaCheckCircle,
   FaCircle,
   FaEye,
-  FaFilter,
-  FaSearch,
   FaSignOutAlt,
   FaTrophy,
   FaUsers,
@@ -17,6 +15,7 @@ import {
 import EmptyState from "@/components/EmptyState";
 import LoadingState from "@/components/ui/LoadingState";
 import AlertBanner from "@/components/ui/AlertBanner";
+import AppDate from "@/components/common/AppDate";
 import useRealtimeChannel from "@/lib/useRealtimeChannel";
 import useWorkIndicators from "@/lib/useWorkIndicators";
 import { isTeamEventLike } from "@/lib/eventParticipationFormat";
@@ -25,6 +24,16 @@ import {
   getEventNextActionLabel,
   getEventWorkflowStatus,
 } from "@/lib/eventWorkflow";
+import EventFilterBar from "@/components/events/EventFilterBar";
+import EventListCard from "@/components/events/EventListCard";
+import {
+  isCompletedEvent,
+  isLiveEvent,
+  isRegistrationOpenEvent,
+  isTerminalEvent,
+  matchesEventFacets,
+  matchesEventListFilter,
+} from "@/lib/eventListTaxonomy";
 
 // Sub-tabs that carry a "new activity" red dot map to a seen-surface.
 const TAB_SEEN_SURFACE = {
@@ -33,15 +42,6 @@ const TAB_SEEN_SURFACE = {
 
 function formatType(value) {
   return String(value || "EVENT").replaceAll("_", " ");
-}
-
-function formatDate(value) {
-  if (!value) return "Not set";
-  return new Date(value).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
 }
 
 function getRegisteredCount(event) {
@@ -61,28 +61,6 @@ function formatGradeSummary(grades = []) {
 
 function isCancelled(event) {
   return String(event.lifecycleStatus || "ACTIVE").toUpperCase() === "CANCELLED";
-}
-
-function isCompleted(event) {
-  return Boolean(event.finalOutcomeReady || event.resultsPublished);
-}
-
-function isLive(event) {
-  const state = String(event.lifecycleStatus || "ACTIVE").toUpperCase();
-  const workflowStatus = getEventWorkflowStatus(event);
-  return (
-    state === "ACTIVE" &&
-    !isCompleted(event) &&
-    ["REGISTRATION_CLOSED", "ROUND_ACTIVE", "RESULTS_DRAFT"].includes(workflowStatus)
-  );
-}
-
-function isRegistrationOpen(event) {
-  return (
-    !isCompleted(event) &&
-    String(event.lifecycleStatus || "ACTIVE").toUpperCase() !== "ARCHIVED" &&
-    getEventWorkflowStatus(event) === "OPEN_FOR_REGISTRATION"
-  );
 }
 
 function getStudentStatus(event) {
@@ -120,7 +98,7 @@ function statusClasses(status) {
 function getStudentNextAction(event) {
   if (isCancelled(event))
     return "This event was cancelled. Your registration was withdrawn.";
-  if (isCompleted(event)) return "Review final result and certificates.";
+  if (isCompletedEvent(event)) return "Review final result and certificates.";
   if (event.participationStatus) return "Follow notices, rounds, and event updates.";
   if (event.isGradeEligible === false) {
     return event.ineligibilityReason || "This event is outside your grade eligibility.";
@@ -266,37 +244,28 @@ export default function StudentEventsManager() {
   );
 
   const metrics = useMemo(() => {
-    const activeRecords = events.filter(
-      (event) => String(event.lifecycleStatus || "ACTIVE").toUpperCase() !== "ARCHIVED"
-    );
+    const activeRecords = events.filter((event) => !isTerminalEvent(event));
     return {
-      live: events.filter(isLive).length,
-      registrationOpen: events.filter(isRegistrationOpen).length,
+      live: events.filter(isLiveEvent).length,
+      registrationOpen: events.filter(isRegistrationOpenEvent).length,
       myEvents: events.filter((event) => Boolean(event.participationStatus)).length,
-      completed: events.filter(isCompleted).length,
+      completed: events.filter(isCompletedEvent).length,
       activeRecords: activeRecords.length,
     };
   }, [events]);
 
   const filteredEvents = useMemo(() => {
-    const needle = search.trim().toLowerCase();
-    return events.filter((event) => {
-      const state = String(event.lifecycleStatus || "ACTIVE").toUpperCase();
-      const matchesStatus =
-        (activeFilter === "ALL" && state !== "ARCHIVED") ||
-        (activeFilter === "LIVE" && isLive(event)) ||
-        (activeFilter === "REGISTRATION" && isRegistrationOpen(event)) ||
-        (activeFilter === "MINE" && Boolean(event.participationStatus)) ||
-        (activeFilter === "COMPLETED" && isCompleted(event));
-      const matchesSearch =
-        !needle ||
-        String(event.title || "").toLowerCase().includes(needle) ||
-        String(event.description || "").toLowerCase().includes(needle);
-      const matchesType = !typeFilter || event.eventType === typeFilter;
-      const matchesGrade =
-        !gradeFilter || (event.eligibleGrades || []).includes(gradeFilter);
-      return matchesStatus && matchesSearch && matchesType && matchesGrade;
-    });
+    return events.filter(
+      (event) =>
+        matchesEventListFilter(event, activeFilter, {
+          isMine: Boolean(event.participationStatus),
+        }) &&
+        matchesEventFacets(event, {
+          search,
+          type: typeFilter,
+          grade: gradeFilter,
+        })
+    );
   }, [activeFilter, events, gradeFilter, search, typeFilter]);
 
   const metricCards = [
@@ -342,11 +311,11 @@ export default function StudentEventsManager() {
   };
 
   const filterTabs = [
-    ["LIVE", "Live", FaCircle, metrics.live],
-    ["REGISTRATION", "Registration Open", FaUsers, metrics.registrationOpen],
-    ["ALL", "All Events", FaCalendarAlt, metrics.activeRecords],
-    ["MINE", "My Events", FaCheckCircle, metrics.myEvents],
-    ["COMPLETED", "Results", FaTrophy, metrics.completed],
+    { key: "LIVE", label: "Live", icon: FaCircle, count: metrics.live },
+    { key: "REGISTRATION", label: "Registration Open", icon: FaUsers, count: metrics.registrationOpen },
+    { key: "ALL", label: "All Events", icon: FaCalendarAlt, count: metrics.activeRecords },
+    { key: "MINE", label: "My Events", icon: FaCheckCircle, count: metrics.myEvents },
+    { key: "COMPLETED", label: "Completed", icon: FaTrophy, count: metrics.completed, surface: TAB_SEEN_SURFACE.COMPLETED },
   ];
 
   return (
@@ -397,111 +366,28 @@ export default function StudentEventsManager() {
       )}
 
       <section className="overflow-hidden rounded-2xl border border-[#e1e7f2] bg-white shadow-[0_14px_34px_rgba(10,47,102,0.08)]">
-        <div className="border-b border-[#e1e7f2]">
-          <div className="flex flex-wrap gap-0 px-4">
-            {filterTabs.map(([key, label, Icon, count]) => {
-              const seenSurface = TAB_SEEN_SURFACE[key];
-              const showDot =
-                Boolean(seenSurface) &&
-                getIndicator(seenSurface).count > 0 &&
-                activeFilter !== key;
-              return (
-              <button
-                key={key}
-                type="button"
-                onClick={() => {
-                  setActiveFilter(key);
-                  if (seenSurface) void markSurfaceSeen(seenSurface);
-                }}
-                className={`relative inline-flex min-h-14 items-center gap-2 px-5 text-sm font-black transition ${
-                  activeFilter === key
-                    ? "text-[#0a2f66] after:absolute after:bottom-0 after:left-0 after:h-[3px] after:w-full after:rounded-full after:bg-[#0a2f66]"
-                    : "text-[#24314d] hover:bg-[#f8fbff] hover:text-[#0a2f66]"
-                }`}
-              >
-                <span className="relative inline-flex">
-                  <Icon />
-                  {showDot && (
-                    <span className="absolute -right-1.5 -top-1.5 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white" />
-                  )}
-                </span>
-                {label}
-                {count > 0 && (
-                  <span
-                    className={`ml-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-black ${
-                      activeFilter === key
-                        ? "bg-blue-100 text-[#0a2f66]"
-                        : "bg-[#eef2f8] text-[#52657d]"
-                    }`}
-                  >
-                    {count}
-                  </span>
-                )}
-              </button>
-              );
-            })}
-          </div>
-
-          <div className="grid gap-3 border-t border-[#e1e7f2] p-4 lg:grid-cols-[minmax(240px,1fr)_180px_180px_auto_auto]">
-            <div className="relative">
-              <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-[#75869b]" />
-              <input
-                type="text"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search events..."
-                className="h-12 w-full rounded-xl border border-[#dbe5f4] bg-[#f8fbff] pl-11 pr-4 text-sm font-semibold outline-none transition focus:border-[#b9c9eb]"
-              />
-            </div>
-            <select
-              value={typeFilter}
-              onChange={(event) => setTypeFilter(event.target.value)}
-              className={`h-12 rounded-xl border border-[#dbe5f4] bg-white px-4 text-sm font-black text-[#24314d] outline-none transition focus:border-[#b9c9eb] ${
-                showFilters ? "" : "hidden"
-              }`}
-            >
-              <option value="">All Types</option>
-              {eventTypes.map((type) => (
-                <option key={type} value={type}>
-                  {formatType(type)}
-                </option>
-              ))}
-            </select>
-            <select
-              value={gradeFilter}
-              onChange={(event) => setGradeFilter(event.target.value)}
-              className={`h-12 rounded-xl border border-[#dbe5f4] bg-white px-4 text-sm font-black text-[#24314d] outline-none transition focus:border-[#b9c9eb] ${
-                showFilters ? "" : "hidden"
-              }`}
-            >
-              <option value="">All Grades</option>
-              {gradeOptions.map((grade) => (
-                <option key={grade} value={grade}>
-                  {grade}
-                </option>
-              ))}
-            </select>
-            <button
-              type="button"
-              onClick={() => {
-                setSearch("");
-                setTypeFilter("");
-                setGradeFilter("");
-              }}
-              className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-[#dbe5f4] bg-white px-4 text-sm font-black text-[#0a2f66] transition hover:bg-[#f8fbff]"
-            >
-              Clear
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowFilters((value) => !value)}
-              className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-[#dbe5f4] bg-[#f8fbff] px-4 text-sm font-black text-[#0a2f66] transition hover:bg-white"
-            >
-              <FaFilter />
-              Filters
-            </button>
-          </div>
-        </div>
+        <EventFilterBar
+          tabs={filterTabs}
+          activeFilter={activeFilter}
+          onFilterChange={setActiveFilter}
+          search={search}
+          onSearchChange={setSearch}
+          typeFilter={typeFilter}
+          onTypeChange={setTypeFilter}
+          typeOptions={eventTypes}
+          gradeFilter={gradeFilter}
+          onGradeChange={setGradeFilter}
+          gradeOptions={gradeOptions}
+          showFilters={showFilters}
+          onToggleFilters={() => setShowFilters((value) => !value)}
+          onClear={() => {
+            setSearch("");
+            setTypeFilter("");
+            setGradeFilter("");
+          }}
+          getNotificationCount={(surface) => getIndicator(surface).count}
+          onSurfaceSeen={(surface) => void markSurfaceSeen(surface)}
+        />
 
         <div className="p-4">
           {loading ? (
@@ -527,7 +413,7 @@ export default function StudentEventsManager() {
                   event.eligibleGrades?.length > 0
                     ? event.eligibleGrades.join(", ")
                     : "All grades";
-                const finished = isCompleted(event);
+                const finished = isCompletedEvent(event);
                 const cancelled = isCancelled(event);
                 const primaryHref = `/student/events/${event._id}${
                   finished ? "?tab=results" : ""
@@ -563,9 +449,8 @@ export default function StudentEventsManager() {
                 ];
 
                 return (
-                  <div
+                  <EventListCard
                     key={event._id}
-                    className="overflow-hidden rounded-xl border border-[#dfe7f3] bg-white shadow-sm transition hover:border-[#b9c9eb] hover:shadow-md"
                   >
                     <div className="grid gap-3 px-4 py-3 xl:grid-cols-[minmax(360px,1.18fr)_minmax(520px,1fr)_190px] xl:items-start">
                       <div className="flex min-w-0 gap-3">
@@ -606,7 +491,7 @@ export default function StudentEventsManager() {
                           <div className="mt-3 flex flex-wrap gap-4 text-xs font-bold text-[#75869b]">
                             <span className="inline-flex items-center gap-1.5">
                               <FaCalendarAlt />
-                              {formatDate(event.date)}
+                              <AppDate value={event.date} fallback="Not set" />
                             </span>
                             <span className="inline-flex items-center gap-1.5">
                               <FaUsers />
@@ -707,7 +592,7 @@ export default function StudentEventsManager() {
                         )}
                       </div>
                     </div>
-                  </div>
+                  </EventListCard>
                 );
               })}
             </div>

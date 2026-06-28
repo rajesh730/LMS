@@ -17,6 +17,7 @@ import {
 } from "react-icons/fi";
 import SettingsAuditPanel from "@/components/settings/SettingsAuditPanel";
 import AcademicYearManager from "@/components/school/AcademicYearManager";
+import CalendarToggle from "@/components/common/CalendarToggle";
 
 const defaultConfig = {
   schoolName: "",
@@ -509,6 +510,17 @@ export default function SchoolSettingsManager() {
           staff-role defaults. Platform governance and global policies belong in
           super admin settings.
         </p>
+      </div>
+
+      <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6">
+        <h2 className="text-lg font-bold text-white">Date display</h2>
+        <p className="mt-1 max-w-3xl text-sm text-slate-400">
+          Choose the calendar used to show dates across your account — Gregorian
+          (AD) or Bikram Sambat (BS). Applies only to what you see.
+        </p>
+        <div className="mt-4 inline-flex rounded-xl bg-white px-3 py-2">
+          <CalendarToggle />
+        </div>
       </div>
 
       {message.text && (

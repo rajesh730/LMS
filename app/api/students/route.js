@@ -9,6 +9,7 @@ import {
 } from "@/lib/studentIdentity";
 import { normalizeGradeValue } from "@/lib/schoolGrades";
 import { buildPagination, escapeRegex, parsePagination } from "@/lib/pagination";
+import { generateStrongPassword } from "@/lib/passwordGenerator";
 import bcrypt from "bcryptjs";
 
 export const dynamic = "force-dynamic";
@@ -46,11 +47,8 @@ export async function POST(req) {
             middleName = nameParts.slice(1, -1).join(" ");
         }
 
-        // Sanitize first name for credentials
-        const cleanFirstName = firstName.replace(/[^a-zA-Z0-9]/g, "") || "Student";
-        
-        // Password: FirstName@123
-        const password = `${cleanFirstName}@123`;
+        // Random password, returned once to the school for distribution.
+        const password = generateStrongPassword();
         const hashedPassword = await bcrypt.hash(password, 10);
         
         const normalizedGrade = normalizeGradeValue(s.grade);
@@ -131,11 +129,8 @@ export async function POST(req) {
           middleName = nameParts.slice(1, -1).join(" ");
       }
 
-      // Sanitize first name for credentials
-      const cleanFirstName = firstName.replace(/[^a-zA-Z0-9]/g, "") || "Student";
-      
-      // Password: FirstName@123
-      const generatedPassword = `${cleanFirstName}@123`;
+      // Random password, returned once to the school for distribution.
+      const generatedPassword = generateStrongPassword();
       const hashedPassword = await bcrypt.hash(generatedPassword, 10);
       
       const normalizedGrade = normalizeGradeValue(grade);

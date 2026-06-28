@@ -19,18 +19,11 @@ import {
   getEventWorkflowStatus,
 } from "@/lib/eventWorkflow";
 import { getEventDeletionPolicy } from "@/lib/eventDeletion";
+import AppDate from "@/components/common/AppDate";
+import EventListCard from "@/components/events/EventListCard";
 
 function formatType(value) {
   return String(value || "EVENT").replaceAll("_", " ");
-}
-
-function formatDate(value) {
-  if (!value) return "Not set";
-  return new Date(value).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
 }
 
 function getEventUnitLabel(event) {
@@ -155,7 +148,7 @@ export default function EventCard({
   };
 
   return (
-    <div className="overflow-hidden rounded-xl border border-[#dfe7f3] bg-white shadow-sm transition hover:border-purple-200 hover:shadow-md">
+    <EventListCard accent="purple">
       <div className="grid gap-3 px-4 py-3 xl:grid-cols-[minmax(360px,1.18fr)_minmax(520px,1fr)_210px] xl:items-start">
         <div className="flex min-w-0 gap-3">
           <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-purple-50 text-lg text-purple-700">
@@ -196,7 +189,7 @@ export default function EventCard({
             <div className="mt-3 flex flex-wrap gap-4 text-xs font-bold text-[#75869b]">
               <span className="inline-flex items-center gap-1.5">
                 <FaCalendarAlt />
-                {formatDate(event.date)}
+                <AppDate value={event.date} fallback="Not set" />
               </span>
               <span className="inline-flex items-center gap-1.5">
                 <FaUsers />
@@ -326,6 +319,6 @@ export default function EventCard({
           )}
         </div>
       </div>
-    </div>
+    </EventListCard>
   );
 }

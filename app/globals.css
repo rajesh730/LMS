@@ -1370,11 +1370,32 @@ main h1[class*="font-black"]:not(.pravyo-on-brand *) {
   to { transform: rotate(360deg); }
 }
 
+@keyframes pravyo-success-pop {
+  0%   { opacity: 0; transform: scale(0.3); }
+  60%  { opacity: 1; transform: scale(1.12); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes pravyo-success-ring {
+  0%   { opacity: 0.5; transform: scale(0.6); }
+  100% { opacity: 0; transform: scale(1.9); }
+}
+@keyframes pravyo-success-check {
+  from { stroke-dashoffset: 48; }
+  to   { stroke-dashoffset: 0; }
+}
+
 .pravyo-animate-fade-up   { animation: pravyo-fade-up   0.32s cubic-bezier(0.22,1,0.36,1) both; }
 .pravyo-animate-fade-in   { animation: pravyo-fade-in   0.22s ease both; }
 .pravyo-animate-slide-left { animation: pravyo-slide-left 0.26s cubic-bezier(0.22,1,0.36,1) both; }
 .pravyo-animate-slide-down { animation: pravyo-slide-down 0.22s ease both; }
 .pravyo-animate-scale-in  { animation: pravyo-scale-in  0.2s ease both; }
+.pravyo-success-pop  { animation: pravyo-success-pop 0.5s cubic-bezier(0.22,1,0.36,1) both; }
+.pravyo-success-ring { animation: pravyo-success-ring 0.9s ease-out 0.15s both; }
+.pravyo-success-check {
+  stroke-dasharray: 48;
+  stroke-dashoffset: 48;
+  animation: pravyo-success-check 0.4s ease-out 0.35s forwards;
+}
 
 /* Stagger helpers */
 .pravyo-stagger > *:nth-child(1) { animation-delay: 0ms; }

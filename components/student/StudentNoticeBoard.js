@@ -10,18 +10,8 @@ import {
 import AlertBanner from "@/components/ui/AlertBanner";
 import LoadingState from "@/components/ui/LoadingState";
 import PageHeader from "@/components/ui/PageHeader";
+import AppDate from "@/components/common/AppDate";
 import useNotificationInbox from "@/lib/useNotificationInbox";
-
-function formatDate(value) {
-  if (!value) return "";
-  return new Date(value).toLocaleString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
 
 export default function StudentNoticeBoard() {
   const {
@@ -91,7 +81,7 @@ export default function StudentNoticeBoard() {
                 <div className="text-right text-sm text-[#52657d]">
                   <div className="inline-flex items-center gap-2">
                     <FaCalendarAlt className="text-[#52657d]" />
-                    <span>{formatDate(notification.publishedAt)}</span>
+                    <span><AppDate value={notification.publishedAt} mode="dateTime" /></span>
                   </div>
                   {!notification.isRead && (
                     <div className="mt-3">

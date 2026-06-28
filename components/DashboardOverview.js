@@ -4,25 +4,17 @@ import { useEffect, useMemo, useState } from "react";
 import {
   FaCalendarAlt,
   FaChalkboardTeacher,
-  FaCheckCircle,
   FaExclamationTriangle,
   FaLayerGroup,
   FaUserGraduate,
 } from "react-icons/fa";
 import EmptyState from "@/components/EmptyState";
 import LoadingState from "@/components/ui/LoadingState";
+import SchoolAnalytics from "@/components/school/SchoolAnalytics";
+import AppDate from "@/components/common/AppDate";
 
 function getCount(map = {}, key) {
   return Number(map?.[key] || 0);
-}
-
-function formatDate(value) {
-  if (!value) return "";
-  return new Date(value).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
 }
 
 function MetricCard({ icon: Icon, value, label, note, tone = "blue" }) {
@@ -115,10 +107,6 @@ export default function DashboardOverview() {
     const activeTeachers = getCount(teacherStatus, "ACTIVE");
     const activeEvents = getCount(eventLifecycle, "ACTIVE");
     const gradeCount = stats?.students?.byGrade?.filter((grade) => grade.gradeName).length || 0;
-    const studentHealth =
-      totalStudents > 0 ? Math.round((activeStudents / totalStudents) * 100) : 0;
-    const teacherHealth =
-      totalTeachers > 0 ? Math.round((activeTeachers / totalTeachers) * 100) : 0;
 
     return {
       totalStudents,
@@ -135,8 +123,6 @@ export default function DashboardOverview() {
       completedEvents: getCount(eventLifecycle, "COMPLETED"),
       archivedEvents: getCount(eventLifecycle, "ARCHIVED"),
       gradeCount,
-      studentHealth,
-      teacherHealth,
     };
   }, [stats]);
 
@@ -208,93 +194,37 @@ export default function DashboardOverview() {
         />
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)]">
-        <div className="rounded-2xl border border-[#e6eaf7] bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-black text-[#10142f]">
-                School Status
-              </h2>
-              <p className="mt-1 text-sm font-semibold text-[#526071]">
-                Overall operational health of students, teachers, and events.
-              </p>
-            </div>
-            <FaCheckCircle className="text-2xl text-emerald-600" />
-          </div>
+      <SchoolAnalytics />
 
-          <div className="mt-5 grid gap-5 md:grid-cols-2">
-            <StatusBar
-              label="Active students"
-              value={summary.activeStudents}
-              total={summary.totalStudents}
-              tone="blue"
-            />
-            <StatusBar
-              label="Active teachers"
-              value={summary.activeTeachers}
-              total={summary.totalTeachers}
-              tone="emerald"
-            />
-            <StatusBar
-              label="Active events"
-              value={summary.activeEvents}
-              total={Math.max(summary.totalEvents, 1)}
-              tone="purple"
-            />
-            <StatusBar
-              label="Completed events"
-              value={summary.completedEvents}
-              total={Math.max(summary.totalEvents, 1)}
-              tone="amber"
-            />
+      <div className="rounded-2xl border border-[#e6eaf7] bg-white p-5 shadow-sm">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-black text-[#10142f]">
+              Student Distribution
+            </h2>
+            <p className="mt-1 text-sm font-semibold text-[#526071]">
+              Grade-level record coverage.
+            </p>
           </div>
-
-          <div className="mt-5 grid gap-3 sm:grid-cols-3">
-            {[
-              ["Student Health", `${summary.studentHealth}%`],
-              ["Teacher Coverage", `${summary.teacherHealth}%`],
-              ["Active Events", summary.activeEvents],
-              ["Archived Events", summary.archivedEvents],
-              ["Active Grades", summary.gradeCount],
-            ].map(([label, value]) => (
-              <div key={label} className="rounded-xl border border-[#eef2f8] bg-[#fbfcff] p-3">
-                <p className="text-xs font-black uppercase text-[#526071]">{label}</p>
-                <p className="mt-1 text-xl font-black text-[#10142f]">{value}</p>
-              </div>
-            ))}
-          </div>
+          <FaUserGraduate className="text-2xl text-[#0a2f66]" />
         </div>
 
-        <div className="rounded-2xl border border-[#e6eaf7] bg-white p-5 shadow-sm">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-black text-[#10142f]">
-                Student Distribution
-              </h2>
-              <p className="mt-1 text-sm font-semibold text-[#526071]">
-                Grade-level record coverage.
-              </p>
+        <div className="mt-5 space-y-3">
+          {gradeRows.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-[#dbe5f4] bg-[#fbfcff] p-5 text-sm font-semibold text-[#526071]">
+              No grade distribution available yet.
             </div>
-            <FaUserGraduate className="text-2xl text-[#0a2f66]" />
-          </div>
-
-          <div className="mt-5 space-y-3">
-            {gradeRows.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-[#dbe5f4] bg-[#fbfcff] p-5 text-sm font-semibold text-[#526071]">
-                No grade distribution available yet.
-              </div>
-            ) : (
-              gradeRows.map((grade) => (
-                <StatusBar
-                  key={grade.gradeName}
-                  label={grade.gradeName}
-                  value={grade.count}
-                  total={summary.totalStudents}
-                  tone="blue"
-                />
-              ))
-            )}
-          </div>
+          ) : (
+            gradeRows.map((grade) => (
+              <StatusBar
+                key={grade.gradeName}
+                label={grade.gradeName}
+                value={grade.count}
+                total={summary.totalStudents}
+                tone="blue"
+              />
+            ))
+          )}
         </div>
       </div>
 
@@ -331,7 +261,7 @@ export default function DashboardOverview() {
                   </p>
                 </div>
                 <span className="text-xs font-bold text-[#75869b] sm:text-right">
-                  {formatDate(item.createdAt)}
+                  <AppDate value={item.createdAt} />
                 </span>
               </div>
             ))

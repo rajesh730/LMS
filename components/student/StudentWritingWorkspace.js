@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   FaArrowLeft,
   FaArrowRight,
@@ -33,6 +33,7 @@ import {
   FaTrophy,
 } from "react-icons/fa";
 import EmptyState from "@/components/EmptyState";
+import AppDate from "@/components/common/AppDate";
 import Modal from "@/components/Modal";
 import StudentQuickNav from "@/components/student/StudentQuickNav";
 import AlertBanner from "@/components/ui/AlertBanner";
@@ -171,6 +172,10 @@ function getWorkflowMessage(writing) {
   const bucket = getLibraryBucket(writing);
   const status = String(writing.status || "DRAFT").toUpperCase();
 
+  if (writing.isTransferredOut) {
+    return `Written at ${writing.schoolName || "your previous school"}. It stays in your portfolio — you can edit, hide, or delete it anytime.`;
+  }
+
   if (writing.isMagazinePublished && !writing.magazineIssue) {
     return "Selected writing with an old magazine placement. Make it private or withdraw from magazine to clean it up.";
   }
@@ -207,6 +212,8 @@ function isLockedPublishedWriting(writing) {
 }
 
 function canEditWriting(writing) {
+  // A piece from a school she has left is portfolio-owned — always editable.
+  if (writing?.isTransferredOut) return true;
   return !isLockedPublishedWriting(writing);
 }
 
@@ -224,6 +231,26 @@ function getDeleteMessage(writing) {
   }
 
   return `"${writing.title}" will be removed from your writing list and hidden from ${publicSurfaces.join(", ")}.`;
+}
+
+// The public surfaces a writing is currently live on, so the student always
+// knows where their post appears right now (or that it is private). After a
+// transfer, the origin school's wall/global wall drop off here automatically.
+function getPlacements(writing) {
+  return [
+    writing.showOnSchoolWall
+      ? { key: "wall", label: "School Wall", icon: FaSchool }
+      : null,
+    writing.isMagazinePublished
+      ? { key: "magazine", label: "School Magazine", icon: FaBookOpen }
+      : null,
+    writing.isPublished
+      ? { key: "home", label: "Homepage", icon: FaHome }
+      : null,
+    writing.isGlobalWallPublished
+      ? { key: "global", label: "Global Wall", icon: FaGlobeAsia }
+      : null,
+  ].filter(Boolean);
 }
 
 function getWithdrawalActions(writing) {
@@ -280,25 +307,6 @@ function getReleaseActions(writing) {
   ].filter(Boolean);
 }
 
-function formatDate(value) {
-  if (!value) return "";
-  return new Date(value).toLocaleString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function formatShortDate(value) {
-  if (!value) return "";
-  return new Date(value).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
 
 function getWordCount(content = "") {
   return String(content || "").trim().split(/\s+/).filter(Boolean).length;
@@ -335,6 +343,37 @@ function StatusPill({ status }) {
       <Icon />
       {meta.label}
     </span>
+  );
+}
+
+function PlacementRow({ writing, className = "" }) {
+  const placements = getPlacements(writing);
+
+  return (
+    <div className={`flex flex-wrap items-center gap-1.5 text-[11px] font-bold ${className}`}>
+      <span className="text-[#75869b]">
+        {placements.length ? "Showing on:" : "Visibility:"}
+      </span>
+      {placements.length ? (
+        placements.map((placement) => {
+          const Icon = placement.icon;
+          return (
+            <span
+              key={placement.key}
+              className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-emerald-700"
+            >
+              <Icon className="text-[10px]" />
+              {placement.label}
+            </span>
+          );
+        })
+      ) : (
+        <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-slate-500">
+          <FaLock className="text-[10px]" />
+          Private — not shown publicly
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -669,6 +708,8 @@ function WritingEditor({
   onSave,
   onReset,
   resetLabel = "New",
+  portfolioOnly = false,
+  titleRef = null,
 }) {
   return (
     <section className="student-writing-editor overflow-hidden rounded-xl border border-[#e7dcc8] bg-white shadow-sm">
@@ -697,6 +738,7 @@ function WritingEditor({
 
       <div className="grid gap-3 p-4 sm:grid-cols-[1fr_190px]">
         <input
+          ref={titleRef}
           type="text"
           placeholder="Enter your article title..."
           value={form.title}
@@ -763,26 +805,40 @@ function WritingEditor({
         </div>
 
         <div className="student-writing-save-actions flex flex-wrap gap-2">
-          <button
-            type="button"
-            disabled={saving}
-            onClick={() => onSave("DRAFT")}
-            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full bg-purple-50 px-4 py-2 text-xs font-black text-purple-700 transition hover:bg-purple-100 disabled:opacity-60"
-          >
-            <FaEdit />
-            {saving ? "Saving..." : form.id ? "Update Private" : "Save Private"}
-          </button>
-          <button
-            type="button"
-            disabled={saving}
-            onClick={() => onSave("SUBMITTED")}
-            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full bg-purple-700 px-4 py-2 text-xs font-black text-white transition hover:bg-purple-800 disabled:opacity-60"
-          >
-            <FaPaperPlane />
-            {saving
-              ? "Posting..."
-              : "Post to School Wall"}
-          </button>
+          {portfolioOnly ? (
+            // Portfolio-owned piece (written at a school she has left): edits just
+            // update her own copy — no draft/school-wall split.
+            <button
+              type="button"
+              disabled={saving}
+              onClick={() => onSave("DRAFT")}
+              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full bg-purple-700 px-4 py-2 text-xs font-black text-white transition hover:bg-purple-800 disabled:opacity-60"
+            >
+              <FaEdit />
+              {saving ? "Saving..." : "Save Changes"}
+            </button>
+          ) : (
+            <>
+              <button
+                type="button"
+                disabled={saving}
+                onClick={() => onSave("DRAFT")}
+                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full bg-purple-50 px-4 py-2 text-xs font-black text-purple-700 transition hover:bg-purple-100 disabled:opacity-60"
+              >
+                <FaEdit />
+                {saving ? "Saving..." : form.id ? "Update Private" : "Save Private"}
+              </button>
+              <button
+                type="button"
+                disabled={saving}
+                onClick={() => onSave("SUBMITTED")}
+                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full bg-purple-700 px-4 py-2 text-xs font-black text-white transition hover:bg-purple-800 disabled:opacity-60"
+              >
+                <FaPaperPlane />
+                {saving ? "Posting..." : "Post to School Wall"}
+              </button>
+            </>
+          )}
           {(form.id || form.title || form.content) && (
             <button
               type="button"
@@ -813,7 +869,14 @@ function WritingListItem({
   const [menuOpen, setMenuOpen] = useState(false);
   const status = String(writing.status || "DRAFT").toUpperCase();
   const isPrivate = status === "DRAFT" || status === "REJECTED";
-  const primaryStatusAction = isPrivate
+  const isTransferredOut = Boolean(writing.isTransferredOut);
+  // For a piece from a school she has left, the actions are portfolio-only
+  // (show/hide), never school-wall posting.
+  const primaryStatusAction = isTransferredOut
+    ? writing.isPublished
+      ? { label: "Hide from portfolio", icon: FaLock, action: "MAKE_PRIVATE" }
+      : { label: "Show on portfolio", icon: FaEye, action: "RELEASE_SCHOOL_WALL" }
+    : isPrivate
     ? {
         label: "Post to school wall",
         icon: FaPaperPlane,
@@ -826,8 +889,9 @@ function WritingListItem({
       };
   const PrimaryStatusIcon = primaryStatusAction.icon;
   const editAllowed = canEditWriting(writing);
-  const withdrawalActions = getWithdrawalActions(writing);
-  const releaseActions = getReleaseActions(writing);
+  // School-wall / homepage / magazine actions don't apply once she has left.
+  const withdrawalActions = isTransferredOut ? [] : getWithdrawalActions(writing);
+  const releaseActions = isTransferredOut ? [] : getReleaseActions(writing);
 
   const runMenuAction = (callback) => {
     setMenuOpen(false);
@@ -853,6 +917,25 @@ function WritingListItem({
               <LibraryIcon />
               {libraryMeta.label}
             </span>
+            {writing.schoolName && (
+              <span
+                className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold ${
+                  isTransferredOut
+                    ? "border-purple-200 bg-purple-50 text-purple-700"
+                    : "border-slate-200 bg-slate-50 text-slate-600"
+                }`}
+                title={
+                  isTransferredOut
+                    ? `Written at ${writing.schoolName} (previous school)`
+                    : writing.schoolName
+                }
+              >
+                <FaSchool />
+                {isTransferredOut
+                  ? `Written at ${writing.schoolName}`
+                  : writing.schoolName}
+              </span>
+            )}
           </div>
           <div className="student-writing-action-menu relative shrink-0">
             <button
@@ -972,8 +1055,9 @@ function WritingListItem({
         <p className="mt-2 line-clamp-2 text-xs font-semibold leading-5 text-[#52657d]">
           {getWorkflowMessage(writing)}
         </p>
+        <PlacementRow writing={writing} className="mt-2.5" />
         <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs font-semibold text-[#75869b]">
-          <span>{formatShortDate(writing.updatedAt)}</span>
+          <span><AppDate value={writing.updatedAt} /></span>
           <span>{getWordCount(writing.content)} words</span>
           <span>{getReadTime(writing.content)} min read</span>
           <span className={`inline-flex items-center gap-1.5 ${statusMeta.chip.split(" ").at(-1)}`}>
@@ -1124,10 +1208,24 @@ export default function StudentWritingWorkspace() {
     }, [loadWritings])
   );
 
+  const editorRef = useRef(null);
+  const titleInputRef = useRef(null);
+
   const resetForm = useCallback(() => {
     setForm(buildEmptyForm());
     setEditorMode("WRITE");
   }, []);
+
+  // "New Writing" clears the editor AND brings it into view + focuses the title,
+  // so the button gives visible feedback instead of silently resetting an
+  // editor that's below the fold.
+  const handleNewWriting = useCallback(() => {
+    resetForm();
+    requestAnimationFrame(() => {
+      editorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      titleInputRef.current?.focus({ preventScroll: true });
+    });
+  }, [resetForm]);
 
   const startEdit = useCallback((writing) => {
     if (!canEditWriting(writing)) {
@@ -1365,7 +1463,7 @@ export default function StudentWritingWorkspace() {
           student={student}
           writings={writings}
           libraryCounts={libraryCounts}
-          onNewDraft={resetForm}
+          onNewDraft={handleNewWriting}
         />
       </div>
 
@@ -1380,16 +1478,19 @@ export default function StudentWritingWorkspace() {
 
       <div className="student-writing-content-grid grid gap-5 xl:grid-cols-[1fr_310px]">
         <main className="student-writing-content-main min-w-0 space-y-5">
-          <WritingEditor
-            form={form}
-            setForm={setForm}
-            editorMode={editorMode}
-            setEditorMode={setEditorMode}
-            activeEditingLabel={activeEditingLabel}
-            saving={saving}
-            onSave={handleSave}
-            onReset={resetForm}
-          />
+          <div ref={editorRef} className="scroll-mt-4">
+            <WritingEditor
+              form={form}
+              setForm={setForm}
+              editorMode={editorMode}
+              setEditorMode={setEditorMode}
+              activeEditingLabel={activeEditingLabel}
+              saving={saving}
+              onSave={handleSave}
+              onReset={resetForm}
+              titleRef={titleInputRef}
+            />
+          </div>
 
           <section className="student-writing-library rounded-xl border border-[#e7dcc8] bg-white p-5 shadow-sm">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -1556,10 +1657,11 @@ export default function StudentWritingWorkspace() {
                 <p className="mt-3 max-w-2xl rounded-lg border border-[#e7dcc8] bg-[#fffdf8] px-4 py-3 text-sm font-semibold leading-6 text-[#52657d]">
                   {getWorkflowMessage(readingWriting)}
                 </p>
+                <PlacementRow writing={readingWriting} className="mt-3" />
                 <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-sm font-semibold text-[#52657d]">
                   <span className="inline-flex items-center gap-1.5">
                     <FaCalendarAlt />
-                    Updated {formatDate(readingWriting.updatedAt)}
+                    Updated <AppDate value={readingWriting.updatedAt} mode="dateTime" />
                   </span>
                   <span className="inline-flex items-center gap-1.5">
                     <FaClock />
@@ -1624,6 +1726,7 @@ export default function StudentWritingWorkspace() {
             onSave={handleEditSave}
             onReset={closeEditDialog}
             resetLabel="Cancel"
+            portfolioOnly={Boolean(editingWriting?.isTransferredOut)}
           />
         </div>
       </Modal>

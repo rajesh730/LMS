@@ -12,6 +12,7 @@ import {
 } from "react-icons/fa";
 import { isTeamEventLike } from "@/lib/eventParticipationFormat";
 import AlertBanner from "@/components/ui/AlertBanner";
+import AppDate from "@/components/common/AppDate";
 
 function buildIndividualEntries(requests = []) {
   const buckets = new Map();
@@ -314,10 +315,7 @@ export default function EventParticipantsView({ event, onBack }) {
                         <div className="flex items-center gap-2 text-slate-400 text-xs mb-1">
                           <FaCalendarAlt className="text-slate-500" />
                           <span>
-                            Joined{" "}
-                            {participant.joinedAt
-                              ? new Date(participant.joinedAt).toLocaleDateString()
-                              : "N/A"}
+                            Joined <AppDate value={participant.joinedAt} fallback="N/A" />
                           </span>
                         </div>
                         {participant.notes && (

@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
 import mongoose from "mongoose";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import Student from "@/models/Student";
 import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
@@ -9,6 +7,7 @@ import MagazineIssue from "@/models/MagazineIssue";
 import { publishWorkIndicatorsUpdate } from "@/lib/workIndicatorRealtime";
 import { notifySchoolMagazineSubmitted } from "@/lib/magazineNotifications";
 import { normalizeWritingCategory } from "@/lib/writingCategories";
+import { requireApiSession } from "@/lib/authz";
 
 function buildStudentLookup(session) {
   return {
@@ -40,13 +39,71 @@ function resetReviewStateIfFullyWithdrawn(article) {
   article.reviewNote = "";
 }
 
+// Handles student actions on a piece written at a school she has since left.
+// The piece is portfolio-owned now: she edits/hides/shows it directly, it never
+// re-enters a school review queue, and the origin school's magazine archive is
+// only touched when she explicitly hides or deletes the piece.
+async function handleTransferredOutWriting({ article, action, body, student }) {
+  if (action === "MAKE_PRIVATE") {
+    const previousMagazineIssue = article.magazineIssue;
+    article.showOnSchoolWall = false;
+    article.isPublished = false;
+    article.isFeatured = false;
+    article.isMagazinePublished = false;
+    article.isGlobalWallPublished = false;
+    article.publishedAt = null;
+    article.magazinePublishedAt = null;
+    article.magazineIssue = null;
+    article.magazineIssueAssignedAt = null;
+    await article.save();
+
+    if (previousMagazineIssue) {
+      await MagazineIssue.updateOne(
+        { _id: previousMagazineIssue, school: article.school },
+        { $pull: { articles: article._id } }
+      );
+    }
+
+    return NextResponse.json({ message: "Writing hidden from your portfolio", article });
+  }
+
+  // Restore a previously hidden portfolio piece to public visibility.
+  if (action === "RELEASE_SCHOOL_WALL" || action === "SHOW_PORTFOLIO") {
+    article.status = "APPROVED";
+    article.isPublished = true;
+    article.publishedAt = article.publishedAt || new Date();
+    article.showOnSchoolWall = false;
+    await article.save();
+    return NextResponse.json({ message: "Writing shown on your portfolio", article });
+  }
+
+  // Default: edit the content of her own portfolio piece.
+  const nextTitle = String(body.title || "").trim();
+  const nextContent = String(body.content || "").trim();
+  const nextCategory = normalizeWritingCategory(body.category || article.category);
+
+  if (!nextTitle || !nextContent) {
+    return NextResponse.json(
+      { message: "Title and content are required" },
+      { status: 400 }
+    );
+  }
+
+  article.title = nextTitle;
+  article.content = nextContent;
+  article.category = nextCategory;
+  // Stays in her portfolio; never re-attaches to a school wall or review queue.
+  article.showOnSchoolWall = false;
+  article.isGlobalWallPublished = false;
+  await article.save();
+
+  return NextResponse.json({ message: "Writing updated", article });
+}
+
 export async function PATCH(request, props) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session || session.user.role !== "STUDENT") {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    }
+    const { session, error } = await requireApiSession(["STUDENT"]);
+    if (error) return error;
 
     await connectDB();
 
@@ -69,10 +126,11 @@ export async function PATCH(request, props) {
       );
     }
 
+    // Match by author only — her writing follows her across schools, so she keeps
+    // full control of pieces written at a school she has since left.
     const article = await SchoolMagazineArticle.findOne({
       _id: params.id,
       authorStudent: student._id,
-      school: student.school,
       isDeleted: { $ne: true },
     });
 
@@ -85,6 +143,16 @@ export async function PATCH(request, props) {
 
     const body = await request.json();
     const action = String(body.action || "").toUpperCase();
+
+    // Piece written at a school she has left: it's now a portfolio-owned item.
+    // She edits/hides/shows it directly with no school re-review (there is no
+    // school to moderate it anymore); it never re-attaches to a school wall.
+    const isTransferredOut =
+      String(article.school || "") !== String(student.school || "");
+
+    if (isTransferredOut) {
+      return handleTransferredOutWriting({ article, action, body, student });
+    }
 
     if (action === "MAKE_PRIVATE") {
       const previousMagazineIssue = article.magazineIssue;
@@ -362,10 +430,11 @@ export async function DELETE(request, props) {
     }
 
     const params = await props.params;
+    // Author-only match: she can delete her own writing from any school she
+    // attended, including ones she has transferred away from.
     const article = await SchoolMagazineArticle.findOne({
       _id: params.id,
       authorStudent: student._id,
-      school: student.school,
       isDeleted: { $ne: true },
     });
 
@@ -395,7 +464,7 @@ export async function DELETE(request, props) {
 
     if (previousMagazineIssue) {
       await MagazineIssue.updateOne(
-        { _id: previousMagazineIssue, school: student.school },
+        { _id: previousMagazineIssue, school: article.school },
         { $pull: { articles: article._id } }
       );
     }

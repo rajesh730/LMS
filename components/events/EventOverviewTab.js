@@ -6,11 +6,8 @@ import {
   FaSchool,
   FaTrophy,
 } from "react-icons/fa";
-import {
-  formatShortDate,
-  getEventStage,
-  isDatePast,
-} from "@/lib/eventUiStatus";
+import { getEventStage, isDatePast } from "@/lib/eventUiStatus";
+import AppDate from "@/components/common/AppDate";
 import {
   formatEventWorkflowStatus,
   getEventNextActionLabel,
@@ -86,7 +83,7 @@ export default function EventOverviewTab({
             <p className="mt-2 text-sm opacity-90">{nextAction}</p>
           </div>
           <div className="rounded-lg border border-current/20 bg-white/70 px-4 py-3 text-sm font-black">
-            Deadline: {formatShortDate(event.registrationDeadline)}
+            Deadline: <AppDate value={event.registrationDeadline} fallback="Not set" />
           </div>
         </div>
       </div>
@@ -122,7 +119,7 @@ export default function EventOverviewTab({
                     <div className="flex items-center justify-between gap-4">
                       <p className="font-black text-[#17120a]">{label}</p>
                       <p className="text-xs font-bold text-[#75869b]">
-                        {date ? formatShortDate(date) : complete ? "Done" : "Pending"}
+                        {date ? <AppDate value={date} /> : complete ? "Done" : "Pending"}
                       </p>
                     </div>
                     {label === "Registration Closed" && (

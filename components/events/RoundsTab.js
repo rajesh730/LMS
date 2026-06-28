@@ -17,6 +17,7 @@ import {
   FaUsers,
 } from "react-icons/fa";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import AppDate from "@/components/common/AppDate";
 import { getEventStartState } from "@/lib/eventStartRules";
 
 const NON_FINAL_STATUS_BUTTONS = [
@@ -45,15 +46,6 @@ function label(value) {
   if (value === "NOT_ATTEMPTED") return "Not Attempted";
   if (value === "SHORTLIST_PUBLISHED") return "Shortlist Published";
   return String(value || "").replaceAll("_", " ");
-}
-
-function formatDate(value) {
-  if (!value) return "Not set";
-  return new Date(value).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
 }
 
 function buildRoundForm(round) {
@@ -648,7 +640,7 @@ export default function RoundsTab({
                         </div>
                       </td>
                       <td className="px-4 py-4 text-sm font-bold text-[#52657d]">
-                        {formatDate(round.date)}
+                        <AppDate value={round.date} fallback="Not set" />
                       </td>
                       <td className="px-4 py-4 text-sm text-[#52657d]">
                         <strong className="block text-[#17120a]">{participantCount}</strong>
@@ -748,7 +740,7 @@ export default function RoundsTab({
                 </span>
               </div>
               <p className="mt-2 text-xs font-bold text-[#52657d]">
-                Date: {formatDate(selectedRound.date)}
+                Date: <AppDate value={selectedRound.date} fallback="Not set" />
               </p>
             </div>
             <div className="flex flex-wrap gap-2 lg:max-w-[720px]">

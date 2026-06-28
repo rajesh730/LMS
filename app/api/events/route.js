@@ -18,6 +18,7 @@ import { buildSchoolParticipationPresentation } from "@/lib/participationPresent
 import { isTeamEventLike, resolveParticipationFormat as resolveParticipationFormatFromRecord } from "@/lib/eventParticipationFormat";
 import { publishEventRealtimeUpdate } from "@/lib/eventRealtime";
 import { ensureStudentEventNotification } from "@/lib/studentEventNotifications";
+import { ensureActiveAcademicYear } from "@/lib/studentEnrollment";
 import {
   getRegistrationWorkflowStatus,
   normalizeEventWorkflowStatus,
@@ -186,6 +187,11 @@ export async function POST(req) {
 
     const ownerId = normalizedScope === "SCHOOL" ? school : session.user.id;
     const ownerType = normalizedScope === "SCHOOL" ? "SCHOOL" : "PLATFORM";
+    // Stamp school events with the owning school's current academic session.
+    const eventAcademicYear =
+      isSchoolOwnedEvent && school
+        ? await ensureActiveAcademicYear(school)
+        : null;
     const resolvedRegistrationMode =
       resolvedParticipationFormat === "TEAM"
         ? "THROUGH_SCHOOL"
@@ -200,6 +206,8 @@ export async function POST(req) {
       date,
       createdBy: session.user.id,
       school,
+      academicYear: eventAcademicYear?.year || "",
+      academicYearStart: eventAcademicYear?.yearStart ?? null,
       eventScope: normalizedScope,
       ownerType,
       ownerId,

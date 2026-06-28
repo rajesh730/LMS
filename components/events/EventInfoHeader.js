@@ -14,17 +14,13 @@ import {
   getEventNextActionLabel,
   getEventWorkflowStatus,
 } from "@/lib/eventWorkflow";
+import useCalendarPreference from "@/lib/useCalendarPreference";
+import { formatDate as formatCalendarDate } from "@/lib/nepaliDate";
 
 export default function EventInfoHeader({ event, capacityInfo }) {
-  const formatDate = (date, options = {}) => {
-    if (!date) return "No deadline";
-    return new Date(date).toLocaleDateString("en-US", {
-      month: "long",
-      day: "numeric",
-      year: "numeric",
-      ...options,
-    });
-  };
+  const { calendar } = useCalendarPreference();
+  const formatDate = (date) =>
+    date ? formatCalendarDate(date, calendar) : "No deadline";
   const formatTime = (date) =>
     date
       ? new Date(date).toLocaleTimeString("en-US", {

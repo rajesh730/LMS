@@ -19,6 +19,8 @@ import {
   FaUserFriends,
 } from "react-icons/fa";
 import { buildGradeLabels, normalizeGradeValue } from "@/lib/schoolGrades";
+import useCalendarPreference from "@/lib/useCalendarPreference";
+import { formatDateTime } from "@/lib/nepaliDate";
 import EmptyState from "@/components/EmptyState";
 import PaginationControls from "@/components/PaginationControls";
 import AlertBanner from "@/components/ui/AlertBanner";
@@ -30,6 +32,7 @@ export default function NoticeManager({
   subtitle = "Manage and publish notices for your school",
   fixedAudience = null,
 }) {
+  const { calendar } = useCalendarPreference();
   const [notices, setNotices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -364,15 +367,7 @@ export default function NoticeManager({
     );
   };
 
-  const formatDate = (date) => {
-    return new Date(date).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
+  const formatDate = (date) => formatDateTime(date, calendar);
 
   const getStatusLabel = (notice) => {
     return notice.status === "DRAFT" ? "Draft" : "Published";

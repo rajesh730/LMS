@@ -1,6 +1,4 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import connectDB from '@/lib/db';
 import Student from '@/models/Student';
 import User from '@/models/User';
@@ -8,13 +6,13 @@ import bcrypt from 'bcryptjs';
 import { generateStudentPassword } from '@/lib/passwordGenerator';
 import { generateUniqueStudentUsername } from '@/lib/studentIdentity';
 import { normalizeGradeValue } from '@/lib/schoolGrades';
+import { getSessionSchoolId, requireApiSession } from '@/lib/authz';
 
 export async function PUT(req, { params }) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session || session.user.role !== 'SCHOOL_ADMIN') {
-            return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
-        }
+        const { session, error } = await requireApiSession(['SCHOOL_ADMIN']);
+        if (error) return error;
+        const schoolId = getSessionSchoolId(session);
 
         const { id } = await params;
         const body = await req.json();
@@ -32,7 +30,7 @@ export async function PUT(req, { params }) {
         // 1. Find the student first to ensure they exist and belong to this school
         const existingStudent = await Student.findOne({
             _id: id,
-            school: session.user.id,
+            school: schoolId,
             isDeleted: { $ne: true },
         });
         if (!existingStudent) {
@@ -51,7 +49,7 @@ export async function PUT(req, { params }) {
                 normalizedGrade !== existingStudent.grade)
         ) {
             const rollCheck = await Student.findOne({
-                school: session.user.id,
+                school: schoolId,
                 grade: normalizedGrade,
                 rollNumber: normalizedRollNumber,
                 isDeleted: { $ne: true },
@@ -129,7 +127,7 @@ export async function PUT(req, { params }) {
                 firstName,
                 grade: normalizedGrade,
                 rollNumber: normalizedRollNumber,
-                school: session.user.id,
+                school: schoolId,
                 excludeId: id,
             });
             updateData.password = await bcrypt.hash(`${cleanFirstName}@123`, 10);
@@ -168,16 +166,15 @@ export async function PUT(req, { params }) {
 
 export async function DELETE(req, { params }) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session || session.user.role !== 'SCHOOL_ADMIN') {
-            return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
-        }
+        const { session, error } = await requireApiSession(['SCHOOL_ADMIN']);
+        if (error) return error;
+        const schoolId = getSessionSchoolId(session);
 
         const { id } = await params;
 
         await connectDB();
         const deletedStudent = await Student.findOneAndUpdate(
-            { _id: id, school: session.user.id, isDeleted: { $ne: true } },
+            { _id: id, school: schoolId, isDeleted: { $ne: true } },
             {
                 isDeleted: true,
                 deletedAt: new Date(),
@@ -204,17 +201,16 @@ export async function DELETE(req, { params }) {
 
 export async function PATCH(req, { params }) {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session || session.user.role !== 'SCHOOL_ADMIN') {
-            return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
-        }
+        const { session, error } = await requireApiSession(['SCHOOL_ADMIN']);
+        if (error) return error;
+        const schoolId = getSessionSchoolId(session);
 
         const { id } = await params;
 
         await connectDB();
         const studentDoc = await Student.findOne({
             _id: id,
-            school: session.user.id,
+            school: schoolId,
             isDeleted: { $ne: true },
         });
 

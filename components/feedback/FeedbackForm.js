@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { FaPaperPlane, FaStar } from "react-icons/fa";
 import AlertBanner from "@/components/ui/AlertBanner";
 import LoadingState from "@/components/ui/LoadingState";
+import AppDate from "@/components/common/AppDate";
 
 const TYPE_OPTIONS = [
   ["GENERAL", "General"],
@@ -18,17 +19,6 @@ const initialForm = {
   title: "",
   message: "",
 };
-
-function formatDate(value) {
-  if (!value) return "";
-  return new Date(value).toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
 
 export default function FeedbackForm({ audience = "school" }) {
   const [form, setForm] = useState(initialForm);
@@ -223,7 +213,7 @@ export default function FeedbackForm({ audience = "school" }) {
                       {item.rating}
                     </span>
                   )}
-                  <span>{formatDate(item.createdAt)}</span>
+                  <span><AppDate value={item.createdAt} mode="dateTime" /></span>
                 </div>
               </article>
             ))}

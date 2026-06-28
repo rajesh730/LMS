@@ -7,6 +7,13 @@ import Student from "@/models/Student";
 import ParticipationRequest from "@/models/ParticipationRequest";
 import { syncApprovedRequestsToRoundOne } from "@/lib/competitionFlow";
 import { getRegistrationLockMessage } from "@/lib/eventWorkflow";
+import {
+  acquireEventCapacityLock,
+  EventCapacityBusyError,
+  releaseEventCapacityLock,
+} from "@/lib/eventCapacityLock";
+
+const ACTIVE_REQUEST_STATUSES = ["PENDING", "APPROVED", "ENROLLED"];
 
 /**
  * POST /api/events/[id]/manage/student/add
@@ -14,6 +21,8 @@ import { getRegistrationLockMessage } from "@/lib/eventWorkflow";
  * Only admin can do this
  */
 export async function POST(req, { params }) {
+  let capacityLock = null;
+  let lockedEventId = null;
   try {
     const session = await getServerSession(authOptions);
 
@@ -26,7 +35,7 @@ export async function POST(req, { params }) {
 
     await dbConnect();
 
-    const { id: eventId } = params;
+    const { id: eventId } = await params;
     const body = await req.json();
     const { studentIds } = body;
 
@@ -38,11 +47,15 @@ export async function POST(req, { params }) {
     }
 
     // Get event
-    const event = await Event.findById(eventId);
-
-    if (!event) {
+    const eventExists = await Event.exists({ _id: eventId });
+    if (!eventExists) {
       return NextResponse.json({ message: "Event not found" }, { status: 404 });
     }
+
+    const lockResult = await acquireEventCapacityLock(eventId);
+    capacityLock = lockResult.token;
+    lockedEventId = eventId;
+    const event = lockResult.event;
 
     // Block new enrollments once the competition has started or the deadline
     // has passed — the participant list must be frozen at that point.
@@ -88,10 +101,10 @@ export async function POST(req, { params }) {
 
         // Check capacity
         if (event.maxParticipants) {
-          const totalEnrolled = event.participants.reduce(
-            (sum, p) => sum + (p.students ? p.students.length : 0),
-            0
-          );
+          const totalEnrolled = await ParticipationRequest.countDocuments({
+            event: eventId,
+            status: { $in: ACTIVE_REQUEST_STATUSES },
+          });
 
           if (totalEnrolled >= event.maxParticipants) {
             failed.push({
@@ -104,13 +117,11 @@ export async function POST(req, { params }) {
 
         // Check per-school capacity
         if (event.maxParticipantsPerSchool) {
-          const schoolParticipant = event.participants.find(
-            (p) => p.school.toString() === student.school._id.toString()
-          );
-
-          const schoolCount = schoolParticipant
-            ? schoolParticipant.students.length
-            : 0;
+          const schoolCount = await ParticipationRequest.countDocuments({
+            event: eventId,
+            school: student.school._id,
+            status: { $in: ACTIVE_REQUEST_STATUSES },
+          });
 
           if (schoolCount >= event.maxParticipantsPerSchool) {
             failed.push({
@@ -193,10 +204,21 @@ export async function POST(req, { params }) {
       { status: 200 }
     );
   } catch (error) {
+    if (error instanceof EventCapacityBusyError) {
+      return NextResponse.json({ message: error.message }, { status: 409 });
+    }
     console.error("Error adding students:", error);
     return NextResponse.json(
       { message: "Internal server error", error: error.message },
       { status: 500 }
     );
+  } finally {
+    if (capacityLock) {
+      await releaseEventCapacityLock(lockedEventId, capacityLock).catch(
+        (releaseError) => {
+          console.error("Failed to release event capacity lock:", releaseError);
+        }
+      );
+    }
   }
 }

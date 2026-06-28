@@ -46,6 +46,16 @@ const EventSchema = new mongoose.Schema(
       ref: "User",
       default: null, // null = global event
     },
+    // For SCHOOL-scoped events: the owning school's academic session at creation
+    // time. Lets year-by-year reporting be exact instead of date-bucketed.
+    academicYear: {
+      type: String,
+      default: "",
+    },
+    academicYearStart: {
+      type: Number,
+      default: null,
+    },
     status: {
       type: String,
       enum: ["PENDING", "APPROVED", "REJECTED"],
@@ -151,6 +161,20 @@ const EventSchema = new mongoose.Schema(
     maxParticipantsPerSchool: {
       type: Number,
       default: null, // null = unlimited
+    },
+    // Distributed mutex for participation mutations. Capacity checks and writes
+    // must be serialized because ParticipationRequest remains the source of truth.
+    capacityMutationLock: {
+      token: {
+        type: String,
+        default: null,
+        select: false,
+      },
+      expiresAt: {
+        type: Date,
+        default: null,
+        select: false,
+      },
     },
     minTeamSize: {
       type: Number,

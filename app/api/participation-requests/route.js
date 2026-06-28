@@ -10,6 +10,11 @@ import {
   internalServerError,
 } from "@/lib/apiResponse";
 import { gradeListContains } from "@/lib/schoolGrades";
+import {
+  acquireEventCapacityLock,
+  EventCapacityBusyError,
+  releaseEventCapacityLock,
+} from "@/lib/eventCapacityLock";
 
 const ACTIVE_REQUEST_STATUSES = ["APPROVED", "ENROLLED"];
 
@@ -71,6 +76,8 @@ export async function GET(req) {
 
 // PATCH: Approve or reject participation request
 export async function PATCH(req) {
+  let capacityLock = null;
+  let lockedEventId = null;
   try {
     const session = await getServerSession(authOptions);
     if (
@@ -95,7 +102,7 @@ export async function PATCH(req) {
       return validationError("Invalid request parameters");
     }
 
-    const request = await ParticipationRequest.findById(requestId)
+    let request = await ParticipationRequest.findById(requestId)
       .populate("student")
       .populate("event");
     if (!request) {
@@ -117,6 +124,23 @@ export async function PATCH(req) {
     }
 
     if (action === "APPROVE") {
+      lockedEventId = request.event._id;
+      const lockResult = await acquireEventCapacityLock(lockedEventId);
+      capacityLock = lockResult.token;
+
+      // Refresh after acquiring the lock so status and capacity decisions are
+      // based on state newer than any preceding participation mutation.
+      request = await ParticipationRequest.findById(requestId)
+        .populate("student")
+        .populate("event");
+      if (!request) {
+        return notFoundError("Participation request");
+      }
+      if (request.status !== "PENDING") {
+        return validationError(
+          `Cannot change status of a ${request.status.toLowerCase()} request`
+        );
+      }
       // ===== VALIDATION 1: Grade Eligibility =====
       const validationErrors = [];
 
@@ -207,12 +231,23 @@ export async function PATCH(req) {
       updatedRequest
     );
   } catch (error) {
+    if (error instanceof EventCapacityBusyError) {
+      return validationError(error.message);
+    }
     console.error("PATCH Request Error:", {
       message: error.message,
       stack: error.stack,
       name: error.name,
     });
     return internalServerError(error.message || "Internal server error");
+  } finally {
+    if (capacityLock) {
+      await releaseEventCapacityLock(lockedEventId, capacityLock).catch(
+        (releaseError) => {
+          console.error("Failed to release event capacity lock:", releaseError);
+        }
+      );
+    }
   }
 }
 

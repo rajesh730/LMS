@@ -17,6 +17,30 @@ const SchoolMagazineArticleSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
+    // Authoring-era snapshot: where + when this was written, frozen at creation.
+    // `school` (the ref above) remains the owning/origin school and never moves on
+    // transfer; these fields just let every surface label the piece as history
+    // ("written at X · Grade 9 · 2026") instead of a stale current affiliation.
+    // See docs/ACADEMIC_YEAR_AND_PORTFOLIO.md.
+    authorSchoolNameSnapshot: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    authorGrade: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    authorAcademicYear: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    authorAcademicYearStart: {
+      type: Number,
+      default: null,
+    },
     title: {
       type: String,
       required: true,

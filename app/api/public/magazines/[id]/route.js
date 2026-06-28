@@ -4,6 +4,7 @@ import connectDB from "@/lib/db";
 import MagazineIssue from "@/models/MagazineIssue";
 import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
 import { serializeMagazineIssue } from "@/lib/magazineIssues";
+import { serializeAuthoredEra } from "@/lib/writingProvenance";
 
 function serializeArticle(article) {
   return {
@@ -13,6 +14,7 @@ function serializeArticle(article) {
     category: article.category,
     publishedAt:
       article.publishedAt || article.magazinePublishedAt || article.updatedAt,
+    ...serializeAuthoredEra(article),
     authorStudent: article.authorStudent
       ? {
           id: String(article.authorStudent._id),

@@ -10,7 +10,8 @@ import {
 } from "react-icons/fa";
 import { useSession } from "next-auth/react";
 import { gradeListContains, normalizeGradeValue } from "@/lib/schoolGrades";
-import { formatEventDate, isDatePast } from "@/lib/eventUiStatus";
+import { isDatePast } from "@/lib/eventUiStatus";
+import AppDate from "@/components/common/AppDate";
 import { isTeamEventLike } from "@/lib/eventParticipationFormat";
 import AlertBanner from "@/components/ui/AlertBanner";
 
@@ -1137,11 +1138,8 @@ const EventParticipationForm = memo(function EventParticipationForm({
               </div>
               {registeredAt && (
                 <div className="mt-2 text-xs text-[#52657d]">
-                  Last saved registration: {formatEventDate(registeredAt)}{" "}
-                  {registeredAt.toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+                  Last saved registration:{" "}
+                  <AppDate value={registeredAt} mode="dateTime" />
                 </div>
               )}
               {savedTeamCount > 0 && (

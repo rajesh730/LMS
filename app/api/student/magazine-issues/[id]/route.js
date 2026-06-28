@@ -7,6 +7,7 @@ import Student from "@/models/Student";
 import MagazineIssue from "@/models/MagazineIssue";
 import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
 import { serializeMagazineIssue } from "@/lib/magazineIssues";
+import { serializeAuthoredEra } from "@/lib/writingProvenance";
 
 function buildStudentLookup(session) {
   return {
@@ -28,6 +29,7 @@ function serializeArticle(article) {
     content: article.content,
     category: article.category,
     publishedAt: article.publishedAt || article.updatedAt,
+    ...serializeAuthoredEra(article),
     authorStudent: article.authorStudent
       ? {
           id: String(article.authorStudent._id),

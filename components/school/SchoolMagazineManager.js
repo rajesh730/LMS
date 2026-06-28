@@ -17,31 +17,12 @@ import SchoolMagazineReviewManager from "@/components/school/SchoolMagazineRevie
 import AlertBanner from "@/components/ui/AlertBanner";
 import LoadingState from "@/components/ui/LoadingState";
 import WritingContent from "@/components/WritingContent";
+import AppDate from "@/components/common/AppDate";
 import useWorkIndicators from "@/lib/useWorkIndicators";
 import { getWritingCategoryLabel } from "@/lib/writingCategories";
 
 function getReadMinutes(content) {
   return Math.max(1, Math.ceil(wordCount(content) / 180));
-}
-
-function formatDate(value) {
-  if (!value) return "";
-  return new Date(value).toLocaleString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function formatShortDate(value) {
-  if (!value) return "";
-  return new Date(value).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
 }
 
 function formatIssueMonth(issue) {
@@ -283,7 +264,7 @@ function WritingTable({ articles, busyId, emptyState, mode, onRead, onAction }) 
             <div className="min-w-0">
               <p className="truncate font-black text-[#17120a]">{article.title}</p>
               <p className="mt-1 text-[11px] font-semibold text-[#52657d]">
-                Posted {formatDate(article.submittedAt || article.updatedAt)}
+                Posted <AppDate value={article.submittedAt || article.updatedAt} mode="dateTime" />
               </p>
             </div>
             <span className="truncate font-bold text-[#17120a]">
@@ -468,6 +449,16 @@ export default function SchoolMagazineManager() {
   useEffect(() => {
     void loadOverview();
   }, [loadOverview]);
+
+  // Stable identity so the child's load effect isn't re-triggered on every
+  // parent re-render (the parent re-renders several times as its own fetches
+  // resolve). Only a { refresh: true } report should pull fresh overview data.
+  const handleWallStatsChange = useCallback(
+    ({ refresh } = {}) => {
+      if (refresh) void loadOverview();
+    },
+    [loadOverview]
+  );
 
   useEffect(() => {
     async function loadGrades() {
@@ -765,9 +756,7 @@ export default function SchoolMagazineManager() {
               selectedGrade={activeGrade}
               onGradeChange={setActiveGrade}
               providedGradeOptions={gradeOptions}
-              onStatsChange={({ refresh }) => {
-                if (refresh) void loadOverview();
-              }}
+              onStatsChange={handleWallStatsChange}
             />
           ) : activeTab === "magazine" ? (
             <PublishingPanel
@@ -845,7 +834,7 @@ export default function SchoolMagazineManager() {
                 <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px] font-bold text-[#75869b]">
                   <span className="inline-flex items-center gap-1.5">
                     <FaCalendarAlt />
-                    Posted {formatShortDate(readingArticle.submittedAt || readingArticle.updatedAt)}
+                    Posted <AppDate value={readingArticle.submittedAt || readingArticle.updatedAt} />
                   </span>
                   <span className="inline-flex items-center gap-1.5">
                     <FaBookOpen />
@@ -1022,7 +1011,7 @@ function PublishingPanel({
                   <div className="mt-3 flex flex-wrap gap-2 text-xs font-black text-[#52657d]">
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-emerald-700">
                       <FaCalendarAlt />
-                      {formatShortDate(selectedIssue.publishedAt || selectedIssue.weekStart)}
+                      <AppDate value={selectedIssue.publishedAt || selectedIssue.weekStart} />
                     </span>
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-purple-50 px-3 py-1 text-purple-700">
                       <FaBookOpen />
@@ -1166,7 +1155,7 @@ function PublishingPanel({
                       </span>
                     </div>
                     <div className="mt-2 text-xs font-bold text-[#52657d]">
-                      {formatShortDate(issue.publishedAt || issue.weekStart)}
+                      <AppDate value={issue.publishedAt || issue.weekStart} />
                     </div>
                     <div className="mt-3 inline-flex rounded-full bg-white px-3 py-1 text-[11px] font-black uppercase text-purple-700 ring-1 ring-inset ring-purple-100">
                       {issue.articleCount || 0} writings

@@ -10,6 +10,7 @@ import {
 } from "react-icons/fi";
 import AlertBanner from "@/components/ui/AlertBanner";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import AppDate from "@/components/common/AppDate";
 
 const SUMMARY_FIELDS = [
   ["admitted", "Admitted"],
@@ -19,15 +20,6 @@ const SUMMARY_FIELDS = [
   ["transferredIn", "Transferred in"],
   ["transferredOut", "Transferred out"],
 ];
-
-function formatDate(value) {
-  if (!value) return "";
-  return new Date(value).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
 
 export default function AcademicYearManager() {
   const [loading, setLoading] = useState(true);
@@ -169,7 +161,7 @@ export default function AcademicYearManager() {
 
   if (loading) {
     return (
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6">
+      <div className="rounded-2xl border border-[#e6eaf7] bg-white p-6 shadow-sm">
         <div className="pravyo-skeleton h-6 w-48 rounded" />
         <div className="pravyo-skeleton mt-4 h-20 w-full rounded" />
       </div>
@@ -189,38 +181,38 @@ export default function AcademicYearManager() {
       )}
 
       {/* Current year + calendar + promote */}
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6">
-        <h2 className="mb-5 flex items-center gap-2 text-xl font-semibold text-white">
-          <FiCalendar className="text-blue-400" />
+      <div className="rounded-2xl border border-[#e6eaf7] bg-white p-6 shadow-sm">
+        <h2 className="mb-5 flex items-center gap-2 text-xl font-bold text-[#10142f]">
+          <FiCalendar className="text-[var(--brand-primary)]" />
           Academic Year
         </h2>
 
         <div className="grid gap-4 md:grid-cols-[1fr_1fr_auto] md:items-end">
-          <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+          <div className="rounded-2xl border border-[#e6eaf7] bg-[#f8fbff] p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#75869b]">
               Current session
             </p>
-            <p className="mt-2 text-2xl font-bold text-white">
+            <p className="mt-2 text-2xl font-bold text-[#10142f]">
               {current?.year || "—"}
             </p>
-            <p className="mt-1 text-sm text-slate-400">
+            <p className="mt-1 text-sm text-[#52657d]">
               Next will be {data?.upcoming?.year || "—"} after promotion.
             </p>
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-medium text-slate-300">
+            <label className="mb-2 block text-sm font-medium text-[#24314d]">
               Calendar
             </label>
             <select
               value={calendar}
               onChange={(e) => setCalendar(e.target.value)}
-              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-white"
+              className="w-full rounded-xl border border-[#dbe5f4] bg-white px-3 py-2.5 text-[#10142f]"
             >
               <option value="AD">AD (e.g. 2025-26)</option>
               <option value="BS">BS (e.g. 2082/83)</option>
             </select>
-            <p className="mt-2 text-xs text-slate-500">
+            <p className="mt-2 text-xs text-[#75869b]">
               Controls how academic years are displayed for your school.
             </p>
           </div>
@@ -229,17 +221,17 @@ export default function AcademicYearManager() {
             type="button"
             onClick={saveCalendar}
             disabled={savingCalendar || calendar === data?.calendar}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 font-medium text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-slate-700"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 font-medium text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-slate-300"
           >
             <FiSave />
             {savingCalendar ? "Saving..." : "Save"}
           </button>
         </div>
 
-        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#e6eaf7] bg-[#f8fbff] p-4">
           <div>
-            <p className="text-sm font-semibold text-white">Promote to next year</p>
-            <p className="mt-1 text-xs text-slate-400">
+            <p className="text-sm font-bold text-[#10142f]">Promote to next year</p>
+            <p className="mt-1 text-xs text-[#52657d]">
               Move every grade up one level for {data?.upcoming?.year || "the next year"}.
               You can keep repeating students in their current grade, and the top
               grade graduates.
@@ -257,53 +249,60 @@ export default function AcademicYearManager() {
       </div>
 
       {/* History */}
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-6">
-        <h2 className="mb-1 flex items-center gap-2 text-xl font-semibold text-white">
-          <FiClock className="text-amber-300" />
+      <div className="rounded-2xl border border-[#e6eaf7] bg-white p-6 shadow-sm">
+        <h2 className="mb-1 flex items-center gap-2 text-xl font-bold text-[#10142f]">
+          <FiClock className="text-amber-500" />
           Academic Year History
         </h2>
-        <p className="mb-5 text-sm text-slate-400">
+        <p className="mb-5 text-sm text-[#52657d]">
           What happened each academic year — admissions, promotions, retentions,
           graduations, and transfers.
         </p>
 
         {(data?.history || []).length === 0 ? (
-          <p className="text-sm text-slate-500">No academic years recorded yet.</p>
+          <p className="text-sm text-[#75869b]">No academic years recorded yet.</p>
         ) : (
           <div className="space-y-3">
             {data.history.map((year) => (
               <div
                 key={year._id}
-                className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4"
+                className="rounded-2xl border border-[#e6eaf7] bg-[#f8fbff] p-4"
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    <span className="text-base font-bold text-white">
+                    <span className="text-base font-bold text-[#10142f]">
                       {year.year}
                     </span>
                     <span
                       className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
                         year.status === "ACTIVE"
-                          ? "bg-emerald-500/15 text-emerald-300"
-                          : "bg-slate-700/40 text-slate-300"
+                          ? "bg-emerald-50 text-emerald-700"
+                          : "bg-slate-100 text-slate-600"
                       }`}
                     >
                       {year.status === "ACTIVE" ? <FiCheckCircle /> : null}
                       {year.status === "ACTIVE" ? "Active" : "Closed"}
                     </span>
                   </div>
-                  <span className="text-xs text-slate-500">
-                    {formatDate(year.startedAt)}
-                    {year.closedAt ? ` – ${formatDate(year.closedAt)}` : ""}
+                  <span className="text-xs text-[#75869b]">
+                    <AppDate value={year.startedAt} />
+                    {year.closedAt ? (
+                      <>
+                        {" – "}
+                        <AppDate value={year.closedAt} />
+                      </>
+                    ) : (
+                      ""
+                    )}
                   </span>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {SUMMARY_FIELDS.map(([key, label]) => (
                     <span
                       key={key}
-                      className="inline-flex items-center gap-1.5 rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-xs text-slate-300"
+                      className="inline-flex items-center gap-1.5 rounded-full border border-[#dbe5f4] bg-white px-3 py-1 text-xs text-[#52657d]"
                     >
-                      <span className="font-bold text-white">
+                      <span className="font-bold text-[#10142f]">
                         {year.summary?.[key] || 0}
                       </span>
                       {label}
@@ -319,13 +318,13 @@ export default function AcademicYearManager() {
       {/* Promotion review modal */}
       {promoteOpen && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center bg-[rgba(16,20,47,0.55)] p-4 backdrop-blur-sm">
-          <div className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-800 px-5 py-4">
+          <div className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-[#e6eaf7] bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-[#e6eaf7] px-5 py-4">
               <div>
-                <h3 className="text-lg font-bold text-white">
+                <h3 className="text-lg font-bold text-[#10142f]">
                   Promote to {preview?.nextYear?.year || "next year"}
                 </h3>
-                <p className="mt-0.5 text-xs text-slate-400">
+                <p className="mt-0.5 text-xs text-[#52657d]">
                   Unchecked students stay in their current grade (repeating). The
                   top grade graduates.
                 </p>
@@ -333,7 +332,7 @@ export default function AcademicYearManager() {
               <button
                 type="button"
                 onClick={() => setPromoteOpen(false)}
-                className="rounded-lg px-3 py-1.5 text-sm font-semibold text-slate-300 hover:bg-slate-800"
+                className="rounded-lg px-3 py-1.5 text-sm font-semibold text-[#52657d] hover:bg-[#f1f5fb]"
               >
                 Close
               </button>
@@ -346,18 +345,49 @@ export default function AcademicYearManager() {
                   <div className="pravyo-skeleton h-16 w-full rounded" />
                 </div>
               ) : promoteResult ? (
-                <div className="space-y-4">
-                  <AlertBanner
-                    type="success"
-                    title="Promotion complete"
-                    message={`${promoteResult.summary.promoted} promoted, ${promoteResult.summary.retained} retained, ${promoteResult.summary.graduated} graduated.`}
-                  />
+                <div className="space-y-5">
+                  <div className="flex flex-col items-center justify-center py-6 text-center">
+                    <div className="relative flex h-24 w-24 items-center justify-center">
+                      <span className="pravyo-success-ring absolute inset-0 rounded-full bg-emerald-500/40" />
+                      <span className="pravyo-success-pop flex h-20 w-20 items-center justify-center rounded-full bg-emerald-500 shadow-[0_10px_30px_rgba(16,185,129,0.5)]">
+                        <svg
+                          viewBox="0 0 24 24"
+                          className="h-10 w-10"
+                          fill="none"
+                          stroke="white"
+                          strokeWidth="3"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path className="pravyo-success-check" d="M5 13l4 4L19 7" />
+                        </svg>
+                      </span>
+                    </div>
+                    <h3 className="pravyo-animate-fade-up mt-5 text-2xl font-bold text-[#10142f]">
+                      Promoted successfully!
+                    </h3>
+                    <p className="pravyo-animate-fade-up mt-1 text-sm text-[#52657d]">
+                      Students advanced to{" "}
+                      {promoteResult.nextYear?.year || "the next session"}.
+                    </p>
+                    <div className="pravyo-animate-fade-up mt-5 flex flex-wrap justify-center gap-2">
+                      <span className="rounded-full bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-700">
+                        {promoteResult.summary.promoted} promoted
+                      </span>
+                      <span className="rounded-full bg-amber-50 px-3 py-1 text-sm font-semibold text-amber-700">
+                        {promoteResult.summary.retained} retained
+                      </span>
+                      <span className="rounded-full bg-blue-50 px-3 py-1 text-sm font-semibold text-[#0a2f66]">
+                        {promoteResult.summary.graduated} graduated
+                      </span>
+                    </div>
+                  </div>
                   {promoteResult.failures?.length > 0 && (
-                    <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
-                      <p className="text-sm font-semibold text-amber-200">
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                      <p className="text-sm font-semibold text-amber-800">
                         {promoteResult.failures.length} student(s) need attention
                       </p>
-                      <ul className="mt-2 space-y-1 text-xs text-amber-100/90">
+                      <ul className="mt-2 space-y-1 text-xs text-amber-700">
                         {promoteResult.failures.map((f) => (
                           <li key={f.id}>
                             {f.name} ({f.grade}, roll {f.rollNumber}) — {f.reason}
@@ -368,7 +398,7 @@ export default function AcademicYearManager() {
                   )}
                 </div>
               ) : preview && preview.totalStudents === 0 ? (
-                <p className="text-sm text-slate-400">
+                <p className="text-sm text-[#52657d]">
                   No active students to promote. Running this will simply open{" "}
                   {preview?.nextYear?.year}.
                 </p>
@@ -383,18 +413,18 @@ export default function AcademicYearManager() {
                       return (
                         <div
                           key={group.grade}
-                          className="rounded-xl border border-slate-800 bg-slate-950/50 p-4"
+                          className="rounded-xl border border-[#e6eaf7] bg-[#f8fbff] p-4"
                         >
                           <div className="flex flex-wrap items-center justify-between gap-2">
-                            <p className="text-sm font-bold text-white">
+                            <p className="text-sm font-bold text-[#10142f]">
                               {group.grade}{" "}
-                              <span className="text-slate-400">→</span>{" "}
+                              <span className="text-[#75869b]">→</span>{" "}
                               {group.graduates ? (
-                                <span className="text-amber-300">Graduates</span>
+                                <span className="text-amber-600">Graduates</span>
                               ) : (
                                 group.nextGrade
                               )}
-                              <span className="ml-2 text-xs font-normal text-slate-500">
+                              <span className="ml-2 text-xs font-normal text-[#75869b]">
                                 {group.count} students
                               </span>
                             </p>
@@ -403,7 +433,7 @@ export default function AcademicYearManager() {
                               onClick={() =>
                                 toggleGradeRetain(group.students, !allRetained)
                               }
-                              className="text-xs font-semibold text-blue-400 hover:text-blue-300"
+                              className="text-xs font-semibold text-[var(--brand-primary)] hover:text-[#0a2f66]"
                             >
                               {allRetained ? "Promote all" : "Retain all"}
                             </button>
@@ -414,22 +444,22 @@ export default function AcademicYearManager() {
                               return (
                                 <label
                                   key={s.id}
-                                  className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-slate-200 hover:bg-slate-800/60"
+                                  className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-[#24314d] hover:bg-[#f1f5fb]"
                                 >
                                   <input
                                     type="checkbox"
                                     checked={!isRetained}
                                     onChange={() => toggleStudent(s.id)}
-                                    className="rounded border-slate-600 bg-slate-800 text-emerald-600"
+                                    className="rounded border-[#cbd5e1] bg-white text-emerald-600"
                                   />
                                   <span className="truncate">
                                     {s.name}
-                                    <span className="ml-1 text-xs text-slate-500">
+                                    <span className="ml-1 text-xs text-[#75869b]">
                                       roll {s.rollNumber}
                                     </span>
                                   </span>
                                   {isRetained && (
-                                    <span className="ml-auto rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-semibold text-amber-300">
+                                    <span className="ml-auto rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
                                       Repeats
                                     </span>
                                   )}
@@ -445,17 +475,17 @@ export default function AcademicYearManager() {
             </div>
 
             {!promoteResult && !previewLoading && (
-              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-800 px-5 py-4">
-                <p className="text-xs text-slate-400">
-                  <span className="font-semibold text-emerald-300">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#e6eaf7] px-5 py-4">
+                <p className="text-xs text-[#52657d]">
+                  <span className="font-semibold text-emerald-600">
                     {promoteCounts.promote}
                   </span>{" "}
                   promote ·{" "}
-                  <span className="font-semibold text-amber-300">
+                  <span className="font-semibold text-amber-600">
                     {promoteCounts.retain}
                   </span>{" "}
                   retain ·{" "}
-                  <span className="font-semibold text-blue-300">
+                  <span className="font-semibold text-[#0a2f66]">
                     {promoteCounts.graduate}
                   </span>{" "}
                   graduate
@@ -464,7 +494,7 @@ export default function AcademicYearManager() {
                   type="button"
                   onClick={() => setConfirmOpen(true)}
                   disabled={promoting}
-                  className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 font-semibold text-white transition hover:bg-emerald-500 disabled:bg-slate-700"
+                  className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 font-semibold text-white transition hover:bg-emerald-500 disabled:bg-slate-300"
                 >
                   <FiArrowUpCircle />
                   Run promotion
@@ -473,7 +503,7 @@ export default function AcademicYearManager() {
             )}
 
             {promoteResult && (
-              <div className="flex justify-end border-t border-slate-800 px-5 py-4">
+              <div className="flex justify-end border-t border-[#e6eaf7] px-5 py-4">
                 <button
                   type="button"
                   onClick={() => setPromoteOpen(false)}

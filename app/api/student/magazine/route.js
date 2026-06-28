@@ -1,13 +1,12 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import Student from "@/models/Student";
-import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
 import MagazineIssue from "@/models/MagazineIssue";
+import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
+import { requireApiSession } from "@/lib/authz";
 import { serializeMagazineIssue } from "@/lib/magazineIssues";
 
-function buildStudentLookup(session) {
+function studentLookup(session) {
   return {
     isDeleted: { $ne: true },
     status: "ACTIVE",
@@ -22,15 +21,11 @@ function buildStudentLookup(session) {
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session || session.user.role !== "STUDENT") {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    }
+    const { session, error } = await requireApiSession(["STUDENT"]);
+    if (error) return error;
 
     await connectDB();
-
-    const student = await Student.findOne(buildStudentLookup(session))
+    const student = await Student.findOne(studentLookup(session))
       .select("_id school name grade rollNumber")
       .lean();
 
@@ -41,55 +36,50 @@ export async function GET() {
       );
     }
 
-    const publishedIssueIds = await MagazineIssue.find({
+    const issues = await MagazineIssue.find({
       school: student.school,
       status: "PUBLISHED",
-    }).distinct("_id");
+    })
+      .sort({ publishedAt: -1, weekStart: -1 })
+      .lean();
+    const issueIds = issues.map((issue) => issue._id);
 
-    const [articles, wallArticles] = await Promise.all([
-      SchoolMagazineArticle.find({
-        school: student.school,
-        isMagazinePublished: true,
-        magazineIssue: { $in: publishedIssueIds },
-        isDeleted: { $ne: true },
-      })
-        .populate("authorStudent", "name grade rollNumber")
-        .populate("magazineIssue")
-        .sort({ publishedAt: -1, updatedAt: -1 })
-        .lean(),
-      SchoolMagazineArticle.find({
-        school: student.school,
-        status: { $in: ["SUBMITTED", "APPROVED"] },
-        showOnSchoolWall: { $ne: false },
-        isDeleted: { $ne: true },
-      })
-        .populate("authorStudent", "name grade rollNumber")
-        .populate("magazineIssue")
-        .sort({ submittedAt: -1, updatedAt: -1 })
-        .limit(100)
-        .lean(),
-    ]);
+    const articles = issueIds.length
+      ? await SchoolMagazineArticle.find({
+          school: student.school,
+          magazineIssue: { $in: issueIds },
+          isMagazinePublished: true,
+          isDeleted: { $ne: true },
+        })
+          .select("magazineIssue title category")
+          .sort({ magazinePublishedAt: 1, publishedAt: 1 })
+          .lean()
+      : [];
 
-    const serializeArticle = (article) => ({
-      id: String(article._id),
-      title: article.title,
-      content: article.content,
-      category: article.category,
-      publishedAt: article.publishedAt || article.submittedAt || article.updatedAt,
-      magazineIssue: serializeMagazineIssue(article.magazineIssue),
-      authorStudent: article.authorStudent
-        ? {
-            id: String(article.authorStudent._id),
-            name: article.authorStudent.name,
-            grade: article.authorStudent.grade,
-            rollNumber: article.authorStudent.rollNumber,
-          }
-        : null,
-    });
+    const articlesByIssue = new Map();
+    for (const article of articles) {
+      const key = String(article.magazineIssue);
+      const group = articlesByIssue.get(key) || [];
+      group.push(article);
+      articlesByIssue.set(key, group);
+    }
 
     return NextResponse.json({
-      articles: articles.map(serializeArticle),
-      wallArticles: wallArticles.map(serializeArticle),
+      issues: issues
+        .map((issue) => {
+          const issueArticles = articlesByIssue.get(String(issue._id)) || [];
+          return {
+            ...serializeMagazineIssue(issue),
+            articleCount: issueArticles.length,
+            coverArticle: issueArticles[0]
+              ? {
+                  title: issueArticles[0].title,
+                  category: issueArticles[0].category,
+                }
+              : null,
+          };
+        })
+        .filter((issue) => issue.articleCount > 0),
       student: {
         id: String(student._id),
         name: student.name,

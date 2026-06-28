@@ -15,6 +15,7 @@ import HomeScrollMemory from "@/components/public/HomeScrollMemory";
 import PublicExplorePanel from "@/components/public/PublicExplorePanel";
 import PublicSiteNav from "@/components/public/PublicSiteNav";
 import SchoolLogoMark from "@/components/public/SchoolLogoMark";
+import AppDate from "@/components/common/AppDate";
 import {
   getWritingPreviewText,
   WritingPreview,
@@ -44,14 +45,6 @@ function dashboardPathForRole(role) {
   return DASHBOARD_BY_ROLE[role] || "/school/dashboard";
 }
 
-function formatDate(value) {
-  if (!value) return "";
-  return new Intl.DateTimeFormat("en", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(new Date(value));
-}
 
 function getPreview(value = "", maxLength = 120) {
   const text = getWritingPreviewText(value, maxLength, { preserveFormatting: false });
@@ -383,7 +376,7 @@ function FeedCard({ item, badge = "Published Writing" }) {
       {item.date && (
         <div className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-[#9aa3b5]">
           <FaRegCalendarAlt className="text-[10px]" />
-          {formatDate(item.date)}
+          <AppDate value={item.date} />
         </div>
       )}
       <div className="mt-3 min-w-0">
@@ -477,7 +470,7 @@ function RightColumn({ schools, event }) {
           <div className="mt-5 flex items-center justify-between gap-3">
             <span className="inline-flex items-center gap-1.5 text-xs font-medium text-white/75">
               <FaCalendarAlt className="text-[10px]" />
-              {formatDate(event.date)}
+              <AppDate value={event.date} />
             </span>
             <Link
               href={event.href}
@@ -559,7 +552,7 @@ function MobileVoiceFeed({ writings }) {
               <span className="inline-flex items-center rounded-full border border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)] px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--brand-primary)]">
                 {getCategoryLabel(item.category)}
               </span>
-              <span className="text-[11px] text-[#9aa3b5]">{formatDate(item.date)}</span>
+              <span className="text-[11px] text-[#9aa3b5]"><AppDate value={item.date} /></span>
             </div>
             <AuthorLine name={item.author} school={item.schoolName} badge="" />
             <h2 className="mt-2.5 text-base font-bold leading-snug text-[#111827]">{item.title}</h2>
@@ -653,7 +646,7 @@ export default async function Home() {
                     <div className="mt-4 flex items-center justify-between">
                       <span className="inline-flex items-center gap-2 text-xs font-bold text-white/88">
                         <FaCalendarAlt />
-                        {formatDate(activeEvent.date)}
+                        <AppDate value={activeEvent.date} />
                       </span>
                       <Link
                         href={activeEvent.href}

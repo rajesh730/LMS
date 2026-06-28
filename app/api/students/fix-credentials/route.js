@@ -4,6 +4,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import Student from "@/models/Student";
 import { generateUniqueStudentUsername } from "@/lib/studentIdentity";
+import { generateStrongPassword } from "@/lib/passwordGenerator";
 import bcrypt from "bcryptjs";
 
 export const dynamic = "force-dynamic";
@@ -25,6 +26,7 @@ export async function GET(req) {
     
     let updatedCount = 0;
     let errors = [];
+    const credentials = [];
 
     for (const student of students) {
       try {
@@ -44,7 +46,6 @@ export async function GET(req) {
         }
 
         // 2. Generate Credentials
-        const cleanFirstName = firstName.replace(/[^a-zA-Z0-9]/g, "") || "Student";
         const username = await generateUniqueStudentUsername(Student, {
           firstName,
           grade: student.grade,
@@ -53,7 +54,7 @@ export async function GET(req) {
           excludeId: student._id,
         });
 
-        const password = `${cleanFirstName}@123`;
+        const password = generateStrongPassword();
         const hashedPassword = await bcrypt.hash(password, 10);
 
         // 3. Update Student
@@ -62,10 +63,11 @@ export async function GET(req) {
         student.lastName = lastName;
         student.username = username;
         student.password = hashedPassword;
-        student.visiblePassword = password;
 
         await student.save();
         updatedCount++;
+        // Surface the new password once so the school can redistribute it.
+        credentials.push({ name: student.name, username, password });
       } catch (err) {
         console.error(`Failed to update student ${student._id}:`, err);
         errors.push({ id: student._id, name: student.name, error: err.message });
@@ -76,6 +78,7 @@ export async function GET(req) {
       message: "Migration completed",
       total: students.length,
       updated: updatedCount,
+      credentials,
       errors
     });
 

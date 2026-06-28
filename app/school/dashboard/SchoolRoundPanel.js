@@ -8,18 +8,10 @@ import {
   FaSave,
   FaUserGraduate,
 } from "react-icons/fa";
+import AppDate from "@/components/common/AppDate";
 
 function label(value) {
   return String(value || "").replaceAll("_", " ");
-}
-
-function formatDate(value) {
-  if (!value) return "";
-  return new Date(value).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
 }
 
 function isPast(value) {
@@ -186,7 +178,7 @@ export default function SchoolRoundPanel({ eventId }) {
               <div className="space-y-1 text-sm text-slate-400">
                 {round.date && (
                   <div className="flex items-center gap-2">
-                    <FaCalendarAlt /> {formatDate(round.date)}
+                    <FaCalendarAlt /> <AppDate value={round.date} />
                   </div>
                 )}
                 {round.submissionDeadline && (
@@ -196,7 +188,7 @@ export default function SchoolRoundPanel({ eventId }) {
                     }
                   >
                     {submissionClosed ? "Submission closed" : "Submit by"}{" "}
-                    {formatDate(round.submissionDeadline)}
+                    <AppDate value={round.submissionDeadline} />
                   </div>
                 )}
               </div>

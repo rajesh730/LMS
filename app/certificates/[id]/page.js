@@ -17,6 +17,7 @@ import { formatPlacementLabel } from "@/lib/results";
 import { normalizeImageUrl } from "@/lib/imageUrls";
 import PravyoLogo from "@/components/brand/PravyoLogo";
 import CertificatePrintActions from "@/components/certificates/CertificatePrintActions";
+import AppDate from "@/components/common/AppDate";
 
 export const dynamic = "force-dynamic";
 
@@ -74,17 +75,6 @@ function toTitleCase(value) {
   return String(value || "")
     .toLowerCase()
     .replace(/\b\w/g, (char) => char.toUpperCase());
-}
-
-function formatDate(value) {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
 }
 
 function resolveEventOwnership(event) {
@@ -444,7 +434,7 @@ export default async function CertificatePage({ params, searchParams }) {
                 <StatItem
                   icon={CalendarDays}
                   label="Event Date"
-                  value={formatDate(achievement.event?.date)}
+                  value={<AppDate value={achievement.event?.date} />}
                 />
                 <StatItem
                   icon={Award}
@@ -455,9 +445,11 @@ export default async function CertificatePage({ params, searchParams }) {
                   icon={CalendarCheck2}
                   label="Issued On"
                   value={
-                    achievement.certificateIssuedAt
-                      ? formatDate(achievement.certificateIssuedAt)
-                      : "Preview"
+                    achievement.certificateIssuedAt ? (
+                      <AppDate value={achievement.certificateIssuedAt} />
+                    ) : (
+                      "Preview"
+                    )
                   }
                 />
                 <StatItem

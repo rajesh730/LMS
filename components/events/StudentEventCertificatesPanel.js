@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { FaCertificate, FaDownload, FaExternalLinkAlt } from "react-icons/fa";
-import { formatPlacement as formatLabel, formatDate } from "@/lib/displayFormat";
+import { formatPlacement as formatLabel } from "@/lib/displayFormat";
+import AppDate from "@/components/common/AppDate";
 
 export default function StudentEventCertificatesPanel({ eventId }) {
   const [certificates, setCertificates] = useState([]);
@@ -83,9 +84,14 @@ export default function StudentEventCertificatesPanel({ eventId }) {
                 {certificate.certificateRecipientName || "Student Certificate"}
               </h6>
               <p className="mt-1 text-xs font-semibold text-[#52657d]">
-                {certificate.teamName
-                  ? `${certificate.teamName} - ${formatDate(certificate.certificateIssuedAt)}`
-                  : formatDate(certificate.certificateIssuedAt)}
+                {certificate.teamName ? (
+                  <>
+                    {certificate.teamName} -{" "}
+                    <AppDate value={certificate.certificateIssuedAt} />
+                  </>
+                ) : (
+                  <AppDate value={certificate.certificateIssuedAt} />
+                )}
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
                 <Link

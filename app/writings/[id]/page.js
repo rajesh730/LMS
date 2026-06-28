@@ -5,24 +5,33 @@ import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
 import SchoolShowcaseProfile from "@/models/SchoolShowcaseProfile";
 import PublicSiteNav from "@/components/public/PublicSiteNav";
 import PublicWritingReader from "@/components/public/PublicWritingReader";
+import { stripWritingMarkup } from "@/components/WritingContent";
 import "@/models/Student";
 import "@/models/User";
 
 export const dynamic = "force-dynamic";
 
-function serializeArticle(article, schoolProfile = null) {
+function serializeArticle(article, schoolProfile = null, authorCurrentSchoolProfile = null) {
   return {
     id: String(article._id),
     title: article.title,
     content: article.content,
     category: article.category,
     publishedAt: article.publishedAt || article.updatedAt,
+    authorSchoolNameSnapshot: article.authorSchoolNameSnapshot || "",
+    authorGrade: article.authorGrade || "",
+    authorAcademicYear: article.authorAcademicYear || "",
     authorStudent: article.authorStudent
       ? {
           id: String(article.authorStudent._id),
           name: article.authorStudent.name,
           grade: article.authorStudent.grade,
           rollNumber: article.authorStudent.rollNumber,
+          currentSchoolId: article.authorStudent.school?._id
+            ? String(article.authorStudent.school._id)
+            : "",
+          currentSchoolName: article.authorStudent.school?.schoolName || "",
+          currentSchoolLogoUrl: authorCurrentSchoolProfile?.coverImageUrl || "",
         }
       : null,
     school: article.school
@@ -51,7 +60,11 @@ async function getWritingData(id) {
     isPublished: true,
     isDeleted: { $ne: true },
   })
-    .populate("authorStudent", "name grade rollNumber")
+    .populate({
+      path: "authorStudent",
+      select: "name grade rollNumber school",
+      populate: { path: "school", select: "schoolName" },
+    })
     .populate("school", "schoolName schoolLocation")
     .lean();
 
@@ -63,6 +76,19 @@ async function getWritingData(id) {
         .select("coverImageUrl")
         .lean()
     : null;
+
+  // The author's CURRENT school (for the "Now at X" byline logo) — only fetched
+  // when she has moved on to a different school than the one she wrote this at.
+  const authorCurrentSchoolId = article.authorStudent?.school?._id;
+  const authorCurrentSchoolProfile =
+    authorCurrentSchoolId && String(authorCurrentSchoolId) !== String(schoolId)
+      ? await SchoolShowcaseProfile.findOne({
+          school: authorCurrentSchoolId,
+          visibility: "PUBLIC",
+        })
+          .select("coverImageUrl")
+          .lean()
+      : null;
 
   const [relatedArticles, moreFromSchool] = await Promise.all([
     SchoolMagazineArticle.find({
@@ -92,9 +118,9 @@ async function getWritingData(id) {
   ]);
 
   return {
-    article: serializeArticle(article, schoolProfile),
-    relatedArticles: relatedArticles.map(serializeArticle),
-    moreFromSchool: moreFromSchool.map(serializeArticle),
+    article: serializeArticle(article, schoolProfile, authorCurrentSchoolProfile),
+    relatedArticles: relatedArticles.map((item) => serializeArticle(item)),
+    moreFromSchool: moreFromSchool.map((item) => serializeArticle(item)),
   };
 }
 
@@ -108,9 +134,37 @@ export async function generateMetadata({ params }) {
     };
   }
 
+  const { article } = data;
+  const author = article.authorStudent?.name || "a student";
+  const cleaned = stripWritingMarkup(article.content || "")
+    .replace(/\s+/g, " ")
+    .trim();
+  const description =
+    cleaned.length > 160
+      ? `${cleaned.slice(0, 157)}...`
+      : cleaned || `${article.title} — student writing on Pravyo.`;
+  const url = `/writings/${resolvedParams.id}`;
+
   return {
-    title: data.article.title,
-    description: data.article.content.slice(0, 140),
+    title: article.title,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      title: article.title,
+      description,
+      url,
+      type: "article",
+      siteName: "Pravyo",
+      publishedTime: article.publishedAt
+        ? new Date(article.publishedAt).toISOString()
+        : undefined,
+      authors: [author],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: article.title,
+      description,
+    },
   };
 }
 

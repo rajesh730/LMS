@@ -3,11 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNotification } from "@/components/NotificationSystem";
 import useRealtimeChannel from "@/lib/useRealtimeChannel";
-
-function formatPublishedDate(value) {
-  if (!value) return "";
-  return new Date(value).toLocaleDateString();
-}
+import AppDate from "@/components/common/AppDate";
 
 export default function PublicEventNoticeList({
   eventId,
@@ -111,7 +107,7 @@ export default function PublicEventNoticeList({
                 </span>
                 {notice.publishedAt && (
                   <span className="text-xs font-semibold text-[#52657d]">
-                    {formatPublishedDate(notice.publishedAt)}
+                    <AppDate value={notice.publishedAt} />
                   </span>
                 )}
               </div>

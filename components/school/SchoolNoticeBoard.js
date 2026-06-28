@@ -16,18 +16,8 @@ import {
 } from "react-icons/fa";
 import EmptyState from "@/components/EmptyState";
 import LoadingState from "@/components/ui/LoadingState";
+import AppDate from "@/components/common/AppDate";
 import useNotificationInbox from "@/lib/useNotificationInbox";
-
-function formatDate(value) {
-  if (!value) return "";
-  return new Date(value).toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
 
 function isToday(value) {
   if (!value) return false;
@@ -171,7 +161,7 @@ function NoticeRow({ notification }) {
                       ? "Magazine Desk"
                       : "Super Admin"}
                 </span>
-                <span>{formatDate(notification.publishedAt)}</span>
+                <span><AppDate value={notification.publishedAt} mode="dateTime" /></span>
                 {notification.event?.title && <span>{notification.event.title}</span>}
               </span>
             </span>

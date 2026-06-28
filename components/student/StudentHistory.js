@@ -12,6 +12,9 @@ import {
 import LoadingState from "@/components/ui/LoadingState";
 import AlertBanner from "@/components/ui/AlertBanner";
 import EmptyState from "@/components/EmptyState";
+import CalendarToggle from "@/components/common/CalendarToggle";
+import useCalendarPreference from "@/lib/useCalendarPreference";
+import { formatMonthYear } from "@/lib/nepaliDate";
 
 const ENROLLMENT_STATUS = {
   CURRENT: { label: "Current", classes: "bg-emerald-50 text-emerald-700" },
@@ -21,12 +24,18 @@ const ENROLLMENT_STATUS = {
   GRADUATED: { label: "Graduated", classes: "bg-slate-100 text-slate-600" },
 };
 
-function formatDate(value) {
-  if (!value) return "";
-  return new Date(value).toLocaleDateString("en-US", {
-    month: "short",
-    year: "numeric",
-  });
+// A human "when did they study here" range for a journey entry, in the viewer's
+// chosen calendar (AD or BS).
+function formatEnrollmentRange(entry, calendar) {
+  const start = formatMonthYear(entry.startedAt, calendar);
+  if (entry.status === "CURRENT") {
+    return start ? `Since ${start} · Present` : "Present";
+  }
+  const end = formatMonthYear(entry.endedAt, calendar);
+  if (start && end) return `${start} – ${end}`;
+  if (start) return `From ${start}`;
+  if (end) return `Until ${end}`;
+  return "";
 }
 
 function formatPlacement(value) {
@@ -38,6 +47,7 @@ export default function StudentHistory() {
   const [error, setError] = useState("");
   const [data, setData] = useState(null);
   const [activeYear, setActiveYear] = useState("ALL");
+  const { calendar } = useCalendarPreference();
 
   useEffect(() => {
     let active = true;
@@ -90,6 +100,11 @@ export default function StudentHistory() {
 
   return (
     <div className="space-y-5">
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-lg font-black text-[#17120a]">My Journey</h1>
+        <CalendarToggle />
+      </div>
+
       {/* Summary */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <SummaryTile icon={FaSchool} label="Schools" value={schoolsCount} />
@@ -124,19 +139,27 @@ export default function StudentHistory() {
         {filtered.journey.length === 0 ? (
           <p className="mt-3 text-sm text-[#52657d]">No enrollment records for this year.</p>
         ) : (
-          <div className="mt-4 space-y-3">
+          <ol className="relative mt-5 space-y-4 border-l-2 border-[#e1e8f4] pl-6">
             {filtered.journey.map((entry, index) => {
               const meta = ENROLLMENT_STATUS[entry.status] || ENROLLMENT_STATUS.CURRENT;
+              const range = formatEnrollmentRange(entry, calendar);
+              const isCurrent = entry.status === "CURRENT";
               return (
-                <div
+                <li
                   key={`${entry.school}-${entry.academicYearStart}-${index}`}
-                  className="flex items-start gap-3 rounded-xl border border-[#e1e8f4] bg-[#f8fbff] p-4"
+                  className="relative"
                 >
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-[var(--brand-primary)] shadow-sm">
-                    <FaSchool />
-                  </span>
-                  <div className="min-w-0 flex-1">
+                  <span
+                    className={`absolute top-1.5 flex h-4 w-4 items-center justify-center rounded-full border-2 border-white shadow ${
+                      isCurrent ? "bg-emerald-500" : "bg-[var(--brand-primary)]"
+                    }`}
+                    style={{ left: "-31px" }}
+                  />
+                  <div className="rounded-xl border border-[#e1e8f4] bg-[#f8fbff] p-4">
                     <div className="flex flex-wrap items-center gap-2">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-[var(--brand-primary)] shadow-sm">
+                        <FaSchool className="text-xs" />
+                      </span>
                       <p className="text-sm font-black text-[#17120a]">
                         {entry.schoolName}
                       </p>
@@ -144,16 +167,21 @@ export default function StudentHistory() {
                         {meta.label}
                       </span>
                     </div>
-                    <p className="mt-1 text-xs text-[#52657d]">
+                    <p className="mt-2 text-xs text-[#52657d]">
                       {entry.grade}
                       {entry.academicYear ? ` · ${entry.academicYear}` : ""}
                       {entry.rollNumber ? ` · Roll ${entry.rollNumber}` : ""}
                     </p>
+                    {range && (
+                      <p className="mt-1 text-xs font-bold text-[var(--brand-primary)]">
+                        {range}
+                      </p>
+                    )}
                   </div>
-                </div>
+                </li>
               );
             })}
-          </div>
+          </ol>
         )}
       </section>
 
@@ -183,7 +211,7 @@ export default function StudentHistory() {
                 <p className="mt-1 text-xs text-[#52657d]">
                   {a.eventTitle ? `${a.eventTitle} · ` : ""}
                   {a.schoolName}
-                  {a.awardedAt ? ` · ${formatDate(a.awardedAt)}` : ""}
+                  {a.awardedAt ? ` · ${formatMonthYear(a.awardedAt, calendar)}` : ""}
                 </p>
                 {a.certificateUrl && (
                   <a
@@ -232,7 +260,7 @@ export default function StudentHistory() {
                 </p>
                 <p className="mt-1 text-xs text-[#52657d]">
                   {w.schoolName}
-                  {w.date ? ` · ${formatDate(w.date)}` : ""}
+                  {w.date ? ` · ${formatMonthYear(w.date, calendar)}` : ""}
                 </p>
               </a>
             ))}

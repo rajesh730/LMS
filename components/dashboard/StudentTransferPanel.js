@@ -25,6 +25,8 @@ export default function StudentTransferPanel({ grades = [], onChanged }) {
   const [feedback, setFeedback] = useState(null);
   const [admissionDrafts, setAdmissionDrafts] = useState({});
   const [rollInfo, setRollInfo] = useState({});
+  const [rejectTarget, setRejectTarget] = useState(null);
+  const [rejectReason, setRejectReason] = useState("");
 
   const load = useCallback(async () => {
     try {
@@ -86,6 +88,60 @@ export default function StudentTransferPanel({ grades = [], onChanged }) {
       ...prev,
       [id]: { ...(prev[id] || {}), ...patch },
     }));
+  };
+
+  const openReject = (id, action) => {
+    setRejectTarget({ id, action });
+    setRejectReason("");
+  };
+
+  const confirmReject = async () => {
+    if (!rejectTarget) return;
+    const { id, action } = rejectTarget;
+    const reason = rejectReason.trim();
+    setRejectTarget(null);
+    setRejectReason("");
+    await decide(id, action, { reason });
+  };
+
+  // Inline reason box shown under a row's Reject button before confirming.
+  const renderRejectBox = (transfer) => {
+    if (rejectTarget?.id !== transfer._id) return null;
+    return (
+      <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 p-3">
+        <label className="block text-xs font-black text-rose-700">
+          Reason for rejection (shared with the student)
+        </label>
+        <textarea
+          value={rejectReason}
+          maxLength={300}
+          autoFocus
+          onChange={(e) => setRejectReason(e.target.value)}
+          placeholder="e.g. Dues pending, please clear before transfer."
+          className="mt-1 min-h-16 w-full rounded-lg border border-rose-200 bg-white px-3 py-2 text-sm outline-none"
+        />
+        <div className="mt-2 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setRejectTarget(null);
+              setRejectReason("");
+            }}
+            className="inline-flex h-8 items-center rounded-lg border border-[#e1e7f2] bg-white px-3 text-xs font-black text-[#52657d] hover:bg-[#f8fbff]"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={busyId === transfer._id}
+            onClick={confirmReject}
+            className="inline-flex h-8 items-center rounded-lg bg-rose-600 px-3 text-xs font-black text-white hover:bg-rose-500 disabled:opacity-50"
+          >
+            Confirm Reject
+          </button>
+        </div>
+      </div>
+    );
   };
 
   // Ask the server for the next free roll number in a grade and prefill it,
@@ -213,13 +269,14 @@ export default function StudentTransferPanel({ grades = [], onChanged }) {
                         <button
                           type="button"
                           disabled={busyId === transfer._id}
-                          onClick={() => decide(transfer._id, "reject_release")}
+                          onClick={() => openReject(transfer._id, "reject_release")}
                           className="inline-flex h-8 items-center gap-1 rounded-lg border border-[#e1e7f2] bg-white px-2.5 text-xs font-black text-rose-600 hover:bg-rose-50 disabled:opacity-50"
                         >
                           <FaTimes /> Reject
                         </button>
                       </div>
                     </div>
+                    {renderRejectBox(transfer)}
                   </div>
                 ))
               )}
@@ -387,7 +444,7 @@ export default function StudentTransferPanel({ grades = [], onChanged }) {
                         <button
                           type="button"
                           disabled={busyId === transfer._id}
-                          onClick={() => decide(transfer._id, "reject_admission")}
+                          onClick={() => openReject(transfer._id, "reject_admission")}
                           className="inline-flex h-9 items-center gap-1 rounded-lg border border-[#e1e7f2] bg-white px-3 text-xs font-black text-rose-600 hover:bg-rose-50 disabled:opacity-50"
                         >
                           Reject
@@ -411,6 +468,7 @@ export default function StudentTransferPanel({ grades = [], onChanged }) {
                           Admit Student
                         </button>
                       </div>
+                      {renderRejectBox(transfer)}
                     </div>
                   );
                 })

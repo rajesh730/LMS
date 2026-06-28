@@ -15,6 +15,7 @@ import {
   FaUsers,
 } from "react-icons/fa";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import AppDate from "@/components/common/AppDate";
 
 function formatStatus(value) {
   if (value === "RUNNER_UP") return "1st Runner Up";
@@ -304,7 +305,7 @@ export default function EventResultsManager({
                 {description}
               </p>
               <div className="mt-3 flex flex-wrap gap-3 text-[11px] font-bold text-[#52657d]">
-                <span>{detail?.event?.date ? new Date(detail.event.date).toLocaleDateString() : "Event date"}</span>
+                <span><AppDate value={detail?.event?.date} fallback="Event date" /></span>
                 <span>
                   {resultSummary.certificateCount} / {participants.length}{" "}
                   certificate{participants.length === 1 ? "" : "s"} issued

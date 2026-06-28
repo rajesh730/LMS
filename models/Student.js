@@ -212,6 +212,14 @@ const StudentSchema = new mongoose.Schema(
       default: [],
     },
     
+    // Preferred calendar for displaying dates across the app (per student).
+    // Bikram Sambat is the platform default.
+    calendarPreference: {
+      type: String,
+      enum: ["AD", "BS"],
+      default: "BS",
+    },
+
     // Track when status was changed and by whom
     statusChangedAt: {
       type: Date,

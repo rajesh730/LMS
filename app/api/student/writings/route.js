@@ -7,6 +7,7 @@ import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
 import { publishWorkIndicatorsUpdate } from "@/lib/workIndicatorRealtime";
 import { notifySchoolMagazineSubmitted } from "@/lib/magazineNotifications";
 import { normalizeWritingCategory } from "@/lib/writingCategories";
+import { buildAuthoredEraSnapshot } from "@/lib/studentEnrollment";
 
 function buildStudentLookup(session) {
   return {
@@ -42,11 +43,16 @@ export async function GET() {
       );
     }
 
+    // The writing belongs to the student (her property), so it follows her across
+    // schools — match by author only, not current school. Pieces written at a
+    // school she has since left are flagged `isTransferredOut` so the UI can label
+    // them ("written at X") and offer portfolio editing instead of school review.
+    const currentSchoolId = String(student.school || "");
     const writings = await SchoolMagazineArticle.find({
       authorStudent: student._id,
-      school: student.school,
       isDeleted: { $ne: true },
     })
+      .populate("school", "schoolName")
       .sort({ updatedAt: -1, createdAt: -1 })
       .lean();
 
@@ -57,6 +63,14 @@ export async function GET() {
           title: article.title,
           content: article.content,
           category: article.category,
+          schoolId: article.school?._id ? String(article.school._id) : "",
+          schoolName:
+            article.authorSchoolNameSnapshot ||
+            article.school?.schoolName ||
+            "",
+          isTransferredOut:
+            String(article.school?._id || article.school || "") !==
+            currentSchoolId,
           submissionSource: article.submissionSource || "FREE_WRITE",
           status: article.status,
           reviewNote: article.reviewNote || "",
@@ -104,7 +118,7 @@ export async function POST(request) {
     await connectDB();
 
     const student = await Student.findOne(buildStudentLookup(session))
-      .select("_id school grade name")
+      .select("_id school grade name enrollments")
       .lean();
 
     if (!student) {
@@ -113,6 +127,8 @@ export async function POST(request) {
         { status: 404 }
       );
     }
+
+    const authoredEra = buildAuthoredEraSnapshot(student);
 
     const body = await request.json();
     const title = String(body.title || "").trim();
@@ -145,6 +161,15 @@ export async function POST(request) {
       if (article) {
         const submittedAt = requestedStatus === "SUBMITTED" ? new Date() : null;
         const previousStatus = article.status;
+
+        // Stamp the authoring-era snapshot once if this doc predates it; never
+        // overwrite, so the label reflects when it was first written.
+        if (!article.authorSchoolNameSnapshot) {
+          article.authorSchoolNameSnapshot = authoredEra.authorSchoolNameSnapshot;
+          article.authorGrade = authoredEra.authorGrade;
+          article.authorAcademicYear = authoredEra.authorAcademicYear;
+          article.authorAcademicYearStart = authoredEra.authorAcademicYearStart;
+        }
 
         article.title = title;
         article.content = content;
@@ -198,6 +223,7 @@ export async function POST(request) {
     const article = await SchoolMagazineArticle.create({
       school: student.school,
       authorStudent: student._id,
+      ...authoredEra,
       title,
       content,
       category,

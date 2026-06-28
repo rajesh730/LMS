@@ -9,6 +9,10 @@ import {
   internalServerError,
 } from "@/lib/apiResponse";
 import { requireApiSession } from "@/lib/authz";
+import {
+  notifyReleaseRequested,
+  notifyAdmissionRequested,
+} from "@/lib/transferNotifications";
 
 function serializeSchool(school) {
   if (!school) return null;
@@ -138,7 +142,7 @@ export async function POST(req) {
       return errorResponse(409, "You already have an active transfer request.");
     }
 
-    await StudentTransfer.create({
+    const created = await StudentTransfer.create({
       student: student._id,
       platformStudentId: student.platformStudentId || "",
       fromSchool: student.school?._id || student.school,
@@ -149,6 +153,8 @@ export async function POST(req) {
         student.school?.schoolName || student.school?.name || "",
       reason,
     });
+
+    await notifyReleaseRequested({ transfer: created });
 
     const data = await getStudentTransferData(session.user.id);
     return successResponse(
@@ -223,6 +229,8 @@ export async function PATCH(req) {
     transfer.status = "PENDING_ADMISSION";
     transfer.targetSelectedAt = new Date();
     await transfer.save();
+
+    await notifyAdmissionRequested({ transfer });
 
     const data = await getStudentTransferData(session.user.id);
     return successResponse(

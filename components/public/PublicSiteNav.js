@@ -13,7 +13,8 @@ import PublicRegisterLink from "@/components/public/PublicRegisterLink";
 
 export default function PublicSiteNav({
   active = "home",
-  searchPlaceholder = "Search stories, schools, events…",
+  searchPlaceholder = "Search students, schools…",
+  searchAction = "/search",
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -90,7 +91,7 @@ export default function PublicSiteNav({
 
           {/* Desktop search */}
           <form
-            action="/student-voices"
+            action={searchAction}
             className="hidden h-10 flex-1 items-center gap-2.5 rounded-xl border border-[var(--brand-border)] bg-[#f8f9fd] px-3.5 text-sm text-[var(--brand-muted)] transition hover:border-[var(--brand-primary-border)] focus-within:border-[var(--brand-primary)] focus-within:bg-white focus-within:shadow-[0_0_0_3px_rgba(67,38,232,0.1)] xl:flex"
           >
             <FaSearch className="shrink-0 text-[var(--brand-muted)]" />
@@ -119,7 +120,7 @@ export default function PublicSiteNav({
           <div className="ml-auto flex items-center gap-2 md:hidden">
             {/* Compact search pill */}
             <form
-              action="/student-voices"
+              action={searchAction}
               className="flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--brand-border)] bg-[#f8f9fd] text-[var(--brand-muted)] sm:hidden"
             >
               <button type="submit" aria-label="Search">
@@ -149,7 +150,7 @@ export default function PublicSiteNav({
         {/* ── Mobile search bar (always visible on sm) ──── */}
         <div className="public-mobile-search-wrap border-t border-[var(--brand-border)] px-2 py-2.5 sm:hidden">
           <form
-            action="/student-voices"
+            action={searchAction}
             className="public-mobile-search-form flex h-10 items-center gap-2.5 rounded-xl border border-[var(--brand-border)] bg-[#f8f9fd] px-3.5 text-sm text-[var(--brand-muted)] focus-within:border-[var(--brand-primary)] focus-within:bg-white focus-within:shadow-[0_0_0_3px_rgba(67,38,232,0.1)]"
           >
             <FaSearch className="shrink-0" />

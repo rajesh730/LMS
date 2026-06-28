@@ -13,6 +13,7 @@ import {
   FaSchool,
   FaTrophy,
 } from "react-icons/fa";
+import AppDate from "@/components/common/AppDate";
 import "@/models/Event";
 import "@/models/Student";
 import "@/models/User";
@@ -23,15 +24,6 @@ export const metadata = {
   title: "Winners",
   description: "Public Pravyo winners, certificates, and school achievements.",
 };
-
-function formatDate(value) {
-  if (!value) return "Recently";
-  return new Intl.DateTimeFormat("en", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(new Date(value));
-}
 
 async function getWinners() {
   await connectDB();
@@ -102,7 +94,7 @@ function WinnerCard({ winner, featured = false }) {
       <div className="mt-5 grid gap-3 border-t border-[#f0f2f8] pt-4 sm:grid-cols-3">
         <div>
           <p className="text-[10px] font-black uppercase text-[#7a8499]">Awarded</p>
-          <p className="mt-1 text-sm font-black text-[#10142f]">{formatDate(winner.date)}</p>
+          <p className="mt-1 text-sm font-black text-[#10142f]"><AppDate value={winner.date} fallback="Recently" /></p>
         </div>
         <div>
           <p className="text-[10px] font-black uppercase text-[#7a8499]">Certificate</p>

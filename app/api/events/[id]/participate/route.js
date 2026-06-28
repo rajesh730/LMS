@@ -24,6 +24,29 @@ import {
 import { publishEventRealtimeUpdate } from "@/lib/eventRealtime";
 import { getRegistrationLockMessage } from "@/lib/eventWorkflow";
 import { isStudentSelfRegistrationAllowed } from "@/lib/eventInvitations";
+import {
+  acquireEventCapacityLock,
+  EventCapacityBusyError,
+  releaseEventCapacityLock,
+} from "@/lib/eventCapacityLock";
+
+// Pure capacity check used both as a fast pre-check and as the post-insert
+// verification that closes the over-enrollment race. Returns a message when a
+// limit is exceeded, otherwise null.
+export function capacityViolation({
+  schoolActive = 0,
+  globalActive = 0,
+  maxPerSchool = 0,
+  maxTotal = 0,
+}) {
+  if (maxPerSchool && schoolActive > maxPerSchool) {
+    return `Your school has reached the limit of ${maxPerSchool} students for this event.`;
+  }
+  if (maxTotal && globalActive > maxTotal) {
+    return `This event has reached its limit of ${maxTotal} students.`;
+  }
+  return null;
+}
 
 function normalizeParticipationFormat(event) {
   if (
@@ -335,6 +358,8 @@ async function getPlatformInvitationBlocker(event, schoolId) {
 }
 
 export async function POST(req, { params }) {
+  let capacityLock = null;
+  let lockedEventId = null;
   try {
     await connectDB();
     const session = await getServerSession(authOptions);
@@ -346,11 +371,15 @@ export async function POST(req, { params }) {
     const { id: eventId } = await params;
 
     // Validate event exists
-    const event = await Event.findById(eventId);
-    if (!event) {
+    const eventExists = await Event.exists({ _id: eventId });
+    if (!eventExists) {
       return errorResponse(404, "Event not found");
     }
 
+    const lockResult = await acquireEventCapacityLock(eventId);
+    capacityLock = lockResult.token;
+    lockedEventId = eventId;
+    const event = lockResult.event;
     const lockMessage = getRegistrationLockMessage(event, "join");
     if (lockMessage) {
       return errorResponse(400, lockMessage);
@@ -472,7 +501,7 @@ export async function POST(req, { params }) {
         existingRequest.contactPhone = schoolContactInfo.contactPhone || undefined;
         await existingRequest.save();
       } else {
-        await ParticipationRequest.create({
+        const created = await ParticipationRequest.create({
           student: student._id,
           event: eventId,
           school: schoolId,
@@ -484,6 +513,37 @@ export async function POST(req, { params }) {
           contactPerson: schoolContactInfo.contactPerson || undefined,
           contactPhone: schoolContactInfo.contactPhone || undefined,
         });
+
+        // Race-safe capacity guard: the pre-checks above can both pass under
+        // concurrent self-registrations, so re-verify *after* the insert (which
+        // now counts this row) and roll back if we slipped over a limit.
+        const [schoolActive, globalActive] = await Promise.all([
+          event.maxParticipantsPerSchool
+            ? ParticipationRequest.countDocuments({
+                event: eventId,
+                school: schoolId,
+                status: { $in: ACTIVE_PARTICIPATION_REQUEST_STATUSES },
+              })
+            : Promise.resolve(0),
+          event.maxParticipants
+            ? ParticipationRequest.countDocuments({
+                event: eventId,
+                status: { $in: ACTIVE_PARTICIPATION_REQUEST_STATUSES },
+              })
+            : Promise.resolve(0),
+        ]);
+
+        const violation = capacityViolation({
+          schoolActive,
+          globalActive,
+          maxPerSchool: event.maxParticipantsPerSchool,
+          maxTotal: event.maxParticipants,
+        });
+
+        if (violation) {
+          await ParticipationRequest.deleteOne({ _id: created._id });
+          return errorResponse(400, violation);
+        }
       }
 
       const updatedRequests = await ParticipationRequest.find({
@@ -802,8 +862,19 @@ export async function POST(req, { params }) {
       "Only students or school admins can request participation"
     );
   } catch (error) {
+    if (error instanceof EventCapacityBusyError) {
+      return errorResponse(409, error.message);
+    }
     console.error("POST /api/events/[id]/participate error:", error);
     return internalServerError("Internal server error");
+  } finally {
+    if (capacityLock) {
+      await releaseEventCapacityLock(lockedEventId, capacityLock).catch(
+        (releaseError) => {
+          console.error("Failed to release event capacity lock:", releaseError);
+        }
+      );
+    }
   }
 }
 
@@ -1000,6 +1071,8 @@ export async function DELETE(req, { params }) {
 }
 
 export async function PUT(req, { params }) {
+  let capacityLock = null;
+  let lockedEventId = null;
   try {
     await connectDB();
     const session = await getServerSession(authOptions);
@@ -1021,11 +1094,15 @@ export async function PUT(req, { params }) {
     const captainStudentId = body.captainStudentId || null;
 
     const schoolId = session.user.id;
-    const event = await Event.findById(eventId);
-    if (!event) {
+    const eventExists = await Event.exists({ _id: eventId });
+    if (!eventExists) {
       return errorResponse(404, "Event not found");
     }
 
+    const lockResult = await acquireEventCapacityLock(eventId);
+    capacityLock = lockResult.token;
+    lockedEventId = eventId;
+    const event = lockResult.event;
     if (
       normalizeParticipationFormat(event) !== "TEAM" &&
       !Array.isArray(studentIds)
@@ -1269,7 +1346,18 @@ export async function PUT(req, { params }) {
 
     return successResponse(200, "Participation updated successfully");
   } catch (error) {
+    if (error instanceof EventCapacityBusyError) {
+      return errorResponse(409, error.message);
+    }
     console.error("PUT /api/events/[id]/participate error:", error);
     return internalServerError("Internal server error");
+  } finally {
+    if (capacityLock) {
+      await releaseEventCapacityLock(lockedEventId, capacityLock).catch(
+        (releaseError) => {
+          console.error("Failed to release event capacity lock:", releaseError);
+        }
+      );
+    }
   }
 }

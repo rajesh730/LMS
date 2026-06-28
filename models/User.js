@@ -28,6 +28,13 @@ const UserSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    // Preferred calendar for displaying dates across the app (per user).
+    // Bikram Sambat is the platform default.
+    calendarPreference: {
+      type: String,
+      enum: ["AD", "BS"],
+      default: "BS",
+    },
     principalName: {
       type: String,
     },

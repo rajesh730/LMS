@@ -18,6 +18,7 @@ import {
 import { TableSkeleton } from "@/components/Skeletons";
 import PaginationControls from "@/components/PaginationControls";
 import EmptyState from "@/components/EmptyState";
+import AppDate from "@/components/common/AppDate";
 import AlertBanner from "@/components/ui/AlertBanner";
 
 export default function TeacherManager() {
@@ -461,9 +462,7 @@ export default function TeacherManager() {
                       </div>
                       <div className="text-xs font-semibold text-[#75869b]">
                         Joined:{" "}
-                        {teacher.dateOfJoining
-                          ? new Date(teacher.dateOfJoining).toLocaleDateString()
-                          : "Not set"}
+                        <AppDate value={teacher.dateOfJoining} fallback="Not set" />
                       </div>
                     </td>
                     <td className="px-4 py-3">

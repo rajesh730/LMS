@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import connectDB from "@/lib/db";
 import Student from "@/models/Student";
 import SchoolConfig from "@/models/SchoolConfig";
@@ -145,6 +146,7 @@ export async function POST(req) {
       try {
         const isRetained = retainSet.has(String(student._id));
         const nextGrade = getNextGrade(student.grade, orderedGrades);
+        let outcome;
 
         if (isRetained) {
           closeCurrentEnrollments(student, "RETAINED");
@@ -157,7 +159,7 @@ export async function POST(req) {
               academicYear: nextYear,
             })
           );
-          summary.retained += 1;
+          outcome = "retained";
         } else if (nextGrade === null) {
           // Top grade → graduate / alumni. They leave the active roster.
           closeCurrentEnrollments(student, "GRADUATED");
@@ -165,7 +167,7 @@ export async function POST(req) {
           student.statusChangedAt = new Date();
           student.statusChangedBy = session.user.id;
           student.statusReason = `Graduated (${current.year})`;
-          summary.graduated += 1;
+          outcome = "graduated";
         } else {
           closeCurrentEnrollments(student, "PROMOTED");
           student.grade = nextGrade;
@@ -178,10 +180,13 @@ export async function POST(req) {
               academicYear: nextYear,
             })
           );
-          summary.promoted += 1;
+          outcome = "promoted";
         }
 
         await student.save();
+        // Only count outcomes that actually persisted — a failed save (e.g. a
+        // roll-number conflict) is recorded as a failure below, not in the summary.
+        summary[outcome] += 1;
       } catch (studentError) {
         failures.push({
           id: String(student._id),
@@ -196,35 +201,45 @@ export async function POST(req) {
       }
     }
 
-    // Close the current session (record the summary) and open the next.
-    await AcademicYear.updateOne(
-      { _id: current._id },
-      {
-        $set: {
-          status: "CLOSED",
-          closedAt: new Date(),
-          closedBy: session.user.id,
-          "summary.promoted": summary.promoted,
-          "summary.retained": summary.retained,
-          "summary.graduated": summary.graduated,
-        },
-      }
-    );
+    // Close the current session (record the summary) and open the next as one
+    // atomic step — so the school is never left without an ACTIVE year if the
+    // second write fails.
+    const dbSession = await mongoose.startSession();
+    try {
+      await dbSession.withTransaction(async () => {
+        await AcademicYear.updateOne(
+          { _id: current._id },
+          {
+            $set: {
+              status: "CLOSED",
+              closedAt: new Date(),
+              closedBy: session.user.id,
+              "summary.promoted": summary.promoted,
+              "summary.retained": summary.retained,
+              "summary.graduated": summary.graduated,
+            },
+          },
+          { session: dbSession }
+        );
 
-    await AcademicYear.updateOne(
-      { school: schoolId, yearStart: nextYear.yearStart },
-      {
-        $setOnInsert: {
-          school: schoolId,
-          year: nextYear.year,
-          yearStart: nextYear.yearStart,
-          calendar: nextYear.calendar,
-          status: "ACTIVE",
-          startedAt: new Date(),
-        },
-      },
-      { upsert: true }
-    );
+        await AcademicYear.updateOne(
+          { school: schoolId, yearStart: nextYear.yearStart },
+          {
+            $setOnInsert: {
+              school: schoolId,
+              year: nextYear.year,
+              yearStart: nextYear.yearStart,
+              calendar: nextYear.calendar,
+              status: "ACTIVE",
+              startedAt: new Date(),
+            },
+          },
+          { upsert: true, session: dbSession }
+        );
+      });
+    } finally {
+      await dbSession.endSession();
+    }
 
     return successResponse(
       200,

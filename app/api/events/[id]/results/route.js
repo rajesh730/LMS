@@ -917,29 +917,39 @@ async function upsertResults(req, props) {
       }
     }
 
-    await Achievement.deleteMany({ event: event._id });
-    if (nextAchievements.length > 0) {
-      await Achievement.insertMany(nextAchievements);
-    }
-
-    if (resultsPublished) {
-      await EventRound.updateMany(
-        { event: params.id },
-        {
-          $set: {
-            status: "COMPLETED",
-          },
-        }
-      );
-    }
-
     event.scorecardCriteria = scorecardCriteria;
     event.publicResultsEnabled = publishPublicly;
     event.resultsPublished = resultsPublished;
     event.eventWorkflowStatus = resultsPublished
       ? "RESULTS_PUBLISHED"
       : "RESULTS_DRAFT";
-    await event.save();
+
+    // Replace the achievement set, complete rounds, and flip the event flags as
+    // one atomic unit so a failed insert can't wipe the prior achievements.
+    const dbSession = await mongoose.startSession();
+    try {
+      await dbSession.withTransaction(async () => {
+        await Achievement.deleteMany(
+          { event: event._id },
+          { session: dbSession }
+        );
+        if (nextAchievements.length > 0) {
+          await Achievement.insertMany(nextAchievements, {
+            session: dbSession,
+          });
+        }
+        if (resultsPublished) {
+          await EventRound.updateMany(
+            { event: params.id },
+            { $set: { status: "COMPLETED" } },
+            { session: dbSession }
+          );
+        }
+        await event.save({ session: dbSession });
+      });
+    } finally {
+      await dbSession.endSession();
+    }
 
     if (resultsPublished) {
       await AuditLog.create({

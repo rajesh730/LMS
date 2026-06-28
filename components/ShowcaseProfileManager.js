@@ -25,6 +25,7 @@ import {
 } from "react-icons/fa";
 import { normalizeImageUrl } from "@/lib/imageUrls";
 import SchoolLogoMark from "@/components/public/SchoolLogoMark";
+import AppDate from "@/components/common/AppDate";
 
 const EMPTY_SOCIAL_LINKS = {
   facebook: "",
@@ -631,7 +632,7 @@ export default function ShowcaseProfileManager() {
 
           <p className="text-center text-[11px] font-semibold text-[#52657d]">
             Last updated:{" "}
-            {profile.updatedAt ? new Date(profile.updatedAt).toLocaleString() : "Not saved yet"}
+            <AppDate value={profile.updatedAt} mode="dateTime" fallback="Not saved yet" />
           </p>
         </aside>
       </div>

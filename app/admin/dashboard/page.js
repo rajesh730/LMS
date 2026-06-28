@@ -30,7 +30,14 @@ import {
   FaSearch,
   FaUsers,
 } from "react-icons/fa";
-import { getEventWorkflowStatus, isRegistrationOpen } from "@/lib/eventWorkflow";
+import {
+  isCompletedEvent,
+  isLiveEvent,
+  isRegistrationOpenEvent,
+  isTerminalEvent,
+  matchesEventFacets,
+  matchesEventListFilter,
+} from "@/lib/eventListTaxonomy";
 
 const FETCH_TIMEOUT_MS = 10000;
 
@@ -64,26 +71,6 @@ function eventSortTime(event) {
 
 function newestEventsFirst(events = []) {
   return [...events].sort((a, b) => eventSortTime(b) - eventSortTime(a));
-}
-
-function isTerminalEvent(event) {
-  return ["ARCHIVED", "CANCELLED"].includes(
-    String(event.lifecycleStatus || "ACTIVE").toUpperCase()
-  );
-}
-
-function isCompletedEvent(event) {
-  return Boolean(event.resultsPublished);
-}
-
-function isLiveEvent(event) {
-  return (
-    !isTerminalEvent(event) &&
-    !isCompletedEvent(event) &&
-    ["REGISTRATION_CLOSED", "ROUND_ACTIVE", "RESULTS_DRAFT"].includes(
-      getEventWorkflowStatus(event)
-    )
-  );
 }
 
 function formatEventType(value) {
@@ -150,7 +137,7 @@ function AdminDashboardContent() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [eventWorkspaceTab, setEventWorkspaceTab] = useState("manage");
-  const [eventStatusFilter, setEventStatusFilter] = useState("ACTIVE");
+  const [eventStatusFilter, setEventStatusFilter] = useState("LIVE");
   const [eventSearch, setEventSearch] = useState("");
   const [eventTypeFilter, setEventTypeFilter] = useState("");
   const [eventGradeFilter, setEventGradeFilter] = useState("");
@@ -538,12 +525,7 @@ function AdminDashboardContent() {
     const activeRecords = platformEvents.filter((event) => !isTerminalEvent(event));
     return {
       live: platformEvents.filter(isLiveEvent).length,
-      registrationOpen: platformEvents.filter(
-        (event) =>
-          !isTerminalEvent(event) &&
-          !isCompletedEvent(event) &&
-          isRegistrationOpen(event)
-      ).length,
+      registrationOpen: platformEvents.filter(isRegistrationOpenEvent).length,
       completed: platformEvents.filter(
         (event) => !isTerminalEvent(event) && isCompletedEvent(event)
       ).length,
@@ -552,38 +534,17 @@ function AdminDashboardContent() {
     };
   }, [platformEvents]);
   const filteredPlatformEvents = useMemo(() => {
-    const needle = eventSearch.trim().toLowerCase();
     return newestEventsFirst(
-      platformEvents.filter((event) => {
-        const matchesStatus =
-          (eventStatusFilter === "ALL" && !isTerminalEvent(event)) ||
-          (eventStatusFilter === "ACTIVE" && isLiveEvent(event)) ||
-          (eventStatusFilter === "REGISTRATION" &&
-            !isTerminalEvent(event) &&
-            !isCompletedEvent(event) &&
-            isRegistrationOpen(event)) ||
-          (eventStatusFilter === "COMPLETED" &&
-            !isTerminalEvent(event) &&
-            isCompletedEvent(event)) ||
-          (eventStatusFilter === "ARCHIVED" && isTerminalEvent(event));
-        const searchable = [
-          event.title,
-          event.description,
-          event.eventType,
-          event.visibility,
-          ...(event.eligibleGrades || []),
-        ]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase();
-        return (
-          matchesStatus &&
-          (!needle || searchable.includes(needle)) &&
-          (!eventTypeFilter || event.eventType === eventTypeFilter) &&
-          (!eventGradeFilter || (event.eligibleGrades || []).includes(eventGradeFilter)) &&
-          (!eventVisibilityFilter || event.visibility === eventVisibilityFilter)
-        );
-      })
+      platformEvents.filter(
+        (event) =>
+          matchesEventListFilter(event, eventStatusFilter) &&
+          matchesEventFacets(event, {
+            search: eventSearch,
+            type: eventTypeFilter,
+            grade: eventGradeFilter,
+            visibility: eventVisibilityFilter,
+          })
+      )
     );
   }, [
     eventGradeFilter,
@@ -595,7 +556,7 @@ function AdminDashboardContent() {
   ]);
   const eventMetricCards = [
     {
-      key: "ACTIVE",
+      key: "LIVE",
       label: "Live",
       value: eventMetrics.live,
       note: "Rounds or results in progress",
@@ -633,7 +594,7 @@ function AdminDashboardContent() {
     slate: "border-slate-100 bg-slate-50 text-slate-700",
   };
   const eventFilterTabs = [
-    ["ACTIVE", "Live", FaCircle, eventMetrics.live],
+    ["LIVE", "Live", FaCircle, eventMetrics.live],
     ["REGISTRATION", "Registration Open", FaUsers, eventMetrics.registrationOpen],
     ["ALL", "All Events", FaCalendarAlt, eventMetrics.activeRecords],
     ["COMPLETED", "Completed", FaCheckCircle, eventMetrics.completed],

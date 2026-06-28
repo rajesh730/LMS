@@ -17,6 +17,7 @@ import {
   FaTrash,
 } from "react-icons/fa";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import AppDate from "@/components/common/AppDate";
 
 const NOTICE_TYPES = [
   "GENERAL",
@@ -36,16 +37,6 @@ const EMPTY_FORM = {
   status: "PUBLISHED",
 };
 
-function formatDate(value) {
-  if (!value) return "Draft";
-  return new Date(value).toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
 
 function label(value) {
   return String(value || "GENERAL").replaceAll("_", " ");
@@ -415,7 +406,7 @@ export default function EventNoticeManager({ eventId, eventTitle = "Event", read
               </h3>
               <p className="mt-2 text-sm text-[#52657d]">
                 {label(selectedNotice.type)} - Public event notice -{" "}
-                {formatDate(selectedNotice.publishedAt)}
+                <AppDate value={selectedNotice.publishedAt} mode="dateTime" fallback="Draft" />
               </p>
             </div>
             <button
@@ -558,7 +549,7 @@ export default function EventNoticeManager({ eventId, eventTitle = "Event", read
                         {notice.message}
                       </p>
                       <p className="mt-2 text-xs font-bold text-[#75869b]">
-                        {formatDate(notice.publishedAt || notice.createdAt)} - Public
+                        <AppDate value={notice.publishedAt || notice.createdAt} mode="dateTime" fallback="Draft" /> - Public
                       </p>
                     </div>
                   </div>

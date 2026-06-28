@@ -22,6 +22,7 @@ import EmptyState from "@/components/EmptyState";
 import LoadingState from "@/components/ui/LoadingState";
 import AlertBanner from "@/components/ui/AlertBanner";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import AppDate from "@/components/common/AppDate";
 import useRealtimeChannel from "@/lib/useRealtimeChannel";
 import useWorkIndicators from "@/lib/useWorkIndicators";
 import { isTeamEventLike } from "@/lib/eventParticipationFormat";
@@ -33,15 +34,6 @@ import {
 
 function formatType(value) {
   return String(value || "EVENT").replaceAll("_", " ");
-}
-
-function formatDate(value) {
-  if (!value) return "Not set";
-  return new Date(value).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
 }
 
 function formatGradeSummary(grades = []) {
@@ -690,12 +682,12 @@ export default function PlatformEventsManager() {
                           <div className="mt-3 flex flex-wrap gap-4 text-xs font-bold text-[#75869b]">
                             <span className="inline-flex items-center gap-1.5">
                               <FaCalendarAlt />
-                              {formatDate(event.date)}
+                              <AppDate value={event.date} fallback="Not set" />
                             </span>
                             {event.registrationDeadline && (
                               <span className="inline-flex items-center gap-1.5">
                                 <FaClipboardCheck />
-                                Register by {formatDate(event.registrationDeadline)}
+                                Register by <AppDate value={event.registrationDeadline} fallback="Not set" />
                               </span>
                             )}
                             <span className="inline-flex items-center gap-1.5">

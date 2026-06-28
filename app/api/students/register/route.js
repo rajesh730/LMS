@@ -123,7 +123,6 @@ export async function POST(req) {
       platformStudentId: await generatePlatformStudentId(Student),
       username: generatedUsername,
       password: hashedPassword,
-      visiblePassword: password,
 
       // Student details
       firstName,

@@ -1,8 +1,31 @@
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { subscribeRealtimeEvent } from "@/lib/realtimeBus";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+// Private channels carry per-school / per-student / admin change signals. They
+// must not be open to anonymous subscribers (metadata disclosure). Public
+// channels (the public feed + event-notice channels used on logged-out pages)
+// stay open so live updates keep working for visitors.
+const LOGIN_REQUIRED_CHANNELS = new Set([
+  "school-notifications",
+  "student-notifications",
+  "work-indicators",
+]);
+const ADMIN_ONLY_CHANNELS = new Set(["admin-diagnostics"]);
+
+function filterAllowedChannels(channels, session) {
+  const isLoggedIn = Boolean(session?.user?.id);
+  const isAdmin = session?.user?.role === "SUPER_ADMIN";
+  return channels.filter((channel) => {
+    if (ADMIN_ONLY_CHANNELS.has(channel)) return isAdmin;
+    if (LOGIN_REQUIRED_CHANNELS.has(channel)) return isLoggedIn;
+    return true;
+  });
+}
 
 function formatSseEvent(event) {
   return `data: ${JSON.stringify(event)}\n\n`;
@@ -27,6 +50,17 @@ export async function GET(request) {
     return NextResponse.json(
       { message: "At least one channel is required." },
       { status: 400 }
+    );
+  }
+
+  // Drop any private/admin channels the caller isn't authorized for; keep public
+  // ones. If nothing remains accessible, reject.
+  const session = await getServerSession(authOptions);
+  const allowedChannels = filterAllowedChannels(channels, session);
+  if (allowedChannels.length === 0) {
+    return NextResponse.json(
+      { message: "No accessible channels for this session." },
+      { status: 401 }
     );
   }
 
@@ -55,7 +89,7 @@ export async function GET(request) {
         })
       );
 
-      const unsubscribers = channels.map((channel) =>
+      const unsubscribers = allowedChannels.map((channel) =>
         subscribeRealtimeEvent(channel, (event) => {
           safeEnqueue(formatSseEvent(event));
         })

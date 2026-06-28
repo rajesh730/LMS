@@ -15,6 +15,7 @@ import {
   FiUserX,
 } from "react-icons/fi";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import AppDate from "@/components/common/AppDate";
 
 const defaultConfig = {
   general: {
@@ -642,7 +643,7 @@ export default function SuperAdminSettingsManager() {
                     <div>
                       <p className="font-semibold text-white">{admin.name}</p>
                       <p className="mt-1 text-xs text-slate-500">
-                        Added {new Date(admin.createdAt).toLocaleDateString()}
+                        Added <AppDate value={admin.createdAt} />
                       </p>
                     </div>
                     <div className="text-slate-300">{admin.email}</div>

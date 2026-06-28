@@ -10,6 +10,8 @@
     "test": "jest --runInBand",
     "db:ensure-indexes": "node scripts/ensure-indexes.mjs",
     "db:backfill-event-workflow": "node scripts/backfill-event-workflow-and-certificates.mjs",
+    "db:backfill-article-author-era": "node scripts/backfill-article-author-era.mjs",
+    "db:backfill-transferred-writing-detach": "node scripts/backfill-transferred-writing-detach.mjs",
     "db:remove-pulse-data": "node scripts/remove-pulse-data.mjs",
     "db:remove-support-ticket-data": "node scripts/remove-support-ticket-data.mjs"
   },
@@ -19,6 +21,7 @@
     "dotenv": "^17.2.3",
     "lucide-react": "^0.561.0",
     "mongoose": "^9.0.0",
+    "nepali-date-converter": "^3.4.0",
     "next": "^16.2.4",
     "next-auth": "^4.24.13",
     "papaparse": "^5.5.3",
