@@ -2,10 +2,9 @@
 
 import { useState } from "react";
 import { signIn, signOut, useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import AuthShell, { AuthSessionPanel } from "@/components/auth/AuthShell";
-import Button from "@/components/ui/Button";
+import Button, { ButtonLink } from "@/components/ui/Button";
 import Input, { PasswordInput } from "@/components/ui/Input";
 import AlertBanner from "@/components/ui/AlertBanner";
 
@@ -14,12 +13,14 @@ const AUTH_LINKS = [
   { href: "/login", label: "School/Admin Login" },
 ];
 
-function redirectForRole(role, router) {
-  if (role === "STUDENT") router.push("/student/dashboard");
-  else if (role === "SUPER_ADMIN") router.push("/admin/dashboard");
-  else if (role === "SCHOOL_ADMIN") router.push("/school/dashboard");
-  else if (role === "TEACHER") router.push("/teacher/dashboard");
-  else router.push("/");
+function destinationForRole(role) {
+  const destinations = {
+    STUDENT: "/student/dashboard",
+    SUPER_ADMIN: "/admin/dashboard",
+    SCHOOL_ADMIN: "/school/dashboard",
+    TEACHER: "/teacher/dashboard",
+  };
+  return destinations[role] || "/";
 }
 
 export default function StudentLogin() {
@@ -29,9 +30,6 @@ export default function StudentLogin() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const { data: session, status } = useSession();
-  const router = useRouter();
-
-  const handleContinue = () => redirectForRole(session?.user?.role, router);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -48,7 +46,7 @@ export default function StudentLogin() {
       if (result?.error) {
         setError(result.error);
       } else {
-        router.push("/student/dashboard");
+        window.location.assign("/student/dashboard");
       }
     } catch {
       setError("An unexpected error occurred. Please try again.");
@@ -70,9 +68,12 @@ export default function StudentLogin() {
           email={session?.user?.email}
         />
         <div className="mt-6 space-y-3">
-          <Button fullWidth onClick={handleContinue}>
+          <ButtonLink
+            fullWidth
+            href={destinationForRole(session?.user?.role)}
+          >
             Continue with this account
-          </Button>
+          </ButtonLink>
           <Button
             fullWidth
             variant="secondary"

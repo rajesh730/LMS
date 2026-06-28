@@ -57,6 +57,9 @@ export const authOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials, req) {
+        const identifier = String(credentials?.email || "").trim();
+        const normalizedEmail = identifier.toLowerCase();
+
         // Throttle credential attempts per client IP to blunt brute-forcing.
         const ip =
           String(req?.headers?.["x-forwarded-for"] || "")
@@ -77,7 +80,7 @@ export const authOptions = {
 
         // 1. Try Teacher collection FIRST (Clean Architecture)
         const teacher = await Teacher.findOne({
-          email: credentials.email,
+          email: normalizedEmail,
           isDeleted: { $ne: true },
           status: { $ne: "INACTIVE" },
         });
@@ -93,7 +96,7 @@ export const authOptions = {
           } else {
             // Fallback: a legacy teacher whose credentials live in the User
             // collection. Hashed compare only — no plaintext path.
-            const user = await User.findOne({ email: credentials.email });
+            const user = await User.findOne({ email: normalizedEmail });
             if (user && user.password) {
               isValid = await bcrypt.compare(
                 credentials.password,
@@ -118,7 +121,7 @@ export const authOptions = {
         }
 
         // 2. Try User collection (Admins, School Admins, Legacy support)
-        const user = await User.findOne({ email: credentials.email });
+        const user = await User.findOne({ email: normalizedEmail });
 
         if (user) {
           const isValid = await bcrypt.compare(
@@ -173,7 +176,7 @@ export const authOptions = {
         // 3. Try Student collection (Students)
         // Check by username OR email (in case they use email)
         const student = await Student.findOne({
-          $or: [{ username: credentials.email }, { email: credentials.email }],
+          $or: [{ username: identifier }, { email: normalizedEmail }],
           isDeleted: { $ne: true },
           status: "ACTIVE",
         });

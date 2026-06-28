@@ -2,10 +2,9 @@
 
 import { useState } from "react";
 import { signIn, signOut, useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import AuthShell, { AuthSessionPanel } from "@/components/auth/AuthShell";
-import Button from "@/components/ui/Button";
+import Button, { ButtonLink } from "@/components/ui/Button";
 import Input, { PasswordInput } from "@/components/ui/Input";
 import AlertBanner from "@/components/ui/AlertBanner";
 
@@ -15,12 +14,14 @@ const AUTH_LINKS = [
   { href: "/student/login", label: "Student Login", highlight: true },
 ];
 
-function redirectForRole(role, router) {
-  if (role === "SUPER_ADMIN") router.push("/admin/dashboard");
-  else if (role === "SCHOOL_ADMIN") router.push("/school/dashboard");
-  else if (role === "TEACHER") router.push("/teacher/dashboard");
-  else if (role === "STUDENT") router.push("/student/dashboard");
-  else router.push("/school/dashboard");
+function destinationForRole(role) {
+  const destinations = {
+    SUPER_ADMIN: "/admin/dashboard",
+    SCHOOL_ADMIN: "/school/dashboard",
+    TEACHER: "/teacher/dashboard",
+    STUDENT: "/student/dashboard",
+  };
+  return destinations[role] || "/school/dashboard";
 }
 
 export default function LoginPage() {
@@ -28,18 +29,18 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const { status, data: session } = useSession();
-  const router = useRouter();
-
-  const handleContinue = () => redirectForRole(session?.user?.role, router);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (loading) return;
     setError("");
+    setLoading(true);
 
     try {
       const res = await signIn("credentials", {
-        email,
+        email: email.trim(),
         password,
         redirect: false,
       });
@@ -53,12 +54,14 @@ export default function LoginPage() {
       const sessionData = await sessionRes.json();
 
       if (sessionData?.user) {
-        redirectForRole(sessionData.user.role, router);
+        window.location.assign(destinationForRole(sessionData.user.role));
       } else {
-        router.push("/school/dashboard");
+        window.location.assign("/school/dashboard");
       }
     } catch {
       setError("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -75,9 +78,12 @@ export default function LoginPage() {
           email={session?.user?.email}
         />
         <div className="mt-6 space-y-3">
-          <Button fullWidth onClick={handleContinue}>
+          <ButtonLink
+            fullWidth
+            href={destinationForRole(session?.user?.role)}
+          >
             Continue with this account
-          </Button>
+          </ButtonLink>
           <Button
             fullWidth
             variant="secondary"
@@ -118,6 +124,7 @@ export default function LoginPage() {
           onChange={(e) => setEmail(e.target.value)}
           placeholder="Enter email or username"
           required
+          disabled={loading}
           autoComplete="username"
         />
         <PasswordInput
@@ -127,10 +134,11 @@ export default function LoginPage() {
           showPassword={showPassword}
           onToggleShow={() => setShowPassword((v) => !v)}
           required
+          disabled={loading}
           autoComplete="current-password"
         />
-        <Button type="submit" fullWidth>
-          Sign in
+        <Button type="submit" fullWidth disabled={loading}>
+          {loading ? "Signing in..." : "Sign in"}
         </Button>
       </form>
     </AuthShell>
