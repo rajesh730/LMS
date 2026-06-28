@@ -107,6 +107,7 @@ export default function StudentLogin() {
         <Input
           label="Username or email"
           id="username"
+          name="username"
           type="text"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
@@ -118,6 +119,7 @@ export default function StudentLogin() {
         <PasswordInput
           label="Password"
           id="password"
+          name="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           showPassword={showPassword}

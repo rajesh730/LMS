@@ -119,6 +119,8 @@ export default function LoginPage() {
       <form onSubmit={handleSubmit} className="space-y-4">
         <Input
           label="Email or username"
+          id="email"
+          name="email"
           type="text"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -129,6 +131,8 @@ export default function LoginPage() {
         />
         <PasswordInput
           label="Password"
+          id="password"
+          name="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           showPassword={showPassword}
