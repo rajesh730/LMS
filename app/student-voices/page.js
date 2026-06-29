@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { unstable_cache } from "next/cache";
 import connectDB from "@/lib/db";
 import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
 import PublicExplorePanel from "@/components/public/PublicExplorePanel";
@@ -18,8 +19,6 @@ import {
 } from "react-icons/fa";
 import "@/models/Student";
 import "@/models/User";
-
-export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Student Voices",
@@ -42,7 +41,7 @@ function getInitials(value = "Student") {
     .toUpperCase();
 }
 
-async function getStudentVoices() {
+const getStudentVoices = unstable_cache(async () => {
   await connectDB();
 
   const articles = await SchoolMagazineArticle.find({
@@ -64,7 +63,7 @@ async function getStudentVoices() {
     title: article.title,
     content: article.content,
     category: article.category,
-    date: article.publishedAt || article.updatedAt,
+    date: (article.publishedAt || article.updatedAt)?.toISOString() || "",
     author: article.authorStudent?.name || "Student",
     authorId: article.authorStudent?._id ? String(article.authorStudent._id) : "",
     grade: article.authorStudent?.grade || "",
@@ -80,7 +79,10 @@ async function getStudentVoices() {
     getSchoolKey: (article) => article.schoolId || article.schoolName,
     getTime: (article) => article.date,
   });
-}
+}, ["public-student-voices-v1"], {
+  revalidate: 60,
+  tags: ["public-student-voices"],
+});
 
 function VoiceCard({ article, featured = false }) {
   return (

@@ -93,5 +93,7 @@ const SchoolShowcaseProfileSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+SchoolShowcaseProfileSchema.index({ school: 1, visibility: 1 });
+
 export default mongoose.models.SchoolShowcaseProfile ||
   mongoose.model("SchoolShowcaseProfile", SchoolShowcaseProfileSchema);

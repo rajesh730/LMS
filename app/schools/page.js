@@ -1,4 +1,5 @@
 import connectDB from "@/lib/db";
+import { unstable_cache } from "next/cache";
 import User from "@/models/User";
 import Student from "@/models/Student";
 import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
@@ -8,8 +9,6 @@ import PublicExplorePanel from "@/components/public/PublicExplorePanel";
 import PublicSchoolsDirectory from "@/components/public/PublicSchoolsDirectory";
 import PublicSiteNav from "@/components/public/PublicSiteNav";
 import { PublicPageShell } from "@/components/public/PublicLayout";
-
-export const dynamic = "force-dynamic";
 
 function serializeProfile(profile) {
   return {
@@ -69,7 +68,7 @@ function serializeActivity(activity) {
   };
 }
 
-export default async function PublicSchoolsPage() {
+const getPublicSchoolsData = unstable_cache(async () => {
   await connectDB();
 
   const [schools, spotlights] = await Promise.all([
@@ -82,7 +81,9 @@ export default async function PublicSchoolsPage() {
       )
       .sort({ createdAt: -1 })
       .lean(),
-    getActiveSchoolPromotions("SCHOOLS_SPOTLIGHT", 4),
+    getActiveSchoolPromotions("SCHOOLS_SPOTLIGHT", 4, {
+      trackImpression: false,
+    }),
   ]);
 
   const schoolIds = schools.map((school) => school._id);
@@ -245,6 +246,20 @@ export default async function PublicSchoolsPage() {
   const serializedSpotlights = spotlights
     .map((promotion) => serializePromotion(promotion, studentCountMap))
     .filter((promotion) => promotion.schoolId);
+
+  return {
+    publicSchools,
+    serializedSpotlights,
+    totals,
+  };
+}, ["public-schools-directory-v1"], {
+  revalidate: 60,
+  tags: ["public-schools-directory"],
+});
+
+export default async function PublicSchoolsPage() {
+  const { publicSchools, serializedSpotlights, totals } =
+    await getPublicSchoolsData();
 
   return (
     <PublicPageShell className="bg-[#f8f9fd]">
