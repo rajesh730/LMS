@@ -29,6 +29,7 @@ export default function ConfirmDialog({
   busy = false,
   onConfirm,
   onClose,
+  children,
 }) {
   const styles = TONE[tone] || TONE.danger;
   const Icon = tone === "info" ? FaInfoCircle : FaExclamationTriangle;
@@ -69,6 +70,7 @@ export default function ConfirmDialog({
             {message && (
               <p className="mt-3 text-sm leading-6 text-[var(--brand-muted)]">{message}</p>
             )}
+            {children}
           </div>
         </div>
 

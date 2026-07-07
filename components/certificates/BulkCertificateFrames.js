@@ -21,10 +21,10 @@ export default function BulkCertificateFrames({ certificates, autoPrint = false 
 
   return (
     <>
-      <div className="mb-5 flex flex-col gap-3 rounded-lg border border-[#dbe5f4] bg-white p-4 shadow-sm print:hidden sm:flex-row sm:items-center sm:justify-between">
+      <div className="mb-5 flex flex-col gap-3 rounded-lg border-l-4 border-l-[#c9a227] border-y border-r border-[#e4d6a8] bg-white p-4 shadow-sm print:hidden sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-xl font-black text-[#10142f]">Bulk Certificates</h1>
-          <p className="mt-1 text-sm font-semibold text-[#52657d]">
+          <h1 className="text-xl font-black text-[#0a1f4d]">Bulk Certificates</h1>
+          <p className="mt-1 text-sm font-semibold text-[#4a5a72]">
             {certificates.length} issued certificate
             {certificates.length === 1 ? "" : "s"} ready for one PDF export.
           </p>
@@ -32,7 +32,7 @@ export default function BulkCertificateFrames({ certificates, autoPrint = false 
         <button
           type="button"
           onClick={() => window.print()}
-          className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-[#1f4e79] px-4 text-sm font-bold text-white shadow-sm transition hover:bg-[#173f63]"
+          className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-[#0a1f4d] px-4 text-sm font-bold text-white shadow-sm ring-1 ring-inset ring-[#c9a227]/40 transition hover:bg-[#122f6d] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c9a227]"
         >
           <FaDownload />
           Download PDF

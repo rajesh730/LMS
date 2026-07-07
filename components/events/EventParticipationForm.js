@@ -668,7 +668,7 @@ const EventParticipationForm = memo(function EventParticipationForm({
                       }));
                       setActiveTeamIndex((formData.teams || []).length);
                     }}
-                    className="rounded-lg bg-purple-700 px-3 py-2 text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-50"
+                    className="rounded-lg bg-[#1f4e79] px-3 py-2 text-xs font-black text-white transition hover:bg-[#173f63] disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Add Team
                   </button>
@@ -1309,7 +1309,7 @@ const EventParticipationForm = memo(function EventParticipationForm({
                         }));
                         setActiveTeamIndex((formData.teams || []).length);
                       }}
-                      className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                      className="rounded-lg bg-[#1f4e79] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#173f63] disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       Add Team
                     </button>

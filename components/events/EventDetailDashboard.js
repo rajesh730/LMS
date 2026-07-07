@@ -122,7 +122,8 @@ export default function EventDetailDashboard() {
     );
   }
 
-  const { event, requests, capacityInfo, perSchoolBreakdown } = eventData;
+  const { event, requests, capacityInfo, perSchoolBreakdown, roundsSummary, certificatesIssued } =
+    eventData;
   const handleArchive = async () => {
     if (!archiveTarget) return;
     try {
@@ -191,6 +192,8 @@ export default function EventDetailDashboard() {
           requests={requests}
           capacityInfo={capacityInfo}
           perSchoolBreakdown={perSchoolBreakdown}
+          roundsSummary={roundsSummary}
+          certificatesIssued={certificatesIssued}
           event={event}
           currentUserRole={session?.user?.role}
           canManagePlatformOperations={session?.user?.role === "SUPER_ADMIN"}

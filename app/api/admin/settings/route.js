@@ -37,24 +37,40 @@ function normalizeDefaults(defaults = {}) {
 }
 
 async function getOrCreateSettings() {
-  let settings = await PlatformSetting.findOne({ singletonKey: "platform" });
-  if (!settings) {
-    settings = await PlatformSetting.create({ singletonKey: "platform" });
-  } else {
-    const currentRoles = normalizeStringList(
-      settings.defaults?.defaultTeacherRoles || []
+  // Atomic upsert instead of find-then-create: the settings page fires two
+  // concurrent GETs in React StrictMode, and a check-then-create would race and
+  // throw E11000 on the unique `singletonKey` index. Upsert is idempotent, and
+  // we still guard against a concurrent-insert duplicate by falling back to a
+  // plain read.
+  let settings;
+  try {
+    settings = await PlatformSetting.findOneAndUpdate(
+      { singletonKey: "platform" },
+      { $setOnInsert: { singletonKey: "platform" } },
+      { new: true, upsert: true, setDefaultsOnInsert: true }
     );
-    if (
-      JSON.stringify(currentRoles) ===
-      JSON.stringify(LEGACY_PLATFORM_ROLE_BASELINE)
-    ) {
-      settings.defaults = {
-        ...settings.defaults?.toObject?.(),
-        defaultTeacherRoles: [],
-      };
-      await settings.save();
+  } catch (error) {
+    if (error?.code === 11000) {
+      settings = await PlatformSetting.findOne({ singletonKey: "platform" });
+    } else {
+      throw error;
     }
   }
+
+  // Migrate the legacy default-teacher-roles baseline to an empty list.
+  const currentRoles = normalizeStringList(
+    settings.defaults?.defaultTeacherRoles || []
+  );
+  if (
+    JSON.stringify(currentRoles) === JSON.stringify(LEGACY_PLATFORM_ROLE_BASELINE)
+  ) {
+    settings.defaults = {
+      ...settings.defaults?.toObject?.(),
+      defaultTeacherRoles: [],
+    };
+    await settings.save();
+  }
+
   return settings;
 }
 

@@ -1,12 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Cinzel, Great_Vibes } from "next/font/google";
-import {
-  CalendarDays,
-  Award,
-  CalendarCheck2,
-  ShieldCheck,
-} from "lucide-react";
+import { Cinzel, Great_Vibes, EB_Garamond } from "next/font/google";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
@@ -15,7 +9,9 @@ import SchoolShowcaseProfile from "@/models/SchoolShowcaseProfile";
 import { isActiveCertificateRecord } from "@/lib/certificates";
 import { formatPlacementLabel } from "@/lib/results";
 import { normalizeImageUrl } from "@/lib/imageUrls";
-import PravyoLogo from "@/components/brand/PravyoLogo";
+import Image from "next/image";
+import QRCode from "qrcode";
+import pravyoLogo from "@/logo/pravyo logo by name.png";
 import CertificatePrintActions from "@/components/certificates/CertificatePrintActions";
 import AppDate from "@/components/common/AppDate";
 
@@ -31,6 +27,21 @@ const scriptFont = Great_Vibes({
   weight: ["400"],
   display: "swap",
 });
+const bodySerif = EB_Garamond({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  style: ["normal", "italic"],
+  display: "swap",
+});
+
+/* ---------- palette ---------- */
+const NAVY = "#0a1f4d";
+const GOLD = "#c9a227";
+
+// Printed copies carry no signature; the code + this URL prove authenticity.
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL || "https://pratyo.infobytesnepal.com";
+const VERIFY_HOST = SITE_URL.replace(/^https?:\/\//, "");
 
 async function getCertificate(id) {
   await connectDB();
@@ -84,58 +95,212 @@ function resolveEventOwnership(event) {
 
 /* ---------- decorative pieces ---------- */
 
-const RIBBON_TRANSFORMS = {
+// Shared gradients, defined once per document (one certificate per page/iframe).
+function GoldDefs() {
+  return (
+    <svg width="0" height="0" aria-hidden="true" className="absolute">
+      <defs>
+        <linearGradient id="certGold" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#f6e6a4" />
+          <stop offset="0.45" stopColor={GOLD} />
+          <stop offset="1" stopColor="#8a6a12" />
+        </linearGradient>
+      </defs>
+    </svg>
+  );
+}
+
+const FLOURISH_TRANSFORMS = {
   "top-left": "",
   "top-right": "scaleX(-1)",
   "bottom-left": "scaleY(-1)",
   "bottom-right": "scale(-1, -1)",
 };
 
-const RIBBON_POSITIONS = {
+const FLOURISH_POSITIONS = {
   "top-left": "top-0 left-0",
   "top-right": "top-0 right-0",
   "bottom-left": "bottom-0 left-0",
   "bottom-right": "bottom-0 right-0",
 };
 
-function CornerRibbon({ position }) {
+function CornerFlourish({ position }) {
   return (
     <svg
-      viewBox="0 0 240 240"
+      viewBox="0 0 120 120"
       aria-hidden="true"
-      className={`pointer-events-none absolute z-0 h-36 w-36 print:h-28 print:w-28 ${RIBBON_POSITIONS[position]}`}
-      style={{ transform: RIBBON_TRANSFORMS[position] }}
+      className={`pointer-events-none absolute z-[2] h-24 w-24 print:h-20 print:w-20 ${FLOURISH_POSITIONS[position]}`}
+      style={{ transform: FLOURISH_TRANSFORMS[position] }}
     >
-      <path d="M0 0 L240 0 C168 26 132 62 96 98 C62 132 26 168 0 240 Z" fill="#14b8a6" />
-      <path d="M0 0 L186 0 C132 22 104 48 76 76 C50 102 24 132 0 186 Z" fill="#1d4ed8" />
-      <path d="M0 0 L120 0 C86 18 66 38 48 56 C32 72 16 92 0 120 Z" fill="#0a1f4d" />
+      <g
+        fill="none"
+        stroke="url(#certGold)"
+        strokeWidth="2"
+        strokeLinecap="round"
+      >
+        <path d="M18 96 C18 48 48 18 96 18" />
+        <path d="M26 96 C26 55 55 26 96 26" opacity="0.75" />
+        <path d="M26 26 C44 28 60 36 70 50" opacity="0.9" />
+        <path d="M26 26 C28 44 36 60 50 70" opacity="0.9" />
+        <path d="M34 34 C40 34 46 38 48 46" opacity="0.7" />
+      </g>
+      <circle cx="26" cy="26" r="3.4" fill="url(#certGold)" />
+      <circle cx="70" cy="50" r="2.4" fill="url(#certGold)" />
+      <circle cx="50" cy="70" r="2.4" fill="url(#certGold)" />
     </svg>
   );
 }
 
-function CornerBracket({ position }) {
+function GoldDivider({ className = "" }) {
   return (
-    <span
-      aria-hidden="true"
-      className={`pointer-events-none absolute h-7 w-7 border-[#0a1f4d] ${
-        {
-          "top-left": "top-0 left-0 border-l-2 border-t-2 rounded-tl",
-          "top-right": "top-0 right-0 border-r-2 border-t-2 rounded-tr",
-          "bottom-left": "bottom-0 left-0 border-l-2 border-b-2 rounded-bl",
-          "bottom-right": "bottom-0 right-0 border-r-2 border-b-2 rounded-br",
-        }[position]
-      }`}
-    />
+    <div className={`flex items-center justify-center gap-2 ${className}`}>
+      <span
+        className="h-px w-16 sm:w-24"
+        style={{ background: `linear-gradient(to right, transparent, ${GOLD})` }}
+      />
+      <span
+        aria-hidden="true"
+        className="inline-block h-2 w-2 rotate-45"
+        style={{ background: GOLD }}
+      />
+      <span
+        className="h-px w-16 sm:w-24"
+        style={{ background: `linear-gradient(to left, transparent, ${GOLD})` }}
+      />
+    </div>
   );
 }
 
-function OrnamentDivider({ className = "" }) {
+// Faint concentric guilloché watermark behind the content.
+function GuillocheWatermark() {
   return (
-    <div className={`flex items-center justify-center gap-2 ${className}`}>
-      <span className="h-px w-16 bg-gradient-to-r from-transparent to-[#1d4ed8] sm:w-24" />
-      <span className="text-[#14b8a6]">&#10070;</span>
-      <span className="h-px w-16 bg-gradient-to-l from-transparent to-[#1d4ed8] sm:w-24" />
-    </div>
+    <svg
+      viewBox="0 0 200 200"
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-0 z-0 m-auto h-[62%] w-[62%] opacity-[0.05]"
+    >
+      <g fill="none" stroke={NAVY} strokeWidth="0.7">
+        {[70, 60, 50, 40, 30].map((r) => (
+          <circle key={r} cx="100" cy="100" r={r} />
+        ))}
+        {Array.from({ length: 36 }, (_, i) => {
+          const a = (i / 36) * Math.PI * 2;
+          return (
+            <line
+              key={i}
+              x1={100 + 30 * Math.cos(a)}
+              y1={100 + 30 * Math.sin(a)}
+              x2={100 + 70 * Math.cos(a)}
+              y2={100 + 70 * Math.sin(a)}
+            />
+          );
+        })}
+      </g>
+    </svg>
+  );
+}
+
+// Beaded gold ring positions for the seal.
+const SEAL_BEADS = Array.from({ length: 30 }, (_, i) => {
+  const a = (i / 30) * Math.PI * 2;
+  return {
+    x: Number((60 + 45 * Math.cos(a)).toFixed(1)),
+    y: Number((52 + 45 * Math.sin(a)).toFixed(1)),
+  };
+});
+
+// Gold award seal with navy center, star and ribbon tails.
+function SealMedallion({ caption = "PRAVYO" }) {
+  return (
+    <svg
+      viewBox="0 0 120 148"
+      aria-hidden="true"
+      className="h-32 w-24 print:h-28 print:w-20"
+    >
+      {/* ribbon tails */}
+      <path d="M46 92 L38 138 L54 124 L60 136 L60 96 Z" fill="#12307a" />
+      <path d="M74 92 L82 138 L66 124 L60 136 L60 96 Z" fill={NAVY} />
+      {/* beaded ring */}
+      {SEAL_BEADS.map((b, i) => (
+        <circle key={i} cx={b.x} cy={b.y} r="2.1" fill="url(#certGold)" />
+      ))}
+      {/* medallion body */}
+      <circle cx="60" cy="52" r="40" fill="url(#certGold)" />
+      <circle cx="60" cy="52" r="33" fill={NAVY} />
+      <circle
+        cx="60"
+        cy="52"
+        r="33"
+        fill="none"
+        stroke="url(#certGold)"
+        strokeWidth="1.4"
+      />
+      {/* star */}
+      <path
+        d="M60 33 l3.6 7.3 8 1.2 -5.8 5.6 1.4 8 -7.2 -3.8 -7.2 3.8 1.4 -8 -5.8 -5.6 8 -1.2 Z"
+        fill="url(#certGold)"
+      />
+      <text
+        x="60"
+        y="66"
+        textAnchor="middle"
+        fontSize="9"
+        letterSpacing="1.5"
+        fontWeight="700"
+        fill="#f6e6a4"
+        fontFamily="serif"
+      >
+        {caption}
+      </text>
+      <text
+        x="60"
+        y="76"
+        textAnchor="middle"
+        fontSize="5.5"
+        letterSpacing="2"
+        fill="#e8c766"
+        fontFamily="serif"
+      >
+        VERIFIED
+      </text>
+    </svg>
+  );
+}
+
+function LaurelBranch({ flip = false }) {
+  return (
+    <svg
+      viewBox="0 0 44 84"
+      aria-hidden="true"
+      className="h-11 w-6"
+      style={flip ? { transform: "scaleX(-1)" } : undefined}
+    >
+      <g fill="url(#certGold)">
+        <path
+          d="M30 82 C14 60 16 30 26 6"
+          fill="none"
+          stroke="url(#certGold)"
+          strokeWidth="2.2"
+          strokeLinecap="round"
+        />
+        {[
+          { x: 27, y: 16, r: -35 },
+          { x: 22, y: 30, r: -30 },
+          { x: 19, y: 44, r: -22 },
+          { x: 18, y: 58, r: -14 },
+          { x: 20, y: 70, r: -6 },
+        ].map((leaf, i) => (
+          <ellipse
+            key={i}
+            cx={leaf.x}
+            cy={leaf.y}
+            rx="7"
+            ry="3.2"
+            transform={`rotate(${leaf.r} ${leaf.x} ${leaf.y})`}
+          />
+        ))}
+      </g>
+    </svg>
   );
 }
 
@@ -144,7 +309,7 @@ function CertificateLogoMark({ imageUrl, label, fallbackText }) {
 
   return (
     <div className="flex items-center gap-3">
-      <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border border-[#dbe4f3] bg-white shadow-sm print:h-11 print:w-11">
+      <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border-2 border-[#c9a227]/60 bg-white shadow-sm print:h-11 print:w-11">
         {image ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={image} alt={label} className="h-full w-full object-contain p-1.5" />
@@ -163,16 +328,15 @@ function CertificateLogoMark({ imageUrl, label, fallbackText }) {
   );
 }
 
-function StatItem({ icon: Icon, label, value }) {
+function MetaItem({ label, value }) {
   return (
-    <div className="flex flex-col items-center gap-2 text-center">
-      <span className="flex h-11 w-11 items-center justify-center rounded-full border border-[#1d4ed8]/30 bg-[#eef3ff] text-[#1d4ed8] print:h-10 print:w-10">
-        <Icon className="h-5 w-5" strokeWidth={1.8} />
-      </span>
-      <p className="text-[10px] font-black uppercase tracking-[0.12em] text-[#0a1f4d]">
+    <div className="text-center">
+      <p className="text-[9px] font-black uppercase tracking-[0.14em] text-[#8a6a12]">
         {label}
       </p>
-      <p className="text-xs font-semibold text-[#1d4ed8]">{value || "—"}</p>
+      <p className="mt-1 truncate text-xs font-semibold text-[#0a1f4d]">
+        {value || "—"}
+      </p>
     </div>
   );
 }
@@ -266,13 +430,22 @@ export default async function CertificatePage({ params, searchParams }) {
   const schoolLine = isPlatformEvent ? "Associated School" : "School";
 
   // Header logos: platform events lead with Pravyo, school events lead with school.
+  // Rendered directly (not via PravyoLogo) so the certificate controls the
+  // exact size and matches the school badge next to it.
   const pravyoMark = (
-    <div key="pravyo" className="flex items-center">
-      <PravyoLogo
-        variant="wordmark"
-        imageClassName="w-[124px] sm:w-[140px] print:w-[112px]"
-        className="items-center"
-      />
+    <div key="pravyo" className="flex items-center gap-3">
+      <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border-2 border-[#c9a227]/60 bg-white shadow-sm print:h-11 print:w-11">
+        <Image
+          src={pravyoLogo}
+          alt="Pravyo"
+          width={48}
+          height={48}
+          className="h-full w-full object-contain p-1.5"
+        />
+      </div>
+      <p className="text-left text-sm font-black uppercase tracking-wide text-[#0a1f4d] print:text-xs">
+        Pravyo
+      </p>
     </div>
   );
   const schoolMark = (
@@ -287,18 +460,32 @@ export default async function CertificatePage({ params, searchParams }) {
     ? [pravyoMark, schoolMark]
     : [schoolMark, pravyoMark];
 
-  const footerItems = (
-    isPlatformEvent
-      ? [
-          ["Platform Event", eventTitle],
-          ["Associated School", schoolName],
-          ["Managed by", "Pravyo"],
-        ]
-      : [
-          ["School Event", schoolName],
-          ["Managed by", "Pravyo"],
-        ]
-  ).concat([["Certificate Code", achievement.certificateCode || "Pending"]]);
+  const badgeLabel = isParticipantCertificate ? "Participant" : placementTitle;
+
+  // QR straight to the verify page — a printed copy stays self-verifying.
+  let verifyQrSvg = "";
+  if (achievement.certificateCode) {
+    verifyQrSvg = await QRCode.toString(
+      `${SITE_URL}/verify?code=${encodeURIComponent(achievement.certificateCode)}`,
+      {
+        type: "svg",
+        margin: 0,
+        errorCorrectionLevel: "M",
+        color: { dark: NAVY, light: "#0000" },
+      }
+    );
+  }
+
+  const footerItems = isPlatformEvent
+    ? [
+        ["Platform Event", eventTitle],
+        ["Associated School", schoolName],
+        ["Managed by", "Pravyo"],
+      ]
+    : [
+        ["School Event", schoolName],
+        ["Managed by", "Pravyo"],
+      ];
 
   return (
     <main
@@ -310,7 +497,10 @@ export default async function CertificatePage({ params, searchParams }) {
         {/* screen-only action bar */}
         {!isBulkMode && (
         <div className="mb-6 flex flex-col gap-4 print:hidden sm:flex-row sm:items-center sm:justify-between">
-          <Link href="/" className="text-sm font-bold text-[#526071] hover:text-[#10142f]">
+          <Link
+            href="/"
+            className="text-sm font-bold text-[#0a1f4d]/70 transition hover:text-[#0a1f4d]"
+          >
             ← Back to platform
           </Link>
           <div className="flex flex-wrap items-center gap-2">
@@ -323,7 +513,7 @@ export default async function CertificatePage({ params, searchParams }) {
             {achievement.certificateCode && (
               <Link
                 href={`/verify?code=${encodeURIComponent(achievement.certificateCode)}`}
-                className="rounded-lg border border-[#dbe5f4] bg-white px-4 py-2 text-sm font-bold text-[#0a2f66] hover:bg-[#eef4f8]"
+                className="rounded-lg border border-[#0a1f4d]/25 bg-white px-4 py-2 text-sm font-bold text-[#0a1f4d] transition hover:border-[#c9a227] hover:bg-[#fbf7ea]"
               >
                 Verify
               </Link>
@@ -331,7 +521,7 @@ export default async function CertificatePage({ params, searchParams }) {
             {eventHref && (
               <Link
                 href={eventHref}
-                className="rounded-lg bg-[#1f4e79] px-4 py-2 text-sm font-bold text-white"
+                className="rounded-lg bg-[#c9a227] px-4 py-2 text-sm font-bold text-[#0a1f4d] shadow-sm transition hover:bg-[#b8901f]"
               >
                 View public event
               </Link>
@@ -341,80 +531,102 @@ export default async function CertificatePage({ params, searchParams }) {
         )}
 
         {/* certificate sheet */}
-        <section className="certificate-sheet relative mx-auto aspect-[1/1.414] w-full overflow-hidden rounded-[1rem] border-[3px] border-[#0a1f4d] bg-white shadow-[0_24px_72px_rgba(10,31,77,0.22)] print:aspect-auto print:rounded-none print:shadow-none">
-          {/* corner ribbons */}
-          <CornerRibbon position="top-left" />
-          <CornerRibbon position="top-right" />
-          <CornerRibbon position="bottom-left" />
-          <CornerRibbon position="bottom-right" />
+        <section className="certificate-sheet relative mx-auto aspect-[1/1.414] w-full overflow-hidden rounded-[1rem] border-[3px] border-[#0a1f4d] bg-[#fffdf7] shadow-[0_24px_72px_rgba(10,31,77,0.22)] print:aspect-auto print:rounded-none print:shadow-none">
+          <GoldDefs />
 
-          {/* inner double frame */}
-          <div className="certificate-frame relative z-10 flex h-full flex-col items-center justify-between rounded-[0.75rem] border border-[#0a1f4d]/70 px-7 py-9 text-center sm:px-12 print:px-10 print:py-8">
-            <CornerBracket position="top-left" />
-            <CornerBracket position="top-right" />
-            <CornerBracket position="bottom-left" />
-            <CornerBracket position="bottom-right" />
+          {/* inset gold hairline frame */}
+          <span className="pointer-events-none absolute inset-[10px] z-[1] rounded-[0.55rem] border border-[#c9a227]/70 print:inset-[8px]" />
+
+          {/* corner flourishes */}
+          <div className="pointer-events-none absolute inset-[10px] z-[2] print:inset-[8px]">
+            <CornerFlourish position="top-left" />
+            <CornerFlourish position="top-right" />
+            <CornerFlourish position="bottom-left" />
+            <CornerFlourish position="bottom-right" />
+          </div>
+
+          {/* inner frame */}
+          <div className="certificate-frame relative z-10 flex h-full flex-col items-center justify-between px-8 py-9 text-center sm:px-14 print:px-12 print:py-10">
+            <GuillocheWatermark />
 
             {/* header */}
-            <div className="flex w-full flex-col items-center gap-4">
+            <div className="relative z-10 flex w-full flex-col items-center gap-4">
               <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6">
                 {headerLogos[0]}
-                <span className="h-9 w-px bg-[#cfd8e8]" />
+                <span className="h-9 w-px bg-[#e2d5a6]" />
                 {headerLogos[1]}
               </div>
 
               <div className="mt-2">
                 <h1
-                  className={`${displaySerif.className} text-3xl font-bold tracking-[0.12em] text-[#0a1f4d] sm:text-4xl`}
+                  className={`${displaySerif.className} text-[2rem] font-bold tracking-[0.16em] text-[#0a1f4d] sm:text-[2.6rem]`}
                 >
                   CERTIFICATE
                 </h1>
-                <div className="mt-1 flex items-center justify-center gap-2">
-                  <span className="h-px w-8 bg-[#1d4ed8]" />
+                <div className="mt-1.5 flex items-center justify-center gap-3">
+                  <span className="h-px w-10" style={{ background: GOLD }} />
                   <p
-                    className={`${displaySerif.className} text-sm font-semibold tracking-[0.3em] text-[#1d4ed8]`}
+                    className={`${displaySerif.className} text-sm font-semibold tracking-[0.32em] text-[#8a6a12]`}
                   >
-                    OF RECOGNITION
+                    OF ACHIEVEMENT
                   </p>
-                  <span className="h-px w-8 bg-[#1d4ed8]" />
+                  <span className="h-px w-10" style={{ background: GOLD }} />
                 </div>
               </div>
             </div>
 
             {/* recipient */}
-            <div className="flex w-full flex-col items-center">
-              <p className="text-sm font-medium italic text-[#526071]">
-                Proudly presented to
+            <div className="relative z-10 flex w-full flex-col items-center">
+              <p className={`${bodySerif.className} text-base italic text-[#526071]`}>
+                This certificate is proudly presented to
               </p>
               <h2
-                className={`${scriptFont.className} mt-2 break-words text-5xl leading-tight text-[#0a1f4d] sm:text-6xl`}
+                className={`${scriptFont.className} mt-2 break-words text-6xl leading-tight text-[#0a1f4d] sm:text-7xl`}
               >
                 {recipientName}
               </h2>
 
-              <OrnamentDivider className="mt-3" />
+              <GoldDivider className="mt-3" />
 
-              <p className="mt-3 text-sm font-bold text-[#0a1f4d]">
-                {schoolLine}: <span className="text-[#1d4ed8]">{schoolName}</span>
+              {/* placement / participation ribbon */}
+              <div className="mt-4 flex items-center justify-center gap-2">
+                <LaurelBranch />
+                <span
+                  className={`${displaySerif.className} px-6 py-1.5 text-sm font-bold uppercase tracking-[0.18em] text-[#0a1f4d]`}
+                  style={{
+                    background: "linear-gradient(135deg, #f6e6a4, #c9a227 55%, #a9841c)",
+                    clipPath:
+                      "polygon(0 0, 100% 0, calc(100% - 12px) 50%, 100% 100%, 0 100%, 12px 50%)",
+                  }}
+                >
+                  {badgeLabel}
+                </span>
+                <LaurelBranch flip />
+              </div>
+
+              <p className="mt-4 text-sm font-bold text-[#0a1f4d]">
+                {schoolLine}: <span className="text-[#8a6a12]">{schoolName}</span>
               </p>
               {recipientMeta && (
                 <p className="mt-1 text-xs font-medium text-[#526071]">{recipientMeta}</p>
               )}
 
               {/* statement */}
-              <p className="mx-auto mt-4 max-w-md text-sm leading-6 text-[#344054]">
+              <p
+                className={`${bodySerif.className} mx-auto mt-4 max-w-md text-[15px] leading-7 text-[#344054]`}
+              >
                 {isParticipantCertificate ? (
                   <>
                     for active participation in{" "}
-                    <span className="font-bold text-[#1d4ed8]">‘{eventTitle}’</span> in
+                    <span className="font-semibold text-[#8a6a12]">‘{eventTitle}’</span>, in
                     recognition of dedication and engagement throughout the event.
                   </>
                 ) : (
                   <>
                     for earning the{" "}
-                    <span className="font-bold text-[#0a1f4d]">{placementUpper}</span>{" "}
+                    <span className="font-semibold text-[#0a1f4d]">{placementUpper}</span>{" "}
                     position in{" "}
-                    <span className="font-bold text-[#1d4ed8]">‘{eventTitle}’</span> in
+                    <span className="font-semibold text-[#8a6a12]">‘{eventTitle}’</span>, in
                     recognition of outstanding performance and active participation.
                   </>
                 )}
@@ -428,22 +640,26 @@ export default async function CertificatePage({ params, searchParams }) {
               )}
             </div>
 
-            {/* stat row */}
-            <div className="flex w-full flex-col items-center gap-5">
-              <div className="grid w-full max-w-xl grid-cols-2 gap-5 sm:grid-cols-4">
-                <StatItem
-                  icon={CalendarDays}
+            {/* seal + signatures */}
+            <div className="relative z-10 flex w-full flex-col items-center gap-5">
+              {/* Digitally issued — no signature lines. The certificate code
+                  and the /verify page prove authenticity instead. */}
+              <div className="-mb-1 flex w-full justify-center">
+                <SealMedallion caption="PRAVYO" />
+              </div>
+
+              {/* details row */}
+              <div className="grid w-full max-w-xl grid-cols-2 gap-y-3 border-t border-[#e4d6a8] pt-4 sm:grid-cols-4">
+                <MetaItem
                   label="Event Date"
                   value={<AppDate value={achievement.event?.date} />}
                 />
-                <StatItem
-                  icon={Award}
+                <MetaItem
                   label="Position"
                   value={isParticipantCertificate ? "Participant" : placementTitle}
                 />
-                <StatItem
-                  icon={CalendarCheck2}
-                  label="Issued On"
+                <MetaItem
+                  label="Date of Issue"
                   value={
                     achievement.certificateIssuedAt ? (
                       <AppDate value={achievement.certificateIssuedAt} />
@@ -452,27 +668,52 @@ export default async function CertificatePage({ params, searchParams }) {
                     )
                   }
                 />
-                <StatItem
-                  icon={ShieldCheck}
+                <MetaItem
                   label="Certificate Code"
                   value={achievement.certificateCode || "Pending"}
                 />
               </div>
 
-              <OrnamentDivider />
-
-              {/* footer bar */}
-              <div className="grid w-full max-w-xl grid-cols-2 gap-x-6 gap-y-3 border-t border-[#dbe4f3] pt-4 text-center sm:grid-cols-4">
-                {footerItems.map(([label, value]) => (
-                  <div key={label}>
-                    <p className="text-[9px] font-black uppercase tracking-wide text-[#526071]">
-                      {label}
-                    </p>
-                    <p className="mt-1 truncate text-[11px] font-bold text-[#1d4ed8]">
-                      {value || "—"}
-                    </p>
-                  </div>
+              {/* footer context line */}
+              <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-[10px] font-semibold uppercase tracking-wide text-[#41506a]">
+                {footerItems.map(([label, value], index) => (
+                  <span key={label} className="flex items-center gap-2">
+                    {index > 0 && (
+                      <span
+                        aria-hidden="true"
+                        className="inline-block h-1 w-1 rotate-45"
+                        style={{ background: GOLD }}
+                      />
+                    )}
+                    <span>
+                      {label}:{" "}
+                      <span className="text-[#0a1f4d]">{value || "—"}</span>
+                    </span>
+                  </span>
                 ))}
+              </div>
+
+              {/* authenticity line */}
+              <div className="flex items-center justify-center gap-3">
+                {verifyQrSvg && (
+                  <span
+                    aria-hidden="true"
+                    className="h-12 w-12 shrink-0 [&>svg]:h-full [&>svg]:w-full"
+                    dangerouslySetInnerHTML={{ __html: verifyQrSvg }}
+                  />
+                )}
+                <p className="text-left text-[9px] font-semibold uppercase tracking-[0.14em] text-[#8a6a12]">
+                  Verify this certificate at {VERIFY_HOST}/verify
+                  {achievement.certificateCode ? (
+                    <>
+                      <br />
+                      Code:{" "}
+                      <span className="text-[#0a1f4d]">
+                        {achievement.certificateCode}
+                      </span>
+                    </>
+                  ) : null}
+                </p>
               </div>
             </div>
           </div>

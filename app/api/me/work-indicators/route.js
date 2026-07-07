@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
-import { getWorkIndicators } from "@/lib/workIndicators";
+import { getWorkIndicatorsCached } from "@/lib/workIndicators";
 
 export async function GET() {
   try {
@@ -12,7 +12,7 @@ export async function GET() {
     }
 
     await connectDB();
-    const indicators = await getWorkIndicators(session);
+    const indicators = await getWorkIndicatorsCached(session);
 
     return NextResponse.json({
       role: session.user.role,

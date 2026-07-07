@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import dbConnect from "@/lib/db";
 import Event from "@/models/Event";
+import EventRound from "@/models/EventRound";
+import Achievement from "@/models/Achievement";
 import EventSchoolInvitation from "@/models/EventSchoolInvitation";
 import ParticipationRequest from "@/models/ParticipationRequest";
 import { buildParticipationLifecycle } from "@/lib/lifecycle";
@@ -236,6 +238,20 @@ export async function GET(req, context) {
             : null,
         }));
 
+    // Real counts for the dashboard sidebar ("At a Glance").
+    const [roundStatuses, certificatesIssued] = await Promise.all([
+      EventRound.find({ event: event._id }).select("status").lean(),
+      Achievement.countDocuments({
+        event: event._id,
+        certificateIssuedAt: { $ne: null },
+      }),
+    ]);
+    const roundsSummary = {
+      total: roundStatuses.length,
+      completed: roundStatuses.filter((round) => round.status === "COMPLETED")
+        .length,
+    };
+
     return NextResponse.json(
       {
         event: {
@@ -271,6 +287,8 @@ export async function GET(req, context) {
         },
         capacityInfo,
         perSchoolBreakdown,
+        roundsSummary,
+        certificatesIssued,
       },
       { status: 200 }
     );

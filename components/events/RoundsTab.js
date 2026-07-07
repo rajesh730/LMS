@@ -17,6 +17,7 @@ import {
   FaUsers,
 } from "react-icons/fa";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import Spinner from "@/components/ui/Spinner";
 import AppDate from "@/components/common/AppDate";
 import { getEventStartState } from "@/lib/eventStartRules";
 
@@ -525,33 +526,54 @@ export default function RoundsTab({
               {readOnly
                 ? "View each round and its outcomes."
                 : rounds.length === 0
-                ? "Start the event to create Round 1 and freeze the participant list."
+                ? "Go live to create Round 1 and freeze the participant list."
                 : "Manage each round and update outcomes. Selected entries can move forward."}
             </p>
           </div>
-          {!competitionLocked && !readOnly && rounds.length === 0 && (
+          {!competitionLocked &&
+            !readOnly &&
+            startState.mode !== "STARTED" &&
+            !loading &&
+            rounds.length === 0 && (
             <button
               type="button"
               onClick={startEvent}
               disabled={!startState.canStart || busyKey === "start-event"}
-              title={startState.canStart ? "Start Round 1" : startState.reason}
+              aria-busy={busyKey === "start-event"}
+              title={
+                startState.canStart
+                  ? "Start the event and begin rounds"
+                  : startState.reason
+              }
               className="event-participant-selected-control inline-flex min-h-10 items-center gap-2 rounded-xl bg-[#0a2f66] px-4 text-sm font-black text-white hover:bg-[#123f7d] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <FaPlay />
+              {busyKey === "start-event" ? <Spinner /> : <FaPlay />}
               <span className="event-participant-selected-label">
-                {busyKey === "start-event" ? "Starting..." : "Start Event"}
+                {busyKey === "start-event" ? "Starting..." : "Go Live"}
               </span>
             </button>
           )}
-          {!competitionLocked && !readOnly && rounds.length > 0 && (
-            <button
-              type="button"
-              onClick={openCreateRound}
-              className="event-participant-selected-control inline-flex min-h-10 items-center gap-2 rounded-xl bg-purple-700 px-4 text-sm font-black text-white hover:bg-purple-800"
-            >
-              <FaPlus />
-              <span className="event-participant-selected-label">Add Round</span>
-            </button>
+          {(startState.mode === "STARTED" || rounds.length > 0) && (
+            <div className="flex items-center gap-3">
+              {/* Live is a status, not an action — the event is already running. */}
+              <span className="inline-flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-black uppercase tracking-wide text-red-700">
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-red-600" />
+                </span>
+                Live
+              </span>
+              {!competitionLocked && !readOnly && (
+                <button
+                  type="button"
+                  onClick={openCreateRound}
+                  className="event-participant-selected-control inline-flex min-h-10 items-center gap-2 rounded-xl bg-[#1f4e79] px-4 text-sm font-black text-white hover:bg-[#173f63]"
+                >
+                  <FaPlus />
+                  <span className="event-participant-selected-label">Add Round</span>
+                </button>
+              )}
+            </div>
           )}
         </div>
 
@@ -582,7 +604,7 @@ export default function RoundsTab({
                 <tr>
                   <td colSpan="6" className="px-6 py-10 text-center text-[#52657d]">
                     <p className="font-bold text-[#17120a]">
-                      No rounds yet. Start the event to create Round 1.
+                      No rounds yet. Go live to create Round 1.
                     </p>
                     <p className="mt-1 text-sm">
                       {startState.canStart

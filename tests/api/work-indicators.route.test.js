@@ -9,12 +9,12 @@ jest.mock("@/app/api/auth/[...nextauth]/route", () => ({
 jest.mock("@/lib/db", () => jest.fn());
 
 jest.mock("@/lib/workIndicators", () => ({
-  getWorkIndicators: jest.fn(),
+  getWorkIndicatorsCached: jest.fn(),
 }));
 
 import { getServerSession } from "next-auth";
 import connectDB from "@/lib/db";
-import { getWorkIndicators } from "@/lib/workIndicators";
+import { getWorkIndicatorsCached } from "@/lib/workIndicators";
 import { GET } from "@/app/api/me/work-indicators/route";
 
 describe("GET /api/me/work-indicators", () => {
@@ -47,7 +47,7 @@ describe("GET /api/me/work-indicators", () => {
     };
 
     getServerSession.mockResolvedValue(session);
-    getWorkIndicators.mockResolvedValue(indicators);
+    getWorkIndicatorsCached.mockResolvedValue(indicators);
 
     const response = await GET();
     const body = await response.json();
@@ -57,6 +57,6 @@ describe("GET /api/me/work-indicators", () => {
     expect(body.indicators).toEqual(indicators);
     expect(body.generatedAt).toBeTruthy();
     expect(connectDB).toHaveBeenCalledTimes(1);
-    expect(getWorkIndicators).toHaveBeenCalledWith(session);
+    expect(getWorkIndicatorsCached).toHaveBeenCalledWith(session);
   });
 });

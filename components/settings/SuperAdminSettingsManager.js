@@ -15,6 +15,7 @@ import {
   FiUserX,
 } from "react-icons/fi";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import Spinner from "@/components/ui/Spinner";
 import AppDate from "@/components/common/AppDate";
 
 const defaultConfig = {
@@ -801,9 +802,10 @@ export default function SuperAdminSettingsManager() {
                   type="button"
                   onClick={handleCreateAdmin}
                   disabled={adminsSaving}
-                  className="inline-flex min-h-[46px] items-center justify-center gap-2 rounded-xl bg-violet-600 px-5 py-3 font-semibold text-white transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:bg-slate-700"
+                  aria-busy={adminsSaving}
+                  className="inline-flex min-h-[46px] items-center justify-center gap-2 rounded-xl bg-[#1f4e79] px-5 py-3 font-semibold text-white transition hover:bg-[#173f63] disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  <FiUserPlus />
+                  {adminsSaving ? <Spinner /> : <FiUserPlus />}
                   {adminsSaving ? "Creating..." : "Add admin"}
                 </button>
               </div>
@@ -1069,9 +1071,10 @@ export default function SuperAdminSettingsManager() {
           type="button"
           onClick={handleSave}
           disabled={saving}
-          className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-slate-700"
+          aria-busy={saving}
+          className="inline-flex items-center gap-2 rounded-xl bg-[#1f4e79] px-5 py-3 font-semibold text-white transition hover:bg-[#173f63] disabled:cursor-not-allowed disabled:opacity-60"
         >
-          <FiSave />
+          {saving ? <Spinner /> : <FiSave />}
           {saving ? "Saving..." : "Save platform settings"}
         </button>
       </div>

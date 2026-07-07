@@ -4,6 +4,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import UserSurfaceSeenState from "@/models/UserSurfaceSeenState";
 import { publishWorkIndicatorsUpdate } from "@/lib/workIndicatorRealtime";
+import { invalidateWorkIndicatorsCache } from "@/lib/workIndicators";
 
 const ALLOWED_SURFACES = new Set([
   "school.platformEvents",
@@ -57,6 +58,7 @@ export async function POST(request) {
       { upsert: true }
     );
 
+    invalidateWorkIndicatorsCache(session.user.id);
     publishWorkIndicatorsUpdate("indicator-surface-seen", {
       userId: String(session.user.id),
       surface,

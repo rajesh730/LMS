@@ -1,6 +1,7 @@
 import connectDB from "@/lib/db";
 import Student from "@/models/Student";
-import User from "@/models/User";
+// Registers the User schema so .populate("school") below can resolve it.
+import "@/models/User";
 import StudentTransfer from "@/models/StudentTransfer";
 import {
   successResponse,

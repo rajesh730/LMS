@@ -4,6 +4,8 @@ import { useEffect } from "react";
 
 const STORAGE_KEY = "pravyo:home-scroll";
 const MAX_AGE_MS = 15 * 60 * 1000;
+// On desktop the feed scrolls inside this container, not the window.
+const FEED_SCROLL_ID = "home-feed-scroll";
 
 function isWritingLink(href) {
   try {
@@ -23,10 +25,14 @@ export default function HomeScrollMemory() {
         const saved = JSON.parse(raw);
         const isFresh = Date.now() - Number(saved.createdAt || 0) < MAX_AGE_MS;
         const y = Number(saved.y || 0);
+        const feedY = Number(saved.feedY || 0);
 
-        if (isFresh && y > 0) {
+        if (isFresh && (y > 0 || feedY > 0)) {
           requestAnimationFrame(() => {
             window.scrollTo({ top: y, left: 0, behavior: "auto" });
+            document
+              .getElementById(FEED_SCROLL_ID)
+              ?.scrollTo({ top: feedY, left: 0, behavior: "auto" });
           });
         }
       } catch {
@@ -44,6 +50,7 @@ export default function HomeScrollMemory() {
         STORAGE_KEY,
         JSON.stringify({
           y: window.scrollY,
+          feedY: document.getElementById(FEED_SCROLL_ID)?.scrollTop || 0,
           createdAt: Date.now(),
         })
       );

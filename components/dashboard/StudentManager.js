@@ -331,49 +331,6 @@ export default function StudentManager({ initialGrade, hideGradeFilter = false }
     }
   };
 
-  const requestCorrectPromotion = (student) => {
-    setIsEditModalOpen(false);
-    setConfirmState({
-      type: "correct-promotion",
-      student,
-      title: "Undo this student's last promotion?",
-      message: `${student.name} will be moved back to their previous grade as a repeated year. The school's academic year stays as it is. Use this only if they were promoted (or graduated) by mistake.`,
-      confirmLabel: "Mark as repeated",
-      tone: "warning",
-      busy: false,
-    });
-  };
-
-  const executeCorrectPromotion = async (student) => {
-    try {
-      setConfirmState((current) => ({ ...current, busy: true }));
-      const res = await fetch("/api/school/academic-year/correct-promotion", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ studentId: student._id }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(data.message || "Failed to correct promotion.");
-      }
-      setConfirmState(null);
-      setFeedback({
-        type: "success",
-        title: "Promotion corrected",
-        message: `${student.name} now repeats ${data.data?.grade || "their grade"}.`,
-      });
-      await fetchStudents(pagination.page);
-      await fetchStudentStats();
-    } catch (error) {
-      setConfirmState(null);
-      setFeedback({
-        type: "error",
-        title: "Correction failed",
-        message: error.message || "Please retry.",
-      });
-    }
-  };
-
   const handleSaveEdit = async (e) => {
     e.preventDefault();
     setIsSaving(true);

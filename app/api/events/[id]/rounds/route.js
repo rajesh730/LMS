@@ -17,6 +17,7 @@ import {
   getOrderedRounds,
   getInitialStatusForRound,
 } from "@/lib/competitionFlow";
+import { canCreateRounds } from "@/lib/eventWorkflow";
 import "@/models/Student";
 import "@/models/User";
 
@@ -165,6 +166,19 @@ export async function POST(req, props) {
     if (event.resultsPublished || event.lifecycleStatus === "COMPLETED") {
       return NextResponse.json(
         { message: "Competition is already closed. Rounds are locked." },
+        { status: 400 }
+      );
+    }
+
+    // Rounds can only be created once the event is live (the registration
+    // deadline has passed, or the organizer pressed "Go Live"). This is what
+    // prevents rounds from running while the event still shows "registration open".
+    if (!canCreateRounds(event)) {
+      return NextResponse.json(
+        {
+          message:
+            "This event is still in registration. Start the event (or wait for the registration deadline to pass) before creating rounds.",
+        },
         { status: 400 }
       );
     }

@@ -1,28 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  NotificationProvider,
-  useNotification,
-} from "@/components/NotificationSystem";
+import { useNotification } from "@/components/NotificationSystem";
 import useRealtimeChannel from "@/lib/useRealtimeChannel";
 import AppDate from "@/components/common/AppDate";
 
+// The NotificationProvider is now supplied globally in app/providers.js, so this
+// component consumes the toast context directly instead of wrapping its own.
 export default function PublicEventNoticeList({
-  eventId,
-  initialNotices = [],
-}) {
-  return (
-    <NotificationProvider>
-      <PublicEventNoticeListContent
-        eventId={eventId}
-        initialNotices={initialNotices}
-      />
-    </NotificationProvider>
-  );
-}
-
-function PublicEventNoticeListContent({
   eventId,
   initialNotices = [],
 }) {

@@ -45,40 +45,50 @@ function serializeTransfer(transfer) {
 }
 
 async function getStudentTransferData(studentId) {
-  const student = await Student.findById(studentId)
-    .select("name grade rollNumber platformStudentId school")
-    .populate("school", "schoolName name schoolLocation")
-    .lean();
+  // Independent lookups — run them in parallel instead of paying two sequential
+  // DB round-trips.
+  const [student, transfer] = await Promise.all([
+    Student.findById(studentId)
+      .select("name grade rollNumber platformStudentId school")
+      .populate("school", "schoolName name schoolLocation")
+      .lean(),
+    StudentTransfer.findOne({
+      student: studentId,
+      status: { $in: ["PENDING_RELEASE", "RELEASED", "PENDING_ADMISSION", "PENDING"] },
+    })
+      .sort({ createdAt: -1 })
+      .populate("fromSchool", "schoolName name schoolLocation")
+      .populate("toSchool", "schoolName name schoolLocation")
+      .lean(),
+  ]);
 
   if (!student) return null;
 
-  const transfer = await StudentTransfer.findOne({
-    student: studentId,
-    status: { $in: ["PENDING_RELEASE", "RELEASED", "PENDING_ADMISSION", "PENDING"] },
-  })
-    .sort({ createdAt: -1 })
-    .populate("fromSchool", "schoolName name schoolLocation")
-    .populate("toSchool", "schoolName name schoolLocation")
-    .lean();
+  // The destination-school picker is only shown while the transfer is RELEASED,
+  // so only then pay for the (heavy) 500-school + logo lookup. Every other
+  // status check stays a cheap two-query read.
+  let schools = [];
+  const logoBySchool = new Map();
+  if (transfer?.status === "RELEASED") {
+    schools = await User.find({
+      role: "SCHOOL_ADMIN",
+      status: { $in: ["APPROVED", "SUBSCRIBED"] },
+      _id: { $ne: student.school?._id || student.school },
+    })
+      .select("schoolName name schoolLocation province district")
+      .sort({ schoolName: 1, name: 1 })
+      .limit(500)
+      .lean();
 
-  const schools = await User.find({
-    role: "SCHOOL_ADMIN",
-    status: { $in: ["APPROVED", "SUBSCRIBED"] },
-    _id: { $ne: student.school?._id || student.school },
-  })
-    .select("schoolName name schoolLocation province district")
-    .sort({ schoolName: 1, name: 1 })
-    .limit(500)
-    .lean();
-
-  const profiles = await SchoolShowcaseProfile.find({
-    school: { $in: schools.map((school) => school._id) },
-  })
-    .select("school coverImageUrl")
-    .lean();
-  const logoBySchool = new Map(
-    profiles.map((profile) => [String(profile.school), profile.coverImageUrl || ""])
-  );
+    const profiles = await SchoolShowcaseProfile.find({
+      school: { $in: schools.map((school) => school._id) },
+    })
+      .select("school coverImageUrl")
+      .lean();
+    for (const profile of profiles) {
+      logoBySchool.set(String(profile.school), profile.coverImageUrl || "");
+    }
+  }
 
   return {
     student: {

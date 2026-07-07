@@ -60,6 +60,8 @@ export default function EventResultsManager({
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [searchTerm, setSearchTerm] = useState("");
   const [reopenOpen, setReopenOpen] = useState(false);
+  const [publishOpen, setPublishOpen] = useState(false);
+  const [publishPublicly, setPublishPublicly] = useState(true);
 
   const eventId = fixedEventId;
 
@@ -93,8 +95,17 @@ export default function EventResultsManager({
     String(detail?.event?.participationFormat || "INDIVIDUAL").toUpperCase() ===
     "TEAM";
   const resultsPublished = Boolean(detail?.event?.resultsPublished);
+  // Publishing only makes sense after the final round is finished and the
+  // competition closed — that's when the workflow reaches RESULTS_DRAFT.
+  const resultsDraftReady =
+    String(detail?.event?.eventWorkflowStatus || "").toUpperCase() ===
+    "RESULTS_DRAFT";
+  // Only platform events can expose results publicly (winners page, public
+  // event page, student/school profiles) — the API ignores the flag otherwise.
+  const isPlatformEvent =
+    String(detail?.event?.eventScope || "").toUpperCase() === "PLATFORM";
 
-  const saveResults = useCallback(async ({ publish = false, reopen = false } = {}) => {
+  const saveResults = useCallback(async ({ publish = false, reopen = false, makePublic = false } = {}) => {
     if (!eventId || participants.length === 0) return;
     try {
       setSaving(true);
@@ -111,7 +122,9 @@ export default function EventResultsManager({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           resultsPublished: publish,
-          publishPublicly: false,
+          // Honored by the API for platform events only; reopen/draft always
+          // pulls results back off the public surfaces.
+          publishPublicly: publish && makePublic,
           confirmPublish: publish,
         }),
       });
@@ -331,6 +344,24 @@ export default function EventResultsManager({
               >
                 <FaUndo />
                 Reopen for Correction
+              </button>
+            </div>
+          )}
+          {!readOnly && !resultsPublished && resultsDraftReady && participants.length > 0 && (
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <button
+                type="button"
+                disabled={saving || loading}
+                onClick={() => {
+                  setPublishPublicly(
+                    isPlatformEvent ? detail?.publishPublicly ?? true : false
+                  );
+                  setPublishOpen(true);
+                }}
+                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-[#0a2f66] px-4 text-xs font-black text-white hover:bg-[#123f7d] disabled:opacity-50"
+              >
+                <FaCheckCircle />
+                Publish Final Results
               </button>
             </div>
           )}
@@ -636,6 +667,41 @@ export default function EventResultsManager({
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={publishOpen}
+        title="Publish final results?"
+        message="Placements become final and certificates are issued to every participant. Students and schools can then view, download, and verify them by certificate code. If you spot a mistake later, use Reopen for Correction."
+        confirmLabel="Publish and issue certificates"
+        tone="info"
+        busy={saving}
+        onClose={() => setPublishOpen(false)}
+        onConfirm={() => {
+          setPublishOpen(false);
+          saveResults({
+            publish: true,
+            makePublic: isPlatformEvent && publishPublicly,
+          });
+        }}
+      >
+        {isPlatformEvent && (
+          <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-lg border border-[#dbe5f4] bg-[#f8fbff] p-3">
+            <input
+              type="checkbox"
+              checked={publishPublicly}
+              onChange={(event) => setPublishPublicly(event.target.checked)}
+              className="mt-0.5 h-4 w-4 accent-[#0a2f66]"
+            />
+            <span className="text-sm leading-6 text-[#344054]">
+              <span className="font-black text-[#10142f]">
+                Also publish results publicly.
+              </span>{" "}
+              Winners appear on the public winners page, the event page, and
+              student and school profiles.
+            </span>
+          </label>
+        )}
+      </ConfirmDialog>
 
       <ConfirmDialog
         open={reopenOpen}

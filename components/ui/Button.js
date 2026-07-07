@@ -1,4 +1,5 @@
 import clsx from "clsx";
+import Spinner from "@/components/ui/Spinner";
 
 const VARIANTS = {
   primary: "pravyo-btn-primary bg-[#1f4e79] text-white hover:bg-[#173f63]",
@@ -24,11 +25,13 @@ export default function Button({
   fullWidth = false,
   type = "button",
   disabled = false,
+  loading = false,
   asChild = false,
   ...props
 }) {
   const Component = asChild ? "span" : "button";
-  
+  const isDisabled = disabled || loading;
+
   return (
     <Component
       type={asChild ? undefined : type}
@@ -37,13 +40,15 @@ export default function Button({
         VARIANTS[variant] || VARIANTS.primary,
         SIZES[size] || SIZES.md,
         fullWidth && "w-full",
-        disabled && "opacity-50 pointer-events-none",
+        isDisabled && "opacity-50 pointer-events-none",
         className
       )}
-      disabled={disabled && !asChild}
-      aria-disabled={disabled}
+      disabled={isDisabled && !asChild}
+      aria-disabled={isDisabled}
+      aria-busy={loading || undefined}
       {...props}
     >
+      {loading && <Spinner />}
       {children}
     </Component>
   );

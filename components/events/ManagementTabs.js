@@ -20,6 +20,8 @@ import StudentEventCertificatesPanel from "./StudentEventCertificatesPanel";
 export default function ManagementTabs({
   requests,
   capacityInfo,
+  roundsSummary = null,
+  certificatesIssued = 0,
   event,
   currentUserRole = "",
   canManagePlatformOperations = false,
@@ -84,7 +86,11 @@ export default function ManagementTabs({
   const selectedTab = availableTabs.some((tab) => tab.id === normalizedTab)
     ? normalizedTab
     : "overview";
-  const completedRounds = event.resultsPublished ? "1/1" : "0/1";
+  const completedRounds = roundsSummary
+    ? `${roundsSummary.completed}/${roundsSummary.total}`
+    : event.resultsPublished
+    ? "1/1"
+    : "0/1";
   // Only genuinely unique actions live here — navigation between sections is the
   // job of the tab bar above, so we don't duplicate those as buttons.
   const quickActions = [
@@ -265,7 +271,7 @@ export default function ManagementTabs({
               ["Schools Participated", capacityInfo.schoolCount || 1, FaUsers],
               ["Total Participant", capacityInfo.filled || 0, FaUsers],
               canControlEventOperations && ["Rounds Completed", completedRounds, FaLayerGroup],
-              ["Certificates Issued", event.resultsPublished ? capacityInfo.filled || 0 : 0, FaCertificate],
+              ["Certificates Issued", certificatesIssued || 0, FaCertificate],
             ].filter(Boolean).map(([label, value, Icon]) => (
               <div
                 key={label}

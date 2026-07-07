@@ -92,6 +92,9 @@ async function getLatestStudentWritings() {
     status: "APPROVED",
     isPublished: true,
     isDeleted: false,
+    // Transfers flip this off so a student's writing stops showing as the
+    // origin school's live content (it stays in the student's portfolio).
+    showOnSchoolWall: true,
   })
     .select("title content category publishedAt updatedAt")
     .sort({ publishedAt: -1, updatedAt: -1 })
@@ -202,6 +205,9 @@ async function getHighRotationSpotlightStudentWritings() {
     status: "APPROVED",
     isPublished: true,
     isDeleted: false,
+    // Same rule as the feed: transferred-out students' writings are no longer
+    // the origin school's live content.
+    showOnSchoolWall: true,
     school: { $in: highRotationSchoolIds },
   })
     .select("title content category publishedAt updatedAt")
@@ -411,7 +417,9 @@ function SectionTitle({ title, href = "/" }) {
 
 function RightColumn({ schools, event }) {
   return (
-    <aside className="hidden space-y-4 lg:block">
+    <aside className="hidden lg:block">
+      {/* Pinned like the left explore panel — the feed scrolls, the rails stay. */}
+      <div className="sticky top-24 space-y-4">
       {/* Featured Schools card */}
       {schools.length > 0 && (
         <section className="overflow-hidden rounded-2xl border border-[#edf0f7] bg-white shadow-sm">
@@ -475,6 +483,7 @@ function RightColumn({ schools, event }) {
           </div>
         </section>
       )}
+      </div>
     </aside>
   );
 }
@@ -593,7 +602,12 @@ export default async function Home() {
 
         <div className="min-w-0">
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-            <div className="min-w-0 space-y-5">
+            {/* On desktop the feed scrolls inside its own column; the page and
+                both rails stay put. Mobile keeps normal page scrolling. */}
+            <div
+              id="home-feed-scroll"
+              className="scrollbar-hidden min-w-0 space-y-5 lg:max-h-[calc(100vh-5.75rem)] lg:overflow-y-auto lg:overscroll-contain"
+            >
               <HomepageHeroCarousel stories={spotlightStories} />
 
               <div className="hidden space-y-5 md:block">

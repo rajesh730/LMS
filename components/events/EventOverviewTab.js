@@ -6,7 +6,7 @@ import {
   FaSchool,
   FaTrophy,
 } from "react-icons/fa";
-import { getEventStage, isDatePast } from "@/lib/eventUiStatus";
+import { formatShortDate, getEventStage, isDatePast } from "@/lib/eventUiStatus";
 import AppDate from "@/components/common/AppDate";
 import {
   formatEventWorkflowStatus,

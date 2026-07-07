@@ -1,5 +1,15 @@
 @import "tailwindcss";
 
+/* Scroll container with an invisible scrollbar — scrolling still works via
+   wheel, touch, and keyboard; only the visual track is hidden. */
+.scrollbar-hidden {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+}
+
 :root {
   --background: #f7f8fa;
   --foreground: #111827;
@@ -357,6 +367,24 @@ td {
 
 [class*="text-white"] {
   color: var(--brand-ink) !important;
+}
+
+/* A white label sitting on a solid colored background is an intentional button,
+   not a dark-theme leftover. The blanket rule above (and the per-shell copies
+   further down) would otherwise flip those labels to dark ink and render them
+   dark-on-dark. So any element that carries BOTH `text-white` and a `bg-[...]`
+   background utility (plus its children, e.g. icons) stays white in every
+   shell. Elements with `text-white` but no background are still neutralized,
+   so genuine leftovers on white surfaces are unaffected. This replaces the old
+   per-color whitelist, which had to be updated by hand for every button color. */
+[class*="text-white"][class*="bg-["],
+[class*="text-white"][class*="bg-["] *,
+.pravyo-dark-shell [class*="text-white"][class*="bg-["],
+.pravyo-dark-shell [class*="text-white"][class*="bg-["] *,
+.event-manage-shell [class*="text-white"][class*="bg-["],
+.event-manage-shell [class*="text-white"][class*="bg-["] * {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
 }
 
 [class~="bg-[#4326e8]"] [class*="text-white"],
@@ -3182,4 +3210,41 @@ button.publishing-desk-primary-button:focus,
 button.publishing-desk-primary-button:disabled {
   color: #ffffff !important;
   -webkit-text-fill-color: #ffffff !important;
+}
+
+/* ── Loading spinner ──────────────────────────────────────────
+   `.pravyo-spinner` is a self-contained ring spinner that inherits the current
+   text color, so it looks right on any button/surface (white on a navy button,
+   navy on a white one). Used by <Spinner /> and the shared <Button loading />.
+   Any button can also opt in to the progress affordance by setting
+   aria-busy="true" while an async action runs. */
+@keyframes pravyo-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.pravyo-spinner {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  flex-shrink: 0;
+  vertical-align: -0.125em;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 9999px;
+  animation: pravyo-spin 0.6s linear infinite;
+}
+
+/* Any button doing async work: show a wait cursor and block repeat clicks. */
+button[aria-busy="true"],
+a[aria-busy="true"] {
+  cursor: progress !important;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pravyo-spinner {
+    animation-duration: 1.4s;
+  }
 }
