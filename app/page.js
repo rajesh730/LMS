@@ -233,6 +233,7 @@ async function getHighRotationSpotlightStudentWritings() {
 
 async function getUpcomingEvents() {
   const events = await Event.find({
+    eventScope: "PLATFORM",
     status: "APPROVED",
     visibility: "PUBLIC",
     lifecycleStatus: { $ne: "ARCHIVED" },

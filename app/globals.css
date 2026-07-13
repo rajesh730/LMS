@@ -1300,11 +1300,11 @@ a[aria-disabled="true"] {
     margin: 0;
   }
 
+  /* No overflow:hidden on html/body here — it clips every page after the
+     first when several certificates print from one document (bulk export). */
   html,
   body {
     width: 210mm;
-    min-height: 297mm;
-    overflow: hidden;
     background: #ffffff !important;
   }
 
@@ -1315,6 +1315,13 @@ a[aria-disabled="true"] {
     width: 210mm;
     height: 297mm;
     overflow: hidden;
+    break-after: page;
+    page-break-after: always;
+  }
+
+  .certificate-print-page:last-of-type {
+    break-after: auto;
+    page-break-after: auto;
   }
 
   .certificate-sheet {
@@ -1326,7 +1333,9 @@ a[aria-disabled="true"] {
 
   .certificate-frame {
     height: 100%;
-    padding: 12mm 14mm !important;
+    /* Mirrors the sheet's on-screen 13.5% / 8% / 21.5% padding so content stays
+       clear of the top and bottom wave bands on the 283mm-tall print sheet. */
+    padding: 38mm 16mm 61mm !important;
   }
 }
 

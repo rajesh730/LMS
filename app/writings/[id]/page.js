@@ -9,7 +9,12 @@ import { stripWritingMarkup } from "@/components/WritingContent";
 import "@/models/Student";
 import "@/models/User";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
+
+// Prerender nothing at build; cache each visited writing on demand.
+export async function generateStaticParams() {
+  return [];
+}
 
 function serializeArticle(article, schoolProfile = null, authorCurrentSchoolProfile = null) {
   return {

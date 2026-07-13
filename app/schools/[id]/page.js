@@ -16,6 +16,7 @@ import ExpandableStoryText from "@/components/public/ExpandableStoryText";
 import { stripWritingMarkup } from "@/components/WritingContent";
 import { normalizeImageUrl } from "@/lib/imageUrls";
 import { formatPlacement } from "@/lib/displayFormat";
+import { getEventPublicStatus } from "@/lib/eventUiStatus";
 import {
   FaArrowRight,
   FaBookOpen,
@@ -41,7 +42,12 @@ import {
   FaYoutube,
 } from "react-icons/fa";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
+
+// Prerender nothing at build; cache each visited school page on demand.
+export async function generateStaticParams() {
+  return [];
+}
 
 function ensureHttp(url) {
   const value = String(url || "").trim();
@@ -157,11 +163,14 @@ async function getSchoolData(id) {
         .lean(),
       Event.find({
         school: id,
+        eventScope: "SCHOOL",
         visibility: "PUBLIC",
         lifecycleStatus: { $ne: "ARCHIVED" },
       })
         .sort({ date: -1 })
-        .select("title date description eventType")
+        .select(
+          "title date description eventType eventScope eventWorkflowStatus lifecycleStatus registrationDeadline resultsPublished publicResultsEnabled"
+        )
         .limit(4)
         .lean(),
       Achievement.find({
@@ -382,6 +391,43 @@ function AchievementCard({ achievement }) {
         </div>
       </div>
     </article>
+  );
+}
+
+function SchoolEventCard({ event }) {
+  const status = getEventPublicStatus(event);
+  const typeLabel = String(event.eventType || "EVENT").replaceAll("_", " ");
+
+  return (
+    <Link
+      href={`/events/${event._id}`}
+      className="group block rounded-xl border border-[#e7dcc8] bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-purple-200 hover:shadow-md"
+    >
+      <div className="flex items-start gap-3">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-purple-50 text-purple-700">
+          <FaCalendarAlt />
+        </span>
+        <div className="min-w-0">
+          <div className="flex flex-wrap gap-2">
+            <span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase ${status.className}`}>
+              {status.label}
+            </span>
+            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-black uppercase text-slate-600">
+              {typeLabel}
+            </span>
+          </div>
+          <h3 className="mt-2 line-clamp-2 text-sm font-black text-[#17120a] group-hover:text-purple-700">
+            {event.title}
+          </h3>
+          {event.description ? (
+            <p className="mt-1 line-clamp-2 text-xs leading-5 text-[#52657d]">
+              {getPreview(event.description)}
+            </p>
+          ) : null}
+          <p className="mt-1 text-xs text-[#75869b]">{formatDate(event.date)}</p>
+        </div>
+      </div>
+    </Link>
   );
 }
 
@@ -766,6 +812,31 @@ export default async function PublicSchoolPage({ params }) {
             </section>
 
             <section
+              id="events"
+              className="scroll-mt-28 border border-[#e7dcc8] bg-white p-5 shadow-sm sm:rounded-2xl"
+            >
+              <h2 className="inline-flex items-center gap-2 text-lg font-black text-[#17120a]">
+                <FaCalendarAlt className="text-purple-700" />
+                School Events
+              </h2>
+              {events.length === 0 ? (
+                <div className="mt-5">
+                  <EmptyPanel
+                    icon={FaCalendarAlt}
+                    title="No public events yet"
+                    description="Events organized by this school will appear here once they are published."
+                  />
+                </div>
+              ) : (
+                <div className="mt-5 grid gap-4 md:grid-cols-2">
+                  {events.map((event) => (
+                    <SchoolEventCard key={String(event._id)} event={event} />
+                  ))}
+                </div>
+              )}
+            </section>
+
+            <section
               id="achievements"
               className="scroll-mt-28 border border-[#e7dcc8] bg-white p-5 shadow-sm sm:rounded-2xl"
             >
@@ -889,7 +960,14 @@ export default async function PublicSchoolPage({ params }) {
 
       <footer className="border-t border-[#d7cdbb] px-4 py-6 text-center text-sm text-[#52657d]">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p>&copy; 2026 Pravyo. Student talent, school recognition, public events, and verified certificates.</p>
+          <p>
+            &copy; 2026 Pravyo. Student talent, school recognition, public events, and verified certificates.{" "}
+            <Link href="/privacy" className="font-bold hover:text-[#1f4e79]">Privacy</Link>
+            {" · "}
+            <Link href="/terms" className="font-bold hover:text-[#1f4e79]">Terms</Link>
+            {" · "}
+            <Link href="/contact" className="font-bold hover:text-[#1f4e79]">Contact</Link>
+          </p>
           {socialEntries.length > 0 ? (
             <SocialIconLinks entries={socialEntries} variant="light" />
           ) : (

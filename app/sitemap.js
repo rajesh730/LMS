@@ -7,7 +7,7 @@ import "@/models/Student";
 
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL || "https://pratyo.infobytesnepal.com";
-export const dynamic = "force-dynamic";
+export const revalidate = 3600;
 
 export default async function sitemap() {
   const staticRoutes = [
@@ -18,6 +18,9 @@ export default async function sitemap() {
     "/login",
     "/register",
     "/student/login",
+    "/privacy",
+    "/terms",
+    "/contact",
   ].map((path) => ({
     url: `${siteUrl}${path}`,
     lastModified: new Date(),

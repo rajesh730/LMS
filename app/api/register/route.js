@@ -5,6 +5,7 @@ import { applyRateLimit } from "@/lib/rateLimit";
 import User from "@/models/User";
 import SchoolConfig from "@/models/SchoolConfig";
 import { buildGradeLabels, normalizeSchoolLevelConfig } from "@/lib/schoolGrades";
+import { sendSchoolRegistrationReceivedEmail } from "@/lib/emailService";
 
 function getCurrentNepaliYearApprox() {
   const today = new Date();
@@ -155,6 +156,10 @@ export async function POST(req) {
       },
       { upsert: true, new: true }
     );
+
+    // Fire-and-forget confirmation; failures are logged inside the helper
+    // and must not fail the registration itself.
+    sendSchoolRegistrationReceivedEmail(email, schoolName);
 
     return NextResponse.json(
       {

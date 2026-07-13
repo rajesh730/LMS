@@ -4,6 +4,7 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import connectDB from '@/lib/db';
 import User from '@/models/User';
 import { publishWorkIndicatorsUpdate } from '@/lib/workIndicatorRealtime';
+import { sendSchoolApprovalEmail } from '@/lib/emailService';
 
 export async function PUT(req, { params }) {
     try {
@@ -29,11 +30,20 @@ export async function PUT(req, { params }) {
         await connectDB();
         console.log("Updating school document...");
         
-        const user = await User.findByIdAndUpdate(id, { status }, { new: true });
-
-        if (!user) {
+        const previous = await User.findById(id).select('status email schoolName').lean();
+        if (!previous) {
             console.error("❌ School not found with ID:", id);
             return NextResponse.json({ message: 'School not found' }, { status: 404 });
+        }
+
+        const user = await User.findByIdAndUpdate(id, { status }, { new: true });
+
+        // Welcome email only when the school newly gains access; failures are
+        // logged inside sendSchoolApprovalEmail and never block the update.
+        const hadAccess = ['APPROVED', 'SUBSCRIBED'].includes(previous.status);
+        const hasAccess = ['APPROVED', 'SUBSCRIBED'].includes(status);
+        if (!hadAccess && hasAccess && previous.email) {
+            sendSchoolApprovalEmail(previous.email, previous.schoolName || 'Your school');
         }
 
         console.log("School updated successfully:", user._id, "New status:", user.status);

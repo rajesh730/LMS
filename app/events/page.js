@@ -2,7 +2,7 @@ import PublicSiteNav from "@/components/public/PublicSiteNav";
 import PublicEventsHub from "@/components/public/PublicEventsHub";
 import { getPublicEventsHubData } from "@/lib/publicEventsHub";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 export const metadata = {
   title: "Events",

@@ -277,16 +277,15 @@ export default function PublicEventsHub({ initialData }) {
     [
       data.featuredEvent,
       ...(data.liveEvents || []),
-      ...data.upcomingEvents,
-      ...data.resultsEvents,
-      ...data.schoolEvents,
+      ...(data.upcomingEvents || []),
+      ...(data.resultsEvents || []),
     ]
       .filter(Boolean)
       .forEach((event) => map.set(event.id, event));
     return Array.from(map.values()).sort(
       (a, b) => new Date(a.date || 0) - new Date(b.date || 0)
     );
-  }, [data.featuredEvent, data.liveEvents, data.resultsEvents, data.schoolEvents, data.upcomingEvents]);
+  }, [data.featuredEvent, data.liveEvents, data.resultsEvents, data.upcomingEvents]);
 
   const filteredEvents = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();

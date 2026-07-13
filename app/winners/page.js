@@ -18,7 +18,7 @@ import "@/models/Event";
 import "@/models/Student";
 import "@/models/User";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 export const metadata = {
   title: "Winners",

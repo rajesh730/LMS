@@ -31,7 +31,12 @@ import {
   FaTrophy,
 } from "react-icons/fa";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
+
+// Prerender nothing at build; cache each visited profile on demand.
+export async function generateStaticParams() {
+  return [];
+}
 
 function formatPlacement(value) {
   if (value === "RUNNER_UP") return "1st Runner Up";

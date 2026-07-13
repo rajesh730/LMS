@@ -148,7 +148,6 @@ function SchoolDashboardContent() {
   }, [isNavOpen]);
 
   const [teachers, setTeachers] = useState([]);
-  const [loading, setLoading] = useState(true);
 
   // Forms State
   const [editingTeacher, setEditingTeacher] = useState(null);
@@ -172,13 +171,11 @@ function SchoolDashboardContent() {
 
   const fetchData = async () => {
     try {
-      const teachersRes = await fetch("/api/teachers", { cache: "no-store" });
-      const configRes = await fetch("/api/school/config", {
-        cache: "no-store",
-      });
-      const gradesRes = await fetch("/api/school/grade-structure", {
-        cache: "no-store",
-      });
+      const [teachersRes, configRes, gradesRes] = await Promise.all([
+        fetch("/api/teachers", { cache: "no-store" }),
+        fetch("/api/school/config", { cache: "no-store" }),
+        fetch("/api/school/grade-structure", { cache: "no-store" }),
+      ]);
 
       if (teachersRes.ok) {
         setTeachers((await teachersRes.json()).teachers);
@@ -212,8 +209,6 @@ function SchoolDashboardContent() {
     } catch (error) {
       console.error("Error fetching data", error);
       setSchoolConfig({ teacherRoles: [] });
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -296,7 +291,7 @@ function SchoolDashboardContent() {
     }
   };
 
-  if (loading) {
+  if (status === "loading") {
     return (
       <div className="min-h-screen bg-slate-950 p-6 text-slate-200">
         <LoadingState

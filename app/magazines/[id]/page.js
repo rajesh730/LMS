@@ -1,7 +1,12 @@
 import PublicSiteNav from "@/components/public/PublicSiteNav";
 import StudentMagazineIssueReader from "@/components/student/StudentMagazineIssueReader";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
+
+// Prerender nothing at build; cache each visited magazine on demand.
+export async function generateStaticParams() {
+  return [];
+}
 
 export const metadata = {
   title: "Read School Magazine",

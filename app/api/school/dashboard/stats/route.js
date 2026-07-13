@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
@@ -25,89 +26,106 @@ export async function GET(req) {
 
     await connectDB();
     const schoolId = session.user.schoolId || session.user.id;
+    // Aggregation pipelines skip Mongoose's schema casting, so the session's
+    // string id must be converted to an ObjectId for $match to hit documents.
+    const schoolObjectId = new mongoose.Types.ObjectId(String(schoolId));
 
-    // Fetch all data in parallel
-    const [students, teachers, events] =
-      await Promise.all([
-        Student.countDocuments({
-          school: schoolId,
-          isDeleted: { $ne: true },
-        }),
-        Teacher.countDocuments({
-          school: schoolId,
-          isDeleted: { $ne: true },
-        }),
-        Event.countDocuments({
-          $or: [{ school: schoolId }, { ownerId: schoolId }],
-          lifecycleStatus: { $ne: "ARCHIVED" },
-        }),
-      ]);
-
-    // Get status breakdown
-    const studentsByStatus = await Student.aggregate([
-      {
-        $match: {
-          school: schoolId,
-          isDeleted: { $ne: true },
+    // Fetch all data in parallel; totals are derived from the breakdowns
+    // below instead of separate count queries.
+    const [
+      studentsByStatus,
+      studentsByGrade,
+      teachersByStatus,
+      eventsByLifecycle,
+      activityLogs,
+      recentStudents,
+      recentTeachers,
+      recentEvents,
+    ] = await Promise.all([
+      Student.aggregate([
+        {
+          $match: {
+            school: schoolObjectId,
+            isDeleted: { $ne: true },
+          },
         },
-      },
-      {
-        $group: {
-          _id: "$status",
-          count: { $sum: 1 },
+        {
+          $group: {
+            _id: "$status",
+            count: { $sum: 1 },
+          },
         },
-      },
-    ]);
-
-    // Get students by grade
-    const studentsByGrade = await Student.aggregate([
-      {
-        $match: {
-          school: schoolId,
-          isDeleted: { $ne: true },
+      ]),
+      Student.aggregate([
+        {
+          $match: {
+            school: schoolObjectId,
+            isDeleted: { $ne: true },
+          },
         },
-      },
-      {
-        $group: {
-          _id: "$grade",
-          count: { $sum: 1 },
+        {
+          $group: {
+            _id: "$grade",
+            count: { $sum: 1 },
+          },
         },
-      },
-      {
-        $project: {
-          gradeName: "$_id",
-          count: 1,
+        {
+          $project: {
+            gradeName: "$_id",
+            count: 1,
+          },
         },
-      },
-    ]);
-
-    const teachersByStatus = await Teacher.aggregate([
-      {
-        $match: {
-          school: schoolId,
-          isDeleted: { $ne: true },
+      ]),
+      Teacher.aggregate([
+        {
+          $match: {
+            school: schoolObjectId,
+            isDeleted: { $ne: true },
+          },
         },
-      },
-      {
-        $group: {
-          _id: "$status",
-          count: { $sum: 1 },
+        {
+          $group: {
+            _id: "$status",
+            count: { $sum: 1 },
+          },
         },
-      },
-    ]);
-
-    const eventsByLifecycle = await Event.aggregate([
-      {
-        $match: {
-          $or: [{ school: schoolId }, { ownerId: schoolId }],
+      ]),
+      Event.aggregate([
+        {
+          $match: {
+            $or: [{ school: schoolObjectId }, { ownerId: schoolObjectId }],
+          },
         },
-      },
-      {
-        $group: {
-          _id: "$lifecycleStatus",
-          count: { $sum: 1 },
+        {
+          $group: {
+            _id: "$lifecycleStatus",
+            count: { $sum: 1 },
+          },
         },
-      },
+      ]),
+      ActivityLog.find({ school: schoolId, status: "SUCCESS" })
+        .select("action targetType targetName createdAt")
+        .sort({ createdAt: -1 })
+        .limit(30)
+        .lean(),
+      Student.find({ school: schoolId, isDeleted: { $ne: true } })
+        .select("name grade status createdAt")
+        .sort({ createdAt: -1 })
+        .limit(8)
+        .lean(),
+      Teacher.find({ school: schoolId, isDeleted: { $ne: true } })
+        .select("name subject status createdAt")
+        .sort({ createdAt: -1 })
+        .limit(8)
+        .lean(),
+      Event.find({
+        $or: [{ school: schoolId }, { ownerId: schoolId }],
+        lifecycleStatus: { $ne: "ARCHIVED" },
+      })
+        .select("title lifecycleStatus date createdAt")
+        .sort({ createdAt: -1 })
+        .limit(8)
+        .lean(),
     ]);
 
     // Format status breakdown
@@ -126,32 +144,11 @@ export async function GET(req) {
       eventLifecycleBreakdown[item._id || "UNKNOWN"] = item.count;
     });
 
-    const [activityLogs, recentStudents, recentTeachers, recentEvents] =
-      await Promise.all([
-        ActivityLog.find({ school: schoolId, status: "SUCCESS" })
-          .select("action targetType targetName createdAt")
-          .sort({ createdAt: -1 })
-          .limit(30)
-          .lean(),
-        Student.find({ school: schoolId, isDeleted: { $ne: true } })
-          .select("name grade status createdAt")
-          .sort({ createdAt: -1 })
-          .limit(8)
-          .lean(),
-        Teacher.find({ school: schoolId, isDeleted: { $ne: true } })
-          .select("name subject status createdAt")
-          .sort({ createdAt: -1 })
-          .limit(8)
-          .lean(),
-        Event.find({
-          $or: [{ school: schoolId }, { ownerId: schoolId }],
-          lifecycleStatus: { $ne: "ARCHIVED" },
-        })
-          .select("title lifecycleStatus date createdAt")
-          .sort({ createdAt: -1 })
-          .limit(8)
-          .lean(),
-      ]);
+    const students = studentsByStatus.reduce((sum, item) => sum + item.count, 0);
+    const teachers = teachersByStatus.reduce((sum, item) => sum + item.count, 0);
+    const events = eventsByLifecycle
+      .filter((item) => item._id !== "ARCHIVED")
+      .reduce((sum, item) => sum + item.count, 0);
 
     const recentActivity = [
       ...activityLogs.map((log) => ({

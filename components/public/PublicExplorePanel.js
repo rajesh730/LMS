@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { PUBLIC_NAV_LINKS } from "@/components/navigation/appNavigation";
 import NavItemLink from "@/components/navigation/NavItemLink";
 
@@ -45,6 +46,17 @@ export default function PublicExplorePanel({ active = "home", groups }) {
             />
           )
         )}
+        <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 px-3 text-[11px] font-bold text-[#8a9ab1]">
+          <Link href="/privacy" className="hover:text-[#1f4e79]">
+            Privacy
+          </Link>
+          <Link href="/terms" className="hover:text-[#1f4e79]">
+            Terms
+          </Link>
+          <Link href="/contact" className="hover:text-[#1f4e79]">
+            Contact
+          </Link>
+        </div>
       </div>
     </aside>
   );

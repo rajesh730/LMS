@@ -3,8 +3,10 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import Achievement from "@/models/Achievement";
+import SchoolShowcaseProfile from "@/models/SchoolShowcaseProfile";
 import { getActiveCertificateFilter } from "@/lib/certificates";
-import BulkCertificateFrames from "@/components/certificates/BulkCertificateFrames";
+import BulkPrintBar from "@/components/certificates/BulkPrintBar";
+import CertificateSheet from "@/components/certificates/CertificateSheet";
 
 export const dynamic = "force-dynamic";
 
@@ -50,15 +52,47 @@ export default async function BulkCertificatePage({ searchParams }) {
     _id: { $in: ids },
     ...getActiveCertificateFilter(),
   })
+    .populate("student", "name grade")
+    .populate("captainStudent", "name grade")
     .populate("school", "schoolName")
-    .populate("student", "name")
-    .select("_id school student certificateRecipientName teamName")
+    .populate({
+      path: "event",
+      select:
+        "title eventType eventOwnershipType date visibility participationFormat eventScope resultsPublished",
+    })
     .lean();
 
+  const visibleCertificates = certificates.filter((certificate) =>
+    canViewCertificate(certificate, session)
+  );
+
+  // One batched lookup for every school logo instead of one query per sheet.
+  const schoolIds = [
+    ...new Set(
+      visibleCertificates
+        .map((certificate) => certificate.school?._id)
+        .filter(Boolean)
+        .map(String)
+    ),
+  ];
+  const schoolProfiles = schoolIds.length
+    ? await SchoolShowcaseProfile.find({ school: { $in: schoolIds } })
+        .select("school coverImageUrl")
+        .lean()
+    : [];
+  const profileBySchool = new Map(
+    schoolProfiles.map((profile) => [String(profile.school), profile])
+  );
+
   const certificateById = new Map(
-    certificates
-      .filter((certificate) => canViewCertificate(certificate, session))
-      .map((certificate) => [String(certificate._id), certificate])
+    visibleCertificates.map((certificate) => [
+      String(certificate._id),
+      {
+        ...certificate,
+        schoolProfile:
+          profileBySchool.get(String(certificate.school?._id || "")) || null,
+      },
+    ])
   );
   const orderedCertificates = ids
     .map((id) => certificateById.get(id))
@@ -69,19 +103,17 @@ export default async function BulkCertificatePage({ searchParams }) {
   }
 
   return (
-    <main className="min-h-screen bg-[#eef1f7] px-4 py-6 text-[#10142f] print:bg-white print:p-0">
-      <div className="mx-auto max-w-5xl print:max-w-none">
-        <BulkCertificateFrames
-          autoPrint={autoPrint}
-          certificates={orderedCertificates.map((certificate) => ({
-            id: String(certificate._id),
-            label:
-              certificate.certificateRecipientName ||
-              certificate.teamName ||
-              certificate.student?.name ||
-              String(certificate._id),
-          }))}
-        />
+    <main className="min-h-screen bg-[#eef1f7] px-4 py-6 text-[#10142f] print:min-h-0 print:bg-white print:p-0">
+      <div className="mx-auto max-w-3xl print:max-w-none">
+        <BulkPrintBar count={orderedCertificates.length} autoPrint={autoPrint} />
+
+        <div className="space-y-6 print:space-y-0">
+          {orderedCertificates.map((certificate) => (
+            <div key={String(certificate._id)} className="certificate-print-page">
+              <CertificateSheet achievement={certificate} />
+            </div>
+          ))}
+        </div>
       </div>
     </main>
   );
