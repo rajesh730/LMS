@@ -89,6 +89,27 @@ Already wired, both in `lib/emailService.js`:
 The templates and triggers are done; if approval mail isn't arriving, the problem
 is transport configuration or DNS (SPF/DKIM), not application code.
 
+Every email carries the logo via `logoBlock()` in `lib/emailService.js`. Two
+constraints there are easy to break:
+
+- The image must be an **absolute hosted URL** (`${SITE_URL}/pravyo-icon.png`).
+  Gmail and Outlook strip `data:` URIs, so an inlined base64 logo renders broken.
+- It sits on a **white band**, not the navy header. The mark is navy with white
+  cut-outs, so on navy it nearly disappears — the same reason the PWA splash
+  background in `app/manifest.js` is white.
+
+Styles are inline and `width`/`height` are set as HTML attributes as well as CSS,
+because several clients drop `<style>` blocks and Outlook ignores CSS dimensions.
+
+## Sending mail from Zoho vs Resend
+
+Resend sends; Zoho receives. Resend's SPF lives on `send.pravyo.infobytesnepal.com`
+so it does **not** collide with the Zoho SPF (`v=spf1 include:zohomail.com ~all`)
+on `pravyo.infobytesnepal.com` — never merge or delete that one. Zoho's free plan
+cannot send via SMTP at all, which is why Resend does the sending. Cloudflare DNS
+records for mail must be proxy status "DNS only"; the zone is the parent
+`infobytesnepal.com`, so record names need the `.pravyo` suffix.
+
 ## Deployment
 
 Vercel, region `bom1` (see `vercel.json`). `.env.local` is **not** deployed —
@@ -98,6 +119,14 @@ production env lives in the Vercel dashboard and changes need a redeploy.
 Required: `MONGODB_URI`, `NEXTAUTH_URL`, `NEXTAUTH_SECRET`, `NEXT_PUBLIC_SITE_URL`.
 `NEXTAUTH_URL` and `NEXT_PUBLIC_SITE_URL` must both be the live origin with no
 trailing slash.
+
+**Public contact address.** The official address is
+**contact@pravyo.infobytesnepal.com**. It comes from `NEXT_PUBLIC_SUPPORT_EMAIL`,
+resolved once in `components/public/InfoPageShell.js` and rendered on `/contact`,
+`/privacy` and `/terms`. Because it is a `NEXT_PUBLIC_*` variable it is baked into
+the client bundle at build time, so changing it needs a rebuild, not just a
+restart. Never let this fall back to a personal mailbox — it did until
+2026-07-26, when a personal Gmail was live on all three public pages.
 
 Two deployment gotchas that have bitten before:
 
