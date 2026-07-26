@@ -1,7 +1,7 @@
 import http from "k6/http";
 import { check, sleep } from "k6";
 
-export const DEFAULT_BASE_URL = "https://pratyo.infobytesnepal.com";
+export const DEFAULT_BASE_URL = "https://pravyo.infobytesnepal.com";
 
 export const PUBLIC_ROUTES = Object.freeze([
   { name: "home", path: "/" },
@@ -20,7 +20,7 @@ export const PUBLIC_API_ROUTES = Object.freeze([
 ]);
 
 const SAFE_HOSTNAMES = new Set([
-  "pratyo.infobytesnepal.com",
+  "pravyo.infobytesnepal.com",
   "localhost",
   "127.0.0.1",
   "::1",

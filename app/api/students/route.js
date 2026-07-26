@@ -227,7 +227,7 @@ export async function GET(req) {
     const status = searchParams.get("status");
     if (status && status !== "ALL") {
         // Case-insensitive status check
-        andConditions.push({ status: { $regex: new RegExp(`^${status}$`, 'i') } });
+        andConditions.push({ status: { $regex: new RegExp(`^${escapeRegex(status)}$`, 'i') } });
     } else if (!status) {
         // Default behavior: Show only ACTIVE students (case-insensitive)
         andConditions.push({ status: { $regex: /^ACTIVE$/i } });
@@ -241,7 +241,7 @@ export async function GET(req) {
           andConditions.push({
             $or: [
                 { grade: grade }, // Exact match
-                { grade: { $regex: new RegExp(`^${grade}$`, 'i') } }, // Case insensitive
+                { grade: { $regex: new RegExp(`^${escapeRegex(grade)}$`, 'i') } }, // Case insensitive
                 { grade: { $regex: new RegExp(`^Grade\\s*${gradeNumber}$`, 'i') } }, // "Grade 9", "Grade  9"
                 { grade: { $regex: new RegExp(`^Class\\s*${gradeNumber}$`, 'i') } }, // "Class 9"
                 { grade: gradeNumber } // "9"
@@ -252,7 +252,7 @@ export async function GET(req) {
           andConditions.push({
              $or: [
                 { grade: grade },
-                { grade: { $regex: new RegExp(`^${grade}$`, 'i') } }
+                { grade: { $regex: new RegExp(`^${escapeRegex(grade)}$`, 'i') } }
              ]
           });
       }

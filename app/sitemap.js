@@ -6,7 +6,7 @@ import "@/models/User";
 import "@/models/Student";
 
 const siteUrl =
-  process.env.NEXT_PUBLIC_SITE_URL || "https://pratyo.infobytesnepal.com";
+  process.env.NEXT_PUBLIC_SITE_URL || "https://pravyo.infobytesnepal.com";
 export const revalidate = 3600;
 
 export default async function sitemap() {

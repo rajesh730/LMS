@@ -5,6 +5,7 @@ import { formatPlacementLabel } from "@/lib/results";
 import { normalizeImageUrl } from "@/lib/imageUrls";
 import pravyoLogo from "@/logo/pravyo logo by name.png";
 import AppDate from "@/components/common/AppDate";
+import FittedCertificateName from "@/components/certificates/FittedCertificateName";
 
 const displaySerif = Cinzel({
   subsets: ["latin"],
@@ -31,7 +32,7 @@ const PAPER = "#fbf5e8"; // warm ivory sheet
 
 // Printed copies carry no signature; the code + this URL prove authenticity.
 const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL || "https://pratyo.infobytesnepal.com";
+  process.env.NEXT_PUBLIC_SITE_URL || "https://pravyo.infobytesnepal.com";
 const VERIFY_HOST = SITE_URL.replace(/^https?:\/\//, "");
 
 function getInitials(value) {
@@ -212,7 +213,7 @@ function GoldDivider({ className = "" }) {
   return (
     <div className={`flex items-center justify-center gap-2 ${className}`}>
       <span
-        className="h-px w-16 sm:w-24"
+        className="h-px w-24"
         style={{ background: `linear-gradient(to right, transparent, ${GOLD})` }}
       />
       <span
@@ -221,7 +222,7 @@ function GoldDivider({ className = "" }) {
         style={{ background: GOLD }}
       />
       <span
-        className="h-px w-16 sm:w-24"
+        className="h-px w-24"
         style={{ background: `linear-gradient(to left, transparent, ${GOLD})` }}
       />
     </div>
@@ -272,7 +273,7 @@ function SealMedallion({ caption = "PRAVYO" }) {
     <svg
       viewBox="0 0 120 148"
       aria-hidden="true"
-      className="h-32 w-24 print:h-28 print:w-20"
+      className="h-32 w-24"
     >
       {/* ribbon tails */}
       <path d="M46 92 L38 138 L54 124 L60 136 L60 96 Z" fill="#2f7fdb" />
@@ -366,7 +367,7 @@ function CertificateLogoMark({ imageUrl, label, fallbackText }) {
 
   return (
     <div className="flex items-center gap-3">
-      <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-[#f7b731]/60 bg-white shadow-sm print:h-11 print:w-11">
+      <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-[#f7b731]/60 bg-white shadow-sm">
         {image ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={image} alt={label} className="h-full w-full object-contain p-1.5" />
@@ -377,7 +378,7 @@ function CertificateLogoMark({ imageUrl, label, fallbackText }) {
         )}
       </div>
       <div className="text-left leading-tight">
-        <p className="max-w-[11rem] text-sm font-black uppercase tracking-wide text-[#10142f] print:text-xs">
+        <p className="max-w-[11rem] text-sm font-black uppercase tracking-wide text-[#10142f]">
           {label}
         </p>
       </div>
@@ -438,7 +439,7 @@ export default async function CertificateSheet({ achievement }) {
   // exact size and matches the school badge next to it.
   const pravyoMark = (
     <div key="pravyo" className="flex items-center gap-3">
-      <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-[#f7b731]/60 bg-white shadow-sm print:h-11 print:w-11">
+      <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-[#f7b731]/60 bg-white shadow-sm">
         <Image
           src={pravyoLogo}
           alt="Pravyo"
@@ -447,7 +448,7 @@ export default async function CertificateSheet({ achievement }) {
           className="h-full w-full object-contain p-1.5"
         />
       </div>
-      <p className="text-left text-sm font-black uppercase tracking-wide text-[#10142f] print:text-xs">
+      <p className="text-left text-sm font-black uppercase tracking-wide text-[#10142f]">
         Pravyo
       </p>
     </div>
@@ -482,7 +483,7 @@ export default async function CertificateSheet({ achievement }) {
 
   return (
     <section
-      className="certificate-sheet relative mx-auto aspect-[1/1.414] w-full overflow-hidden rounded-[1rem] border-[3px] border-[#10142f] shadow-[0_24px_72px_rgba(10,31,77,0.22)] print:aspect-auto print:rounded-none print:shadow-none"
+      className="certificate-sheet relative mx-auto h-[1123px] w-[794px] max-w-none shrink-0 overflow-hidden rounded-[1rem] border-[3px] border-[#10142f] shadow-[0_24px_72px_rgba(10,31,77,0.22)] print:rounded-none print:shadow-none"
       style={{ backgroundColor: PAPER }}
     >
       <GoldDefs />
@@ -498,7 +499,7 @@ export default async function CertificateSheet({ achievement }) {
       <div className="certificate-frame relative z-10 flex h-full flex-col items-center justify-between px-[8%] pb-[21.5%] pt-[13.5%] text-center">
         {/* header */}
         <div className="relative z-10 flex w-full flex-col items-center gap-4">
-          <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6">
+          <div className="flex items-center justify-center gap-6">
             {headerLogos[0]}
             <span className="h-9 w-px bg-[#d9c58a]" />
             {headerLogos[1]}
@@ -506,18 +507,18 @@ export default async function CertificateSheet({ achievement }) {
 
           <div className="mt-1">
             <h1
-              className={`${displaySerif.className} text-[2.5rem] font-bold tracking-[0.16em] text-[#16345f] sm:text-[3.6rem]`}
+              className={`${displaySerif.className} text-[3.6rem] font-bold tracking-[0.16em] text-[#16345f]`}
             >
               CERTIFICATE
             </h1>
             <div className="mt-1.5 flex items-center justify-center gap-3">
-              <span className="h-px w-16 sm:w-20" style={{ background: GOLD }} />
+              <span className="h-px w-20" style={{ background: GOLD }} />
               <p
                 className={`${displaySerif.className} text-sm font-semibold tracking-[0.32em] text-[#16345f]`}
               >
                 OF ACHIEVEMENT
               </p>
-              <span className="h-px w-16 sm:w-20" style={{ background: GOLD }} />
+              <span className="h-px w-20" style={{ background: GOLD }} />
             </div>
           </div>
         </div>
@@ -527,11 +528,10 @@ export default async function CertificateSheet({ achievement }) {
           <p className={`${bodySerif.className} text-base italic text-[#7a6434]`}>
             This certificate is proudly presented to
           </p>
-          <h2
-            className={`${scriptFont.className} mt-2 break-words text-6xl leading-tight text-[#10142f] sm:text-8xl`}
-          >
-            {recipientName}
-          </h2>
+          <FittedCertificateName
+            name={recipientName}
+            className={scriptFont.className}
+          />
 
           <GoldDivider className="mt-3" />
 
@@ -596,7 +596,7 @@ export default async function CertificateSheet({ achievement }) {
           </div>
 
           {/* details row */}
-          <div className="grid w-full max-w-xl grid-cols-2 gap-y-3 border-t border-[#e3cf96] pt-4 sm:grid-cols-4 sm:divide-x sm:divide-[#e3cf96]">
+          <div className="grid w-full max-w-xl grid-cols-4 divide-x divide-[#e3cf96] border-t border-[#e3cf96] pt-4">
             <MetaItem
               label="Event Date"
               value={<AppDate value={achievement.event?.date} />}

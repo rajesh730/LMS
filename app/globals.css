@@ -1331,6 +1331,20 @@ a[aria-disabled="true"] {
     border-width: 3px !important;
   }
 
+  .certificate-viewport {
+    width: 196mm !important;
+    max-width: none !important;
+    height: 283mm !important;
+    overflow: visible !important;
+  }
+
+  .certificate-viewport-inner {
+    position: static !important;
+    width: 196mm !important;
+    height: 283mm !important;
+    transform: none !important;
+  }
+
   .certificate-frame {
     height: 100%;
     /* Mirrors the sheet's on-screen 13.5% / 8% / 21.5% padding so content stays

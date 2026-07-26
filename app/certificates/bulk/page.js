@@ -7,6 +7,7 @@ import SchoolShowcaseProfile from "@/models/SchoolShowcaseProfile";
 import { getActiveCertificateFilter } from "@/lib/certificates";
 import BulkPrintBar from "@/components/certificates/BulkPrintBar";
 import CertificateSheet from "@/components/certificates/CertificateSheet";
+import CertificateViewport from "@/components/certificates/CertificateViewport";
 
 export const dynamic = "force-dynamic";
 
@@ -104,13 +105,15 @@ export default async function BulkCertificatePage({ searchParams }) {
 
   return (
     <main className="min-h-screen bg-[#eef1f7] px-4 py-6 text-[#10142f] print:min-h-0 print:bg-white print:p-0">
-      <div className="mx-auto max-w-3xl print:max-w-none">
+      <div className="mx-auto w-full max-w-[794px] print:max-w-none">
         <BulkPrintBar count={orderedCertificates.length} autoPrint={autoPrint} />
 
         <div className="space-y-6 print:space-y-0">
           {orderedCertificates.map((certificate) => (
             <div key={String(certificate._id)} className="certificate-print-page">
-              <CertificateSheet achievement={certificate} />
+              <CertificateViewport>
+                <CertificateSheet achievement={certificate} />
+              </CertificateViewport>
             </div>
           ))}
         </div>

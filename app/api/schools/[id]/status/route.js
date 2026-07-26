@@ -8,10 +8,8 @@ import { sendSchoolApprovalEmail } from '@/lib/emailService';
 
 export async function PUT(req, { params }) {
     try {
-        console.log("=== SCHOOL STATUS UPDATE REQUEST ===");
         const session = await getServerSession(authOptions);
-        console.log("Session user role:", session?.user?.role);
-        
+
         if (!session || session.user.role !== 'SUPER_ADMIN') {
             console.error("❌ Unauthorized - User is not SUPER_ADMIN");
             return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
@@ -20,7 +18,6 @@ export async function PUT(req, { params }) {
         // Await params for Next.js 15+
         const { id } = await params;
         const { status } = await req.json();
-        console.log("School ID:", id, "New status:", status);
 
         if (!['PENDING', 'APPROVED', 'REJECTED', 'SUBSCRIBED', 'UNSUBSCRIBED'].includes(status)) {
             console.error("❌ Invalid status:", status);
@@ -28,8 +25,7 @@ export async function PUT(req, { params }) {
         }
 
         await connectDB();
-        console.log("Updating school document...");
-        
+
         const previous = await User.findById(id).select('status email schoolName').lean();
         if (!previous) {
             console.error("❌ School not found with ID:", id);
@@ -46,7 +42,6 @@ export async function PUT(req, { params }) {
             sendSchoolApprovalEmail(previous.email, previous.schoolName || 'Your school');
         }
 
-        console.log("School updated successfully:", user._id, "New status:", user.status);
         publishWorkIndicatorsUpdate("school-status-updated", {
             schoolId: String(user._id),
             status: user.status,

@@ -3,6 +3,7 @@ import Student from "@/models/Student";
 import { successResponse, errorResponse } from "@/lib/apiResponse";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { escapeRegex } from "@/lib/pagination";
 
 export async function GET(req, { params }) {
   try {
@@ -20,8 +21,6 @@ export async function GET(req, { params }) {
     }
 
     await connectDB();
-
-    console.log(`Fetching students for School: ${schoolId}, Grade Param: "${grade}"`);
 
     // Construct a flexible query to handle "Grade 9" vs "9" mismatches
     let gradeQuery = grade;
@@ -44,7 +43,6 @@ export async function GET(req, { params }) {
         // Remove duplicates
         const uniqueVariations = [...new Set(variations)];
         gradeQuery = { $in: uniqueVariations };
-        console.log(`Searching for grade variations: ${JSON.stringify(uniqueVariations)}`);
     } else {
         // If no number found, use the decoded grade
         gradeQuery = decodedGrade;
@@ -58,13 +56,13 @@ export async function GET(req, { params }) {
         isDeleted: { $ne: true },
         $or: [
             { grade: gradeQuery },
-            // Also try regex matching for "Grade X" vs "grade x"
-            { grade: { $regex: new RegExp(`^${decodedGrade}$`, 'i') } },
+            // Also try regex matching for "Grade X" vs "grade x". The param is a
+            // user-supplied URL segment, so escape it — an unescaped "(" would
+            // throw a SyntaxError and 500 the route.
+            { grade: { $regex: new RegExp(`^${escapeRegex(decodedGrade)}$`, 'i') } },
             { grade: { $regex: new RegExp(`^Grade ${numericPart}$`, 'i') } }
         ]
     };
-
-    console.log("Executing query:", JSON.stringify(query));
 
     // Fetch all students for this school and grade
     const students = await Student.find(query)

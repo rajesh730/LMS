@@ -8,7 +8,7 @@ create users, submit writing, send email, or modify application data.
 The default target is:
 
 ```text
-https://pratyo.infobytesnepal.com
+https://pravyo.infobytesnepal.com
 ```
 
 The helper permits only that staging hostname and local development hosts.
@@ -66,7 +66,7 @@ each route, not only an overall p95.
 The staging URL is the default. To set it explicitly in PowerShell:
 
 ```powershell
-$env:BASE_URL = "https://pratyo.infobytesnepal.com"
+$env:BASE_URL = "https://pravyo.infobytesnepal.com"
 ```
 
 Environment variables last for the current PowerShell session. Remove one

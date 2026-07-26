@@ -15,7 +15,7 @@ export const options = {
   },
 };
 
-const BASE_URL = "https://pratyo.infobytesnepal.com";
+const BASE_URL = "https://pravyo.infobytesnepal.com";
 
 export default function () {
   const pages = [

@@ -10,6 +10,7 @@ import CertificatePrintActions from "@/components/certificates/CertificatePrintA
 import CertificateSheet, {
   resolveEventOwnership,
 } from "@/components/certificates/CertificateSheet";
+import CertificateViewport from "@/components/certificates/CertificateViewport";
 
 export const dynamic = "force-dynamic";
 
@@ -114,7 +115,7 @@ export default async function CertificatePage({ params, searchParams }) {
         isBulkMode ? "bg-white p-0" : "bg-[#eef1f7] px-4 py-8"
       }`}
     >
-      <div className="mx-auto max-w-3xl print:max-w-none">
+      <div className="mx-auto w-full max-w-[794px] print:max-w-none">
         {/* screen-only action bar */}
         {!isBulkMode && (
         <div className="mb-6 flex flex-col gap-4 print:hidden sm:flex-row sm:items-center sm:justify-between">
@@ -136,7 +137,9 @@ export default async function CertificatePage({ params, searchParams }) {
         )}
 
         {/* certificate sheet */}
-        <CertificateSheet achievement={achievement} />
+        <CertificateViewport>
+          <CertificateSheet achievement={achievement} />
+        </CertificateViewport>
 
         {/* screen-only supplementary details (kept out of the printed sheet) */}
         {(achievement.totalScore > 0 || isTeamCertificate || achievement.description) && (
