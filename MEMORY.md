@@ -21,8 +21,12 @@ are both "pravyo" — an older domain spelled "pratyo" was retired and now retur
 - **Tailwind CSS v4** via `@tailwindcss/postcss`; global tokens in `app/globals.css`.
 - **MongoDB Atlas** through Mongoose 9 (`lib/db.js` holds the cached connection).
 - **NextAuth v4**, credentials provider only, JWT sessions.
-- **Resend** for transactional email; **Upstash Redis** for rate limiting and the
-  realtime bus. Both are optional and degrade gracefully when unset.
+- **Email** via `lib/emailService.js`, which picks a transport at call time:
+  SMTP (nodemailer — used for Zoho) when `SMTP_HOST`/`SMTP_USER`/`SMTP_PASSWORD`
+  are set, else Resend when `RESEND_API_KEY` is set, else it warns and skips.
+  Verify a transport with `npm run mail:test -- you@example.com`.
+- **Upstash Redis** for rate limiting and the realtime bus. Optional; falls back
+  to per-instance in-memory state.
 - **Jest** for tests (`npm test`, 26 suites / 118 tests, runs serially).
 - **k6** for load tests in `load-tests/`.
 
@@ -67,6 +71,23 @@ role dashboard, which keeps the public homepage cacheable.
   `lib/academicYear.js`.
 - Realtime updates flow through `lib/realtimeBus.js` over SSE at
   `/api/realtime/stream`, with in-memory fallback when Redis is absent.
+- Emails are fire-and-forget: call sites deliberately don't `await` them, and
+  `deliver()` in `lib/emailService.js` never throws, so a mail outage can't fail
+  a registration or an approval. Keep that contract when adding new mail.
+
+## School signup and approval emails
+
+Already wired, both in `lib/emailService.js`:
+
+- `sendSchoolRegistrationReceivedEmail` — fired from `app/api/register/route.js`
+  when a school submits registration ("waiting for review").
+- `sendSchoolApprovalEmail` — fired from `app/api/schools/[id]/status/route.js`
+  when a super admin flips the school to `APPROVED` or `SUBSCRIBED`. It only
+  sends on the transition *into* access, so re-saving an already-approved school
+  does not re-notify.
+
+The templates and triggers are done; if approval mail isn't arriving, the problem
+is transport configuration or DNS (SPF/DKIM), not application code.
 
 ## Deployment
 
