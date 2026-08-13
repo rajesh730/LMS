@@ -3,6 +3,7 @@ import Student from "@/models/Student";
 import User from "@/models/User";
 import Achievement from "@/models/Achievement";
 import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
+import "@/models/Event";
 import {
   successResponse,
   errorResponse,

@@ -11,6 +11,8 @@ import {
   FaShieldAlt,
   FaTimesCircle,
 } from "react-icons/fa";
+import "@/models/Event";
+import "@/models/Student";
 
 export const dynamic = "force-dynamic";
 

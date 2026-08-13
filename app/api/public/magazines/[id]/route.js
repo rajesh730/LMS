@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import connectDB from "@/lib/db";
 import MagazineIssue from "@/models/MagazineIssue";
 import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
+import "@/models/Student";
 import { serializeMagazineIssue } from "@/lib/magazineIssues";
 import { serializeAuthoredEra } from "@/lib/writingProvenance";
 

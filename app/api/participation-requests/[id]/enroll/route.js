@@ -3,6 +3,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import ParticipationRequest from "@/models/ParticipationRequest";
 import ActivityLog from "@/models/ActivityLog";
+import "@/models/Event";
 import {
   successResponse,
   unauthorizedError,

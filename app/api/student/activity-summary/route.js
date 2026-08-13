@@ -9,6 +9,7 @@ import ParticipationRequest from "@/models/ParticipationRequest";
 import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
 import SchoolShowcaseProfile from "@/models/SchoolShowcaseProfile";
 import User from "@/models/User";
+import "@/models/Event";
 
 function buildStudentLookup(session) {
   return {

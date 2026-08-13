@@ -7,6 +7,7 @@ import User from "@/models/User";
 import Achievement from "@/models/Achievement";
 import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
 import SchoolShowcaseProfile from "@/models/SchoolShowcaseProfile";
+import "@/models/Event";
 import { getActiveCertificateFilter } from "@/lib/certificates";
 import { WritingPreview } from "@/components/WritingContent";
 import AppDate from "@/components/common/AppDate";

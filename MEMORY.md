@@ -65,6 +65,12 @@ role dashboard, which keeps the public homepage cacheable.
   `escapeRegex` from `lib/pagination.js`. An unescaped `(` otherwise throws and
   500s the route.
 - Pagination goes through `buildPagination` / `parsePagination` in the same module.
+- Any model you `.populate()` must be imported by that route, even if unused —
+  e.g. `import "@/models/Event";`. Mongoose only knows a ref once its file has
+  been imported, and a cold Vercel lambda loads only its own route's graph. Dev
+  hides this (one process loads every route), so it fails **only in production**
+  with `MissingSchemaError: Schema hasn't been registered for model "X"`, which
+  surfaces as an opaque "Server Components render" error.
 - Grade values are messy in the data — "9", "Grade 9", "Class 9" all occur, so
   grade queries fan out across those variants deliberately.
 - Dates support both AD and BS (Nepali) calendars; see `lib/nepaliDate.js` and

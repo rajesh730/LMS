@@ -11,6 +11,7 @@ import CertificateSheet, {
   resolveEventOwnership,
 } from "@/components/certificates/CertificateSheet";
 import CertificateViewport from "@/components/certificates/CertificateViewport";
+import "@/models/Event";
 
 export const dynamic = "force-dynamic";
 

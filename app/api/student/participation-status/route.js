@@ -4,6 +4,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import connectDB from "@/lib/db";
 import Student from "@/models/Student";
 import ParticipationRequest from "@/models/ParticipationRequest";
+import "@/models/Event";
 import { buildEventPresentationState } from "@/lib/eventPresentation";
 
 export async function GET(req) {

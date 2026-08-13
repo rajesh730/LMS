@@ -8,6 +8,7 @@ import { getActiveCertificateFilter } from "@/lib/certificates";
 import BulkPrintBar from "@/components/certificates/BulkPrintBar";
 import CertificateSheet from "@/components/certificates/CertificateSheet";
 import CertificateViewport from "@/components/certificates/CertificateViewport";
+import "@/models/Event";
 
 export const dynamic = "force-dynamic";
 
