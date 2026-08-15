@@ -63,6 +63,7 @@ const SCHOOL_NAV_GROUPS = [
       "Overview",
       "Students",
       "Student Transfer",
+      "Parents & Guardians",
       "Teachers",
       "School Events",
       "Platform Events",

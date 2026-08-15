@@ -14,7 +14,10 @@ const UserSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ["SUPER_ADMIN", "SCHOOL_ADMIN", "TEACHER", "STUDENT"],
+      // PARENT is accepted here for legacy/compat only — real guardian accounts
+      // live in the `Parent` collection (see models/Parent.js), the same way
+      // teachers live in `Teacher`. Nothing creates a PARENT User today.
+      enum: ["SUPER_ADMIN", "SCHOOL_ADMIN", "TEACHER", "STUDENT", "PARENT"],
       default: "SCHOOL_ADMIN",
     },
     schoolName: {

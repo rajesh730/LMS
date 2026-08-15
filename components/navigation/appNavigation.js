@@ -18,6 +18,7 @@ import {
   FaSchool,
   FaTrophy,
   FaUsers,
+  FaUserShield,
 } from "react-icons/fa";
 
 export const PUBLIC_NAV_LINKS = [
@@ -42,6 +43,10 @@ export const SCHOOL_NAV_LINKS = [
   { name: "Overview", href: "/school/dashboard", icon: FaChartPie },
   { name: "Students", href: "/school/dashboard?tab=students", icon: FaUsers },
   { name: "Student Transfer", href: "/school/dashboard?tab=student-transfers", icon: FaExchangeAlt },
+  // Guardian access to the Parent App is authorised here — see §19/§27 in
+  // docs/PARENT_APP.md. Its own page rather than a dashboard tab, because
+  // safeguarding decisions deserve a stable URL an admin can be sent to.
+  { name: "Parents & Guardians", href: "/school/guardians", icon: FaUserShield },
   { name: "Teachers", href: "/school/dashboard?tab=teachers", icon: FaChalkboardTeacher },
   { name: "School Events", href: "/school/dashboard?tab=school-events", icon: FaCalendarAlt },
   { name: "Platform Events", href: "/school/dashboard?tab=platform-events", icon: FaGlobe },

@@ -5,6 +5,7 @@ import connectDB from "@/lib/db";
 import User from "@/models/User";
 import Teacher from "@/models/Teacher";
 import Student from "@/models/Student";
+import Parent from "@/models/Parent";
 import { applyRateLimit } from "@/lib/rateLimit";
 
 const PERSISTENT_SESSION_MAX_AGE = 60 * 60 * 24 * 365; // 1 year
@@ -64,10 +65,20 @@ export const authOptions = {
       credentials: {
         email: { label: "Email/Username", type: "text" },
         password: { label: "Password", type: "password" },
+        loginScope: { label: "Login scope", type: "text" },
+        // Parent Access sign-in (§13). Present only for the PIN path.
+        parentId: { label: "Parent ID", type: "text" },
+        pin: { label: "PIN", type: "password" },
+        deviceMode: { label: "Device mode", type: "text" },
       },
       async authorize(credentials, req) {
         const identifier = String(credentials?.email || "").trim();
         const normalizedEmail = identifier.toLowerCase();
+        // /parent/login sends loginScope="parent". Without it we would hit the
+        // Teacher branch first for a teacher who is ALSO a guardian at the same
+        // school (a common case), and they could never reach the parent app.
+        // Any other value keeps the pre-existing lookup order untouched.
+        const loginScope = String(credentials?.loginScope || "").toLowerCase();
 
         // Throttle credential attempts per client IP to blunt brute-forcing.
         const ip =
@@ -86,6 +97,105 @@ export const authOptions = {
         }
 
         await connectDB();
+
+        // Guardians sign in from /parent/login, which scopes the lookup to the
+        // Parent collection only. Nothing below this block changes for the
+        // existing admin / teacher / student flows.
+        if (loginScope === "parent") {
+          // --- Primary path: Parent ID + PIN (§13) -------------------------
+          // Requires neither an email nor a phone number, which is the whole
+          // point — see §3 and the Parent Access Card flow.
+          if (credentials?.parentId) {
+            const { verifyParentPin } = await import("@/lib/parentCredentials");
+            const result = await verifyParentPin(
+              credentials.parentId,
+              credentials.pin
+            );
+
+            if (!result.ok) {
+              if (result.code === "LOCKED") {
+                throw new Error(
+                  "Too many wrong PINs. Please wait a few minutes, or ask your school for help."
+                );
+              }
+              if (result.code === "NOT_ACTIVATED") {
+                throw new Error(
+                  "This Parent ID is not active yet. Please use your Parent Access Card first."
+                );
+              }
+              throw new Error("Parent ID or PIN is not correct");
+            }
+
+            const parent = result.parent;
+            const deviceMode =
+              credentials.deviceMode === "SHARED" ? "SHARED" : "PERSONAL";
+
+            return {
+              id: parent._id.toString(),
+              email: parent.email || parent.parentId,
+              role: "PARENT",
+              name: parent.name,
+              status: parent.status,
+              schoolId: null,
+              authVersion: parent.authVersion || 0,
+              calendarPreference: parent.preferences?.calendarPreference || "BS",
+              // Drives the shared-device re-authentication window; see the jwt
+              // callback below.
+              deviceMode,
+              pinVerifiedAt: Date.now(),
+            };
+          }
+
+          // --- Legacy path: email/phone + password (§15, §57) --------------
+          // Kept so guardians created before Parent Access can still sign in.
+          // Not deleted; existing users are never forced to migrate.
+          const parent = await Parent.findOne({
+            $or: [{ email: normalizedEmail }, { phone: identifier }],
+            isDeleted: { $ne: true },
+          });
+
+          if (!parent) {
+            throw new Error("No parent account found for these details");
+          }
+
+          if (!parent.password) {
+            throw new Error(
+              "This account uses a Parent ID and PIN. Please sign in with those."
+            );
+          }
+
+          const isValid = await bcrypt.compare(
+            credentials.password,
+            parent.password
+          );
+          if (!isValid) {
+            throw new Error("Invalid password");
+          }
+
+          if (parent.status !== "ACTIVE") {
+            throw new Error("Your account is inactive. Please contact your school.");
+          }
+
+          // Fire-and-forget: a failed timestamp write must never block a login.
+          Parent.updateOne(
+            { _id: parent._id },
+            { $set: { lastLoginAt: new Date() } }
+          ).catch(() => {});
+
+          return {
+            id: parent._id.toString(),
+            email: parent.email || parent.phone,
+            role: "PARENT",
+            name: parent.name,
+            status: parent.status,
+            // A guardian is not scoped to a single school — they may have
+            // children at several. School context is resolved per selected
+            // child by lib/parentAccess.js, never from the session.
+            schoolId: null,
+            authVersion: parent.authVersion || 0,
+            calendarPreference: parent.preferences?.calendarPreference || "BS",
+          };
+        }
 
         // 1. Try Teacher collection FIRST (Clean Architecture)
         const teacher = await Teacher.findOne({
@@ -227,6 +337,12 @@ export const authOptions = {
         token.authVersion = user.authVersion || 0;
         token.calendarPreference = user.calendarPreference || "BS";
         token.lastValidatedAt = Date.now();
+        // Shared-device policy (§12). The cookie itself is long-lived for
+        // everyone, but a SHARED session stops being trusted after a short
+        // idle window and lib/parentAccess.js then demands the PIN again.
+        // Enforcing it server-side means clearing localStorage cannot bypass it.
+        if (user.deviceMode) token.deviceMode = user.deviceMode;
+        if (user.pinVerifiedAt) token.pinVerifiedAt = user.pinVerifiedAt;
         delete token.error;
       } else if (
         token?.id &&
@@ -276,6 +392,29 @@ export const authOptions = {
           } else {
             await syncSchoolOnToken(token, currentTeacher.school);
           }
+        } else if (role === "PARENT") {
+          const currentParent = await Parent.findById(token.id).select(
+            "status isDeleted authVersion preferences"
+          );
+
+          if (
+            !currentParent ||
+            currentParent.isDeleted ||
+            currentParent.status !== "ACTIVE" ||
+            (currentParent.authVersion || 0) !== (token.authVersion || 0)
+          ) {
+            token.error = "SessionRevoked";
+            delete token.role;
+            delete token.schoolId;
+          } else {
+            token.status = currentParent.status;
+            token.calendarPreference =
+              currentParent.preferences?.calendarPreference || "BS";
+            // Never cache a school on a parent token — see the note in
+            // authorize(). Child selection decides school, per request.
+            token.schoolId = null;
+            token.schoolName = null;
+          }
         } else if (role === "STUDENT") {
           const currentStudent = await Student.findById(token.id).select(
             "status isDeleted school calendarPreference"
@@ -306,6 +445,8 @@ export const authOptions = {
         session.user.schoolName = token.schoolName || null;
         session.user.authVersion = token.authVersion || 0;
         session.user.calendarPreference = token.calendarPreference || "BS";
+        session.user.deviceMode = token.deviceMode || "PERSONAL";
+        session.user.pinVerifiedAt = token.pinVerifiedAt || null;
         if (token.error) {
           session.error = token.error;
         }

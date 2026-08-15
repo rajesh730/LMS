@@ -6,7 +6,18 @@ const DASHBOARD_BY_ROLE = {
     SCHOOL_ADMIN: '/school/dashboard',
     TEACHER: '/teacher/dashboard',
     STUDENT: '/student/dashboard',
+    PARENT: '/parent',
 };
+
+// Parent Access Card entry points. A guardian reaches these holding a printed
+// card with no session at all, so they must be publicly routable — the card's
+// own credentials are the authentication (see lib/parentCredentials.js).
+const PARENT_PUBLIC_PATHS = new Set([
+    '/parent/login',
+    '/parent/register',
+    '/parent/access',
+    '/parent/activate',
+]);
 
 export default withAuth(
     function proxy(req) {
@@ -20,6 +31,27 @@ export default withAuth(
             if (destination) {
                 return NextResponse.redirect(new URL(destination, req.url));
             }
+        }
+
+        // Parent gates run FIRST. The staff gates below bounce "not my role" to
+        // another staff dashboard (e.g. /admin sends non-admins to
+        // /school/dashboard), which would trap a parent in a redirect toward an
+        // area they can never enter. Resolving PARENT up front avoids that.
+        if (token?.role === 'PARENT') {
+            if (
+                pathname.startsWith('/admin') ||
+                pathname.startsWith('/school') ||
+                pathname.startsWith('/teacher') ||
+                pathname.startsWith('/student')
+            ) {
+                return NextResponse.redirect(new URL('/parent', req.url));
+            }
+        } else if (pathname.startsWith('/parent') && !PARENT_PUBLIC_PATHS.has(pathname)) {
+            // Everyone else is kept out of the Parent App. Staff go to their own
+            // dashboard so a mistyped URL does not look like a session failure.
+            const destination = DASHBOARD_BY_ROLE[token?.role];
+            if (destination) return NextResponse.redirect(new URL(destination, req.url));
+            return NextResponse.redirect(new URL('/parent/login', req.url));
         }
 
         // Protect Admin Routes
@@ -73,6 +105,10 @@ export default withAuth(
                 if (req.nextUrl.pathname === '/student/login') {
                     return true;
                 }
+                // Guardians must be able to reach sign-in and card activation.
+                if (PARENT_PUBLIC_PATHS.has(req.nextUrl.pathname)) {
+                    return true;
+                }
                 // Require token for all other matched routes
                 return !!token;
             },
@@ -81,5 +117,12 @@ export default withAuth(
 );
 
 export const config = {
-    matcher: ['/', '/admin/:path*', '/school/:path*', '/teacher/:path*', '/student/:path*'],
+    matcher: [
+        '/',
+        '/admin/:path*',
+        '/school/:path*',
+        '/teacher/:path*',
+        '/student/:path*',
+        '/parent/:path*',
+    ],
 };

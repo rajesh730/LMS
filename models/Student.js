@@ -160,6 +160,15 @@ const StudentSchema = new mongoose.Schema(
       type: String,
       sparse: true,
     },
+    // Optional profile photo. Added for the Parent App, whose home screen leads
+    // with the child's face (§3, §32). Empty for every existing student, and
+    // every surface that renders it falls back to initials, so nothing depends
+    // on it being populated.
+    photoUrl: {
+      type: String,
+      default: "",
+      trim: true,
+    },
     bloodGroup: {
       type: String,
       enum: ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-", ""],

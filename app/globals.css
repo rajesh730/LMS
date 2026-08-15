@@ -3271,3 +3271,351 @@ a[aria-busy="true"] {
     animation-duration: 1.4s;
   }
 }
+
+/* ==========================================================================
+   Print — Parent Access Card and Parent Summary
+   ==========================================================================
+   The Parent App's offline inclusion features (docs/PARENT_APP.md §5, §23)
+   depend on real printed output: a guardian with no smartphone receives a
+   printed card, and a guardian with no regular device receives a printed
+   summary. These sheets are produced with browser print rather than a PDF
+   service, so the print stylesheet IS the document design.
+
+   Everything here assumes a black-and-white office printer. No colour carries
+   meaning, no tints sit behind text, and nothing relies on a background
+   graphic (most browsers omit those by default). */
+
+.no-print {
+  /* Screen-only chrome: toolbars, buttons, navigation. */
+}
+
+@media print {
+  .no-print,
+  nav,
+  header.sticky {
+    display: none !important;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Never split a card or a summary block across two sheets. */
+  .parent-access-card,
+  .parent-summary,
+  .pac-qr-block,
+  .summary-block {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .card-page,
+  .summary-page {
+    padding: 0 !important;
+  }
+
+  /* Print the URL behind a link? No — a parent card full of raw hrefs is
+     noise, and the QR already carries the address. */
+  a[href]::after {
+    content: none !important;
+  }
+}
+
+@page {
+  margin: 12mm;
+}
+
+/* --- Parent Access Card ---------------------------------------------- */
+
+.card-page,
+.summary-page {
+  min-height: 100vh;
+  background: #f7f8fa;
+  padding: 2rem 1rem;
+}
+
+.card-toolbar,
+.summary-toolbar {
+  max-width: 40rem;
+  margin: 0 auto 1.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.card-toolbar-title,
+.summary-toolbar-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.card-toolbar-note {
+  margin-top: 0.25rem;
+  font-size: 0.8125rem;
+  color: #b42318;
+  max-width: 28rem;
+}
+
+.card-sheet,
+.summary-sheet {
+  max-width: 40rem;
+  margin: 0 auto;
+}
+
+.parent-access-card {
+  background: #fff;
+  border: 2px solid #000;
+  border-radius: 4px;
+  padding: 1.5rem;
+  text-align: center;
+  font-family: var(--font-ui);
+  color: #000;
+}
+
+.pac-header {
+  border-bottom: 2px solid #000;
+  padding-bottom: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.pac-school {
+  font-size: 1.05rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  line-height: 1.25;
+}
+
+.pac-brand {
+  margin-top: 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+}
+
+.pac-child {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.pac-child-icon {
+  font-size: 2rem;
+}
+
+.pac-child-name {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.pac-child-grade {
+  font-size: 0.95rem;
+}
+
+.pac-guardian {
+  border: 1px solid #000;
+  border-radius: 4px;
+  padding: 0.6rem;
+  margin-bottom: 1rem;
+}
+
+.pac-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.pac-guardian-name {
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.pac-relationship {
+  font-size: 0.85rem;
+}
+
+.pac-scan {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+}
+
+.pac-scan-ne {
+  font-size: 0.8rem;
+  margin-bottom: 0.5rem;
+}
+
+.pac-qr {
+  display: flex;
+  justify-content: center;
+}
+
+/* The QR must stay large enough for a low-end phone camera to lock onto,
+   even after the sheet has been folded into a school bag. */
+.pac-qr svg {
+  width: 190px;
+  height: 190px;
+}
+
+.pac-or {
+  margin: 0.85rem 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
+.pac-credentials {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.pac-cred {
+  border: 2px solid #000;
+  border-radius: 4px;
+  padding: 0.6rem 0.4rem;
+}
+
+/* Monospaced and widely tracked: this is read aloud and typed by hand. */
+.pac-value {
+  margin-top: 0.2rem;
+  font-family: var(--font-code);
+  font-size: 1.3rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  word-break: break-all;
+}
+
+.pac-footer {
+  border-top: 1px solid #000;
+  padding-top: 0.75rem;
+}
+
+.pac-help,
+.pac-help-ne {
+  font-size: 0.8rem;
+}
+
+.pac-expiry {
+  margin-top: 0.4rem;
+  font-size: 0.75rem;
+}
+
+.pac-warning {
+  margin-top: 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.card-missing {
+  max-width: 28rem;
+  margin: 0 auto;
+  background: #fff;
+  border: 1px solid var(--brand-border);
+  border-radius: 1rem;
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+}
+
+.card-missing-icon {
+  font-size: 2rem;
+}
+
+.card-missing-title {
+  margin-top: 0.75rem;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.card-missing-text {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--brand-muted);
+}
+
+/* --- Parent Summary --------------------------------------------------- */
+
+.parent-summary {
+  background: #fff;
+  border: 1px solid #000;
+  border-radius: 4px;
+  padding: 1.5rem;
+  color: #000;
+  font-family: var(--font-ui);
+}
+
+.summary-header {
+  border-bottom: 2px solid #000;
+  padding-bottom: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.summary-student {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.summary-meta {
+  font-size: 0.9rem;
+}
+
+.summary-section-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  margin: 1.25rem 0 0.5rem;
+  border-bottom: 1px solid #000;
+  padding-bottom: 0.25rem;
+}
+
+.summary-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.6rem;
+}
+
+.summary-stat {
+  border: 1px solid #000;
+  border-radius: 4px;
+  padding: 0.6rem;
+  font-size: 0.9rem;
+}
+
+.summary-stat strong {
+  font-size: 1.2rem;
+}
+
+.summary-block {
+  border: 1px solid #000;
+  border-radius: 4px;
+  padding: 0.7rem;
+  margin-bottom: 0.6rem;
+}
+
+.summary-block-title {
+  font-weight: 700;
+}
+
+.summary-block-meta {
+  font-size: 0.82rem;
+}
+
+.summary-footer {
+  margin-top: 1.25rem;
+  border-top: 1px solid #000;
+  padding-top: 0.75rem;
+  font-size: 0.78rem;
+}

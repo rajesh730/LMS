@@ -74,6 +74,35 @@ const noticeSchema = new mongoose.Schema(
         trim: true,
       },
     ], // Specific grades (empty means all grades)
+    // --- Parent action flags (§11) ---------------------------------------
+    // Both default false, so every notice that already exists keeps behaving
+    // exactly as it does today: informational, no action button.
+    // When set, the parent notice detail shows an "I Understand" button and the
+    // notice counts as ACTION REQUIRED until acknowledged.
+    requiresAcknowledgement: {
+      type: Boolean,
+      default: false,
+    },
+    // When set, the parent is asked YES/NO ("Allow Aayush to participate?") and
+    // the decision is recorded per guardian in NoticeReceipt.
+    requiresConsent: {
+      type: Boolean,
+      default: false,
+    },
+    // Optional deadline shown on the card and used to escalate urgency.
+    actionDeadline: {
+      type: Date,
+      default: null,
+    },
+    // Restrict a notice to named students (§16 — "selected students"). Empty
+    // means "everyone matching school + grades", which is the existing
+    // behaviour.
+    targetStudents: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Student",
+      },
+    ],
     expiryDate: {
       type: Date,
       default: null,

@@ -39,7 +39,7 @@ are both "pravyo" — an older domain spelled "pratyo" was retired and now retur
 | `lib/` | Business logic and helpers — the substantive layer, ~60 modules. |
 | `models/` | 26 Mongoose schemas. |
 | `scripts/` | One-off `.mjs` migrations and backfills, exposed as `npm run db:*`. |
-| `docs/` | Design and audit notes (`REDESIGN.md`, `DEEP_AUDIT.md`, `WORK_INDICATORS.md`, `REALTIME_AND_NOTICES.md`, `ACADEMIC_YEAR_AND_PORTFOLIO.md`, `load-testing.md`). |
+| `docs/` | Design and audit notes (`REDESIGN.md`, `DEEP_AUDIT.md`, `WORK_INDICATORS.md`, `REALTIME_AND_NOTICES.md`, `ACADEMIC_YEAR_AND_PORTFOLIO.md`, `PARENT_APP.md`, `load-testing.md`). |
 | `proxy.js` | **This is the Next.js middleware.** Next 16 renamed `middleware.js` to `proxy.js`. It does auth gating and role-based redirects. Do not delete it as a stray. |
 
 ## Roles and auth
@@ -48,6 +48,13 @@ Four roles on the `User` model: `SUPER_ADMIN`, `SCHOOL_ADMIN`, `TEACHER`,
 `STUDENT`. Students are a separate `Student` collection with their own login
 surface (`/student/login`) — `User` and `Student` are distinct, which is the
 single most common source of confusion when reading auth code.
+
+A fifth role, `PARENT`, backs the Parent App. Guardians live in their own
+`Parent` collection (not as `User` rows) because a guardian can have children at
+several schools, so the `User.schoolName` shape does not fit. `/parent/login`
+sends `loginScope: "parent"` so the credentials provider checks `Parent` first —
+without it a teacher who is also a parent could never reach the Parent App.
+See `docs/PARENT_APP.md`.
 
 Schools carry a lifecycle status: `PENDING` → `APPROVED` / `REJECTED`, plus
 `SUBSCRIBED` / `UNSUBSCRIBED`. Access is granted for `APPROVED` and `SUBSCRIBED`
@@ -77,6 +84,10 @@ role dashboard, which keeps the public homepage cacheable.
   `lib/academicYear.js`.
 - Realtime updates flow through `lib/realtimeBus.js` over SSE at
   `/api/realtime/stream`, with in-memory fallback when Redis is absent.
+- Every `/api/parent/**` handler MUST go through `lib/parentAccess.js`
+  (`requireParentChild`). A `studentId` from the client is a claim, not a fact —
+  never query `Student` by it directly, and always take the school from the
+  resolved student rather than the request.
 - Emails are fire-and-forget: call sites deliberately don't `await` them, and
   `deliver()` in `lib/emailService.js` never throws, so a mail outage can't fail
   a registration or an approval. Keep that contract when adding new mail.
