@@ -82,13 +82,15 @@ const SCHOOL_NAV_GROUPS = [
 ];
 
 function getInitials(name = "") {
-  return String(name)
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((p) => p[0])
-    .join("")
-    .toUpperCase() || "U";
+  return (
+    String(name)
+      .split(" ")
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((p) => p[0])
+      .join("")
+      .toUpperCase() || "U"
+  );
 }
 
 function getRoleLabel(role) {
@@ -125,7 +127,10 @@ export default function Sidebar({
     if (!accountMenuOpen) return;
 
     const handlePointer = (event) => {
-      if (accountMenuRef.current && !accountMenuRef.current.contains(event.target)) {
+      if (
+        accountMenuRef.current &&
+        !accountMenuRef.current.contains(event.target)
+      ) {
         setAccountMenuOpen(false);
       }
     };
@@ -201,9 +206,11 @@ export default function Sidebar({
             <div className="space-y-0.5">
               {group.links.map((link) => {
                 const Icon = link.icon;
-                const currentHref = pathname + (currentTab ? `?tab=${currentTab}` : "");
+                const currentHref =
+                  pathname + (currentTab ? `?tab=${currentTab}` : "");
                 const isNestedActive =
-                  !link.href.includes("?") && pathname?.startsWith(`${link.href}/`);
+                  !link.href.includes("?") &&
+                  pathname?.startsWith(`${link.href}/`);
                 const isActive = link.href === currentHref || isNestedActive;
                 const indicator = getIndicator(HREF_INDICATOR_KEYS[link.href]);
 
@@ -293,7 +300,9 @@ export default function Sidebar({
                         className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold"
                       >
                         <Icon className="pravyo-sidebar-icon text-base" />
-                        <span className="pravyo-sidebar-label">{link.name}</span>
+                        <span className="pravyo-sidebar-label">
+                          {link.name}
+                        </span>
                       </Link>
                     );
                   })}
