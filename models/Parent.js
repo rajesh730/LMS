@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { ensureParentId } from "@/lib/parentIdentity";
 
 /**
  * Parent / Guardian account.
@@ -201,6 +202,33 @@ const ParentSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+/**
+ * Every guardian gets a Parent ID the moment their record exists.
+ *
+ * This lives on the MODEL rather than in each creation path on purpose: parents
+ * are created from registration auto-linking, the retrospective backfill, the
+ * school's "add guardian" form, and self-registration. A hook is the only place
+ * that all four cannot forget.
+ *
+ * Assigning it early is safe because the Parent ID is an IDENTIFIER, not a
+ * credential (§53): knowing `PRV-P-X7K4Q9` grants nothing on its own, and
+ * authentication always requires the PIN. Withholding it until a card was
+ * printed just meant the roster showed a blank column and staff could not read
+ * a guardian their ID over the phone.
+ *
+ * Assigned once and never rotated — a reissued card keeps the same Parent ID
+ * (§6), which is why this only fills a missing value.
+ */
+// Static import, and an async hook with NO `next` callback. An earlier version
+// used a dynamic `import()` inside the hook and mixed it with `next()`: the
+// module never resolved at runtime, every save rejected, and the Parent ID
+// column stayed blank with the failure swallowed by the caller's try/catch.
+// `lib/parentIdentity` imports nothing from models, so there is no cycle to
+// avoid here.
+ParentSchema.pre("save", async function assignParentId() {
+  await ensureParentId(this, this.constructor);
+});
 
 /**
  * The display name to attribute an action to.

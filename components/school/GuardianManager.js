@@ -1,9 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { FaPlus, FaCheckCircle, FaBan, FaEye, FaCopy } from "react-icons/fa";
+import {
+  FaPlus,
+  FaCheckCircle,
+  FaBan,
+  FaEye,
+  FaCopy,
+  FaPaperPlane,
+} from "react-icons/fa";
 import ParentAccessPanel from "./ParentAccessPanel";
 import AssistedAccessDialog from "./AssistedAccessDialog";
+import MessageGuardianDialog from "./MessageGuardianDialog";
 
 /**
  * Manage one student's guardians (§19, §20, §27).
@@ -56,11 +64,24 @@ const PERMISSION_LABELS = {
   canMessageSchool: "Message the school",
 };
 
-export default function GuardianManager({ student }) {
+export default function GuardianManager({
+  student,
+  // Parent details captured at student registration but never turned into a
+  // guardian account. Passed in by the roster so the panel can offer a
+  // one-click conversion instead of making staff retype what is already there.
+  registrationParent = null,
+  // Set when the roster's row-level "add guardian" button was used, so the
+  // form opens straight away instead of making staff find it a second time.
+  openAddForm = false,
+  onAddFormOpened,
+  onChanged,
+}) {
   const [state, setState] = useState({ loading: true, error: "", data: null });
   const [inviting, setInviting] = useState(false);
   const [issuedCode, setIssuedCode] = useState(null);
   const [assisting, setAssisting] = useState(null);
+  const [prefill, setPrefill] = useState(null);
+  const [messagingGuardian, setMessagingGuardian] = useState(null);
 
   const load = useCallback(async () => {
     try {
@@ -82,13 +103,27 @@ export default function GuardianManager({ student }) {
     load();
   }, [load]);
 
+  // Honour the roster's request to open the add form, then clear the flag so
+  // collapsing and reopening the row does not reopen the form unexpectedly.
+  useEffect(() => {
+    if (!openAddForm) return;
+    setInviting(true);
+    onAddFormOpened?.();
+  }, [openAddForm, onAddFormOpened]);
+
+  // Keep the roster's coverage column in step with anything done in here.
+  const refresh = useCallback(async () => {
+    await load();
+    onChanged?.();
+  }, [load, onChanged]);
+
   const updateGuardian = async (payload) => {
     await fetch("/api/school/guardians", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-    await load();
+    await refresh();
   };
 
   if (state.loading) {
@@ -120,7 +155,7 @@ export default function GuardianManager({ student }) {
           className="flex min-h-[44px] items-center gap-2 rounded-xl bg-[var(--brand-primary)] px-4 text-sm font-bold text-white"
         >
           <FaPlus aria-hidden="true" className="h-3.5 w-3.5" />
-          Invite guardian
+          {guardians.length === 0 ? "Add guardian" : "Add another guardian"}
         </button>
       </header>
 
@@ -149,13 +184,55 @@ export default function GuardianManager({ student }) {
         </div>
       ) : null}
 
+      {/* Registration captured a parent but nobody was ever connected. Offer
+          the conversion inline rather than making staff retype it. */}
+      {registrationParent && guardians.length === 0 ? (
+        <section className="rounded-2xl border-2 border-orange-200 bg-orange-50 p-4">
+          <p className="text-xs font-bold uppercase tracking-wide text-orange-900">
+            From the student record
+          </p>
+          <p className="mt-1 text-base font-bold text-[var(--brand-ink)]">
+            {registrationParent.name}
+          </p>
+          <p className="text-sm text-orange-900">
+            {[
+              relationshipLabel(registrationParent.relationshipType),
+              registrationParent.phone,
+              registrationParent.email,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          </p>
+          <p className="mt-2 text-xs leading-relaxed text-orange-900">
+            These details were entered when {student.name.split(" ")[0]} was
+            registered, but no guardian account exists yet, so this family
+            cannot use the Parent App.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setPrefill(registrationParent);
+              setInviting(true);
+            }}
+            className="mt-3 min-h-[44px] w-full rounded-xl bg-orange-600 text-sm font-bold text-white"
+          >
+            Add {registrationParent.name} as guardian
+          </button>
+        </section>
+      ) : null}
+
       {inviting ? (
         <InviteForm
           studentId={student.id}
-          onCancel={() => setInviting(false)}
+          prefill={prefill}
+          isFirstGuardian={guardians.length === 0}
+          onCancel={() => {
+            setInviting(false);
+            setPrefill(null);
+          }}
           onCreated={() => {
             setInviting(false);
-            load();
+            refresh();
           }}
           onCardIssued={(card, parentIdentifier) => {
             setInviting(false);
@@ -168,13 +245,23 @@ export default function GuardianManager({ student }) {
               "_blank",
               "noopener"
             );
-            load();
+            refresh();
           }}
           onLegacyCode={(code) => {
             setIssuedCode(code);
             setInviting(false);
-            load();
+            refresh();
           }}
+        />
+      ) : null}
+
+      {messagingGuardian ? (
+        <MessageGuardianDialog
+          linkId={messagingGuardian.linkId}
+          guardianName={messagingGuardian.guardianName}
+          studentName={student.name}
+          canReply={messagingGuardian.canReply}
+          onClose={() => setMessagingGuardian(null)}
         />
       ) : null}
 
@@ -302,12 +389,33 @@ export default function GuardianManager({ student }) {
                   <ParentAccessPanel
                     linkId={guardian.id}
                     guardianName={guardian.name}
-                    onChanged={load}
+                    studentName={student.name}
+                    onChanged={refresh}
                   />
                 </div>
               ) : null}
 
               <div className="mt-3 flex flex-wrap justify-end gap-2">
+                {/* Message THIS guardian only. Messaging the student would
+                    reach every guardian, which is exactly wrong when the
+                    school needs a private word with one of them (§19). */}
+                {guardian.status === "ACTIVE" ? (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setMessagingGuardian({
+                        linkId: guardian.id,
+                        guardianName: guardian.name,
+                        canReply: guardian.permissions.canMessageSchool,
+                      })
+                    }
+                    className="flex min-h-[40px] items-center gap-2 rounded-lg px-3 text-sm font-semibold text-[var(--brand-primary)] hover:bg-slate-100"
+                  >
+                    <FaPaperPlane aria-hidden="true" className="h-3.5 w-3.5" />
+                    Message
+                  </button>
+                ) : null}
+
                 {guardian.status === "ACTIVE" ? (
                   <button
                     type="button"
@@ -370,15 +478,29 @@ export default function GuardianManager({ student }) {
  *  - **CODE** — the legacy invitation-code flow, kept available but no longer
  *    the default (§57).
  */
-function InviteForm({ studentId, onCancel, onCreated, onCardIssued, onLegacyCode }) {
+function InviteForm({
+  studentId,
+  prefill,
+  isFirstGuardian = true,
+  onCancel,
+  onCreated,
+  onCardIssued,
+  onLegacyCode,
+}) {
   const [mode, setMode] = useState("NEW");
   const [form, setForm] = useState({
-    guardianName: "",
-    email: "",
-    phone: "",
-    relationshipType: "MOTHER",
-    accessLevel: "FULL",
-    isPrimaryGuardian: false,
+    // Seeded from the student record when converting registration details,
+    // so staff confirm rather than retype.
+    guardianName: prefill?.name || "",
+    email: prefill?.email || "",
+    phone: prefill?.phone || "",
+    relationshipType: RELATIONSHIPS.includes(prefill?.relationshipType)
+      ? prefill.relationshipType
+      : "MOTHER",
+    // A second guardian defaults to view + notices, not full rights, and never
+    // to primary — those are decisions the school makes deliberately (§20).
+    accessLevel: prefill || isFirstGuardian ? "FULL" : "VIEW_AND_NOTICES",
+    isPrimaryGuardian: Boolean(prefill) || isFirstGuardian,
     isHousehold: false,
     householdName: "",
     existingParentIdentifier: "",

@@ -47,6 +47,9 @@ export const SCHOOL_NAV_LINKS = [
   // docs/PARENT_APP.md. Its own page rather than a dashboard tab, because
   // safeguarding decisions deserve a stable URL an admin can be sent to.
   { name: "Parents & Guardians", href: "/school/guardians", icon: FaUserShield },
+  // The staff side of parent messaging. Without it parents can write and
+  // nobody reads, which is worse than having no messaging at all.
+  { name: "Parent Messages", href: "/school/messages", icon: FaCommentDots },
   { name: "Teachers", href: "/school/dashboard?tab=teachers", icon: FaChalkboardTeacher },
   { name: "School Events", href: "/school/dashboard?tab=school-events", icon: FaCalendarAlt },
   { name: "Platform Events", href: "/school/dashboard?tab=platform-events", icon: FaGlobe },

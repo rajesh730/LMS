@@ -45,6 +45,27 @@ const SchoolConfigSchema = new mongoose.Schema({
         enum: ["AD", "BS"],
         default: "AD",
     },
+    // Progress marker for the automatic guardian backfill.
+    //
+    // Students registered before Parent Access existed have parent details on
+    // their record but no guardian account. Rather than making a school find
+    // and press an "Import" button, the roster links them automatically, in
+    // batches, and records progress here so the work happens once and then
+    // stops. See app/api/school/guardians/roster/route.js.
+    guardianBackfill: {
+        completedAt: {
+            type: Date,
+            default: null,
+        },
+        lastRunAt: {
+            type: Date,
+            default: null,
+        },
+        linkedCount: {
+            type: Number,
+            default: 0,
+        },
+    },
     // Whether a child's photo may be shown to their authorised guardians in
     // the Parent App and on the activation confirmation screen (§54).
     //

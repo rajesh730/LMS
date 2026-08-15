@@ -54,7 +54,13 @@ A fifth role, `PARENT`, backs the Parent App. Guardians live in their own
 several schools, so the `User.schoolName` shape does not fit. `/parent/login`
 sends `loginScope: "parent"` so the credentials provider checks `Parent` first —
 without it a teacher who is also a parent could never reach the Parent App.
-See `docs/PARENT_APP.md`.
+
+Guardians authenticate with a **Parent ID + 6-digit PIN**, not an email and
+password: a phone number and email address are both optional on `Parent`, and
+`Parent.password` is optional too. The school prints a Parent Access Card
+(QR + `PRV-P-XXXXXX` + activation PIN); the parent scans or types it at
+`/parent/access`. Credentials live in `lib/parentCredentials.js` — every secret
+is hashed at rest and shown exactly once. See `docs/PARENT_APP.md`.
 
 Schools carry a lifecycle status: `PENDING` → `APPROVED` / `REJECTED`, plus
 `SUBSCRIBED` / `UNSUBSCRIBED`. Access is granted for `APPROVED` and `SUBSCRIBED`
@@ -88,6 +94,12 @@ role dashboard, which keeps the public homepage cacheable.
   (`requireParentChild`). A `studentId` from the client is a claim, not a fact —
   never query `Student` by it directly, and always take the school from the
   resolved student rather than the request.
+- School notices go out through `lib/notifications/service.js`, never by
+  emailing from a route. One `Notice` fans out to in-app / email / offline
+  channels. The SMS channel is a deliberately inert stub — do not add a paid
+  SMS provider.
+- Delivery reporting must stay honest: email is `QUEUED` (not `SENT`), and
+  recording a paper hand-over must never set `openedAt`.
 - Emails are fire-and-forget: call sites deliberately don't `await` them, and
   `deliver()` in `lib/emailService.js` never throws, so a mail outage can't fail
   a registration or an approval. Keep that contract when adding new mail.

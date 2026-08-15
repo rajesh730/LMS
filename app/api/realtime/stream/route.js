@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { subscribeRealtimeEvent } from "@/lib/realtimeBus";
+import {
+  isMessagingChannel,
+  canAccessChannel,
+} from "@/lib/messagingChannels";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,6 +27,11 @@ function filterAllowedChannels(channels, session) {
   return channels.filter((channel) => {
     if (ADMIN_ONLY_CHANNELS.has(channel)) return isAdmin;
     if (LOGIN_REQUIRED_CHANNELS.has(channel)) return isLoggedIn;
+    // Private messaging channels are OWNERSHIP-scoped and must be checked
+    // before the permissive default below. They carry one family's
+    // conversation with the school, so "unknown channel = public" would let a
+    // stranger tail it by guessing an id.
+    if (isMessagingChannel(channel)) return canAccessChannel(channel, session);
     return true;
   });
 }

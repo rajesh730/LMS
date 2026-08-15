@@ -1,17 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { signIn, signOut, useSession } from "next-auth/react";
 import Link from "next/link";
 import AuthShell, { AuthSessionPanel } from "@/components/auth/AuthShell";
 import Button, { ButtonLink } from "@/components/ui/Button";
 import Input, { PasswordInput } from "@/components/ui/Input";
 import AlertBanner from "@/components/ui/AlertBanner";
+import RoleChooser from "./RoleChooser";
 
 const AUTH_LINKS = [
   { href: "/events", label: "Events" },
   { href: "/schools", label: "Schools" },
-  { href: "/student/login", label: "Student Login", highlight: true },
 ];
 
 function destinationForRole(role) {
@@ -25,6 +26,20 @@ function destinationForRole(role) {
 }
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginContent />
+    </Suspense>
+  );
+}
+
+function LoginContent() {
+  const searchParams = useSearchParams();
+  // /login shows "who is signing in?" first. ?as=school jumps straight to the
+  // staff form, which is where the School tile points and where any existing
+  // bookmark or redirect still lands.
+  const showStaffForm = searchParams.get("as") === "school";
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -96,18 +111,50 @@ export default function LoginPage() {
     );
   }
 
+  // Everyone lands here first. Sending a parent straight to an email/password
+  // form they can never complete was the single biggest sign-in dead end.
+  if (!showStaffForm) {
+    return (
+      <AuthShell
+        links={AUTH_LINKS}
+        title="Sign in to Pravyo"
+        description="Choose how you use Pravyo."
+        footer={
+          <p className="text-center text-sm text-[var(--brand-muted)]">
+            New school?{" "}
+            <Link
+              href="/register"
+              className="font-semibold text-[var(--brand-primary)] hover:underline"
+            >
+              Register your school
+            </Link>
+          </p>
+        }
+      >
+        <RoleChooser />
+      </AuthShell>
+    );
+  }
+
   return (
     <AuthShell
       links={AUTH_LINKS}
-      title="Sign in"
-      description="Sign in to manage your school, events, notices, and student activities."
+      title="School sign in"
+      description="For teachers and school administrators."
       footer={
-        <p className="text-center text-sm text-[var(--brand-muted)]">
-          Don&apos;t have an account?{" "}
-          <Link href="/register" className="font-semibold text-[var(--brand-primary)] hover:underline">
-            Register your school
-          </Link>
-        </p>
+        <div className="space-y-3 text-center text-sm text-[var(--brand-muted)]">
+          <p>
+            Don&apos;t have an account?{" "}
+            <Link href="/register" className="font-semibold text-[var(--brand-primary)] hover:underline">
+              Register your school
+            </Link>
+          </p>
+          <p>
+            <Link href="/login" className="font-semibold text-[var(--brand-primary)] hover:underline">
+              ← Not a school? Choose again
+            </Link>
+          </p>
+        </div>
       }
     >
       {error && (

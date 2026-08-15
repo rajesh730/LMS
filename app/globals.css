@@ -3619,3 +3619,23 @@ a[aria-busy="true"] {
   padding-top: 0.75rem;
   font-size: 0.78rem;
 }
+
+/* Bulk card runs: one card per sheet so the office can cut and hand them out
+   without a card straddling a page fold. */
+.card-page-break {
+  break-after: page;
+  page-break-after: always;
+}
+.card-page-break:last-child {
+  break-after: auto;
+  page-break-after: auto;
+}
+
+@media screen {
+  /* On screen the run is just a scrolling stack — the page breaks above only
+     apply to print. */
+  .card-page-break {
+    break-after: auto;
+    page-break-after: auto;
+  }
+}

@@ -18,6 +18,7 @@ import {
 } from "../../../../lib/studentEnrollment.js";
 import bcrypt from "bcryptjs";
 import { generateStrongPassword } from "../../../../lib/passwordGenerator.js";
+import { linkGuardianFromStudentRecord } from "../../../../lib/guardianLinking.js";
 
 export async function POST(req) {
   try {
@@ -123,10 +124,20 @@ export async function POST(req) {
 
         await newStudent.save();
 
+        // The school named this parent on the registration sheet, so treat it
+        // as an authentic guardian relationship and link it now. Never throws;
+        // a guardian problem must not fail the student's registration.
+        const guardian = await linkGuardianFromStudentRecord({
+          student: newStudent,
+          schoolId,
+          actorId: session?.user?.id || null,
+        });
+
         results.success.push({
           name: newStudent.name,
           username: newStudent.username,
-          password: plainPassword, 
+          password: plainPassword,
+          guardianLinked: guardian.linked,
         });
 
       } catch (error) {

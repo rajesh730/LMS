@@ -25,6 +25,30 @@ export const dynamic = "force-dynamic";
 const INVITATION_TTL_DAYS = 30;
 
 /**
+ * Keep exactly one primary guardian per student.
+ *
+ * A student can have any number of guardians — mother, father, grandparent,
+ * legal guardian — but only one is the school's first point of contact. Without
+ * this, promoting a second guardian left two "Primary" badges on the row and no
+ * way to tell who to ring first.
+ *
+ * Deliberately a no-op when the caller did not ask for primary: adding a second
+ * guardian must never silently strip the first one's status.
+ */
+async function demoteOtherPrimaries(studentId, keepLinkId, requested) {
+  if (requested !== true) return;
+
+  await ParentStudentLink.updateMany(
+    {
+      student: studentId,
+      _id: { $ne: keepLinkId },
+      isPrimaryGuardian: true,
+    },
+    { $set: { isPrimaryGuardian: false } }
+  );
+}
+
+/**
  * School-side guardian management (§19, §20, §27).
  *
  * The school is the authorisation source for every parent↔student link. This
@@ -311,6 +335,11 @@ export async function POST(request) {
         });
       }
 
+      // A student has one primary guardian. Naming a new one demotes the old,
+      // otherwise the roster shows two "Primary" badges and nothing decides
+      // which guardian the school should contact first.
+      await demoteOtherPrimaries(studentId, link._id, body.isPrimaryGuardian);
+
       // An existing, already-activated guardian gaining a second child does
       // NOT need a new card — their Parent ID and PIN already work, and
       // reissuing would invalidate the PIN they are using.
@@ -453,6 +482,9 @@ export async function PATCH(request) {
     }
 
     await link.save();
+
+    // Promoting this guardian demotes whoever held it before.
+    await demoteOtherPrimaries(link.student, link._id, body.isPrimaryGuardian);
 
     return successResponse(200, "Guardian updated", { id: String(link._id) });
   } catch (err) {

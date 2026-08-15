@@ -7,6 +7,7 @@ import { generateStudentPassword } from '@/lib/passwordGenerator';
 import { generateUniqueStudentUsername } from '@/lib/studentIdentity';
 import { normalizeGradeValue } from '@/lib/schoolGrades';
 import { getSessionSchoolId, requireApiSession } from '@/lib/authz';
+import { syncGuardianFromStudentRecord } from '@/lib/guardianLinking';
 
 export async function PUT(req, { params }) {
     try {
@@ -151,9 +152,20 @@ export async function PUT(req, { params }) {
             { new: true, runValidators: true }
         );
 
-        return NextResponse.json({ 
-            message: 'Student updated successfully', 
-            student: updatedStudent 
+        // Keep the guardian record in step with the student's parent details.
+        // Without this a school that corrects a parent's name or adds a missing
+        // phone number would have to remember a second, manual step — and the
+        // roster would quietly show stale information until they did.
+        const guardian = await syncGuardianFromStudentRecord({
+            student: updatedStudent,
+            schoolId,
+            actorId: session.user.id,
+        });
+
+        return NextResponse.json({
+            message: 'Student updated successfully',
+            student: updatedStudent,
+            guardianSynced: guardian.synced,
         }, { status: 200 });
 
     } catch (error) {

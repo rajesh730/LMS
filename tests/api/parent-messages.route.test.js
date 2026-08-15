@@ -1,5 +1,8 @@
 jest.mock("@/lib/db", () => jest.fn());
-jest.mock("@/lib/parentAccess", () => ({ requireParentChild: jest.fn() }));
+jest.mock("@/lib/parentAccess", () => ({
+  requireParentChild: jest.fn(),
+  requireParentSession: jest.fn(),
+}));
 jest.mock("@/lib/parentMessaging", () => ({
   getAvailableTopics: jest.fn(),
   findOrCreateConversation: jest.fn(),
@@ -16,8 +19,19 @@ jest.mock("@/models/Message", () => ({
   __esModule: true,
   default: { find: jest.fn(), updateMany: jest.fn() },
 }));
+jest.mock("@/models/ParentStudentLink", () => ({
+  __esModule: true,
+  default: { findOne: jest.fn() },
+}));
+jest.mock("@/models/Student", () => ({
+  __esModule: true,
+  default: { findById: jest.fn() },
+}));
 
-import { requireParentChild } from "@/lib/parentAccess";
+import {
+  requireParentChild,
+  requireParentSession,
+} from "@/lib/parentAccess";
 import {
   getAvailableTopics,
   findOrCreateConversation,
@@ -25,6 +39,8 @@ import {
 } from "@/lib/parentMessaging";
 import Conversation from "@/models/Conversation";
 import Message from "@/models/Message";
+import ParentStudentLink from "@/models/ParentStudentLink";
+import Student from "@/models/Student";
 import { errorResponse } from "@/lib/apiResponse";
 import { GET as LIST, POST as START } from "@/app/api/parent/messages/route";
 import { GET as THREAD } from "@/app/api/parent/messages/[id]/route";
@@ -202,16 +218,83 @@ describe("starting a conversation — topic routing (§14)", () => {
 });
 
 describe("reading a thread", () => {
-  it("404s a thread this guardian is not a participant in", async () => {
-    authorised();
-    Conversation.findOne.mockReturnValue({ lean: () => Promise.resolve(null) });
+  /**
+   * The thread is authorised against the conversation's OWN child, not the
+   * child currently selected in the app. A guardian with two children used to
+   * get "Failed to load conversation" whenever the switcher was on the other
+   * one — following a notification deep link did it every time.
+   */
+  function signedIn() {
+    requireParentSession.mockResolvedValue({
+      parent: { _id: PARENT_A, name: "Sita Sharma" },
+      session: { user: { id: PARENT_A, role: "PARENT" } },
+    });
+  }
 
-    const res = await THREAD(
-      new Request(
-        `http://localhost/api/parent/messages/${CONVERSATION}?studentId=${AAYUSH}`
-      ),
+  function conversationIs(value) {
+    Conversation.findOne.mockResolvedValue(value);
+  }
+
+  function linkIs(value) {
+    ParentStudentLink.findOne.mockReturnValue({
+      select: () => ({ lean: () => Promise.resolve(value) }),
+    });
+  }
+
+  function messagesAre(rows) {
+    Message.find.mockReturnValue({
+      sort: () => ({
+        skip: () => ({
+          limit: () => ({
+            select: () => ({ lean: () => Promise.resolve(rows) }),
+          }),
+        }),
+      }),
+    });
+  }
+
+  function request() {
+    return THREAD(
+      new Request(`http://localhost/api/parent/messages/${CONVERSATION}`),
       { params: Promise.resolve({ id: CONVERSATION }) }
     );
+  }
+
+  beforeEach(() => {
+    signedIn();
+    linkIs({ canMessageSchool: true });
+    messagesAre([]);
+    Student.findById.mockReturnValue({
+      select: () => ({
+        lean: () =>
+          Promise.resolve({ _id: AARYA, name: "Aarya", grade: "Grade 5" }),
+      }),
+    });
+  });
+
+  it("opens a thread about a child OTHER than the selected one", async () => {
+    // The exact regression. The conversation is about Aarya; the app may well
+    // be showing Aayush. It must still open.
+    conversationIs({
+      _id: CONVERSATION,
+      topic: "LEARNING",
+      routedToLabel: "Class Teacher",
+      student: AARYA,
+    });
+
+    const res = await request();
+    const json = await res.json();
+
+    expect(res.status).toBe(200);
+    // The response names the child it is ACTUALLY about, so the app can align
+    // its switcher rather than showing the wrong name over the messages.
+    expect(json.data.child.id).toBe(AARYA);
+  });
+
+  it("404s a thread this guardian is not a participant in", async () => {
+    conversationIs(null);
+
+    const res = await request();
 
     expect(res.status).toBe(404);
     // Participation is part of the FILTER, so the thread's existence is not
@@ -221,51 +304,52 @@ describe("reading a thread", () => {
     );
   });
 
-  it("marks own messages as mine and returns them oldest-first", async () => {
-    authorised();
-    Conversation.findOne.mockReturnValue({
-      lean: () =>
-        Promise.resolve({
-          _id: CONVERSATION,
-          topic: "LEARNING",
-          routedToLabel: "Class Teacher",
-          student: AAYUSH,
-        }),
-    });
-    Message.find.mockReturnValue({
-      sort: () => ({
-        skip: () => ({
-          limit: () => ({
-            select: () => ({
-              lean: () =>
-                Promise.resolve([
-                  {
-                    _id: "m2",
-                    senderType: "STAFF",
-                    senderName: "Mr Thapa",
-                    body: "He is doing well.",
-                    createdAt: new Date("2026-08-15T10:05:00Z"),
-                  },
-                  {
-                    _id: "m1",
-                    senderType: "PARENT",
-                    senderParent: PARENT_A,
-                    body: "How is he doing?",
-                    createdAt: new Date("2026-08-15T10:00:00Z"),
-                  },
-                ]),
-            }),
-          }),
-        }),
-      }),
-    });
+  it("404s when access to that child has been revoked since", async () => {
+    conversationIs({ _id: CONVERSATION, student: AARYA });
+    linkIs(null);
 
-    const res = await THREAD(
-      new Request(
-        `http://localhost/api/parent/messages/${CONVERSATION}?studentId=${AAYUSH}`
-      ),
-      { params: Promise.resolve({ id: CONVERSATION }) }
-    );
+    const res = await request();
+
+    // Participation alone is not enough — a school can withdraw a guardian
+    // from a child without deleting the thread.
+    expect(res.status).toBe(404);
+    expect(Message.find).not.toHaveBeenCalled();
+  });
+
+  it("403s a guardian the school disabled messaging for", async () => {
+    conversationIs({ _id: CONVERSATION, student: AARYA });
+    linkIs({ canMessageSchool: false });
+
+    const res = await request();
+
+    expect(res.status).toBe(403);
+  });
+
+  it("marks own messages as mine and returns them oldest-first", async () => {
+    conversationIs({
+      _id: CONVERSATION,
+      topic: "LEARNING",
+      routedToLabel: "Class Teacher",
+      student: AARYA,
+    });
+    messagesAre([
+      {
+        _id: "m2",
+        senderType: "STAFF",
+        senderName: "Mr Thapa",
+        body: "He is doing well.",
+        createdAt: new Date("2026-08-15T10:05:00Z"),
+      },
+      {
+        _id: "m1",
+        senderType: "PARENT",
+        senderParent: PARENT_A,
+        body: "How is he doing?",
+        createdAt: new Date("2026-08-15T10:00:00Z"),
+      },
+    ]);
+
+    const res = await request();
     const json = await res.json();
 
     // Fetched newest-first, reversed for display.

@@ -3,6 +3,7 @@ import Parent from "@/models/Parent";
 import ParentStudentLink from "@/models/ParentStudentLink";
 import ParentActivation from "@/models/ParentActivation";
 import Student from "@/models/Student";
+import User from "@/models/User";
 import {
   successResponse,
   errorResponse,
@@ -162,8 +163,13 @@ export async function POST(request) {
       purpose,
     });
 
+    const school = await User.findById(link.school)
+      .select("schoolName name")
+      .lean();
+
     return successResponse(201, "Parent access created", {
       // Shown once. Not retrievable afterwards — see lib/parentCredentials.js.
+      schoolName: school?.schoolName || school?.name || "Your school",
       parentIdentifier: issued.parentIdentifier,
       activationPin: issued.activationPin,
       activationToken: issued.activationToken,

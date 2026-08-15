@@ -10,7 +10,9 @@ import AlertBanner from "@/components/ui/AlertBanner";
 
 const AUTH_LINKS = [
   { href: "/events", label: "Events" },
-  { href: "/login", label: "School/Admin Login" },
+  // Back to "who is signing in?" rather than straight to the staff form — a
+  // student who lands here by mistake is more likely to be a parent.
+  { href: "/login", label: "Not a student?" },
 ];
 
 function destinationForRole(role) {

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { FaIdCard, FaRedo, FaKey, FaBan, FaUnlock } from "react-icons/fa";
+import ParentCardDialog from "./ParentCardDialog";
 
 /**
  * Parent Access management for one guardian (§4, §58, §59).
@@ -26,9 +27,15 @@ const ACCESS_STATES = {
   REVOKED: { emoji: "⛔", label: "Revoked", tone: "bg-slate-200 text-slate-700" },
 };
 
-export default function ParentAccessPanel({ linkId, guardianName, onChanged }) {
+export default function ParentAccessPanel({
+  linkId,
+  guardianName,
+  studentName,
+  onChanged,
+}) {
   const [state, setState] = useState({ loading: true, data: null, error: "" });
   const [busy, setBusy] = useState("");
+  const [card, setCard] = useState(null);
 
   const load = useCallback(async () => {
     try {
@@ -49,10 +56,11 @@ export default function ParentAccessPanel({ linkId, guardianName, onChanged }) {
   }, [load]);
 
   /**
-   * Issue or reissue a card, then open the print page.
+   * Issue or reissue a card and SHOW it.
    *
-   * The PIN and token exist only in this response, so they are handed straight
-   * to the print window and never stored — see app/school/guardians/card.
+   * The PIN and token exist only in this response, so the dialog renders them
+   * immediately. Printing is one option there alongside copy and share — most
+   * guardians are sent their details rather than handed paper.
    */
   const issue = async (purpose) => {
     setBusy(purpose);
@@ -65,17 +73,7 @@ export default function ParentAccessPanel({ linkId, guardianName, onChanged }) {
       const json = await res.json();
       if (!res.ok) throw new Error(json.message || "Could not create access");
 
-      const { activationId, activationPin, activationToken } = json.data;
-      window.open(
-        `/school/guardians/card?activation=${encodeURIComponent(activationId)}` +
-          `&pin=${encodeURIComponent(activationPin)}` +
-          `&token=${encodeURIComponent(activationToken)}`,
-        "_blank",
-        "noopener"
-      );
-
-      await load();
-      onChanged?.();
+      setCard(json.data);
     } catch (err) {
       setState((prev) => ({ ...prev, error: err.message }));
     } finally {
@@ -182,7 +180,7 @@ export default function ParentAccessPanel({ linkId, guardianName, onChanged }) {
         {!hasCard ? (
           <Action
             icon={FaIdCard}
-            label="Create access & print card"
+            label="Create access card"
             busy={busy === "INITIAL"}
             onClick={() => issue("INITIAL")}
             primary
@@ -191,7 +189,7 @@ export default function ParentAccessPanel({ linkId, guardianName, onChanged }) {
           <>
             <Action
               icon={FaRedo}
-              label="Reissue card"
+              label="New card"
               hint="Old card stops working"
               busy={busy === "REISSUE"}
               onClick={() => issue("REISSUE")}
@@ -233,6 +231,20 @@ export default function ParentAccessPanel({ linkId, guardianName, onChanged }) {
           />
         ) : null}
       </div>
+
+      {card ? (
+        <ParentCardDialog
+          card={card}
+          schoolName={card.schoolName || "Your school"}
+          studentName={studentName || "your child"}
+          guardianName={guardianName}
+          onClose={async () => {
+            setCard(null);
+            await load();
+            onChanged?.();
+          }}
+        />
+      ) : null}
 
       <ContactEditor
         email={data.contact.email}

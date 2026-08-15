@@ -2,8 +2,12 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import PinInput from "@/components/parent/PinInput";
+import QrCardScanner, {
+  extractActivationToken,
+} from "@/components/parent/QrCardScanner";
 
 /**
  * Returning guardian sign-in (§13, §15).
@@ -20,6 +24,7 @@ import PinInput from "@/components/parent/PinInput";
  * borrowed handset even though their own phone is personal (§12).
  */
 export default function ParentLoginPage() {
+  const router = useRouter();
   const [mode, setMode] = useState("PIN");
 
   const [parentId, setParentId] = useState("");
@@ -225,6 +230,26 @@ export default function ParentLoginPage() {
         >
           {mode === "PIN" ? "Other sign-in options" : "Use Parent ID and PIN"}
         </button>
+
+        {/* A guardian who still has their card should never be stuck trying to
+            remember a Parent ID — scanning it fills everything in. */}
+        {mode === "PIN" ? (
+          <div className="mt-8">
+            <p className="pb-3 text-center text-sm font-semibold text-[var(--brand-muted)]">
+              OR / अथवा
+            </p>
+            <QrCardScanner
+              onDetected={(raw) => {
+                const token = extractActivationToken(raw);
+                if (!token) {
+                  setError("That code is not a Pravyo Parent Card.");
+                  return;
+                }
+                router.push(`/parent/activate?t=${encodeURIComponent(token)}`);
+              }}
+            />
+          </div>
+        ) : null}
 
         <div className="mt-8 rounded-2xl border border-[var(--brand-border)] bg-white p-4 text-center">
           <p className="text-sm font-semibold text-[var(--brand-ink)]">

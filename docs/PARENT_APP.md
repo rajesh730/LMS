@@ -139,6 +139,92 @@ rerouted. Staff are refs; no personal phone numbers or emails are ever exposed.
   thumbnails first, denormalised unread counts (one query per thread list),
   skeletons over spinners.
 
+## 7a. Parent Access — identity without a phone or an email
+
+The core rule: **a phone, email or smartphone may improve the experience, but
+must never be required for a guardian to have legitimate access.** Identity and
+contact method are separate concepts.
+
+**Onboarding is now:** school creates the guardian → Pravyo issues a Parent
+Access Card → parent scans the QR (or types Parent ID + PIN) → confirms the
+child → picks a language → chooses a 6-digit PIN → done. No email, no password,
+no self-registration form, no long code to copy.
+
+| Piece | Where | Notes |
+| --- | --- | --- |
+| **Parent ID** | `lib/parentIdentity.js` | `PRV-P-X7K4Q9`. Random, non-sequential, not derived from any id. Alphabet excludes O/0/I/1 — it gets read aloud. Case- and hyphen-insensitive on entry. **Identifier, never a credential** (§53). |
+| **Activation** | `models/ParentActivation.js` | One-time. QR token = 32 random bytes, SHA-256 at rest. Activation PIN = 6 digits, **bcrypt** at rest (weak secret ⇒ needs the work factor). Both unreadable after the card prints. |
+| **Guardian PIN** | `Parent.pinHash` (`select: false`) | bcrypt. Weak-PIN rejection (`000000`, `123456`, runs). 5 attempts → 15-minute lock. |
+| **Card** | `components/school/ParentAccessCard.js` | Server-rendered inline SVG QR via the existing `qrcode` package. **No new dependency, no external QR service.** Black-and-white safe, bilingual. |
+| **Print** | `app/globals.css` | The project had no print styles; `@media print` + `@page` added. Browser print, not a paid PDF service. |
+
+**Three access states are kept distinct** (§59), because conflating them is how
+a school revokes the wrong thing:
+
+- `Parent.accessState` — can they sign in at all?
+- `Parent.status` — is the account alive?
+- `ParentStudentLink.status` — are they linked to *this* child?
+
+Removing one child is a link operation; revoking sign-in is an account
+operation. A father losing Child A keeps Child B.
+
+**Shared devices** (§12) are enforced server-side in `lib/parentAccess.js`: a
+`SHARED` session stops being trusted after 30 idle minutes and returns
+`PIN_REQUIRED`. A client-side timer would be bypassed by not running the
+JavaScript.
+
+**Login** now leads with Parent ID + PIN; the old email/password form is kept
+behind "Other sign-in options" (§57 — existing guardians are never forced to
+migrate).
+
+## 7b. Publish once — the channel architecture
+
+`lib/notifications/` implements §24/§70: a school writes ONE `Notice` and the
+service resolves who it reaches and how.
+
+```
+Notice ──▶ NotificationService
+             ├─ InAppNotificationChannel   (always on, all priorities)
+             ├─ EmailNotificationChannel   (optional; reuses emailService)
+             ├─ OfflineDeliveryChannel     (produces the follow-up list)
+             └─ SmsNotificationChannel     ← INERT. isConfigured() === false
+```
+
+**No paid SMS provider is installed or called** (§61). `SmsNotificationChannel`
+is an interface stub. Enabling SMS later = implement `send`, point
+`isConfigured` at real credentials, done. **No notice route changes.**
+
+Honesty rules that are tested, not just documented:
+
+- Email reports `QUEUED`, never `SENT` — handing a message to a transport is
+  not delivery (§40).
+- A **paper hand-over never sets `openedAt`** (§39). Giving someone a sheet is
+  not evidence they read it.
+- An in-person acknowledgement is stamped `acknowledgementMethod: "IN_PERSON"`
+  with the staff member who recorded it — never mistaken for the guardian
+  tapping the button.
+- A guardian with **no email and no phone is "🟢 Connected"** if they have
+  activated Pravyo access (§36). Lacking contact details is not being
+  unreachable.
+
+## 7c. Offline inclusion
+
+| Feature | Route |
+| --- | --- |
+| Delivery overview + metrics | `/school/notices/[id]/delivery` |
+| Offline follow-up list (printable) | same page |
+| Record paper hand-over | `PATCH …/delivery` |
+| Printable Parent Summary | `/school/students/[id]/summary` |
+| School-Assisted Parent View | `POST /api/school/assisted-access` |
+
+**Assisted access does not impersonate.** Staff stay signed in as themselves and
+a read-only projection renders. All seven §55 safeguards fire in order —
+authentication, same-school, explicit student, relationship validation, a
+required written reason, an audit row written *before* any data is returned, and
+an allow-listed payload. The guardian's own permissions still apply, so an
+assisted session can never show more than that guardian would see at home. There
+is deliberately **no "view any parent" entry point**.
+
 ## 8. Known gap — attachment storage
 
 **Voice messages, photos and documents cannot be sent yet.**
@@ -160,6 +246,20 @@ message.") — so the failure is honest rather than silent.
 **To enable:** implement `putObject` and `isStorageConfigured` in
 `lib/parentUploads.js`. That file is the only thing that needs to change.
 
+## 8a. Deprecation path for the old invitation flow (§57)
+
+Nothing was deleted. `/parent/register`, `/parent/link` and existing
+`GuardianInvitation` codes all still work.
+
+- **Phase 1–2 (done):** Parent Access Card is the default in the school UI.
+- **Phase 3 (done):** the old flow is labelled "Use invitation code" and carries
+  a note steering staff to the card flow.
+- **Phase 4 (later):** deprecate after usage review. Do not remove until
+  outstanding codes have expired and no school is mid-rollout.
+
+`Parent.password` is now **optional**. Guardians created via Parent Access never
+have one; guardians who already had one keep signing in with it.
+
 ## 9. Other deferred work
 
 - **SMS/email delivery of notifications** (§21). Preferences are recorded and
@@ -180,14 +280,21 @@ message.") — so the failure is honest rather than silent.
 
 ```bash
 npm run dev
-npm test          # 37 suites / 270 tests
+npm test          # 45 suites / 398 tests
 npm run lint
 npm run build
 ```
 
-Guardian setup: **School → Parents & Guardians** → pick a student → *Invite
-guardian* → copy the one-time code → parent registers at `/parent/register` and
-redeems it at `/parent/link`.
+**Guardian setup (current flow):** School → **Parents & Guardians** → pick a
+student → *Invite guardian* → **New guardian** → name + relationship (phone and
+email optional) → **Add guardian & print card**. The card opens in a new tab
+with the QR, Parent ID and activation PIN. Print it and hand it over.
+
+The parent then scans the QR with their phone camera, or goes to
+`/parent/access` and types the Parent ID + PIN.
+
+⚠️ **The activation PIN is shown once.** It is stored hashed and cannot be
+re-rendered. If it is lost, use **Reissue card** — which invalidates the old one.
 
 Indexes: the new collections declare their own; run `npm run db:ensure-indexes`
 after deploying if that script is extended to cover them.

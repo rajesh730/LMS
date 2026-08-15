@@ -10,6 +10,10 @@ import {
 import { normalizeGradeValue } from "@/lib/schoolGrades";
 import { buildPagination, escapeRegex, parsePagination } from "@/lib/pagination";
 import { generateStrongPassword } from "@/lib/passwordGenerator";
+import {
+  linkGuardianFromStudentRecord,
+  linkGuardiansForStudents,
+} from "@/lib/guardianLinking";
 import bcrypt from "bcryptjs";
 
 export const dynamic = "force-dynamic";
@@ -82,21 +86,38 @@ export async function POST(req) {
           ordered: false,
         });
 
+        // Registration parent details are authentic, so link them straight away
+        // rather than leaving a pile of unconnected families behind an import.
+        const guardians = await linkGuardiansForStudents({
+          students: createdStudents,
+          schoolId: session.user.id,
+          actorId: session.user.id,
+        });
+
         return NextResponse.json(
           {
             message: "Students imported",
             count: createdStudents.length,
             credentials: createdCredentials,
+            guardiansLinked: guardians.linked,
           },
           { status: 201 }
         );
       } catch (bulkError) {
         // If some succeeded, return success with count
         if (bulkError.insertedDocs) {
+          // Partial success still deserves its guardians.
+          const guardians = await linkGuardiansForStudents({
+            students: bulkError.insertedDocs,
+            schoolId: session.user.id,
+            actorId: session.user.id,
+          });
+
           return NextResponse.json(
             {
               message: `Imported ${bulkError.insertedDocs.length} students. Some failed due to duplicates.`,
               count: bulkError.insertedDocs.length,
+              guardiansLinked: guardians.linked,
             },
             { status: 201 }
           );
@@ -173,11 +194,22 @@ export async function POST(req) {
         ...otherData
       });
 
+      // The school named this parent at the front desk, so treat that as an
+      // authentic guardian relationship and link it immediately. Awaited so
+      // the response can report it, but it never throws — a guardian problem
+      // must not fail a student's registration.
+      const guardian = await linkGuardianFromStudentRecord({
+        student: newStudent,
+        schoolId: session.user.id,
+        actorId: session.user.id,
+      });
+
       return NextResponse.json(
         {
           message: "Student created",
           student: newStudent,
           credentials: { username, password: generatedPassword },
+          guardianLinked: guardian.linked,
         },
         { status: 201 }
       );
