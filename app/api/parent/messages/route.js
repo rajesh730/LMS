@@ -72,7 +72,11 @@ export async function GET(request) {
           topic: conversation.topic,
           emoji,
           // The staff-side LABEL, never an individual's contact details (§15).
-          title: conversation.routedToLabel || conversation.subject || "School",
+          // WHO the thread is with — deliberately separate from `subject`,
+          // which is WHAT the school last wrote about. The two used to share
+          // one field with the label winning, so the subject was unreachable.
+          title: conversation.routedToLabel || "School",
+          subject: conversation.subject || "",
           preview: conversation.lastMessagePreview || "",
           lastMessageAt: conversation.lastMessageAt,
           lastMessageSenderType: conversation.lastMessageSenderType || "",

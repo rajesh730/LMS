@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { FaIdCard, FaRedo, FaKey, FaBan, FaUnlock } from "react-icons/fa";
+import { FaIdCard, FaRedo, FaBan, FaUnlock } from "react-icons/fa";
 import ParentCardDialog from "./ParentCardDialog";
 
 /**
@@ -56,13 +56,26 @@ export default function ParentAccessPanel({
   }, [load]);
 
   /**
-   * Issue or reissue a card and SHOW it.
+   * Issue a card and SHOW it.
    *
-   * The PIN and token exist only in this response, so the dialog renders them
-   * immediately. Printing is one option there alongside copy and share — most
-   * guardians are sent their details rather than handed paper.
+   * `INITIAL` is idempotent — it allocates a Parent ID only if the guardian has
+   * none — so "Show card" is safe to press at any time. `REISSUE` rotates the
+   * ID and is the one action here that can lock a guardian out, which is why it
+   * is confirmed first and worded as "the old card stops working".
    */
   const issue = async (purpose) => {
+    if (
+      purpose === "REISSUE" &&
+      !window.confirm(
+        `Give ${guardianName} a new Parent ID?\n\n` +
+          "Their current card will stop working immediately and they will be " +
+          "signed out. Only do this if the card was lost or shared with the " +
+          "wrong person."
+      )
+    ) {
+      return;
+    }
+
     setBusy(purpose);
     try {
       const res = await fetch("/api/school/guardians/access", {
@@ -157,16 +170,9 @@ export default function ParentAccessPanel({
         </span>
       </div>
 
-      {data.pendingActivation ? (
+      {data.accessState === "PENDING_ACTIVATION" ? (
         <p className="mt-2 rounded-lg bg-amber-50 px-2.5 py-1.5 text-[11px] text-amber-900">
-          Card issued (PIN ends …{data.pendingActivation.pinHint}). Waiting for
-          the parent to connect.
-        </p>
-      ) : null}
-
-      {data.lockedUntil && new Date(data.lockedUntil) > new Date() ? (
-        <p className="mt-2 rounded-lg bg-red-50 px-2.5 py-1.5 text-[11px] text-red-800">
-          Locked after too many wrong PINs.
+          Card issued. Waiting for the guardian to sign in for the first time.
         </p>
       ) : null}
 
@@ -187,31 +193,26 @@ export default function ParentAccessPanel({
           />
         ) : (
           <>
+            {/* Safe and repeatable — the card can be shown as often as the
+                office needs it. */}
+            <Action
+              icon={FaIdCard}
+              label="Show card"
+              hint="Print, share, or scan from the screen"
+              busy={busy === "INITIAL"}
+              onClick={() => issue("INITIAL")}
+              primary
+            />
             <Action
               icon={FaRedo}
               label="New card"
-              hint="Old card stops working"
+              hint="Lost card — the old one stops working"
+              danger
               busy={busy === "REISSUE"}
               onClick={() => issue("REISSUE")}
             />
-            <Action
-              icon={FaKey}
-              label="Reset PIN"
-              hint="Parent chooses a new one"
-              busy={busy === "PIN_RESET"}
-              onClick={() => issue("PIN_RESET")}
-            />
           </>
         )}
-
-        {data.accessState === "LOCKED" ? (
-          <Action
-            icon={FaUnlock}
-            label="Unlock"
-            busy={busy === "UNLOCK"}
-            onClick={() => act("UNLOCK")}
-          />
-        ) : null}
 
         {data.accessState === "REVOKED" ? (
           <Action
@@ -234,7 +235,9 @@ export default function ParentAccessPanel({
 
       {card ? (
         <ParentCardDialog
-          card={card}
+          parentIdentifier={card.parentIdentifier}
+          linkId={linkId}
+          rotated={Boolean(card.rotated)}
           schoolName={card.schoolName || "Your school"}
           studentName={studentName || "your child"}
           guardianName={guardianName}

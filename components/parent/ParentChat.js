@@ -270,6 +270,24 @@ function MessageBubble({ message, t }) {
           </p>
         ) : null}
 
+        {/* The school's headline, when this message is an announcement.
+            Set apart from the body with weight and a rule rather than only
+            size: a guardian skimming a long thread needs to find "Sports day"
+            without reading three paragraphs, and §7's status rules mean type
+            alone must carry the distinction — it cannot rely on colour. */}
+        {message.subject ? (
+          <p
+            className={[
+              "mb-1.5 border-b pb-1 text-[15px] font-bold leading-snug",
+              mine
+                ? "border-white/25"
+                : "border-[var(--brand-border)] text-[var(--brand-ink)]",
+            ].join(" ")}
+          >
+            {message.subject}
+          </p>
+        ) : null}
+
         {message.attachments?.map((attachment, index) => (
           <Attachment key={index} attachment={attachment} mine={mine} t={t} />
         ))}

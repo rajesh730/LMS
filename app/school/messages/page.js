@@ -398,6 +398,15 @@ export default function SchoolMessagesPage() {
                                 {row.lastMessageSenderType === "STAFF"
                                   ? "You: "
                                   : ""}
+                                {/* The headline first when there is one, so a
+                                    long inbox is scannable by topic rather
+                                    than by opening sentence. */}
+                                {row.subject ? (
+                                  <strong className="text-[#24314d]">
+                                    {row.subject}
+                                    {row.preview ? " — " : ""}
+                                  </strong>
+                                ) : null}
                                 {row.preview}
                               </>
                             ) : (
@@ -572,8 +581,12 @@ function Composer({ title, subtitle, target, warning = "", onSent, onCancel }) {
             value={subject}
             onChange={(event) => setSubject(event.target.value)}
             placeholder="e.g. Sports day"
+            maxLength={200}
             className="mt-1.5 h-12 w-full rounded-xl border border-[#dbe5f4] px-4 text-sm"
           />
+          <p className="mt-1 text-xs text-[#75869b]">
+            Shown to parents as the heading above your message.
+          </p>
         </div>
 
         <div>

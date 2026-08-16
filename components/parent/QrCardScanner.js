@@ -226,9 +226,9 @@ export default function QrCardScanner({ onDetected, onClose }) {
 /**
  * Pull the activation token out of whatever the QR contained.
  *
- * The card encodes a full `/parent/activate?t=…` URL, but a guardian may scan a
- * card from a different deployment, or a QR that is not ours at all. Returning
- * null for anything unrecognised keeps the caller from sending junk to the API.
+ * Cards printed under the OLD activation flow encode a full
+ * `/parent/activate?t=…` URL. Those are still in circulation and still work, so
+ * this stays. New cards carry the Parent ID instead — see `readParentCard`.
  */
 export function extractActivationToken(raw) {
   const value = String(raw || "").trim();
@@ -246,4 +246,47 @@ export function extractActivationToken(raw) {
   if (/^[A-Za-z0-9_-]{20,}$/.test(value)) return value;
 
   return null;
+}
+
+// The Parent ID alphabet, duplicated from lib/parentIdentity.js on purpose:
+// that module imports node:crypto and cannot be pulled into a client bundle.
+// Only the shape is repeated here — the server still normalises and validates.
+const PARENT_ID_BODY = /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/;
+
+/**
+ * Read a scanned Parent Access Card into something the sign-in form can use.
+ *
+ * Two card generations have to be understood, because both are in school bags
+ * right now:
+ *
+ *   - **Current** — `/parent/login?id=PRV-P-X7K4Q9`. The Parent ID is the
+ *     credential, so the QR is simply a way of typing it without typing.
+ *   - **Legacy**  — `/parent/activate?t=<32-byte token>`. Resolves to the same
+ *     guardian server-side.
+ *
+ * Returns `{ parentId }`, `{ token }`, or null for a QR that is not ours —
+ * a supermarket loyalty card must not be posted to the sign-in endpoint.
+ */
+export function readParentCard(raw) {
+  const value = String(raw || "").trim();
+  if (!value) return null;
+
+  let candidate = value;
+
+  try {
+    const url = new URL(value);
+    const id = url.searchParams.get("id");
+    if (id) candidate = id;
+    const token = url.searchParams.get("t");
+    if (token) return { token };
+  } catch {
+    // Not a URL — treat the whole string as the credential.
+  }
+
+  const compact = candidate.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  const body = compact.startsWith("PRVP") ? compact.slice(4) : compact;
+  if (PARENT_ID_BODY.test(body)) return { parentId: `PRV-P-${body}` };
+
+  const token = extractActivationToken(value);
+  return token ? { token } : null;
 }

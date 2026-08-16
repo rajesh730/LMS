@@ -18,30 +18,24 @@ jest.mock("@/models/AuditLog", () => ({
   default: { create: jest.fn().mockResolvedValue({}) },
 }));
 
-import bcrypt from "bcryptjs";
 import Parent from "@/models/Parent";
 import ParentActivation from "@/models/ParentActivation";
 import AuditLog from "@/models/AuditLog";
 import {
-  generateActivationToken,
   hashActivationToken,
-  generateNumericPin,
-  isValidPinFormat,
-  isWeakPin,
-  hashPin,
   issueParentAccess,
-  resolveActivationByToken,
-  resolveActivationByPin,
-  completeActivation,
-  verifyParentPin,
+  verifyParentId,
+  verifyParentCardToken,
   revokeParentAccess,
-  MAX_PIN_ATTEMPTS,
 } from "@/lib/parentCredentials";
 
 /**
- * §6, §7, §11, §41, §42, §52 — the credential rules. These are the tests that
- * matter most in this feature: a mistake here is an unauthorised person inside
- * a child's record.
+ * The credential rules. These are the tests that matter most in this feature:
+ * a mistake here is an unauthorised person inside a child's record.
+ *
+ * The Parent ID is the whole credential now, so the burden sits on two
+ * properties: the account checks that decide whether an ID signs anyone in, and
+ * the rotation that makes a lost card stop working.
  */
 
 const PARENT_ID = "PRV-P-X7K4Q9";
@@ -53,9 +47,7 @@ function parentDoc(overrides = {}) {
     parentId: PARENT_ID,
     status: "ACTIVE",
     accessState: "ACTIVATED",
-    pinHash: "",
-    failedPinAttempts: 0,
-    lockedUntil: null,
+    activatedAt: new Date("2026-01-01"),
     authVersion: 0,
     preferences: {},
     save: jest.fn().mockResolvedValue(true),
@@ -63,97 +55,19 @@ function parentDoc(overrides = {}) {
   };
 }
 
-function activationDoc(overrides = {}) {
-  return {
-    _id: "activation-1",
-    parent: "parent-1",
-    school: "school-1",
-    student: "student-1",
-    status: "PENDING",
-    attemptCount: 0,
-    expiresAt: new Date(Date.now() + 86400000),
-    activationPinHash: "",
-    save: jest.fn().mockResolvedValue(true),
-    ...overrides,
-  };
+/** Parent.findOne(...) resolving to `doc`. */
+function foundParent(doc) {
+  Parent.findOne.mockResolvedValue(doc);
 }
 
 beforeEach(() => {
   jest.clearAllMocks();
   ParentActivation.updateMany.mockResolvedValue({});
-  ParentActivation.create.mockImplementation(async (doc) => ({
-    ...doc,
-    _id: "activation-new",
-  }));
   Parent.exists.mockResolvedValue(false);
 });
 
-describe("token generation and hashing", () => {
-  it("produces a high-entropy, URL-safe token", () => {
-    const token = generateActivationToken();
-    // 32 bytes base64url.
-    expect(token.length).toBeGreaterThanOrEqual(43);
-    expect(token).toMatch(/^[A-Za-z0-9_-]+$/);
-  });
-
-  it("never repeats", () => {
-    const tokens = new Set();
-    for (let i = 0; i < 200; i += 1) tokens.add(generateActivationToken());
-    expect(tokens.size).toBe(200);
-  });
-
-  it("hashes deterministically and irreversibly", () => {
-    const token = generateActivationToken();
-    const hash = hashActivationToken(token);
-
-    expect(hash).toMatch(/^[a-f0-9]{64}$/);
-    expect(hash).toBe(hashActivationToken(token));
-    // The plaintext must not be recoverable from, or present in, the hash.
-    expect(hash).not.toContain(token);
-  });
-});
-
-describe("PIN rules", () => {
-  it("generates six digits", () => {
-    for (let i = 0; i < 100; i += 1) {
-      expect(generateNumericPin()).toMatch(/^\d{6}$/);
-    }
-  });
-
-  it("uses every digit — no modulo bias toward low numbers", () => {
-    const seen = new Set();
-    for (let i = 0; i < 400; i += 1) {
-      [...generateNumericPin()].forEach((d) => seen.add(d));
-    }
-    expect(seen.size).toBe(10);
-  });
-
-  it("validates format", () => {
-    expect(isValidPinFormat("123456")).toBe(true);
-    expect(isValidPinFormat("12345")).toBe(false);
-    expect(isValidPinFormat("1234567")).toBe(false);
-    expect(isValidPinFormat("12a456")).toBe(false);
-    expect(isValidPinFormat("")).toBe(false);
-  });
-
-  it("rejects trivially guessable PINs", () => {
-    expect(isWeakPin("000000")).toBe(true);
-    expect(isWeakPin("111111")).toBe(true);
-    expect(isWeakPin("123456")).toBe(true);
-    expect(isWeakPin("654321")).toBe(true);
-    expect(isWeakPin("582914")).toBe(false);
-  });
-
-  it("hashes with bcrypt, not plaintext", async () => {
-    const hash = await hashPin("582914");
-    expect(hash).toMatch(/^\$2[aby]\$/);
-    expect(hash).not.toContain("582914");
-    expect(await bcrypt.compare("582914", hash)).toBe(true);
-  });
-});
-
 describe("issuing a card", () => {
-  it("returns the secrets exactly once and stores only hashes", async () => {
+  it("allocates a Parent ID on first issue and marks the guardian as waiting", async () => {
     const parent = parentDoc({ parentId: null, accessState: "NOT_CREATED" });
 
     const issued = await issueParentAccess({
@@ -161,307 +75,287 @@ describe("issuing a card", () => {
       schoolId: "school-1",
       studentId: "student-1",
       issuedBy: "admin-1",
+      purpose: "INITIAL",
     });
 
-    expect(issued.activationPin).toMatch(/^\d{6}$/);
-    expect(issued.activationToken).toBeTruthy();
-
-    const stored = ParentActivation.create.mock.calls[0][0];
-    // Neither secret is persisted in readable form.
-    expect(stored.activationPinHash).not.toBe(issued.activationPin);
-    expect(stored.tokenHash).not.toBe(issued.activationToken);
-    expect(stored.tokenHash).toBe(hashActivationToken(issued.activationToken));
-    expect(await bcrypt.compare(issued.activationPin, stored.activationPinHash)).toBe(
-      true
-    );
-    // Only the last two digits are kept as a hint for the school.
-    expect(stored.pinHint).toBe(issued.activationPin.slice(-2));
+    expect(issued.parentIdentifier).toMatch(/^PRV-P-[A-Z2-9]{6}$/);
+    expect(parent.accessState).toBe("PENDING_ACTIVATION");
+    expect(parent.save).toHaveBeenCalled();
   });
 
-  it("allocates a Parent ID on first issue", async () => {
-    const parent = parentDoc({ parentId: null, accessState: "NOT_CREATED" });
-    await issueParentAccess({ parent, schoolId: "s", issuedBy: "a" });
-    expect(parent.parentId).toMatch(/^PRV-P-[A-Z0-9]{6}$/);
+  it("does NOT rotate an existing Parent ID on a reprint", async () => {
+    // The load-bearing property of a reprint: the school can hand out another
+    // copy without cutting off the guardian who still has the first one.
+    const parent = parentDoc({ accessState: "ACTIVATED" });
+
+    const issued = await issueParentAccess({
+      parent,
+      schoolId: "school-1",
+      issuedBy: "admin-1",
+      purpose: "INITIAL",
+    });
+
+    expect(issued.parentIdentifier).toBe(PARENT_ID);
+    expect(issued.rotated).toBe(false);
+    expect(parent.authVersion).toBe(0);
+    // And it does not demote them on the roster — they are still connected.
+    expect(parent.accessState).toBe("ACTIVATED");
   });
 
-  it("KEEPS the existing Parent ID on reissue (§6)", async () => {
-    const parent = parentDoc({ accessState: "PENDING_ACTIVATION" });
+  it("sends a guardian back to waiting when their ID rotates", async () => {
+    const parent = parentDoc({ accessState: "ACTIVATED" });
+
     await issueParentAccess({
       parent,
-      schoolId: "s",
-      issuedBy: "a",
+      schoolId: "school-1",
+      issuedBy: "admin-1",
       purpose: "REISSUE",
     });
-    // A guardian who has memorised or laminated their ID must not lose it.
-    expect(parent.parentId).toBe(PARENT_ID);
+
+    // They cannot be "connected" against an ID that no longer exists.
+    expect(parent.accessState).toBe("PENDING_ACTIVATION");
   });
 
-  it("revokes every outstanding card first, so a lost card dies (§42)", async () => {
+  it("rotates the Parent ID on REISSUE, so a lost card stops working", async () => {
     const parent = parentDoc();
-    await issueParentAccess({
+
+    const issued = await issueParentAccess({
       parent,
-      schoolId: "s",
-      issuedBy: "a",
+      schoolId: "school-1",
+      issuedBy: "admin-1",
+      purpose: "REISSUE",
+    });
+
+    expect(issued.parentIdentifier).not.toBe(PARENT_ID);
+    expect(issued.rotated).toBe(true);
+    expect(parent.parentId).toBe(issued.parentIdentifier);
+    // Every live session opened with the old card is dropped too — otherwise
+    // whoever found it stays signed in after the replacement is issued.
+    expect(parent.authVersion).toBe(1);
+  });
+
+  it("revokes legacy QR cards when the ID rotates", async () => {
+    await issueParentAccess({
+      parent: parentDoc(),
+      schoolId: "school-1",
+      issuedBy: "admin-1",
       purpose: "REISSUE",
     });
 
     expect(ParentActivation.updateMany).toHaveBeenCalledWith(
-      { parent: parent._id, status: "PENDING" },
+      { parent: "parent-1", status: { $ne: "REVOKED" } },
       expect.objectContaining({
         $set: expect.objectContaining({ status: "REVOKED" }),
       })
     );
   });
 
-  it("a PIN reset actually clears the old PIN (§41)", async () => {
-    const parent = parentDoc({ pinHash: "$2a$10$oldhash" });
-
+  it("never writes a Parent ID into the audit log", async () => {
+    const parent = parentDoc();
     await issueParentAccess({
       parent,
-      schoolId: "s",
-      issuedBy: "a",
-      purpose: "PIN_RESET",
-    });
-
-    // Otherwise the forgotten PIN would still work.
-    expect(parent.pinHash).toBe("");
-    expect(parent.accessState).toBe("PENDING_ACTIVATION");
-  });
-
-  it("audits the issue without recording any secret (§66)", async () => {
-    const parent = parentDoc({ parentId: null, accessState: "NOT_CREATED" });
-    const issued = await issueParentAccess({
-      parent,
-      schoolId: "s",
+      schoolId: "school-1",
       issuedBy: "admin-1",
+      purpose: "REISSUE",
     });
 
-    const entry = AuditLog.create.mock.calls[0][0];
-    expect(entry.action).toBe("PARENT_ACCESS_CREATED");
-    const serialised = JSON.stringify(entry);
-    expect(serialised).not.toContain(issued.activationPin);
-    expect(serialised).not.toContain(issued.activationToken);
+    // The ID is now a live credential; an audit trail full of them would be a
+    // standing list of working logins.
+    const serialised = JSON.stringify(AuditLog.create.mock.calls);
+    expect(serialised).not.toContain(PARENT_ID);
+    expect(serialised).not.toContain(parent.parentId);
   });
 });
 
-describe("QR activation", () => {
-  it("resolves a valid pending card", async () => {
-    const activation = activationDoc();
-    ParentActivation.findOne.mockResolvedValue(activation);
+describe("signing in with a Parent ID", () => {
+  it("accepts an activated guardian", async () => {
+    const parent = parentDoc();
+    foundParent(parent);
 
-    const result = await resolveActivationByToken("tok");
-    expect(result).toBe(activation);
+    const result = await verifyParentId(PARENT_ID);
+
+    expect(result.ok).toBe(true);
+    expect(result.parent).toBe(parent);
+    expect(result.firstSignIn).toBe(false);
+    expect(parent.lastLoginAt).toBeInstanceOf(Date);
   });
 
-  it("refuses a card already used", async () => {
-    // The query filters status PENDING, so a USED row simply does not match.
-    ParentActivation.findOne.mockResolvedValue(null);
-    expect(await resolveActivationByToken("tok")).toBeNull();
-  });
+  it("normalises what the guardian typed", async () => {
+    const parent = parentDoc();
+    foundParent(parent);
 
-  it("refuses and marks an EXPIRED card", async () => {
-    const activation = activationDoc({
-      expiresAt: new Date(Date.now() - 1000),
-    });
-    ParentActivation.findOne.mockResolvedValue(activation);
+    // Lower case, hyphens missing — read off a card by someone not confident
+    // with Latin characters.
+    const result = await verifyParentId("prvpx7k4q9");
 
-    expect(await resolveActivationByToken("tok")).toBeNull();
-    expect(activation.status).toBe("EXPIRED");
-    expect(activation.save).toHaveBeenCalled();
-  });
-
-  it("refuses a card whose attempt budget is exhausted", async () => {
-    ParentActivation.findOne.mockResolvedValue(
-      activationDoc({ attemptCount: 6 })
+    expect(result.ok).toBe(true);
+    expect(Parent.findOne).toHaveBeenCalledWith(
+      expect.objectContaining({ parentId: PARENT_ID })
     );
-    expect(await resolveActivationByToken("tok")).toBeNull();
   });
 
-  it("looks up by hash, never by the raw token", async () => {
-    ParentActivation.findOne.mockResolvedValue(activationDoc());
-    await resolveActivationByToken("secret-token");
+  it("activates on the first sign-in, with no separate activation step", async () => {
+    const parent = parentDoc({
+      accessState: "PENDING_ACTIVATION",
+      activatedAt: null,
+    });
+    foundParent(parent);
+
+    const result = await verifyParentId(PARENT_ID);
+
+    expect(result.ok).toBe(true);
+    expect(result.firstSignIn).toBe(true);
+    expect(parent.accessState).toBe("ACTIVATED");
+    expect(parent.activatedAt).toBeInstanceOf(Date);
+  });
+
+  it("records the language chosen on the sign-in screen", async () => {
+    const parent = parentDoc();
+    foundParent(parent);
+
+    await verifyParentId(PARENT_ID, { language: "ne" });
+
+    expect(parent.preferences.language).toBe("ne");
+  });
+
+  it("ignores a language it does not support", async () => {
+    const parent = parentDoc({ preferences: { language: "en" } });
+    foundParent(parent);
+
+    await verifyParentId(PARENT_ID, { language: "fr" });
+
+    expect(parent.preferences.language).toBe("en");
+  });
+
+  it("rejects an unknown Parent ID", async () => {
+    foundParent(null);
+    const result = await verifyParentId(PARENT_ID);
+    expect(result.ok).toBe(false);
+    expect(result.code).toBe("INVALID_CREDENTIALS");
+  });
+
+  it("rejects a malformed Parent ID without touching the database", async () => {
+    const result = await verifyParentId("not-an-id");
+    expect(result.ok).toBe(false);
+    expect(Parent.findOne).not.toHaveBeenCalled();
+  });
+
+  it("rejects a revoked guardian", async () => {
+    foundParent(parentDoc({ accessState: "REVOKED" }));
+    expect((await verifyParentId(PARENT_ID)).ok).toBe(false);
+  });
+
+  it("rejects a suspended account", async () => {
+    foundParent(parentDoc({ status: "SUSPENDED" }));
+    expect((await verifyParentId(PARENT_ID)).ok).toBe(false);
+  });
+
+  it("rejects a guardian who was never issued a card", async () => {
+    // Parent rows are created by registration auto-linking and by the backfill,
+    // and all of them carry a Parent ID from the model hook. Those must not be
+    // live logins just because the ID exists.
+    foundParent(parentDoc({ accessState: "NOT_CREATED" }));
+    expect((await verifyParentId(PARENT_ID)).ok).toBe(false);
+  });
+
+  it("gives the same answer for every rejection", async () => {
+    foundParent(null);
+    const unknown = await verifyParentId(PARENT_ID);
+
+    foundParent(parentDoc({ accessState: "REVOKED" }));
+    const revoked = await verifyParentId(PARENT_ID);
+
+    foundParent(parentDoc({ status: "SUSPENDED" }));
+    const suspended = await verifyParentId(PARENT_ID);
+
+    // An attacker must not be able to learn which Parent IDs are real.
+    expect(unknown).toEqual(revoked);
+    expect(revoked).toEqual(suspended);
+  });
+});
+
+describe("signing in by scanning a legacy card", () => {
+  function foundActivation(value) {
+    ParentActivation.findOne.mockReturnValue({
+      sort: () => ({ lean: () => Promise.resolve(value) }),
+    });
+  }
+
+  it("resolves an old QR token to its guardian", async () => {
+    foundActivation({ _id: "activation-1", parent: "parent-1" });
+    const parent = parentDoc();
+    foundParent(parent);
+
+    const result = await verifyParentCardToken("legacy-token");
+
+    expect(result.ok).toBe(true);
+    expect(result.parent).toBe(parent);
+  });
+
+  it("looks the token up by hash, never in plaintext", async () => {
+    foundActivation(null);
+    await verifyParentCardToken("secret-token");
 
     const [query] = ParentActivation.findOne.mock.calls[0];
     expect(query.tokenHash).toBe(hashActivationToken("secret-token"));
     expect(JSON.stringify(query)).not.toContain("secret-token");
   });
-});
 
-describe("Parent ID + activation PIN (no camera)", () => {
-  it("accepts the correct pair", async () => {
-    const pinHash = await hashPin("582914");
-    Parent.findOne.mockResolvedValue(parentDoc());
-    ParentActivation.findOne.mockReturnValue({
-      sort: () => Promise.resolve(activationDoc({ activationPinHash: pinHash })),
+  it("accepts a card that expired or was already used", async () => {
+    // Expiry bounded a one-time activation window that no longer exists.
+    // Letting a card lapse in a drawer would strand the guardians this flow is
+    // for; the account checks are what gate access now.
+    foundActivation({
+      _id: "activation-1",
+      parent: "parent-1",
+      status: "USED",
+      expiresAt: new Date("2020-01-01"),
     });
+    foundParent(parentDoc());
 
-    const result = await resolveActivationByPin(PARENT_ID, "582914");
-    expect(result).toBeTruthy();
+    expect((await verifyParentCardToken("legacy-token")).ok).toBe(true);
   });
 
-  it("burns an attempt on a wrong PIN, so rotating IPs does not help", async () => {
-    const pinHash = await hashPin("582914");
-    const activation = activationDoc({ activationPinHash: pinHash });
-    Parent.findOne.mockResolvedValue(parentDoc());
-    ParentActivation.findOne.mockReturnValue({
-      sort: () => Promise.resolve(activation),
-    });
+  it("refuses a REVOKED card", async () => {
+    // The query itself excludes them, which is what makes "New card" and
+    // "Revoke access" actually kill an old QR.
+    foundActivation(null);
+    expect((await verifyParentCardToken("legacy-token")).ok).toBe(false);
 
-    expect(await resolveActivationByPin(PARENT_ID, "000001")).toBeNull();
-    expect(activation.attemptCount).toBe(1);
-    expect(activation.save).toHaveBeenCalled();
+    const [query] = ParentActivation.findOne.mock.calls[0];
+    expect(query.status).toEqual({ $ne: "REVOKED" });
   });
 
-  it("returns null for an unknown Parent ID without touching activations", async () => {
-    Parent.findOne.mockResolvedValue(null);
-    expect(await resolveActivationByPin(PARENT_ID, "582914")).toBeNull();
+  it("refuses an empty token without querying", async () => {
+    expect((await verifyParentCardToken("")).ok).toBe(false);
     expect(ParentActivation.findOne).not.toHaveBeenCalled();
-  });
-
-  it("rejects a malformed Parent ID before any query", async () => {
-    expect(await resolveActivationByPin("nonsense", "582914")).toBeNull();
-    expect(Parent.findOne).not.toHaveBeenCalled();
-  });
-});
-
-describe("completing activation", () => {
-  it("consumes the card and sets the guardian's own PIN", async () => {
-    const activation = activationDoc();
-    const parent = parentDoc({ accessState: "PENDING_ACTIVATION" });
-
-    const result = await completeActivation({
-      activation,
-      parent,
-      pin: "582914",
-      language: "ne",
-      devicePreference: "SHARED",
-    });
-
-    expect(result.ok).toBe(true);
-    expect(activation.status).toBe("USED");
-    expect(parent.accessState).toBe("ACTIVATED");
-    expect(await bcrypt.compare("582914", parent.pinHash)).toBe(true);
-    expect(parent.preferences.language).toBe("ne");
-    expect(parent.devicePreference).toBe("SHARED");
-  });
-
-  it("refuses a weak PIN", async () => {
-    const result = await completeActivation({
-      activation: activationDoc(),
-      parent: parentDoc(),
-      pin: "123456",
-    });
-    expect(result.ok).toBe(false);
-    expect(result.code).toBe("WEAK_PIN");
-  });
-
-  it("refuses a malformed PIN", async () => {
-    const result = await completeActivation({
-      activation: activationDoc(),
-      parent: parentDoc(),
-      pin: "12ab",
-    });
-    expect(result.ok).toBe(false);
-    expect(result.code).toBe("INVALID_PIN");
-  });
-});
-
-describe("PIN sign-in", () => {
-  function mockParentWithPin(hash, overrides = {}) {
-    const parent = parentDoc({ pinHash: hash, ...overrides });
-    Parent.findOne.mockReturnValue({ select: () => Promise.resolve(parent) });
-    return parent;
-  }
-
-  it("accepts the correct PIN and clears the failure counter", async () => {
-    const parent = mockParentWithPin(await hashPin("582914"), {
-      failedPinAttempts: 3,
-    });
-
-    const result = await verifyParentPin(PARENT_ID, "582914");
-
-    expect(result.ok).toBe(true);
-    expect(parent.failedPinAttempts).toBe(0);
-    expect(parent.lastLoginAt).toBeInstanceOf(Date);
-  });
-
-  it("accepts a lower-case, hyphen-less Parent ID", async () => {
-    mockParentWithPin(await hashPin("582914"));
-    const result = await verifyParentPin("prvpx7k4q9", "582914");
-    expect(result.ok).toBe(true);
-  });
-
-  it("rejects a wrong PIN and counts the attempt", async () => {
-    const parent = mockParentWithPin(await hashPin("582914"));
-
-    const result = await verifyParentPin(PARENT_ID, "111222");
-
-    expect(result.ok).toBe(false);
-    expect(result.code).toBe("INVALID_CREDENTIALS");
-    expect(parent.failedPinAttempts).toBe(1);
-  });
-
-  it("locks the account after repeated failures (§7)", async () => {
-    const parent = mockParentWithPin(await hashPin("582914"), {
-      failedPinAttempts: MAX_PIN_ATTEMPTS - 1,
-    });
-
-    const result = await verifyParentPin(PARENT_ID, "111222");
-
-    expect(result.code).toBe("LOCKED");
-    expect(parent.accessState).toBe("LOCKED");
-    expect(parent.lockedUntil).toBeInstanceOf(Date);
-  });
-
-  it("refuses while locked, even with the RIGHT PIN", async () => {
-    mockParentWithPin(await hashPin("582914"), {
-      lockedUntil: new Date(Date.now() + 60000),
-    });
-
-    const result = await verifyParentPin(PARENT_ID, "582914");
-    expect(result.code).toBe("LOCKED");
-    expect(result.retryAfterSeconds).toBeGreaterThan(0);
-  });
-
-  it("gives the SAME answer for an unknown Parent ID as for a wrong PIN (§53)", async () => {
-    Parent.findOne.mockReturnValue({ select: () => Promise.resolve(null) });
-    const unknown = await verifyParentPin(PARENT_ID, "582914");
-
-    mockParentWithPin(await hashPin("582914"));
-    const wrongPin = await verifyParentPin(PARENT_ID, "999999");
-
-    // Enumeration must not be possible.
-    expect(unknown.code).toBe(wrongPin.code);
-    expect(unknown.code).toBe("INVALID_CREDENTIALS");
-  });
-
-  it("refuses a revoked guardian", async () => {
-    mockParentWithPin(await hashPin("582914"), { accessState: "REVOKED" });
-    const result = await verifyParentPin(PARENT_ID, "582914");
-    expect(result.ok).toBe(false);
-  });
-
-  it("reports NOT_ACTIVATED when a card was issued but never used", async () => {
-    mockParentWithPin("", { accessState: "PENDING_ACTIVATION" });
-    const result = await verifyParentPin(PARENT_ID, "582914");
-    expect(result.code).toBe("NOT_ACTIVATED");
   });
 });
 
 describe("revoking access", () => {
-  it("kills outstanding cards and invalidates live sessions", async () => {
-    const parent = parentDoc({ authVersion: 4 });
+  it("suspends sign-in and drops every live session", async () => {
+    const parent = parentDoc();
 
     await revokeParentAccess({ parent, performedBy: "admin-1", reason: "left" });
 
     expect(parent.accessState).toBe("REVOKED");
-    // Bumping authVersion is what makes existing JWTs stop working.
-    expect(parent.authVersion).toBe(5);
+    expect(parent.authVersion).toBe(1);
+  });
+
+  it("kills outstanding legacy cards too", async () => {
+    await revokeParentAccess({ parent: parentDoc(), performedBy: "admin-1" });
+
     expect(ParentActivation.updateMany).toHaveBeenCalledWith(
-      { parent: parent._id, status: "PENDING" },
+      { parent: "parent-1", status: { $ne: "REVOKED" } },
       expect.objectContaining({
         $set: expect.objectContaining({ status: "REVOKED" }),
       })
     );
+  });
+
+  it("leaves the Parent ID alone, so restoring access restores the card", async () => {
+    const parent = parentDoc();
+    await revokeParentAccess({ parent, performedBy: "admin-1" });
+    expect(parent.parentId).toBe(PARENT_ID);
   });
 });

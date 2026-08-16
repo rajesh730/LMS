@@ -52,6 +52,15 @@ export function ParentAppProvider({ children }) {
       const res = await fetch("/api/parent/me", { cache: "no-store" });
       const json = await res.json();
 
+      // No usable session — the cookie expired, the school revoked access, or
+      // this is a shared phone that went idle. Send them to sign in rather than
+      // painting an error screen with no way forward: signing in again is one
+      // scan or one Parent ID, so a dead end here is pure obstruction.
+      if (res.status === 401) {
+        window.location.assign("/parent/login");
+        return;
+      }
+
       if (!res.ok) {
         throw new Error(json.message || "Failed to load your account");
       }

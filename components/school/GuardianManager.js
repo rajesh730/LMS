@@ -234,14 +234,13 @@ export default function GuardianManager({
             setInviting(false);
             refresh();
           }}
-          onCardIssued={(card, parentIdentifier) => {
+          onCardIssued={(linkId) => {
             setInviting(false);
-            // The PIN exists only in that response — open the print page
-            // immediately rather than storing it anywhere.
+            // The card renders from the guardian's stored Parent ID, so this
+            // page can be reopened later from the access panel if the tab is
+            // closed or the print fails.
             window.open(
-              `/school/guardians/card?activation=${encodeURIComponent(card.activationId)}` +
-                `&pin=${encodeURIComponent(card.activationPin)}` +
-                `&token=${encodeURIComponent(card.activationToken)}`,
+              `/school/guardians/card?link=${encodeURIComponent(linkId)}`,
               "_blank",
               "noopener"
             );
@@ -540,11 +539,11 @@ function InviteForm({
 
       if (mode === "CODE") {
         onLegacyCode(json.data.code);
-      } else if (json.data.card) {
-        onCardIssued(json.data.card, json.data.parentIdentifier);
+      } else if (!json.data.alreadyActivated) {
+        onCardIssued(json.data.linkId);
       } else {
-        // An already-activated guardian gaining a second child keeps their
-        // existing Parent ID and PIN — no new card is printed.
+        // An already-connected guardian gaining a second child keeps the Parent
+        // ID they are signing in with — no card needs printing.
         onCreated();
       }
     } catch (err) {
@@ -593,7 +592,7 @@ function InviteForm({
           />
           <p className="mt-1 text-xs text-[var(--brand-muted)]">
             Ask the guardian to read the Parent ID from their card. They keep
-            their existing PIN — no new card is needed.
+            the same ID — no new card is needed.
           </p>
         </div>
       ) : null}
@@ -646,7 +645,8 @@ function InviteForm({
       {mode === "NEW" ? (
         <p className="rounded-lg bg-sky-50 px-3 py-2 text-xs text-sky-900">
           A phone number and email are <strong>not required</strong>. The
-          guardian signs in with the Parent ID and PIN on their printed card.
+          guardian signs in by scanning their printed card, or by typing the
+          Parent ID on it.
         </p>
       ) : null}
 

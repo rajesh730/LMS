@@ -1,8 +1,6 @@
 import connectDB from "@/lib/db";
 import Parent from "@/models/Parent";
 import ParentStudentLink from "@/models/ParentStudentLink";
-import ParentActivation from "@/models/ParentActivation";
-import Student from "@/models/Student";
 import User from "@/models/User";
 import {
   successResponse,
@@ -82,35 +80,21 @@ export async function GET(request) {
 
     const { parent, link } = resolved;
 
-    const pending = await ParentActivation.findOne({
-      parent: parent._id,
-      status: "PENDING",
-    })
-      .sort({ createdAt: -1 })
-      .select("pinHint expiresAt purpose createdAt")
-      .lean();
-
     return successResponse(200, "Access status", {
-      // Never the PIN hash, never a token — only what the school may see.
+      // The Parent ID is now the guardian's credential, so this response is
+      // staff-only by definition — `requireApiSession` above is what keeps it
+      // that way. It is still shown, because school staff are the ones who
+      // read it back to a guardian who has mislaid their card.
       parentIdentifier: parent.parentId || null,
       accessState: parent.accessState,
       activatedAt: parent.activatedAt,
       lastLoginAt: parent.lastLoginAt,
-      lockedUntil: parent.lockedUntil,
       isHousehold: Boolean(parent.isHousehold),
       contact: {
         email: parent.email || null,
         phone: parent.phone || null,
       },
       relationshipStatus: link.status,
-      pendingActivation: pending
-        ? {
-            pinHint: pending.pinHint,
-            expiresAt: pending.expiresAt,
-            purpose: pending.purpose,
-            createdAt: pending.createdAt,
-          }
-        : null,
     });
   } catch (err) {
     console.error("GET /api/school/guardians/access error:", err);
@@ -119,11 +103,12 @@ export async function GET(request) {
 }
 
 /**
- * Issue Parent Access — first time, reissue after a lost card, or PIN reset.
+ * Issue Parent Access — a first card, or a replacement for a lost one.
  *
- * Returns the activation token and PIN EXACTLY ONCE. The response is the only
- * place they will ever exist in readable form; the school prints the card from
- * it immediately.
+ * `REISSUE` **rotates the Parent ID**, because the ID is the credential: a
+ * replacement card that carried the same ID would leave the lost card working.
+ * That is why the school UI words it as "New card — the old card stops
+ * working" and why an already-connected guardian is never reissued by accident.
  */
 export async function POST(request) {
   try {
@@ -139,7 +124,7 @@ export async function POST(request) {
 
     const { parent, link } = resolved;
 
-    const purpose = ["INITIAL", "REISSUE", "PIN_RESET"].includes(body.purpose)
+    const purpose = ["INITIAL", "REISSUE"].includes(body.purpose)
       ? body.purpose
       : parent.accessState === "NOT_CREATED"
         ? "INITIAL"
@@ -168,13 +153,11 @@ export async function POST(request) {
       .lean();
 
     return successResponse(201, "Parent access created", {
-      // Shown once. Not retrievable afterwards — see lib/parentCredentials.js.
       schoolName: school?.schoolName || school?.name || "Your school",
       parentIdentifier: issued.parentIdentifier,
-      activationPin: issued.activationPin,
-      activationToken: issued.activationToken,
-      activationId: issued.activationId,
-      expiresAt: issued.expiresAt,
+      // True when the guardian's previous card was invalidated by this call.
+      rotated: issued.rotated,
+      linkId: String(link._id),
       purpose,
     });
   } catch (err) {
@@ -214,21 +197,13 @@ export async function PATCH(request) {
     }
 
     if (action === "RESTORE_ACCESS") {
-      // Restored to PENDING_ACTIVATION, never straight to ACTIVATED: the old
-      // PIN was invalidated by the revocation, so the guardian needs a new card.
-      parent.accessState = parent.pinHash ? "ACTIVATED" : "PENDING_ACTIVATION";
+      // A guardian who had already connected goes back to ACTIVATED and their
+      // existing card works again — revocation suspends access, it does not
+      // rotate the Parent ID (see `revokeParentAccess`). One who never got that
+      // far returns to waiting-to-connect.
+      parent.accessState = parent.activatedAt ? "ACTIVATED" : "PENDING_ACTIVATION";
       await parent.save();
       return successResponse(200, "Access restored", {
-        accessState: parent.accessState,
-      });
-    }
-
-    if (action === "UNLOCK") {
-      parent.lockedUntil = null;
-      parent.failedPinAttempts = 0;
-      if (parent.accessState === "LOCKED") parent.accessState = "ACTIVATED";
-      await parent.save();
-      return successResponse(200, "Account unlocked", {
         accessState: parent.accessState,
       });
     }

@@ -3474,9 +3474,12 @@ a[aria-busy="true"] {
   letter-spacing: 0.1em;
 }
 
+/* One credential, full width. The card used to carry a Parent ID and a PIN
+   side by side; the PIN is gone, and a half-width box would leave the one
+   thing a guardian has to read smaller than it needs to be. */
 .pac-credentials {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 0.75rem;
   margin-bottom: 1rem;
 }
@@ -3491,7 +3494,7 @@ a[aria-busy="true"] {
 .pac-value {
   margin-top: 0.2rem;
   font-family: var(--font-code);
-  font-size: 1.3rem;
+  font-size: 1.6rem;
   font-weight: 700;
   letter-spacing: 0.12em;
   word-break: break-all;

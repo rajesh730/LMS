@@ -1,30 +1,27 @@
 import mongoose from "mongoose";
 
 /**
- * A one-time Parent Access activation (§6, §7).
+ * LEGACY — a one-time Parent Access activation. **Read-only; nothing creates
+ * these any more.**
  *
- * Issued by the school when it prints (or reprints) a Parent Access Card, and
- * consumed exactly once when the guardian activates. Separate from `Parent`
- * because a guardian accrues MANY activations over their lifetime — first
- * issue, lost card, forgotten PIN, suspected compromise — and each one needs
- * its own expiry, attempt counter and audit trail.
+ * Under the original design a Parent Access Card carried a one-time QR token
+ * and a one-time activation PIN, which a guardian exchanged for a self-chosen
+ * 6-digit PIN. That whole journey was removed: the Parent ID printed on the
+ * card is now the credential and signing in is a single step. See
+ * lib/parentCredentials.js for what replaced this and why.
  *
- * Two credentials are issued together, for two different situations:
+ * The collection survives for one reason: **cards printed under the old flow
+ * are in school bags right now.** Their QR encodes `/parent/activate?t=<token>`,
+ * and `verifyParentCardToken` resolves that token through these rows so those
+ * cards keep working instead of turning into paper overnight.
  *
- *  - `tokenHash` — backs the QR code. High entropy, embedded in a URL, scanned.
- *  - `activationPinHash` — backs manual entry. Six digits, typed alongside the
- *    Parent ID by anyone who cannot scan (no camera, broken lens, printed card
- *    photocopied badly).
+ * Consequently only two things still read or write here:
+ *   - `verifyParentCardToken` — look up a scanned legacy token.
+ *   - `issueParentAccess` / `revokeParentAccess` — mark rows REVOKED, which is
+ *     what stops an old card when a guardian is given a new Parent ID.
  *
- * BOTH are stored only as hashes. Neither is ever readable again after the
- * card is generated — §52 forbids exposing credentials in API responses after
- * creation, and a readable activation credential sitting in the database would
- * be a standing route into a child's record.
- *
- * NOTE the deliberate asymmetry with the QR token: the six-digit activation PIN
- * is weak on its own (10^6), so it is ONLY accepted together with the correct
- * Parent ID, and only under a strict attempt cap. The QR token is strong enough
- * to stand alone.
+ * `activationPinHash`, `expiresAt`, `attemptCount` and `pinHint` are inert.
+ * Once no legacy cards remain in circulation this collection can be dropped.
  */
 
 const ParentActivationSchema = new mongoose.Schema(

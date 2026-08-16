@@ -141,6 +141,34 @@ describe("conversation list scoping (§19, §36)", () => {
     expect(thread.unreadCount).toBe(2);
     expect(JSON.stringify(thread)).not.toMatch(/@|\+977|phone/i);
   });
+
+  it("returns the subject alongside the label, not instead of it", async () => {
+    authorised();
+    conversationList([
+      {
+        _id: CONVERSATION,
+        topic: "ADMINISTRATION",
+        routedToLabel: "Green Village",
+        subject: "Sports day",
+        lastMessagePreview: "Please send a water bottle.",
+        lastMessageAt: new Date(),
+        participants: [
+          { participantType: "PARENT", parent: PARENT_A, unreadCount: 1 },
+        ],
+      },
+    ]);
+
+    const res = await LIST(
+      new Request(`http://localhost/api/parent/messages?studentId=${AAYUSH}`)
+    );
+    const [thread] = (await res.json()).data.conversations;
+
+    // These used to share one field with the label winning, which is why a
+    // guardian never saw a subject the school had typed.
+    expect(thread.title).toBe("Green Village");
+    expect(thread.subject).toBe("Sports day");
+    expect(thread.preview).toBe("Please send a water bottle.");
+  });
 });
 
 describe("starting a conversation — topic routing (§14)", () => {
@@ -356,5 +384,64 @@ describe("reading a thread", () => {
     expect(json.data.messages.map((m) => m.id)).toEqual(["m1", "m2"]);
     expect(json.data.messages[0].mine).toBe(true);
     expect(json.data.messages[1].mine).toBe(false);
+  });
+
+  it("gives each announcement its own subject, alongside the body", async () => {
+    conversationIs({
+      _id: CONVERSATION,
+      topic: "ADMINISTRATION",
+      routedToLabel: "Green Village",
+      subject: "Fee reminder",
+      student: AARYA,
+    });
+    messagesAre([
+      {
+        _id: "m2",
+        senderType: "STAFF",
+        senderName: "Green Village",
+        subject: "Fee reminder",
+        body: "Term fees are due on Friday.",
+        createdAt: new Date("2026-08-15T10:05:00Z"),
+      },
+      {
+        _id: "m1",
+        senderType: "STAFF",
+        senderName: "Green Village",
+        subject: "Sports day",
+        body: "Please send a water bottle.",
+        createdAt: new Date("2026-08-14T10:00:00Z"),
+      },
+    ]);
+
+    const json = await (await request()).json();
+
+    // The whole point: two announcements in ONE thread, each keeping its own
+    // headline. A subject held on the conversation could only ever carry one.
+    expect(json.data.messages[0].subject).toBe("Sports day");
+    expect(json.data.messages[0].body).toBe("Please send a water bottle.");
+    expect(json.data.messages[1].subject).toBe("Fee reminder");
+    expect(json.data.messages[1].body).toBe("Term fees are due on Friday.");
+  });
+
+  it("leaves the subject empty on an ordinary reply", async () => {
+    conversationIs({
+      _id: CONVERSATION,
+      topic: "LEARNING",
+      routedToLabel: "Class Teacher",
+      student: AARYA,
+    });
+    messagesAre([
+      {
+        _id: "m1",
+        senderType: "PARENT",
+        senderParent: PARENT_A,
+        body: "Thank you.",
+        createdAt: new Date(),
+      },
+    ]);
+
+    const json = await (await request()).json();
+    // A conversation turn is not an announcement and must not grow a heading.
+    expect(json.data.messages[0].subject).toBe("");
   });
 });

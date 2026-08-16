@@ -17,7 +17,7 @@ import { issueParentAccess } from "@/lib/parentCredentials";
 export const dynamic = "force-dynamic";
 
 // A print run has to stay something a school office can actually handle in one
-// go, and each card costs a bcrypt hash plus two writes.
+// go, and each card costs a database write.
 const MAX_CARDS_PER_RUN = 300;
 
 /**
@@ -26,15 +26,19 @@ const MAX_CARDS_PER_RUN = 300;
  * This is how a school onboards a class at once: generate, print, hand out at
  * the gate. Without it, connecting 400 families means 400 individual clicks.
  *
- * ⚠️ **Issuing a card invalidates that guardian's previous card** (see
- * `issueParentAccess`). That is correct for a lost card but destructive if run
- * casually over a class where half the parents are already connected — so
- * guardians who have **already activated are skipped by default**. Reprinting
- * for them needs `includeActivated`, which the UI asks about explicitly.
+ * **A bulk run is non-destructive.** It only ever allocates a Parent ID to a
+ * guardian who has none; it never rotates one that already exists. So a jammed
+ * printer, a second run over an overlapping grade, or a reprint for a family
+ * that mislaid the sheet all cost nothing — the same card comes out again.
  *
- * The plaintext PINs and tokens exist ONLY in this response. They are hashed at
- * rest and can never be re-read, so the client must render them to a print view
- * immediately. Reloading that view will not bring them back — by design.
+ * That is a change from the previous design, where every run minted a fresh
+ * one-time PIN and silently killed the last card. Rotating an ID is now a
+ * single, deliberate, per-guardian action ("New card") because it is the one
+ * thing that locks a guardian out.
+ *
+ * Guardians who have already signed in are still skipped by default — printing
+ * paper for a family that does not need it is waste, not danger — and
+ * `includeActivated` brings them back in for a genuine reprint.
  */
 
 /** Preview: how many cards would this run produce? */
@@ -114,19 +118,20 @@ export async function POST(request) {
     const cards = [];
     const failures = [];
 
-    // Sequential: each card is a bcrypt hash plus writes, and a burst of 300
-    // in parallel would exhaust the small serverless connection pool.
+    // Sequential: a burst of 300 writes in parallel would exhaust the small
+    // serverless connection pool.
     for (const candidate of candidates) {
       try {
         const parent = await Parent.findById(candidate.parentId);
         if (!parent) continue;
 
+        // Always INITIAL. Never REISSUE from a bulk run — see the note above.
         const issued = await issueParentAccess({
           parent,
           schoolId,
           studentId: candidate.studentId,
           issuedBy: session.user.id,
-          purpose: parent.accessState === "NOT_CREATED" ? "INITIAL" : "REISSUE",
+          purpose: "INITIAL",
         });
 
         cards.push({
@@ -135,10 +140,6 @@ export async function POST(request) {
           guardianName: candidate.guardianName,
           relationshipLabel: candidate.relationshipLabel,
           parentIdentifier: issued.parentIdentifier,
-          // Shown once, rendered straight to print, never stored.
-          activationPin: issued.activationPin,
-          activationToken: issued.activationToken,
-          expiresAt: issued.expiresAt,
         });
       } catch (err) {
         failures.push({
@@ -234,8 +235,8 @@ async function collectCandidates({ schoolId, grade, studentIds = null }) {
           .replaceAll("_", " ")
           .toLowerCase()
           .replace(/\b\w/g, (char) => char.toUpperCase()),
-        // Reprinting for a connected guardian would kill the PIN they are
-        // already using, so these are excluded unless explicitly requested.
+        // Excluded by default to save paper, not for safety: a reprint is
+        // harmless now that the card carries only the Parent ID.
         alreadyActivated: parent.accessState === "ACTIVATED",
         isPrimaryGuardian: Boolean(link.isPrimaryGuardian),
       };

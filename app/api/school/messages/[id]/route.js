@@ -84,7 +84,7 @@ export async function GET(request, { params }) {
       .skip((page - 1) * limit)
       .limit(limit)
       .select(
-        "senderType senderName body attachments createdAt readByParentAt transcript"
+        "senderType senderName subject body attachments createdAt readByParentAt transcript"
       )
       .lean();
 
@@ -146,6 +146,10 @@ export async function GET(request, { params }) {
         mine: message.senderType === "STAFF",
         senderType: message.senderType,
         senderName: message.senderName || "",
+        // Returned so the staff thread shows the announcement exactly as the
+        // guardian sees it — a subject visible on one side only is how a school
+        // ends up believing it sent something it did not.
+        subject: message.subject || "",
         body: message.body || "",
         attachments: message.attachments || [],
         transcript: message.transcript || "",

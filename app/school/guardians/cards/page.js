@@ -9,22 +9,19 @@ import PrintButton from "@/components/school/PrintButton";
  * The bulk print sheet — one Parent Access Card per page, ready to cut and hand
  * out at the gate.
  *
- * The batch arrives through `sessionStorage`, not the URL and not a refetch.
- * Two reasons, both important:
+ * The batch arrives through `sessionStorage` rather than the URL: hundreds of
+ * Parent IDs in a query string would land in browser history, proxy logs and
+ * the referer header, and each one is a live credential.
  *
- *  1. **Hundreds of one-time PINs cannot go in a query string** — they would
- *     land in browser history, proxy logs and the referer header.
- *  2. **This page must never re-issue.** Generating a card invalidates the
- *     previous one, so a refresh that silently regenerated would kill the very
- *     cards the office just printed. Refreshing here shows a "generate again"
- *     prompt instead, and the school makes that choice knowingly.
+ * Regenerating is safe now — a run never rotates an existing Parent ID — so a
+ * refresh here simply asks the office to generate the batch again.
  */
 /**
  * Read the batch out of sessionStorage EXACTLY ONCE, at module scope.
  *
  * Two constraints meet here. The batch is genuinely external state that React
- * does not own, and it must be consumed on read — leaving hundreds of live PINs
- * in sessionStorage on a shared school-office machine would be careless.
+ * does not own, and it must be consumed on read — leaving hundreds of Parent
+ * IDs in sessionStorage on a shared school-office machine would be careless.
  *
  * Caching the result in a module variable is what makes this safe as a
  * `useSyncExternalStore` snapshot: the getter returns the same reference on
@@ -69,12 +66,12 @@ export default function BulkCardsPage() {
           </p>
           <h1 className="card-missing-title">These cards have been printed</h1>
           <p className="card-missing-text">
-            For safety, PINs are shown only once and are never stored in a
-            readable form.
+            The batch is cleared once it is shown, so that a list of Parent IDs
+            is not left sitting in a shared office browser.
           </p>
           <p className="card-missing-text">
-            If you still need them, generate a new batch — the previous cards
-            will stop working.
+            If you still need them, generate the batch again — the same cards
+            come out, and the ones you already handed over keep working.
           </p>
           <button
             type="button"
@@ -100,8 +97,8 @@ export default function BulkCardsPage() {
             {batch.cards.length === 1 ? "" : "s"}
           </h1>
           <p className="card-toolbar-note">
-            Print now — these PINs cannot be shown again. Each card prints on its
-            own page.
+            Each card prints on its own page. Hand each one to the guardian
+            named on it.
           </p>
           {batch.failures?.length > 0 ? (
             <p className="mt-1 text-xs font-bold text-amber-700">

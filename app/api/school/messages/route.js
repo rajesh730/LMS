@@ -133,6 +133,7 @@ export async function GET(request) {
                 grade: conversation.student.grade || "",
               }
             : null,
+          subject: conversation.subject || "",
           preview: conversation.lastMessagePreview || "",
           lastMessageAt: conversation.lastMessageAt,
           lastMessageSenderType: conversation.lastMessageSenderType || "",

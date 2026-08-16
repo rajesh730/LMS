@@ -139,24 +139,56 @@ rerouted. Staff are refs; no personal phone numbers or emails are ever exposed.
   thumbnails first, denormalised unread counts (one query per thread list),
   skeletons over spinners.
 
-## 7a. Parent Access — identity without a phone or an email
+## 7a. Parent Access — identity without a phone, an email, or a PIN
 
 The core rule: **a phone, email or smartphone may improve the experience, but
 must never be required for a guardian to have legitimate access.** Identity and
 contact method are separate concepts.
 
-**Onboarding is now:** school creates the guardian → Pravyo issues a Parent
-Access Card → parent scans the QR (or types Parent ID + PIN) → confirms the
-child → picks a language → chooses a 6-digit PIN → done. No email, no password,
-no self-registration form, no long code to copy.
+**The whole flow:** school creates the guardian → Pravyo issues a Parent Access
+Card → parent scans the QR, or types the Parent ID on it → they are in. There is
+no activation step, no confirmation wizard, and no PIN. The first sign-in and
+the hundredth are identical.
+
+### The Parent ID is the credential
+
+This is the single most important fact about parent auth, and it reverses the
+original design. Guardians used to choose a 6-digit PIN during activation, with
+the Parent ID as an identifier only. That was correct on paper and wrong in the
+field: it put "invent, confirm and remember a secret" between a guardian and
+their own child, and the guardians this product exists for are exactly the ones
+for whom that is a wall. **The second factor was traded for reach, knowingly.**
+
+What the trade costs, stated so nobody has to infer it:
+
+- **Anyone holding the card — or the ID off it — can sign in.** The card is a
+  key and must be handed over like one. The printed card says so in both
+  languages.
+- **The Parent ID is no longer safe to treat as public.** Staff see it (they
+  issue it); it must not go in shared URLs, logs, or the audit trail.
+- **A lost card is killed by issuing a new one**, which ROTATES the Parent ID
+  and bumps `authVersion`. That is the only thing that makes a leaked ID stop
+  working, and it is why "New card" is confirmed and worded as destructive
+  while everything else about cards is repeatable.
+
+The remaining defences are the ID's own entropy (32⁶ ≈ 1.07 billion, random and
+non-sequential, so the space stays sparse), the IP rate limit on the sign-in
+route, and `accessState` — a Parent row that was never issued a card cannot be
+signed into, which matters because registration auto-linking and the backfill
+both mint Parent rows nobody was ever given access to.
 
 | Piece | Where | Notes |
 | --- | --- | --- |
-| **Parent ID** | `lib/parentIdentity.js` | `PRV-P-X7K4Q9`. Random, non-sequential, not derived from any id. Alphabet excludes O/0/I/1 — it gets read aloud. Case- and hyphen-insensitive on entry. **Identifier, never a credential** (§53). |
-| **Activation** | `models/ParentActivation.js` | One-time. QR token = 32 random bytes, SHA-256 at rest. Activation PIN = 6 digits, **bcrypt** at rest (weak secret ⇒ needs the work factor). Both unreadable after the card prints. |
-| **Guardian PIN** | `Parent.pinHash` (`select: false`) | bcrypt. Weak-PIN rejection (`000000`, `123456`, runs). 5 attempts → 15-minute lock. |
-| **Card** | `components/school/ParentAccessCard.js` | Server-rendered inline SVG QR via the existing `qrcode` package. **No new dependency, no external QR service.** Black-and-white safe, bilingual. |
+| **Parent ID** | `lib/parentIdentity.js` | `PRV-P-X7K4Q9`. Random, non-sequential, not derived from any id. Alphabet excludes O/0/I/1 — it gets read aloud. Case- and hyphen-insensitive on entry. Rotated only by `issueParentAccess({ purpose: "REISSUE" })`. |
+| **Sign-in** | `lib/parentCredentials.js` | `verifyParentId` (typed) and `verifyParentCardToken` (scanned legacy card). One opaque failure for every rejection, so the form is not an ID-existence oracle. |
+| **Card** | `components/school/ParentAccessCard.js` | Server-rendered inline SVG QR via the existing `qrcode` package. **No new dependency, no external QR service.** Black-and-white safe, bilingual. QR encodes `/parent/login?id=…`. |
 | **Print** | `app/globals.css` | The project had no print styles; `@media print` + `@page` added. Browser print, not a paid PDF service. |
+| **Legacy cards** | `models/ParentActivation.js` | **Read-only.** Cards printed under the old flow encode `/parent/activate?t=…`; that route redirects into sign-in and the token still resolves. Nothing creates new rows. |
+
+**Reprinting is free.** The card carries only the Parent ID, which is stored in
+readable form, so `/school/guardians/card?link=…` renders on demand and a bulk
+run never rotates an existing ID. Under the old one-time-PIN design every
+reprint silently killed the previous batch — that trap is gone.
 
 **Three access states are kept distinct** (§59), because conflating them is how
 a school revokes the wrong thing:
@@ -166,16 +198,17 @@ a school revokes the wrong thing:
 - `ParentStudentLink.status` — are they linked to *this* child?
 
 Removing one child is a link operation; revoking sign-in is an account
-operation. A father losing Child A keeps Child B.
+operation. A father losing Child A keeps Child B. Revocation does **not** rotate
+the ID, so restoring access makes the guardian's existing card work again.
 
 **Shared devices** (§12) are enforced server-side in `lib/parentAccess.js`: a
 `SHARED` session stops being trusted after 30 idle minutes and returns
-`PIN_REQUIRED`. A client-side timer would be bypassed by not running the
-JavaScript.
+`SESSION_EXPIRED`, and `ParentAppContext` sends any 401 back to sign-in. A
+client-side timer would be bypassed by not running the JavaScript.
 
-**Login** now leads with Parent ID + PIN; the old email/password form is kept
-behind "Other sign-in options" (§57 — existing guardians are never forced to
-migrate).
+**Login** is `/parent/login` and nothing else — `/parent/access` and
+`/parent/activate` redirect into it. The old email/password form is kept behind
+"Other ways to sign in" (§57 — existing guardians are never forced to migrate).
 
 ## 7b. Publish once — the channel architecture
 
@@ -260,6 +293,12 @@ Nothing was deleted. `/parent/register`, `/parent/link` and existing
 `Parent.password` is now **optional**. Guardians created via Parent Access never
 have one; guardians who already had one keep signing in with it.
 
+**The guardian PIN was removed entirely** (see §7a). `Parent.pinHash`,
+`pinSetAt`, `failedPinAttempts` and `lockedUntil` are still declared but inert —
+dropping fields from a schema does not remove them from documents already in
+Atlas, and a half-migrated collection is worse than four dead columns. Safe to
+drop in a deliberate migration.
+
 ## 9. Other deferred work
 
 - **SMS/email delivery of notifications** (§21). Preferences are recorded and
@@ -288,13 +327,15 @@ npm run build
 **Guardian setup (current flow):** School → **Parents & Guardians** → pick a
 student → *Invite guardian* → **New guardian** → name + relationship (phone and
 email optional) → **Add guardian & print card**. The card opens in a new tab
-with the QR, Parent ID and activation PIN. Print it and hand it over.
+with the QR and the Parent ID. Print it and hand it over.
 
-The parent then scans the QR with their phone camera, or goes to
-`/parent/access` and types the Parent ID + PIN.
+The parent then scans the QR with their phone camera, or goes to `/parent/login`
+and types the Parent ID. That is the entire journey.
 
-⚠️ **The activation PIN is shown once.** It is stored hashed and cannot be
-re-rendered. If it is lost, use **Reissue card** — which invalidates the old one.
+**Reprint any time** from the guardian's access panel → **Show card**. It is
+non-destructive. **New card** is the destructive one: it changes the Parent ID,
+signs the guardian out, and is only for a card that was lost or seen by the
+wrong person.
 
 Indexes: the new collections declare their own; run `npm run db:ensure-indexes`
 after deploying if that script is extended to cover them.

@@ -66,9 +66,11 @@ export const authOptions = {
         email: { label: "Email/Username", type: "text" },
         password: { label: "Password", type: "password" },
         loginScope: { label: "Login scope", type: "text" },
-        // Parent Access sign-in (§13). Present only for the PIN path.
+        // Parent Access sign-in. The Parent ID is the credential; `cardToken`
+        // is the same thing arriving from a scanned legacy QR card.
         parentId: { label: "Parent ID", type: "text" },
-        pin: { label: "PIN", type: "password" },
+        cardToken: { label: "Card token", type: "password" },
+        language: { label: "Language", type: "text" },
         deviceMode: { label: "Device mode", type: "text" },
       },
       async authorize(credentials, req) {
@@ -102,28 +104,28 @@ export const authOptions = {
         // Parent collection only. Nothing below this block changes for the
         // existing admin / teacher / student flows.
         if (loginScope === "parent") {
-          // --- Primary path: Parent ID + PIN (§13) -------------------------
-          // Requires neither an email nor a phone number, which is the whole
-          // point — see §3 and the Parent Access Card flow.
-          if (credentials?.parentId) {
-            const { verifyParentPin } = await import("@/lib/parentCredentials");
-            const result = await verifyParentPin(
-              credentials.parentId,
-              credentials.pin
+          // --- Primary path: the Parent ID off the Access Card -------------
+          // No email, no phone, no password, no PIN. The one thing printed on
+          // the card is the whole credential — see lib/parentCredentials.js for
+          // why that trade was made and what it costs.
+          if (credentials?.parentId || credentials?.cardToken) {
+            const { verifyParentId, verifyParentCardToken } = await import(
+              "@/lib/parentCredentials"
             );
 
+            const result = credentials.cardToken
+              ? // A scanned card printed under the old activation flow.
+                await verifyParentCardToken(credentials.cardToken)
+              : await verifyParentId(credentials.parentId, {
+                  language: credentials.language,
+                });
+
             if (!result.ok) {
-              if (result.code === "LOCKED") {
-                throw new Error(
-                  "Too many wrong PINs. Please wait a few minutes, or ask your school for help."
-                );
-              }
-              if (result.code === "NOT_ACTIVATED") {
-                throw new Error(
-                  "This Parent ID is not active yet. Please use your Parent Access Card first."
-                );
-              }
-              throw new Error("Parent ID or PIN is not correct");
+              throw new Error(
+                credentials.cardToken
+                  ? "This card is not valid any more. Please ask your school for a new one."
+                  : "That Parent ID was not recognised. Please check your card."
+              );
             }
 
             const parent = result.parent;
@@ -139,10 +141,9 @@ export const authOptions = {
               schoolId: null,
               authVersion: parent.authVersion || 0,
               calendarPreference: parent.preferences?.calendarPreference || "BS",
-              // Drives the shared-device re-authentication window; see the jwt
-              // callback below.
+              // Drives the shared-device idle window; see the jwt callback.
               deviceMode,
-              pinVerifiedAt: Date.now(),
+              signedInAt: Date.now(),
             };
           }
 
@@ -160,7 +161,7 @@ export const authOptions = {
 
           if (!parent.password) {
             throw new Error(
-              "This account uses a Parent ID and PIN. Please sign in with those."
+              "This account signs in with a Parent ID. Please use the ID on your card."
             );
           }
 
@@ -339,10 +340,11 @@ export const authOptions = {
         token.lastValidatedAt = Date.now();
         // Shared-device policy (§12). The cookie itself is long-lived for
         // everyone, but a SHARED session stops being trusted after a short
-        // idle window and lib/parentAccess.js then demands the PIN again.
-        // Enforcing it server-side means clearing localStorage cannot bypass it.
+        // idle window and lib/parentAccess.js then sends the guardian back to
+        // sign in. Enforcing it server-side means clearing localStorage cannot
+        // bypass it.
         if (user.deviceMode) token.deviceMode = user.deviceMode;
-        if (user.pinVerifiedAt) token.pinVerifiedAt = user.pinVerifiedAt;
+        if (user.signedInAt) token.signedInAt = user.signedInAt;
         delete token.error;
       } else if (
         token?.id &&
@@ -446,7 +448,7 @@ export const authOptions = {
         session.user.authVersion = token.authVersion || 0;
         session.user.calendarPreference = token.calendarPreference || "BS";
         session.user.deviceMode = token.deviceMode || "PERSONAL";
-        session.user.pinVerifiedAt = token.pinVerifiedAt || null;
+        session.user.signedInAt = token.signedInAt || null;
         if (token.error) {
           session.error = token.error;
         }

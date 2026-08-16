@@ -7,11 +7,14 @@ import { FaTimes, FaQrcode, FaExclamationTriangle } from "react-icons/fa";
 /**
  * Generate Parent Access Cards for a whole grade, a selection, or the school.
  *
- * The destructive detail this dialog exists to make unmissable: **issuing a new
- * card invalidates the guardian's previous one.** For a family that has not
- * connected yet that is harmless. For a family already using the app it would
- * break their PIN with no warning — so already-connected guardians are excluded
- * by default and re-including them takes a deliberate, separately-worded tick.
+ * A bulk run is **non-destructive**: it gives a Parent ID to guardians who have
+ * none and reprints the existing one for everybody else. Nothing a school does
+ * here can lock a family out, which is why this dialog no longer carries the
+ * warnings it used to — under the old one-time-PIN design every run silently
+ * killed the previous batch of cards.
+ *
+ * Already-connected guardians stay excluded by default, but now purely to save
+ * paper. Including them is a reprint, not a reset.
  */
 export default function BulkCardsDialog({
   grades,
@@ -132,9 +135,9 @@ export default function BulkCardsDialog({
 
         <div className="px-5 py-5">
           <p className="text-sm leading-relaxed text-[#52657d]">
-            Each card carries a QR code, a Parent ID and a PIN. Print them, cut
-            them up, and hand one to each guardian. They scan it to connect —
-            no email address or phone number needed.
+            Each card carries a QR code and a Parent ID. Print them, cut them
+            up, and hand one to each guardian. They scan it to sign in — no
+            email address, phone number or password needed.
           </p>
 
           {usingSelection ? (
@@ -189,22 +192,20 @@ export default function BulkCardsDialog({
             </div>
           ) : null}
 
-          {/* The destructive option, worded so it cannot be ticked absently. */}
           {(preview?.alreadyActivated > 0 || usingSelection) && (
-            <label className="mt-4 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3">
+            <label className="mt-4 flex items-start gap-3 rounded-xl border border-[#dbe5f4] bg-slate-50 p-3">
               <input
                 type="checkbox"
                 checked={includeActivated}
                 onChange={(event) => setIncludeActivated(event.target.checked)}
                 className="mt-0.5 h-5 w-5"
               />
-              <span className="text-xs leading-relaxed text-amber-900">
+              <span className="text-xs leading-relaxed text-[#52657d]">
                 <strong className="block">
-                  Also reprint for guardians who are already connected
+                  Also print for guardians who are already signed in
                 </strong>
-                This gives them a new PIN and{" "}
-                <strong>their current one will stop working</strong>. Only use
-                this if their card was lost.
+                They keep the same Parent ID — this is a spare copy, and it does
+                not affect the card they already have.
               </span>
             </label>
           )}
@@ -218,8 +219,8 @@ export default function BulkCardsDialog({
           <p className="mt-4 flex items-start gap-2 rounded-xl bg-sky-50 px-4 py-3 text-xs text-sky-900">
             <FaExclamationTriangle className="mt-0.5 shrink-0" />
             <span>
-              PINs are shown once and never stored in a readable form. Print the
-              sheet before closing the tab.
+              A card is a key to that child&apos;s record. Hand each one to the
+              named guardian rather than sending them home in a pile.
             </span>
           </p>
 

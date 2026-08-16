@@ -117,7 +117,7 @@ export async function GET(request, { params }) {
       .skip((page - 1) * limit)
       .limit(limit)
       .select(
-        "senderType senderParent senderName body attachments replyTo transcript createdAt readByStaffAt"
+        "senderType senderParent senderName subject body attachments replyTo transcript createdAt readByStaffAt"
       )
       .lean();
 
@@ -137,7 +137,8 @@ export async function GET(request, { params }) {
       conversation: {
         id: String(conversation._id),
         topic: conversation.topic,
-        title: conversation.routedToLabel || conversation.subject || "School",
+        title: conversation.routedToLabel || "School",
+        subject: conversation.subject || "",
         isAnnouncement: conversation.originType === "SCHOOL_ANNOUNCEMENT",
         status: conversation.status,
       },
@@ -148,6 +149,9 @@ export async function GET(request, { params }) {
           String(message.senderParent) === String(parent._id),
         senderType: message.senderType,
         senderName: message.senderName || "",
+        // Present only on announcements; the UI renders it as a headline above
+        // the body so the guardian reads WHAT this is before the detail.
+        subject: message.subject || "",
         body: message.body || "",
         attachments: message.attachments || [],
         replyTo: message.replyTo ? String(message.replyTo) : null,

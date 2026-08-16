@@ -2,34 +2,32 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react";
 import QRCode from "qrcode";
-import {
-  FaTimes,
-  FaCopy,
-  FaShareAlt,
-  FaPrint,
-  FaCheck,
-} from "react-icons/fa";
+import { FaTimes, FaCopy, FaShareAlt, FaPrint, FaCheck } from "react-icons/fa";
 
 /**
- * Show a freshly-issued Parent Access Card on screen.
+ * Show a guardian's Parent Access Card on screen.
  *
  * Printing is one option, not the only one. A guardian who lives an hour from
  * the school is not going to collect a piece of paper — the realistic path is a
- * screenshot sent over WhatsApp, so the card is shown large enough to photograph
- * and the details are one tap from the clipboard.
+ * screenshot sent over WhatsApp, so the card is shown large enough to
+ * photograph and the Parent ID is one tap from the clipboard.
  *
- * The QR is rendered here rather than fetched, so it can be scanned straight off
- * the screen: hold the parent's phone up to the office monitor and it works.
+ * The QR is rendered here rather than fetched, so it can be scanned straight
+ * off the screen: hold the parent's phone up to the office monitor and it works.
  *
- * These credentials exist only in the response that opened this dialog. Once it
- * closes they are gone — hence the warning, and hence Copy/Share being as
- * prominent as Print.
+ * Unlike the version this replaces, nothing here is "shown once" — the card
+ * carries only the Parent ID, which is stored in readable form, so staff can
+ * reopen this dialog whenever a family mislays their copy. What IS worth saying
+ * out loud is that the ID is the whole credential: sending it to the wrong
+ * number hands over the child's record.
  */
 export default function ParentCardDialog({
-  card,
+  parentIdentifier,
+  linkId,
   schoolName,
   studentName,
   guardianName,
+  rotated = false,
   onClose,
 }) {
   const [qrSvg, setQrSvg] = useState("");
@@ -45,14 +43,14 @@ export default function ParentCardDialog({
   );
 
   const siteUrl = typeof window !== "undefined" ? window.location.origin : "";
-  const activateUrl = `${siteUrl}/parent/activate?t=${encodeURIComponent(
-    card.activationToken
+  const loginUrl = `${siteUrl}/parent/login?id=${encodeURIComponent(
+    parentIdentifier
   )}`;
 
   useEffect(() => {
     let active = true;
 
-    QRCode.toString(activateUrl, {
+    QRCode.toString(loginUrl, {
       type: "svg",
       errorCorrectionLevel: "M",
       margin: 1,
@@ -61,19 +59,19 @@ export default function ParentCardDialog({
     })
       .then((svg) => active && setQrSvg(svg))
       .catch(() => {
-        // The ID and PIN below are an independent way in, so a missing QR is
+        // The ID below is the same credential typed out, so a missing QR is
         // survivable rather than fatal.
       });
 
     return () => {
       active = false;
     };
-  }, [activateUrl]);
+  }, [loginUrl]);
 
   /**
    * Plain text a parent can actually act on, written for a WhatsApp message
    * rather than for a developer. Includes the link so a tap is enough on a
-   * phone, and the ID/PIN so it still works if the link is stripped.
+   * phone, and the ID so it still works if the link is stripped.
    */
   const shareText = [
     `${schoolName} — Pravyo Parent Access`,
@@ -81,13 +79,12 @@ export default function ParentCardDialog({
     `Child: ${studentName}`,
     `Guardian: ${guardianName}`,
     "",
-    `Parent ID: ${card.parentIdentifier}`,
-    `PIN: ${card.activationPin}`,
+    `Parent ID: ${parentIdentifier}`,
     "",
-    `Open this link to connect:`,
-    activateUrl,
+    "Open this link to sign in:",
+    loginUrl,
     "",
-    `Keep your PIN private.`,
+    "Keep this private — it opens your child's record.",
   ].join("\n");
 
   const copy = async () => {
@@ -114,9 +111,7 @@ export default function ParentCardDialog({
 
   const print = () => {
     window.open(
-      `/school/guardians/card?activation=${encodeURIComponent(card.activationId)}` +
-        `&pin=${encodeURIComponent(card.activationPin)}` +
-        `&token=${encodeURIComponent(card.activationToken)}`,
+      `/school/guardians/card?link=${encodeURIComponent(linkId)}`,
       "_blank",
       "noopener"
     );
@@ -145,10 +140,17 @@ export default function ParentCardDialog({
         </header>
 
         <div className="px-5 py-5">
-          <p className="rounded-xl bg-amber-50 px-4 py-3 text-xs font-semibold text-amber-900">
-            Shown once. Send it to {guardianName} now — screenshot, share, or
-            print. It cannot be shown again.
-          </p>
+          {rotated ? (
+            <p className="rounded-xl bg-amber-50 px-4 py-3 text-xs font-semibold text-amber-900">
+              This is a new Parent ID. {guardianName}&apos;s old card no longer
+              works and they have been signed out — send them this one.
+            </p>
+          ) : (
+            <p className="rounded-xl bg-emerald-50 px-4 py-3 text-xs font-semibold text-emerald-900">
+              Send this to {guardianName} — share it, print it, or let them scan
+              the code off this screen. You can open this again at any time.
+            </p>
+          )}
 
           {/* Big enough to scan straight off the screen, or photograph. */}
           <div className="mt-4 rounded-2xl border-2 border-[#e1e7f2] p-4 text-center">
@@ -165,25 +167,15 @@ export default function ParentCardDialog({
               dangerouslySetInnerHTML={{ __html: qrSvg }}
             />
 
-            <div className="mt-3 grid grid-cols-2 gap-3">
-              <div className="rounded-xl border-2 border-[#e1e7f2] px-2 py-2">
-                <p className="text-[10px] font-black uppercase tracking-widest text-[#75869b]">
-                  Parent ID
-                </p>
-                {/* Selectable, so it can be copied by hand if the clipboard
-                    API is blocked. */}
-                <p className="select-all font-mono text-base font-black tracking-wider text-[#17120a]">
-                  {card.parentIdentifier}
-                </p>
-              </div>
-              <div className="rounded-xl border-2 border-[#e1e7f2] px-2 py-2">
-                <p className="text-[10px] font-black uppercase tracking-widest text-[#75869b]">
-                  PIN
-                </p>
-                <p className="select-all font-mono text-base font-black tracking-wider text-[#17120a]">
-                  {card.activationPin}
-                </p>
-              </div>
+            <div className="mt-3 rounded-xl border-2 border-[#e1e7f2] px-3 py-2">
+              <p className="text-[10px] font-black uppercase tracking-widest text-[#75869b]">
+                Parent ID
+              </p>
+              {/* Selectable, so it can be copied by hand if the clipboard
+                  API is blocked. */}
+              <p className="select-all font-mono text-xl font-black tracking-wider text-[#17120a]">
+                {parentIdentifier}
+              </p>
             </div>
           </div>
 
@@ -225,9 +217,8 @@ export default function ParentCardDialog({
           </div>
 
           <p className="mt-4 text-center text-[11px] leading-relaxed text-[#75869b]">
-            Sending a PIN over WhatsApp is less private than handing over paper.
-            For a guardian who cannot come to the school it is usually the right
-            trade — they can change nothing until they set their own PIN.
+            The Parent ID is the whole sign-in — treat it like a key. Send it
+            only to the guardian named above, and check the number first.
           </p>
 
           <button

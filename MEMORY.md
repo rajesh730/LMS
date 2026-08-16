@@ -55,12 +55,18 @@ several schools, so the `User.schoolName` shape does not fit. `/parent/login`
 sends `loginScope: "parent"` so the credentials provider checks `Parent` first —
 without it a teacher who is also a parent could never reach the Parent App.
 
-Guardians authenticate with a **Parent ID + 6-digit PIN**, not an email and
-password: a phone number and email address are both optional on `Parent`, and
+Guardians authenticate with a **Parent ID alone** — no email, password or PIN.
+A phone number and email address are both optional on `Parent`, and
 `Parent.password` is optional too. The school prints a Parent Access Card
-(QR + `PRV-P-XXXXXX` + activation PIN); the parent scans or types it at
-`/parent/access`. Credentials live in `lib/parentCredentials.js` — every secret
-is hashed at rest and shown exactly once. See `docs/PARENT_APP.md`.
+(QR + `PRV-P-XXXXXX`); the parent scans it or types the ID at `/parent/login`,
+and that is the whole journey — there is no activation step.
+
+**The Parent ID is therefore a credential, not just an identifier.** Treat it
+like a password: never log it, never put it in a shared URL, never show it
+outside school staff. A lost card is killed by issuing a new one, which rotates
+the ID. The trade (dropping the second factor to remove the PIN-creation wall
+for low-digital-confidence guardians) was made deliberately — the reasoning and
+its cost are written out in `lib/parentCredentials.js` and `docs/PARENT_APP.md`.
 
 Schools carry a lifecycle status: `PENDING` → `APPROVED` / `REJECTED`, plus
 `SUBSCRIBED` / `UNSUBSCRIBED`. Access is granted for `APPROVED` and `SUBSCRIBED`

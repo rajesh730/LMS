@@ -7,14 +7,18 @@ import QRCode from "qrcode";
  * package already in the project (same approach as CertificateSheet) — no
  * external QR service, no network call, and it stays crisp at any print size.
  *
+ * The card carries exactly one credential: the Parent ID. Scanning the QR and
+ * typing that ID are the same act — the QR just saves the typing — so the card
+ * is a key, and the footer says so in words a guardian will act on.
+ *
  * Print constraints this design is built around, because the card's real job
  * happens on a school office printer:
  *
  *  - **Black and white must work.** Nothing depends on colour; the QR is pure
  *    black, borders are solid rules, and there are no tints behind text.
- *  - **Readable at arm's length.** The Parent ID and PIN are set large and
- *    monospaced with wide tracking, because they get read aloud and typed by
- *    someone who may not be confident with Latin characters.
+ *  - **Readable at arm's length.** The Parent ID is set large and monospaced
+ *    with wide tracking, because it gets read aloud and typed by someone who
+ *    may not be confident with Latin characters.
  *  - **Bilingual by default.** Nepali sits alongside English on the card
  *    itself — a card a guardian cannot read is a card that does not work (§10).
  *  - **No technical language.** No "token", "credential" or "activation" (§68).
@@ -26,13 +30,11 @@ export default async function ParentAccessCard({
   guardianName,
   relationshipLabel,
   parentIdentifier,
-  activationPin,
-  activateUrl,
-  expiresAt,
+  loginUrl,
 }) {
   // Error-correction level M survives a fold, a smudge, or a mediocre
   // photocopy — all of which happen to a card that lives in a school bag.
-  const qrSvg = await QRCode.toString(activateUrl, {
+  const qrSvg = await QRCode.toString(loginUrl, {
     type: "svg",
     errorCorrectionLevel: "M",
     margin: 1,
@@ -66,8 +68,8 @@ export default async function ParentAccessCard({
       </section>
 
       <section className="pac-qr-block">
-        <p className="pac-scan">SCAN TO CONNECT</p>
-        <p className="pac-scan-ne">जोड्न स्क्यान गर्नुहोस्</p>
+        <p className="pac-scan">SCAN TO SIGN IN</p>
+        <p className="pac-scan-ne">साइन इन गर्न स्क्यान गर्नुहोस्</p>
         <div
           className="pac-qr"
           // Inline SVG from the qrcode package — generated on the server from
@@ -76,38 +78,30 @@ export default async function ParentAccessCard({
         />
       </section>
 
-      <p className="pac-or">OR / अथवा</p>
+      <p className="pac-or">OR TYPE THIS / अथवा यो टाइप गर्नुहोस्</p>
 
       <section className="pac-credentials">
         <div className="pac-cred">
-          <p className="pac-label">Parent ID</p>
+          <p className="pac-label">Parent ID / अभिभावक आईडी</p>
           <p className="pac-value">{parentIdentifier}</p>
-        </div>
-        <div className="pac-cred">
-          <p className="pac-label">PIN</p>
-          <p className="pac-value">{activationPin}</p>
         </div>
       </section>
 
       <footer className="pac-footer">
-        <p className="pac-help">
-          Need help? Please contact the school office.
-        </p>
+        <p className="pac-help">Need help? Please contact the school office.</p>
         <p className="pac-help-ne">
           सहयोग चाहिएमा विद्यालयको कार्यालयमा सम्पर्क गर्नुहोस्।
         </p>
-        {expiresAt ? (
-          <p className="pac-expiry">
-            Please connect before{" "}
-            {new Date(expiresAt).toLocaleDateString("en-GB", {
-              day: "numeric",
-              month: "long",
-              year: "numeric",
-            })}
-          </p>
-        ) : null}
+        {/* The one thing a guardian must understand about this card: it opens
+            their child's record on its own. Worded as "like a key" rather than
+            as a security instruction, because that is what lands (§68). */}
         <p className="pac-warning">
-          Keep this card safe. Do not share your PIN with anyone.
+          Keep this card safe — it opens your child&apos;s record, like a key.
+          If you lose it, tell the school and they will give you a new one.
+        </p>
+        <p className="pac-help-ne">
+          यो कार्ड सुरक्षित राख्नुहोस् — यसले तपाईंको बच्चाको विवरण खोल्छ।
+          हराएमा विद्यालयलाई भन्नुहोस्।
         </p>
       </footer>
     </article>

@@ -46,7 +46,7 @@ function session(overrides = {}) {
       id: PARENT_A,
       role: "PARENT",
       deviceMode: "PERSONAL",
-      pinVerifiedAt: Date.now(),
+      signedInAt: Date.now(),
       ...overrides,
     },
   });
@@ -71,8 +71,8 @@ describe("personal device (§12)", () => {
   it("stays signed in indefinitely", async () => {
     session({
       deviceMode: "PERSONAL",
-      // Verified a long time ago — irrelevant for a personal device.
-      pinVerifiedAt: Date.now() - 30 * 24 * 60 * 60 * 1000,
+      // Signed in a long time ago — irrelevant for a personal device.
+      signedInAt: Date.now() - 30 * 24 * 60 * 60 * 1000,
     });
     activeParent();
 
@@ -86,7 +86,7 @@ describe("shared device (§12)", () => {
   it("works inside the idle window", async () => {
     session({
       deviceMode: "SHARED",
-      pinVerifiedAt: Date.now() - (SHARED_DEVICE_IDLE_MS - 60_000),
+      signedInAt: Date.now() - (SHARED_DEVICE_IDLE_MS - 60_000),
     });
     activeParent();
 
@@ -94,10 +94,10 @@ describe("shared device (§12)", () => {
     expect(result.error).toBeUndefined();
   });
 
-  it("demands the PIN again once idle", async () => {
+  it("ends the session once idle", async () => {
     session({
       deviceMode: "SHARED",
-      pinVerifiedAt: Date.now() - (SHARED_DEVICE_IDLE_MS + 60_000),
+      signedInAt: Date.now() - (SHARED_DEVICE_IDLE_MS + 60_000),
     });
     activeParent();
 
@@ -105,18 +105,19 @@ describe("shared device (§12)", () => {
     const json = await error.json();
 
     expect(error.status).toBe(401);
-    // A distinct code so the app can show "enter your PIN" rather than dumping
-    // the guardian at a full sign-in they may not know how to complete.
-    expect(json.code).toBe("PIN_REQUIRED");
+    // A distinct code so the app can explain WHY they were signed out. There
+    // is no PIN to challenge for any more — the guardian re-enters the Parent
+    // ID from their card, which is a smaller ask than the screen it replaced.
+    expect(json.code).toBe("SESSION_EXPIRED");
   });
 
-  it("demands the PIN when the timestamp is missing entirely", async () => {
-    session({ deviceMode: "SHARED", pinVerifiedAt: null });
+  it("ends the session when the timestamp is missing entirely", async () => {
+    session({ deviceMode: "SHARED", signedInAt: null });
     activeParent();
 
     const { error } = await requireParentSession();
     const json = await error.json();
-    expect(json.code).toBe("PIN_REQUIRED");
+    expect(json.code).toBe("SESSION_EXPIRED");
   });
 });
 

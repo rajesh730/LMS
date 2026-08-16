@@ -63,10 +63,16 @@ const ParentSchema = new mongoose.Schema(
       trim: true,
     },
 
-    // The permanent, human-readable handle printed on the Parent Access Card
-    // (§2). Identifies the account; never authenticates it. Assigned at
-    // creation and never rotated — a reissued card keeps the same Parent ID
-    // (§6: "Do not unnecessarily expire the permanent Parent ID").
+    // The human-readable handle printed on the Parent Access Card (§2), and —
+    // since the guardian PIN was removed — the guardian's ONLY credential.
+    //
+    // Stable in normal use: it survives reprinting a card, adding a second
+    // child, and a school revoking and restoring access. It is rotated in
+    // exactly one case, `issueParentAccess({ purpose: "REISSUE" })`, because a
+    // lost card can only be made harmless by changing the thing printed on it.
+    //
+    // Being a credential, it must not be exposed to anyone but school staff and
+    // the guardian: no public pages, no URLs that get shared onward, no logs.
     parentId: {
       type: String,
       trim: true,
@@ -77,7 +83,7 @@ const ParentSchema = new mongoose.Schema(
 
     // --- Contact: OPTIONAL, both of them (§3, §21) ------------------------
     // A guardian with neither a phone nor an email is a fully valid guardian.
-    // These are CONTACT METHODS, not identity. Identity is parentId + PIN.
+    // These are CONTACT METHODS, not identity. Identity is the parentId.
     email: {
       type: String,
       required: false,
@@ -101,8 +107,15 @@ const ParentSchema = new mongoose.Schema(
       type: String,
       required: false,
     },
-    // bcrypt hash of the guardian's 6-digit Pravyo PIN (§11). Never plaintext,
-    // never returned by any API, never logged.
+    // --- DEAD FIELDS: the guardian PIN ------------------------------------
+    // Kept declared, and only for that reason. Guardians sign in with their
+    // Parent ID alone; nothing reads or writes any of these four any more.
+    //
+    // They stay because dropping fields from a schema does not remove them from
+    // documents already in Atlas, and a half-migrated collection where some
+    // guardians carry a stale `pinHash` and others do not is worse than four
+    // inert columns. Declared here so a future reader finds them explained
+    // rather than mysterious. Safe to drop in a deliberate migration.
     pinHash: {
       type: String,
       default: "",
@@ -112,7 +125,6 @@ const ParentSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
-    // Brute-force protection (§7, §52). Reset on a successful sign-in.
     failedPinAttempts: {
       type: Number,
       default: 0,
@@ -130,9 +142,9 @@ const ParentSchema = new mongoose.Schema(
       type: String,
       enum: [
         "NOT_CREATED", // no access card has ever been issued
-        "PENDING_ACTIVATION", // card issued, not yet activated
-        "ACTIVATED", // PIN set, guardian can sign in
-        "LOCKED", // too many failed PIN attempts
+        "PENDING_ACTIVATION", // card issued, guardian has not signed in yet
+        "ACTIVATED", // guardian has signed in at least once
+        "LOCKED", // legacy: only ever set by the removed PIN lockout
         "REVOKED", // school withdrew access
       ],
       default: "NOT_CREATED",
@@ -211,14 +223,15 @@ const ParentSchema = new mongoose.Schema(
  * school's "add guardian" form, and self-registration. A hook is the only place
  * that all four cannot forget.
  *
- * Assigning it early is safe because the Parent ID is an IDENTIFIER, not a
- * credential (§53): knowing `PRV-P-X7K4Q9` grants nothing on its own, and
- * authentication always requires the PIN. Withholding it until a card was
- * printed just meant the roster showed a blank column and staff could not read
- * a guardian their ID over the phone.
+ * Note this hook only ever FILLS A MISSING value, which matters more than it
+ * used to: the Parent ID is now the guardian's credential, so a hook that
+ * regenerated one would silently sign a family out. Rotation is a deliberate
+ * act and lives in `issueParentAccess`, not here.
  *
- * Assigned once and never rotated — a reissued card keeps the same Parent ID
- * (§6), which is why this only fills a missing value.
+ * Assigning it at creation — before any card is printed — is still right. The
+ * roster needs the column filled so staff can read a guardian their ID over the
+ * phone, and an ID that exists but has never been printed is not reachable by
+ * anyone: `accessState` gates sign-in independently.
  */
 // Static import, and an async hook with NO `next` callback. An earlier version
 // used a dynamic `import()` inside the hook and mixed it with `next()`: the

@@ -219,6 +219,19 @@ function Bubble({ message }) {
           </p>
         ) : null}
 
+        {/* Mirrors the parent's view — staff should see the announcement the
+            way the family reads it, headline included. */}
+        {message.subject ? (
+          <p
+            className={[
+              "mb-1.5 border-b pb-1 text-sm font-black leading-snug",
+              mine ? "border-white/25" : "border-[#e1e7f2] text-[#17120a]",
+            ].join(" ")}
+          >
+            {message.subject}
+          </p>
+        ) : null}
+
         {message.attachments?.map((attachment, index) => (
           <Attachment key={index} attachment={attachment} mine={mine} />
         ))}

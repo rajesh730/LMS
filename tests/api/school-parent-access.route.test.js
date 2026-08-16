@@ -104,10 +104,8 @@ beforeEach(() => {
   });
   issueParentAccess.mockResolvedValue({
     parentIdentifier: "PRV-P-X7K4Q9",
-    activationPin: "582914",
-    activationToken: "tok",
-    activationId: "act-1",
-    expiresAt: new Date(),
+    rotated: false,
+    purpose: "INITIAL",
   });
 });
 
@@ -184,23 +182,10 @@ describe("tenant isolation (§56)", () => {
 });
 
 describe("access status never leaks secrets (§52)", () => {
-  it("returns state and a PIN hint, never a hash or a token", async () => {
+  it("returns the guardian's state and Parent ID, never a hash", async () => {
     signedInAs(SCHOOL_A);
     ParentStudentLink.findById.mockResolvedValue(linkAt(SCHOOL_A));
     Parent.findOne.mockResolvedValue(parentDoc());
-    ParentActivation.findOne.mockReturnValue({
-      sort: () => ({
-        select: () => ({
-          lean: () =>
-            Promise.resolve({
-              pinHint: "14",
-              expiresAt: new Date(),
-              purpose: "INITIAL",
-              createdAt: new Date(),
-            }),
-        }),
-      }),
-    });
 
     const res = await GET(
       new Request(
@@ -210,7 +195,12 @@ describe("access status never leaks secrets (§52)", () => {
     const json = await res.json();
     const body = JSON.stringify(json);
 
-    expect(json.data.pendingActivation.pinHint).toBe("14");
+    expect(json.data.accessState).toBe("ACTIVATED");
+    // The Parent ID IS the credential now, so this endpoint hands one out. That
+    // is deliberate — staff read it back to a guardian who mislaid their card —
+    // and it is why every branch above proves the route is staff-only and
+    // same-school. Nothing hashed or internal may ride along with it.
+    expect(json.data.parentIdentifier).toBe("PRV-P-X7K4Q9");
     expect(body).not.toMatch(/pinHash|tokenHash|activationPinHash/);
   });
 });
@@ -241,22 +231,35 @@ describe("revocation semantics (§44)", () => {
     expect(issueParentAccess).not.toHaveBeenCalled();
   });
 
-  it("UNLOCK clears the lock without issuing anything", async () => {
+  it("RESTORE_ACCESS puts a connected guardian straight back to ACTIVATED", async () => {
     signedInAs(SCHOOL_A);
     ParentStudentLink.findById.mockResolvedValue(linkAt(SCHOOL_A));
     const parent = parentDoc({
-      accessState: "LOCKED",
-      lockedUntil: new Date(Date.now() + 60000),
-      failedPinAttempts: 5,
+      accessState: "REVOKED",
+      activatedAt: new Date("2026-02-01"),
     });
     Parent.findOne.mockResolvedValue(parent);
 
-    const res = await PATCH(request({ linkId: LINK_ID, action: "UNLOCK" }, "PATCH"));
+    const res = await PATCH(
+      request({ linkId: LINK_ID, action: "RESTORE_ACCESS" }, "PATCH")
+    );
 
+    // Revocation suspends sign-in but never rotates the Parent ID, so the card
+    // the guardian already holds starts working again — no reprint needed.
     expect(res.status).toBe(200);
-    expect(parent.lockedUntil).toBeNull();
-    expect(parent.failedPinAttempts).toBe(0);
+    expect(parent.accessState).toBe("ACTIVATED");
     expect(issueParentAccess).not.toHaveBeenCalled();
+  });
+
+  it("RESTORE_ACCESS returns a never-connected guardian to waiting", async () => {
+    signedInAs(SCHOOL_A);
+    ParentStudentLink.findById.mockResolvedValue(linkAt(SCHOOL_A));
+    const parent = parentDoc({ accessState: "REVOKED", activatedAt: null });
+    Parent.findOne.mockResolvedValue(parent);
+
+    await PATCH(request({ linkId: LINK_ID, action: "RESTORE_ACCESS" }, "PATCH"));
+
+    expect(parent.accessState).toBe("PENDING_ACTIVATION");
   });
 });
 

@@ -1,34 +1,83 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
-import PinInput from "@/components/parent/PinInput";
-import QrCardScanner, {
-  extractActivationToken,
-} from "@/components/parent/QrCardScanner";
+import QrCardScanner, { readParentCard } from "@/components/parent/QrCardScanner";
 
 /**
- * Returning guardian sign-in (§13, §15).
+ * Parent sign-in — the only door into the Parent App.
  *
- * **Primary: Parent ID + PIN.** No email, no phone, no password — the two
- * things printed on the Parent Access Card are all that is needed.
+ * Two ways through it, and nothing else:
  *
- * **Secondary: the old email/password form**, kept behind "Other sign-in
- * options". §57 is explicit that existing guardians must not be forced to
- * migrate, so that path stays live rather than being deleted; it is simply no
- * longer the default.
+ *   📷 **Scan the card** — one tap, nothing typed.
+ *   🔑 **Type the Parent ID** — one field, then Continue.
  *
- * The device question is asked here too, because a guardian may sign in on a
- * borrowed handset even though their own phone is personal (§12).
+ * There is no PIN to create, no PIN to remember, no separate "activate your
+ * card" journey, and no first-run wizard. The first sign-in and the hundredth
+ * are the same three seconds. A guardian who has been handed a card should
+ * never be asked to invent a secret before they can see their own child.
+ *
+ * What that costs is real and is documented in lib/parentCredentials.js: the
+ * card is now a key, and whoever holds it can sign in. The school kills a lost
+ * one by issuing a new card, which changes the Parent ID.
+ *
+ * The old email/password form stays behind "Other ways to sign in" — guardians
+ * who registered that way are not forced to migrate (§57).
  */
 export default function ParentLoginPage() {
-  const router = useRouter();
-  const [mode, setMode] = useState("PIN");
+  return (
+    <Suspense fallback={<Centred text="Loading…" />}>
+      <ParentLogin />
+    </Suspense>
+  );
+}
 
+const TEXT = {
+  en: {
+    welcome: "Welcome",
+    intro: "Use the Parent Card your school gave you.",
+    parentId: "Parent ID",
+    idHint: "The code on your card",
+    or: "OR",
+    continue: "Continue",
+    working: "Please wait…",
+    shared: "This phone is shared with others",
+    otherWays: "Other ways to sign in",
+    backToCard: "Use my Parent Card",
+    noCard: "No card yet?",
+    askSchool: "Please ask your school office for your Parent Card.",
+    notACard: "That code is not a Pravyo Parent Card.",
+    failed: "Something went wrong. Please try again.",
+  },
+  ne: {
+    welcome: "स्वागत छ",
+    intro: "विद्यालयले दिएको अभिभावक कार्ड प्रयोग गर्नुहोस्।",
+    parentId: "अभिभावक आईडी",
+    idHint: "तपाईंको कार्डमा भएको कोड",
+    or: "अथवा",
+    continue: "अगाडि बढ्नुहोस्",
+    working: "कृपया पर्खनुहोस्…",
+    shared: "यो फोन अरूसँग साझा छ",
+    otherWays: "अन्य तरिकाले साइन इन गर्नुहोस्",
+    backToCard: "मेरो अभिभावक कार्ड प्रयोग गर्ने",
+    noCard: "कार्ड छैन?",
+    askSchool: "कृपया विद्यालयको कार्यालयमा अभिभावक कार्ड माग्नुहोस्।",
+    notACard: "यो कोड प्राव्यो अभिभावक कार्ड होइन।",
+    failed: "केही गडबड भयो। कृपया फेरि प्रयास गर्नुहोस्।",
+  },
+};
+
+function ParentLogin() {
+  const searchParams = useSearchParams();
+  // A scanned card lands here as a query parameter: `?id=` from a current
+  // card, `?t=` from a legacy one redirected via /parent/activate.
+  const scannedId = searchParams.get("id");
+  const scannedToken = searchParams.get("t");
+
+  const [language, setLanguage] = useState("en");
+  const [mode, setMode] = useState("CARD");
   const [parentId, setParentId] = useState("");
-  const [pin, setPin] = useState("");
   const [sharedDevice, setSharedDevice] = useState(false);
 
   const [identifier, setIdentifier] = useState("");
@@ -37,130 +86,185 @@ export default function ParentLoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const t = TEXT[language];
+
+  // Full navigation rather than router.push: the session cookie has to be in
+  // place before the middleware evaluates /parent.
   const finish = (result) => {
     if (result?.error) {
       setError(result.error);
-      setPin("");
+      setLoading(false);
       return;
     }
-    // Full navigation, not router.push: the session cookie must be in place
-    // before the middleware evaluates /parent.
     window.location.assign("/parent");
   };
 
-  const submitPin = async (event) => {
-    event.preventDefault();
-    setError("");
-    setLoading(true);
-    try {
-      finish(
-        await signIn("credentials", {
+  const enter = useCallback(
+    async (credentials) => {
+      setError("");
+      setLoading(true);
+      try {
+        const result = await signIn("credentials", {
           loginScope: "parent",
-          parentId: parentId.trim(),
-          pin,
+          language,
           deviceMode: sharedDevice ? "SHARED" : "PERSONAL",
           redirect: false,
-        })
-      );
-    } catch {
-      setError("Something went wrong. Please try again.");
-    } finally {
-      setLoading(false);
-    }
+          ...credentials,
+        });
+        if (result?.error) {
+          setError(result.error);
+          setLoading(false);
+          return;
+        }
+        window.location.assign("/parent");
+      } catch {
+        setError(TEXT[language].failed);
+        setLoading(false);
+      }
+    },
+    [language, sharedDevice]
+  );
+
+  // A card scanned with the phone's own camera app opens this page directly.
+  // Sign the guardian in rather than making them retype what they just scanned.
+  // Guarded by a ref so React's double-invoked effects cannot fire two logins.
+  const autoSubmitted = useRef(false);
+  useEffect(() => {
+    if (autoSubmitted.current) return;
+    if (!scannedId && !scannedToken) return;
+    autoSubmitted.current = true;
+
+    // Inside an async callback rather than the effect body: signing in is work
+    // to be started, not state to be synchronised, and calling it synchronously
+    // here would cascade renders.
+    (async () => {
+      if (scannedToken) {
+        await enter({ cardToken: scannedToken });
+        return;
+      }
+      // Fill the field too, so a failure leaves the guardian looking at the ID
+      // that did not work rather than an empty box.
+      setParentId(scannedId.toUpperCase());
+      await enter({ parentId: scannedId });
+    })();
+  }, [scannedId, scannedToken, enter]);
+
+  const submitCard = (event) => {
+    event.preventDefault();
+    enter({ parentId: parentId.trim() });
   };
 
-  const submitLegacy = async (event) => {
+  const submitLegacy = (event) => {
     event.preventDefault();
-    setError("");
-    setLoading(true);
-    try {
-      finish(
-        await signIn("credentials", {
-          loginScope: "parent",
-          email: identifier.trim(),
-          password,
-          redirect: false,
-        })
-      );
-    } catch {
-      setError("Something went wrong. Please try again.");
-    } finally {
-      setLoading(false);
+    enter({ email: identifier.trim(), password });
+  };
+
+  const handleScan = (raw) => {
+    const card = readParentCard(raw);
+    if (!card) {
+      setError(t.notACard);
+      return;
     }
+    if (card.parentId) setParentId(card.parentId);
+    enter(card);
   };
 
   return (
     <main className="flex min-h-screen flex-col justify-center bg-[var(--background)] px-5 py-10">
       <div className="mx-auto w-full max-w-sm">
-        <div className="mb-8 text-center">
-          <p className="text-4xl" aria-hidden="true">
+        {/* Language first and always visible. A guardian who cannot read the
+            screen cannot be asked to choose a language further in. */}
+        <div className="mb-6 flex justify-center gap-2">
+          {[
+            { code: "en", label: "English" },
+            { code: "ne", label: "नेपाली" },
+          ].map((option) => (
+            <button
+              key={option.code}
+              type="button"
+              onClick={() => setLanguage(option.code)}
+              aria-pressed={language === option.code}
+              className={[
+                "min-h-[40px] rounded-full px-4 text-sm font-bold transition-colors",
+                language === option.code
+                  ? "bg-[var(--brand-primary)] text-white"
+                  : "border border-[var(--brand-border)] bg-white text-[var(--brand-muted)]",
+              ].join(" ")}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="mb-7 text-center">
+          <p className="text-5xl" aria-hidden="true">
             👨‍👩‍👧
           </p>
           <h1 className="mt-3 text-2xl font-bold text-[var(--brand-ink)]">
-            Welcome Back
+            {t.welcome}
           </h1>
-          <p className="mt-1 text-base text-[var(--brand-muted)]">
-            फेरि स्वागत छ
+          <p className="mt-2 text-sm leading-relaxed text-[var(--brand-muted)]">
+            {t.intro}
           </p>
         </div>
 
-        {mode === "PIN" ? (
-          <form onSubmit={submitPin} className="space-y-5">
-            <div>
-              <label
-                htmlFor="parentId"
-                className="block text-base font-bold text-[var(--brand-ink)]"
-              >
-                Parent ID
+        {mode === "CARD" ? (
+          <>
+            <QrCardScanner onDetected={handleScan} />
+
+            <p className="py-4 text-center text-sm font-semibold text-[var(--brand-muted)]">
+              {t.or}
+            </p>
+
+            <form onSubmit={submitCard} className="space-y-4">
+              <div>
+                <label
+                  htmlFor="parentId"
+                  className="block text-base font-bold text-[var(--brand-ink)]"
+                >
+                  {t.parentId}
+                </label>
+                <p className="text-sm text-[var(--brand-muted)]">
+                  {t.idHint} — PRV-P-XXXXXX
+                </p>
+                <input
+                  id="parentId"
+                  type="text"
+                  inputMode="text"
+                  autoCapitalize="characters"
+                  autoComplete="username"
+                  autoFocus
+                  value={parentId}
+                  onChange={(event) =>
+                    setParentId(event.target.value.toUpperCase())
+                  }
+                  required
+                  placeholder="PRV-P-XXXXXX"
+                  className="mt-2 min-h-[64px] w-full rounded-xl border-2 border-[var(--brand-border)] px-4 text-center font-mono text-xl tracking-[0.15em] focus:border-[var(--brand-primary)] focus:outline-none"
+                />
+              </div>
+
+              <label className="flex min-h-[48px] items-center gap-3 text-sm text-[var(--brand-ink)]">
+                <input
+                  type="checkbox"
+                  checked={sharedDevice}
+                  onChange={(event) => setSharedDevice(event.target.checked)}
+                  className="h-5 w-5"
+                />
+                {t.shared}
               </label>
-              <input
-                id="parentId"
-                type="text"
-                inputMode="text"
-                autoCapitalize="characters"
-                autoComplete="username"
-                value={parentId}
-                onChange={(event) => setParentId(event.target.value.toUpperCase())}
-                required
-                placeholder="PRV-P-XXXXXX"
-                className="mt-2 min-h-[60px] w-full rounded-xl border-2 border-[var(--brand-border)] px-4 text-center font-mono text-xl tracking-[0.15em] focus:border-[var(--brand-primary)] focus:outline-none"
-              />
-            </div>
 
-            <div>
-              <label className="block text-base font-bold text-[var(--brand-ink)]">
-                PIN
-              </label>
-              <PinInput value={pin} onChange={setPin} disabled={loading} />
-            </div>
+              {error ? <ErrorNote>{error}</ErrorNote> : null}
 
-            <label className="flex min-h-[48px] items-center gap-3 text-sm text-[var(--brand-ink)]">
-              <input
-                type="checkbox"
-                checked={sharedDevice}
-                onChange={(event) => setSharedDevice(event.target.checked)}
-                className="h-5 w-5"
-              />
-              This phone is shared with others
-            </label>
-
-            {error ? (
-              <p
-                role="alert"
-                className="rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-800"
+              <button
+                type="submit"
+                disabled={loading || !parentId.trim()}
+                className="min-h-[60px] w-full rounded-xl bg-[var(--brand-primary)] text-lg font-bold text-white disabled:opacity-40"
               >
-                {error}
-              </p>
-            ) : null}
-
-            <button
-              type="submit"
-              disabled={loading || !parentId.trim() || pin.length !== 6}
-              className="min-h-[60px] w-full rounded-xl bg-[var(--brand-primary)] text-lg font-bold text-white disabled:opacity-40"
-            >
-              {loading ? "Please wait…" : "Continue"}
-            </button>
-          </form>
+                {loading ? t.working : t.continue}
+              </button>
+            </form>
+          </>
         ) : (
           <form onSubmit={submitLegacy} className="space-y-4">
             <p className="rounded-xl bg-sky-50 px-4 py-3 text-sm text-sky-900">
@@ -201,21 +305,14 @@ export default function ParentLoginPage() {
               />
             </div>
 
-            {error ? (
-              <p
-                role="alert"
-                className="rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-800"
-              >
-                {error}
-              </p>
-            ) : null}
+            {error ? <ErrorNote>{error}</ErrorNote> : null}
 
             <button
               type="submit"
               disabled={loading}
               className="min-h-[56px] w-full rounded-xl bg-[var(--brand-primary)] text-base font-bold text-white disabled:opacity-60"
             >
-              {loading ? "Signing in…" : "Sign in"}
+              {loading ? t.working : "Sign in"}
             </button>
           </form>
         )}
@@ -223,50 +320,40 @@ export default function ParentLoginPage() {
         <button
           type="button"
           onClick={() => {
-            setMode(mode === "PIN" ? "LEGACY" : "PIN");
+            setMode(mode === "CARD" ? "LEGACY" : "CARD");
             setError("");
           }}
           className="mt-6 min-h-[48px] w-full text-sm font-semibold text-[var(--brand-primary)]"
         >
-          {mode === "PIN" ? "Other sign-in options" : "Use Parent ID and PIN"}
+          {mode === "CARD" ? t.otherWays : t.backToCard}
         </button>
 
-        {/* A guardian who still has their card should never be stuck trying to
-            remember a Parent ID — scanning it fills everything in. */}
-        {mode === "PIN" ? (
-          <div className="mt-8">
-            <p className="pb-3 text-center text-sm font-semibold text-[var(--brand-muted)]">
-              OR / अथवा
-            </p>
-            <QrCardScanner
-              onDetected={(raw) => {
-                const token = extractActivationToken(raw);
-                if (!token) {
-                  setError("That code is not a Pravyo Parent Card.");
-                  return;
-                }
-                router.push(`/parent/activate?t=${encodeURIComponent(token)}`);
-              }}
-            />
-          </div>
-        ) : null}
-
-        <div className="mt-8 rounded-2xl border border-[var(--brand-border)] bg-white p-4 text-center">
+        <div className="mt-6 rounded-2xl border border-[var(--brand-border)] bg-white p-4 text-center">
           <p className="text-sm font-semibold text-[var(--brand-ink)]">
-            First time here?
+            {t.noCard}
           </p>
-          <Link
-            href="/parent/access"
-            className="mt-2 inline-flex min-h-[48px] w-full items-center justify-center rounded-xl border-2 border-[var(--brand-primary)] font-bold text-[var(--brand-primary)]"
-          >
-            Use your Parent Card
-          </Link>
+          <p className="mt-1 text-sm text-[var(--brand-muted)]">{t.askSchool}</p>
         </div>
-
-        <p className="mt-6 text-center text-sm text-[var(--brand-muted)]">
-          Forgot your PIN? Please contact your school office.
-        </p>
       </div>
+    </main>
+  );
+}
+
+function ErrorNote({ children }) {
+  return (
+    <p
+      role="alert"
+      className="rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-800"
+    >
+      {children}
+    </p>
+  );
+}
+
+function Centred({ text }) {
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-[var(--background)]">
+      <p className="text-sm text-[var(--brand-muted)]">{text}</p>
     </main>
   );
 }

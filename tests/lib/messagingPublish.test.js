@@ -100,6 +100,96 @@ describe("appendMessage", () => {
   });
 });
 
+/**
+ * The subject a school types must reach the parent.
+ *
+ * The bug these encode: the subject was stored on the CONVERSATION and only at
+ * creation time. A guardian keeps one thread per child for years, so the school
+ * typed "Sports day", "Fee reminder", "School closed Friday" — and every one
+ * after the very first was dropped on the floor. The parent saw bare message
+ * bodies with no headline at all.
+ */
+describe("message subject", () => {
+  it("stores the subject on the message, not just the thread", async () => {
+    await appendMessage({
+      conversation: CONVERSATION,
+      senderType: "STAFF",
+      senderStaff: "staff-1",
+      senderName: "Green Village",
+      subject: "Sports day",
+      body: "Please send a water bottle.",
+    });
+
+    const [doc] = Message.create.mock.calls[0];
+    expect(doc.subject).toBe("Sports day");
+    expect(doc.body).toBe("Please send a water bottle.");
+  });
+
+  it("keeps working on the second, third and hundredth announcement", async () => {
+    // The thread already exists — this is exactly the path that used to lose
+    // the subject, because nothing was being created.
+    await appendMessage({
+      conversation: CONVERSATION,
+      senderType: "STAFF",
+      senderStaff: "staff-1",
+      senderName: "Green Village",
+      subject: "Fee reminder",
+      body: "Term fees are due on Friday.",
+    });
+
+    const [doc] = Message.create.mock.calls[0];
+    expect(doc.subject).toBe("Fee reminder");
+
+    const [, update] = Conversation.updateOne.mock.calls[0];
+    // Denormalised onto the thread so the inbox row can show it in one query.
+    expect(update.$set.subject).toBe("Fee reminder");
+  });
+
+  it("does not let an ordinary reply blank the headline", async () => {
+    await appendMessage({
+      conversation: CONVERSATION,
+      senderType: "PARENT",
+      senderParent: "parent-1",
+      senderName: "Sita Sharma",
+      body: "Thank you, we will send one.",
+    });
+
+    const [doc] = Message.create.mock.calls[0];
+    expect(doc.subject).toBe("");
+
+    // A reply carries no subject, and must NOT overwrite the announcement's —
+    // otherwise answering "Sports day" strips its heading off the inbox.
+    const [, update] = Conversation.updateOne.mock.calls[0];
+    expect(update.$set).not.toHaveProperty("subject");
+  });
+
+  it("caps a subject at the field's limit rather than failing the write", async () => {
+    await appendMessage({
+      conversation: CONVERSATION,
+      senderType: "STAFF",
+      senderStaff: "staff-1",
+      subject: "x".repeat(400),
+      body: "Body",
+    });
+
+    const [doc] = Message.create.mock.calls[0];
+    expect(doc.subject).toHaveLength(200);
+  });
+
+  it("carries the subject on the realtime event", async () => {
+    await appendMessage({
+      conversation: CONVERSATION,
+      senderType: "STAFF",
+      senderStaff: "staff-1",
+      subject: "School closed Friday",
+      body: "Heavy rain.",
+    });
+
+    const [, event] = publishRealtimeEvent.mock.calls[0];
+    expect(event.subject).toBe("School closed Friday");
+  });
+});
+
 describe("publishThreadRead", () => {
   it("announces the read on both sides", () => {
     publishThreadRead({ conversation: CONVERSATION, reader: "PARENT" });

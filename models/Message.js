@@ -107,6 +107,27 @@ const MessageSchema = new mongoose.Schema(
       trim: true,
     },
 
+    /**
+     * The headline the school typed, when this message is an announcement.
+     *
+     * **On the message, not the conversation, and that placement is the whole
+     * point.** `Conversation.subject` exists and looks like the natural home for
+     * it, but a guardian has exactly ONE thread per child (see
+     * `findOrCreateConversation`), which that thread carries for years. "Sports
+     * day", "Fee reminder" and "School closed Friday" all land in it. A single
+     * subject on the conversation can hold one of those, so every announcement
+     * after the first silently lost its headline — the school typed it, and the
+     * parent never saw it.
+     *
+     * Empty for ordinary back-and-forth. A reply is not an announcement and does
+     * not want a headline, so the UI renders one only where it exists.
+     */
+    subject: {
+      type: String,
+      default: "",
+      trim: true,
+      maxLength: 200,
+    },
     body: {
       type: String,
       default: "",

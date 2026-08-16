@@ -80,7 +80,10 @@ export async function POST(request) {
 
     const body = await request.json().catch(() => ({}));
     const message = String(body.message || "").trim();
-    const subject = String(body.subject || "").trim();
+    // Capped here rather than trusted: both `Conversation.subject` and
+    // `Message.subject` cap at 200, and a longer one would fail validation
+    // mid-loop — turning an over-long headline into a partial send.
+    const subject = String(body.subject || "").trim().slice(0, 200);
     const grade = body.grade || "";
     const studentIds = Array.isArray(body.studentIds) ? body.studentIds : null;
     // ONE specific guardian, by their ParentStudentLink. The separated-family
@@ -173,12 +176,17 @@ export async function POST(request) {
           });
         }
 
+        // The subject travels with EVERY send, not just the one that happened
+        // to create the thread. A guardian keeps one thread per child for
+        // years, so binding the headline to thread creation meant the school
+        // typed "Sports day" and the parent saw an unlabelled message.
         await appendMessage({
           conversation,
           senderType: "STAFF",
           senderStaff: session.user.id,
           senderStaffModel: "User",
           senderName: schoolName,
+          subject,
           body: message,
         });
 
@@ -193,13 +201,23 @@ export async function POST(request) {
     const studentIdsTouched = Array.from(
       new Set(recipients.map((r) => String(r.student._id)))
     );
+
+    const notificationTitle = (
+      subject ? `${subject.slice(0, 120)} — ${schoolName}` : `Message from ${schoolName}`
+    ).slice(0, 180);
     Promise.all(
       studentIdsTouched.map((studentId) =>
         notifyGuardians({
           studentId,
           category: "MESSAGE",
           priority: "INFO",
-          title: `Message from ${schoolName}`,
+          // The subject leads when there is one: "Sports day" tells a guardian
+          // whether to open this now far better than "Message from …" does,
+          // and the school name is already the notification's context.
+          // Kept inside UserNotification.title's 180-character limit — an
+          // over-long title fails validation, and this call is fire-and-forget,
+          // so the failure would be a notification nobody ever receives.
+          title: notificationTitle,
           message: message.slice(0, 160),
           href: "/parent/messages",
           metadata: { from: "SCHOOL" },

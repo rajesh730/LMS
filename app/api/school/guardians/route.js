@@ -340,20 +340,20 @@ export async function POST(request) {
       // which guardian the school should contact first.
       await demoteOtherPrimaries(studentId, link._id, body.isPrimaryGuardian);
 
-      // An existing, already-activated guardian gaining a second child does
-      // NOT need a new card — their Parent ID and PIN already work, and
-      // reissuing would invalidate the PIN they are using.
-      const needsCard = parent.accessState !== "ACTIVATED";
+      // An existing, already-connected guardian gaining a second child keeps
+      // the Parent ID they are already signing in with — `INITIAL` never
+      // rotates one that exists, so this is safe to run either way.
+      const alreadyActivated = parent.accessState === "ACTIVATED";
 
-      const issued = needsCard
-        ? await issueParentAccess({
-            parent,
-            schoolId: student.school,
-            studentId,
-            issuedBy: session.user.id,
-            purpose: parent.accessState === "NOT_CREATED" ? "INITIAL" : "REISSUE",
-          })
-        : null;
+      if (!alreadyActivated) {
+        await issueParentAccess({
+          parent,
+          schoolId: student.school,
+          studentId,
+          issuedBy: session.user.id,
+          purpose: "INITIAL",
+        });
+      }
 
       return successResponse(201, "Guardian added", {
         mode: "DIRECT",
@@ -361,16 +361,9 @@ export async function POST(request) {
         parentIdentifier: parent.parentId,
         guardianName: parent.name,
         student: { id: String(student._id), name: student.name },
-        // Present only when a card was issued; shown exactly once.
-        card: issued
-          ? {
-              activationPin: issued.activationPin,
-              activationToken: issued.activationToken,
-              activationId: issued.activationId,
-              expiresAt: issued.expiresAt,
-            }
-          : null,
-        alreadyActivated: !needsCard,
+        // The card is printed from /school/guardians/card?link=… and can be
+        // printed again at any time, so there is nothing to hand back here.
+        alreadyActivated,
       });
     }
 

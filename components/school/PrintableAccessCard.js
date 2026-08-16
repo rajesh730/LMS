@@ -7,10 +7,9 @@ import QRCode from "qrcode";
  * A single Parent Access Card, rendered on the CLIENT.
  *
  * The server-rendered card (components/school/ParentAccessCard.js) is used for
- * a one-off print, where the activation details arrive as query parameters.
- * A bulk run cannot work that way — putting 300 PINs in a URL is neither
- * practical nor safe — so the batch is held in memory on the client and each
- * card generates its own QR here.
+ * a one-off print. A bulk run holds the batch in memory on the client instead
+ * of round-tripping 300 cards through the URL, so each card generates its own
+ * QR here.
  *
  * `qrcode` runs in the browser as well as on the server, so this needs no new
  * dependency and still makes no network call: the SVG is computed locally from
@@ -21,11 +20,11 @@ export default function PrintableAccessCard({ card, schoolName, siteUrl }) {
 
   useEffect(() => {
     let active = true;
-    const activateUrl = `${siteUrl}/parent/activate?t=${encodeURIComponent(
-      card.activationToken
+    const loginUrl = `${siteUrl}/parent/login?id=${encodeURIComponent(
+      card.parentIdentifier
     )}`;
 
-    QRCode.toString(activateUrl, {
+    QRCode.toString(loginUrl, {
       type: "svg",
       // Level M survives a fold, a smudge and a mediocre photocopy — all of
       // which happen to a card that travels home in a school bag.
@@ -38,14 +37,14 @@ export default function PrintableAccessCard({ card, schoolName, siteUrl }) {
         if (active) setQrSvg(svg);
       })
       .catch(() => {
-        // A missing QR still leaves a fully usable card: the Parent ID and PIN
-        // below are an independent way in.
+        // A missing QR still leaves a fully usable card: the Parent ID printed
+        // below is the same credential, just typed instead of scanned.
       });
 
     return () => {
       active = false;
     };
-  }, [card.activationToken, siteUrl]);
+  }, [card.parentIdentifier, siteUrl]);
 
   return (
     <article className="parent-access-card">
@@ -75,8 +74,8 @@ export default function PrintableAccessCard({ card, schoolName, siteUrl }) {
       </section>
 
       <section className="pac-qr-block">
-        <p className="pac-scan">SCAN TO CONNECT</p>
-        <p className="pac-scan-ne">जोड्न स्क्यान गर्नुहोस्</p>
+        <p className="pac-scan">SCAN TO SIGN IN</p>
+        <p className="pac-scan-ne">साइन इन गर्न स्क्यान गर्नुहोस्</p>
         <div
           className="pac-qr"
           // Generated locally by the qrcode package from our own URL — never
@@ -85,16 +84,12 @@ export default function PrintableAccessCard({ card, schoolName, siteUrl }) {
         />
       </section>
 
-      <p className="pac-or">OR / अथवा</p>
+      <p className="pac-or">OR TYPE THIS / अथवा यो टाइप गर्नुहोस्</p>
 
       <section className="pac-credentials">
         <div className="pac-cred">
-          <p className="pac-label">Parent ID</p>
+          <p className="pac-label">Parent ID / अभिभावक आईडी</p>
           <p className="pac-value">{card.parentIdentifier}</p>
-        </div>
-        <div className="pac-cred">
-          <p className="pac-label">PIN</p>
-          <p className="pac-value">{card.activationPin}</p>
         </div>
       </section>
 
@@ -103,18 +98,13 @@ export default function PrintableAccessCard({ card, schoolName, siteUrl }) {
         <p className="pac-help-ne">
           सहयोग चाहिएमा विद्यालयको कार्यालयमा सम्पर्क गर्नुहोस्।
         </p>
-        {card.expiresAt ? (
-          <p className="pac-expiry">
-            Please connect before{" "}
-            {new Date(card.expiresAt).toLocaleDateString("en-GB", {
-              day: "numeric",
-              month: "long",
-              year: "numeric",
-            })}
-          </p>
-        ) : null}
         <p className="pac-warning">
-          Keep this card safe. Do not share your PIN with anyone.
+          Keep this card safe — it opens your child&apos;s record, like a key.
+          If you lose it, tell the school and they will give you a new one.
+        </p>
+        <p className="pac-help-ne">
+          यो कार्ड सुरक्षित राख्नुहोस् — यसले तपाईंको बच्चाको विवरण खोल्छ।
+          हराएमा विद्यालयलाई भन्नुहोस्।
         </p>
       </footer>
     </article>

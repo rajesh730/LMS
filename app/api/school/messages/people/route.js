@@ -144,7 +144,7 @@ export async function GET(request) {
           .limit(MAX_THREADS)
           .populate("student", "name grade")
           .select(
-            "student participants topic lastMessageAt lastMessagePreview lastMessageSenderType"
+            "student participants topic subject lastMessageAt lastMessagePreview lastMessageSenderType"
           )
           .lean()
       : [];
@@ -201,6 +201,7 @@ export async function GET(request) {
         grade: student.grade || "",
         conversationId: null,
         emoji: "💬",
+        subject: "",
         preview: "",
         lastMessageAt: null,
         lastMessageSenderType: "",
@@ -242,6 +243,7 @@ export async function GET(request) {
         ...base,
         conversationId: String(conversation._id),
         emoji: catalogue?.emoji || "💬",
+        subject: conversation.subject || "",
         preview: conversation.lastMessagePreview || "",
         lastMessageAt: conversation.lastMessageAt,
         lastMessageSenderType: conversation.lastMessageSenderType || "",
