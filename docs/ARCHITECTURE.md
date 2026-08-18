@@ -527,3 +527,51 @@ grep -rl 'from "zod"' app lib | wc -l
 # The dependency rule itself (must stay at 0 errors)
 npx eslint lib models app/api
 ```
+
+---
+
+## 12. Mobile / installed-app behaviour
+
+Pravyo is used mostly on phones, often on low-end Android devices and patchy
+data. These pieces exist to make it behave like an installed app rather than a
+website in a browser tab.
+
+| Piece | Where | Why |
+| --- | --- | --- |
+| `viewportFit: "cover"` | [app/layout.js](../app/layout.js) | **The fix that unblocked the rest.** The stylesheet already padded for the notch and home indicator with `env(safe-area-inset-*)`, but without this every one of those insets computed to `0` — the padding silently did nothing on exactly the devices it was written for. |
+| `appleWebApp` metadata | [app/layout.js](../app/layout.js) | iOS ignores the web manifest. Without it, a Home Screen icon opens in a Safari tab with browser chrome. |
+| Manifest `scope` / `id` / `display_override` | [app/manifest.js](../app/manifest.js) | `scope` keeps in-app links in-app; `id` keeps an installed app updating in place; `display_override` degrades to `minimal-ui` instead of a full tab. |
+| Split `any` / `maskable` icons | [app/manifest.js](../app/manifest.js) | One entry marked `"any maskable"` makes Android crop the plain icon and clip the mark. Separate entries let each platform choose. |
+| Native-feel CSS block | end of [app/globals.css](../app/globals.css) | Overscroll containment (kills rubber-band and pull-to-refresh), `touch-action: manipulation` (removes the 300ms tap delay), no long-press callout on controls, 16px form controls on coarse pointers, `prefers-reduced-motion`. |
+| [public/sw.js](../public/sw.js) | Service worker | Instant repeat loads and a usable offline screen. |
+| [app/offline/page.js](../app/offline/page.js) | Offline fallback | Plain language, works with zero JavaScript. |
+
+### Why form controls are 16px and pinch-zoom is still enabled
+
+iOS zooms the viewport when a focused control is under 16px and leaves the page
+zoomed. The usual "fix" is `maximum-scale=1, user-scalable=no`, which also
+removes pinch-zoom for low-vision users. On a platform used by whole families
+that is not an acceptable trade, so the size is fixed instead and zoom is left
+alone.
+
+### Service worker rules — do not relax these
+
+A service worker is the one thing here that can keep serving stale code after a
+deploy, and that is very hard to diagnose in the field. Three rules hold:
+
+1. **Never cache `/api/`.** Those responses are per-user and auth-scoped;
+   caching them risks showing one family another family's data.
+2. **Documents are network-first.** HTML is served from cache only when the
+   device is genuinely offline, so nobody gets stuck on an old build.
+3. **Cache-first only for `/_next/static/`**, whose filenames contain a content
+   hash — those bytes can never change, so caching them is safe by construction.
+
+**Kill switch.** Bump `CACHE_VERSION` in `public/sw.js` to invalidate every
+cache. To remove the worker entirely, replace the file's body with
+`self.addEventListener("install", () => self.registration.unregister())` and
+deploy — do not simply delete the file, as already-installed workers keep
+running.
+
+The worker registers in production only ([ServiceWorkerRegistrar](../components/ServiceWorkerRegistrar.js));
+in development it would cache assets between hot reloads and produce stale-module
+bugs that look like broken code.

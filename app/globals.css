@@ -3642,3 +3642,224 @@ a[aria-busy="true"] {
     page-break-after: auto;
   }
 }
+
+/* ==========================================================================
+   Native-app feel on phones
+   --------------------------------------------------------------------------
+   Everything below is about removing the small tells that say "this is a
+   website in a browser". Each rule is here for a specific symptom, noted
+   inline, because they look arbitrary otherwise and get deleted later.
+
+   Paired with `viewportFit: "cover"` and `appleWebApp` in app/layout.js —
+   the CSS alone cannot do this.
+   ========================================================================== */
+
+/* The rubber-band overscroll at the top of a page is the biggest tell on iOS:
+   drag down and the browser's own background shows through behind the app.
+   Containing the chain keeps the bounce inside scrollable regions. This also
+   suppresses Chrome's pull-to-refresh, which fires constantly on a scroll-heavy
+   dashboard and throws away in-progress form state. */
+html {
+  overscroll-behavior-y: contain;
+}
+
+body {
+  overscroll-behavior-y: contain;
+  /* Honour the notch and the home indicator. These are no-ops in a browser
+     tab and on non-notched devices, so they cost nothing elsewhere. */
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* Kill the ~300ms click delay browsers keep for double-tap-to-zoom detection.
+   Scoped to controls: applying it to the whole document would disable
+   double-tap zoom on content, which is an accessibility regression. */
+button,
+[role="button"],
+a,
+input[type="checkbox"],
+input[type="radio"],
+select,
+summary {
+  touch-action: manipulation;
+}
+
+/* Long-pressing a button on iOS pops the "copy / share" callout and a text
+   selection — a native control never does that. Content keeps both. */
+button,
+[role="button"],
+nav,
+[role="tab"],
+[role="menuitem"] {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* iOS zooms the whole viewport when a focused control is under 16px, then
+   leaves the page zoomed. Enforcing 16px on touch devices is the correct fix;
+   disabling user-scaling is not. Line 934 already does this at <=640px — this
+   covers tablets and any device that is touch-primary regardless of width. */
+@media (pointer: coarse) {
+  input,
+  select,
+  textarea {
+    font-size: max(16px, 1rem);
+  }
+}
+
+/* Momentum scrolling inside panes (modals, tables, chat threads). Without it,
+   nested scroll areas stop dead instead of gliding. */
+.overflow-auto,
+.overflow-y-auto,
+.overflow-x-auto,
+[class*="overflow-scroll"] {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Installed / standalone only. These would be wrong in a browser tab, where
+   the user still has real back and reload controls. */
+@media (display-mode: standalone) {
+  /* No browser chrome means the app owns the full height, including the strip
+     behind the home indicator. */
+  body {
+    padding-bottom: env(safe-area-inset-bottom);
+    /* A standalone app has no address bar to reveal, so a stray horizontal
+       drag just looks broken. */
+    overscroll-behavior: none;
+  }
+
+  /* Text selection is a desktop affordance; in a standalone app an accidental
+     drag selecting a heading looks like a bug. Inputs and real content keep it
+     (restored immediately below). */
+  body {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  input,
+  textarea,
+  [contenteditable="true"],
+  p,
+  li,
+  td,
+  article,
+  .selectable {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+}
+
+/* Respect a user's reduced-motion setting. Transitions that feel slick at full
+   health are exactly what triggers motion sickness for some users, and this is
+   a school platform used by a wide range of people. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ==========================================================================
+   Phone tab bar (components/public/MobileTabBar.js)
+   Primary destinations in thumb reach, the way a native app arranges them.
+   ========================================================================== */
+
+.pravyo-tabbar {
+  background: rgba(255, 255, 255, 0.92);
+  /* Frosted rather than solid so content scrolling underneath reads as
+     "behind the bar" instead of being abruptly cut off. */
+  backdrop-filter: saturate(180%) blur(12px);
+  -webkit-backdrop-filter: saturate(180%) blur(12px);
+  border-top: 1px solid var(--brand-border);
+  /* Clears the iPhone home indicator. Resolves to 0 elsewhere, and only works
+     at all because layout.js sets viewportFit: "cover". */
+  padding-bottom: env(safe-area-inset-bottom);
+  box-shadow: 0 -1px 12px rgba(10, 47, 102, 0.06);
+}
+
+.pravyo-tabbar-link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  /* 56px min height keeps every target above the ~44px accessible minimum,
+     with room for the label. */
+  min-height: 56px;
+  padding: 0.45rem 0.25rem 0.5rem;
+  color: var(--brand-muted);
+  text-decoration: none;
+  transition: color 0.18s ease;
+}
+
+.pravyo-tabbar-icon {
+  font-size: 1.15rem;
+  transition: transform 0.18s ease;
+}
+
+.pravyo-tabbar-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1;
+}
+
+.pravyo-tabbar-link.is-active {
+  color: var(--brand-primary);
+}
+
+/* A small lift on the active icon — the one piece of motion here, because it
+   is what makes the bar feel responsive rather than painted on. */
+.pravyo-tabbar-link.is-active .pravyo-tabbar-icon {
+  transform: translateY(-1px) scale(1.06);
+}
+
+/* Pressed state. Phones have no hover, so without this a tap gives no feedback
+   until the next page paints — which on a slow connection reads as "broken". */
+.pravyo-tabbar-link:active {
+  color: var(--brand-primary);
+  background: rgba(47, 127, 219, 0.07);
+}
+
+@media (prefers-color-scheme: dark) {
+  .pravyo-tabbar {
+    background: rgba(12, 20, 38, 0.92);
+  }
+}
+
+/* The bar sits above the page, so every public screen needs clearance or its
+   last row hides behind it. PublicPageShell already reserves pb-32 on mobile;
+   this covers any page that scrolls its own container instead. */
+@media (max-width: 1279px) {
+  .pravyo-public-shell {
+    padding-bottom: calc(4.5rem + env(safe-area-inset-bottom));
+  }
+}
+
+/* ==========================================================================
+   The 100vh trap
+   --------------------------------------------------------------------------
+   On phones, `100vh` is the viewport with the browser chrome HIDDEN — taller
+   than what is actually visible. A `min-h-screen` container is therefore taller
+   than the screen, and when it also centres its children the last element gets
+   pushed underneath the address bar. Because the container is exactly one
+   viewport tall there is nothing to scroll to, so that element is not merely
+   hard to reach, it is unreachable. That is what made the Continue button on
+   /parent/login impossible to press.
+
+   `dvh` tracks the *visible* height instead, so the content fits or the page
+   scrolls normally. On desktop `dvh` and `vh` are identical, so this changes
+   nothing there. Applied to `min-height` only — never to a fixed `height`,
+   where a shifting dvh causes layout jumps as the address bar hides.
+
+   Ten screens shared this bug (both parent sign-in pages, the error and
+   not-found pages, the suspended-school page, and several dashboards).
+   ========================================================================== */
+.min-h-screen {
+  min-height: 100dvh;
+}

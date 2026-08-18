@@ -170,7 +170,13 @@ function ParentLogin() {
   };
 
   return (
-    <main className="flex min-h-screen flex-col justify-center bg-[var(--background)] px-5 py-10">
+    // `min-h-[100dvh]`, NOT `min-h-screen`. 100vh on a phone is the viewport
+    // with the browser chrome HIDDEN — taller than what is actually on screen.
+    // With `justify-center` that pushed Continue underneath the address bar,
+    // and because the container was exactly one viewport tall there was nothing
+    // to scroll to, so the button was unreachable. `dvh` tracks the visible
+    // height, so the page fits or scrolls.
+    <main className="flex min-h-[100dvh] flex-col justify-center bg-[var(--background)] px-5 py-10 pb-[calc(2.5rem+env(safe-area-inset-bottom))]">
       <div className="mx-auto w-full max-w-sm">
         {/* Language first and always visible. A guardian who cannot read the
             screen cannot be asked to choose a language further in. */}

@@ -10,6 +10,7 @@ import {
 import PravyoLogo from "@/components/brand/PravyoLogo";
 import { PUBLIC_NAV_LINKS } from "@/components/navigation/appNavigation";
 import PublicRegisterLink from "@/components/public/PublicRegisterLink";
+import MobileTabBar from "@/components/public/MobileTabBar";
 
 export default function PublicSiteNav({
   active = "home",
@@ -201,6 +202,10 @@ export default function PublicSiteNav({
           </div>
         )}
       </header>
+
+      {/* Phone navigation. Rendered here rather than per-page so all 13 public
+          pages get it without each one remembering to mount it. */}
+      <MobileTabBar active={active} />
 
       {/* Backdrop */}
       {isOpen && (
