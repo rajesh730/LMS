@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { FaPaperPlane, FaTimes, FaCheckDouble } from "react-icons/fa";
 import { formatParentTime, formatDuration } from "@/lib/parentFormat";
-import useRealtimeChannel from "@/lib/useRealtimeChannel";
+import useRealtimeChannel from "@/lib/client/useRealtimeChannel";
 import { MESSAGE_EVENTS } from "@/lib/messagingChannels";
 
 /**

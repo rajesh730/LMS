@@ -3,15 +3,15 @@ import connectDB from "@/lib/db";
 import SchoolConfig from "@/models/SchoolConfig";
 import User from "@/models/User";
 import Teacher from "@/models/Teacher";
-import { getServerSession } from "next-auth";
-import { authOptions } from "../../auth/[...nextauth]/route";
+import { requireApiSession } from "@/lib/authz";
 import { buildGradeLabels } from "@/lib/schoolGrades";
 
 export async function GET() {
   try {
     await connectDB();
 
-    const session = await getServerSession(authOptions);
+    const { session, error: authError } = await requireApiSession();
+    if (authError) return authError;
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

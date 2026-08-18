@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FaBell, FaCheckDouble, FaRegBell, FaRegBellSlash } from "react-icons/fa";
-import useNotificationInbox from "@/lib/useNotificationInbox";
+import useNotificationInbox from "@/lib/client/useNotificationInbox";
 import {
   formatRelativeTime,
   getNotificationType,

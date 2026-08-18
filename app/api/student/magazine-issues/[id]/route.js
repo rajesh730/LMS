@@ -1,24 +1,17 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
 import mongoose from "mongoose";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { requireApiSession } from "@/lib/authz";
 import connectDB from "@/lib/db";
 import Student from "@/models/Student";
 import MagazineIssue from "@/models/MagazineIssue";
 import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
 import { serializeMagazineIssue } from "@/lib/magazineIssues";
 import { serializeAuthoredEra } from "@/lib/writingProvenance";
+import { buildStudentLookupForSession } from "@/lib/studentIdentity";
 
 function buildStudentLookup(session) {
   return {
-    isDeleted: { $ne: true },
-    status: "ACTIVE",
-    $or: [
-      { _id: session.user.id },
-      { userId: session.user.id },
-      { email: session.user.email },
-      { username: session.user.email },
-    ],
+    ...buildStudentLookupForSession(session),
   };
 }
 
@@ -60,7 +53,8 @@ function getMonthIssueTitle(issue, issuesInMonth) {
 
 export async function GET(_request, props) {
   try {
-    const session = await getServerSession(authOptions);
+    const { session, error: authError } = await requireApiSession();
+    if (authError) return authError;
 
     if (!session || session.user.role !== "STUDENT") {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });

@@ -1,15 +1,15 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { requireApiSession } from "@/lib/authz";
 import Event from '@/models/Event';
 import connectDB from '@/lib/db';
 import { syncEventSchoolInvitations } from '@/lib/eventInvitations';
 import { publishEventRealtimeUpdate } from '@/lib/eventRealtime';
-import { ensureStudentEventNotification } from '@/lib/studentEventNotifications';
+import { ensureEventNotice } from '@/lib/eventNotices';
 
 export async function PUT(req, { params }) {
     try {
-        const session = await getServerSession(authOptions);
+        const { session, error: authError } = await requireApiSession();
+        if (authError) return authError;
         if (!session) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
@@ -55,7 +55,7 @@ export async function PUT(req, { params }) {
                 });
             }
             if (eventById.eventScope === 'SCHOOL' && eventById.status === 'APPROVED') {
-                await ensureStudentEventNotification({
+                await ensureEventNotice({
                     event: eventById,
                     schoolId: eventById.school,
                     authorId: session.user.id,
@@ -75,7 +75,7 @@ export async function PUT(req, { params }) {
         }
 
         if (event.eventScope === 'SCHOOL' && event.status === 'APPROVED') {
-            await ensureStudentEventNotification({
+            await ensureEventNotice({
                 event,
                 schoolId: event.school,
                 authorId: session.user.id,

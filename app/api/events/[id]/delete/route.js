@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { requireApiSession } from "@/lib/authz";
 import connectDB from "@/lib/db";
 import Event from "@/models/Event";
 import Achievement from "@/models/Achievement";
@@ -17,7 +16,8 @@ import { publishEventRealtimeUpdate } from "@/lib/eventRealtime";
 
 export async function POST(req, props) {
   try {
-    const session = await getServerSession(authOptions);
+    const { session, error: authError } = await requireApiSession();
+    if (authError) return authError;
     if (
       !session ||
       !["SUPER_ADMIN", "SCHOOL_ADMIN", "TEACHER"].includes(session.user.role)
@@ -79,7 +79,8 @@ export async function POST(req, props) {
 
 export async function DELETE(req, props) {
   try {
-    const session = await getServerSession(authOptions);
+    const { session, error: authError } = await requireApiSession();
+    if (authError) return authError;
     if (
       !session ||
       !["SUPER_ADMIN", "SCHOOL_ADMIN", "TEACHER"].includes(session.user.role)

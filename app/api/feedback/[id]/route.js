@@ -1,13 +1,13 @@
-import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { requireApiSession } from "@/lib/authz";
 import connectDB from "@/lib/db";
 import Feedback from "@/models/Feedback";
 import { publishWorkIndicatorsUpdate } from "@/lib/workIndicatorRealtime";
 
 export async function PATCH(request, props) {
   try {
-    const session = await getServerSession(authOptions);
+    const { session, error: authError } = await requireApiSession();
+    if (authError) return authError;
     if (!session || session.user.role !== "SUPER_ADMIN") {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }

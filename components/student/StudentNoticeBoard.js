@@ -11,7 +11,7 @@ import AlertBanner from "@/components/ui/AlertBanner";
 import LoadingState from "@/components/ui/LoadingState";
 import PageHeader from "@/components/ui/PageHeader";
 import AppDate from "@/components/common/AppDate";
-import useNotificationInbox from "@/lib/useNotificationInbox";
+import useNotificationInbox from "@/lib/client/useNotificationInbox";
 
 export default function StudentNoticeBoard() {
   const {

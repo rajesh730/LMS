@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/lib/authOptions";
 import connectDB from "@/lib/db";
 import Achievement from "@/models/Achievement";
 import SchoolShowcaseProfile from "@/models/SchoolShowcaseProfile";

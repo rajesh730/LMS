@@ -39,7 +39,7 @@ are both "pravyo" — an older domain spelled "pratyo" was retired and now retur
 | `lib/` | Business logic and helpers — the substantive layer, ~60 modules. |
 | `models/` | 26 Mongoose schemas. |
 | `scripts/` | One-off `.mjs` migrations and backfills, exposed as `npm run db:*`. |
-| `docs/` | Design and audit notes (`REDESIGN.md`, `DEEP_AUDIT.md`, `WORK_INDICATORS.md`, `REALTIME_AND_NOTICES.md`, `ACADEMIC_YEAR_AND_PORTFOLIO.md`, `PARENT_APP.md`, `load-testing.md`). |
+| `docs/` | Design and audit notes. **Start with `ARCHITECTURE.md`** — it defines the layers, the dependency rule, and where new code goes. Then `REDESIGN.md`, `DEEP_AUDIT.md`, `WORK_INDICATORS.md`, `REALTIME_AND_NOTICES.md`, `ACADEMIC_YEAR_AND_PORTFOLIO.md`, `PARENT_APP.md`, `load-testing.md`. |
 | `proxy.js` | **This is the Next.js middleware.** Next 16 renamed `middleware.js` to `proxy.js`. It does auth gating and role-based redirects. Do not delete it as a stray. |
 
 ## Roles and auth

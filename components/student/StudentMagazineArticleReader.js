@@ -9,7 +9,7 @@ import MagazineArticleCard, {
   getCategoryMeta,
 } from "@/components/student/MagazineArticleCard";
 import MagazineArticleDetail from "@/components/student/MagazineArticleDetail";
-import useRealtimeChannel from "@/lib/useRealtimeChannel";
+import useRealtimeChannel from "@/lib/client/useRealtimeChannel";
 
 export default function StudentMagazineArticleReader({
   articleId,

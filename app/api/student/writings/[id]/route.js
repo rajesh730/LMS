@@ -8,97 +8,12 @@ import { publishWorkIndicatorsUpdate } from "@/lib/workIndicatorRealtime";
 import { notifySchoolMagazineSubmitted } from "@/lib/magazineNotifications";
 import { normalizeWritingCategory } from "@/lib/writingCategories";
 import { requireApiSession } from "@/lib/authz";
-
-function buildStudentLookup(session) {
-  return {
-    isDeleted: { $ne: true },
-    status: "ACTIVE",
-    $or: [
-      { _id: session.user.id },
-      { userId: session.user.id },
-      { email: session.user.email },
-      { username: session.user.email },
-    ],
-  };
-}
-
-function hasVisibleSurface(article) {
-  return Boolean(
-    (article.status !== "DRAFT" && article.showOnSchoolWall !== false) ||
-      article.isPublished ||
-      article.isMagazinePublished ||
-      article.isGlobalWallPublished
-  );
-}
-
-function resetReviewStateIfFullyWithdrawn(article) {
-  if (hasVisibleSurface(article)) return;
-  article.status = "DRAFT";
-  article.reviewedAt = null;
-  article.reviewedBy = null;
-  article.reviewNote = "";
-}
-
-// Handles student actions on a piece written at a school she has since left.
-// The piece is portfolio-owned now: she edits/hides/shows it directly, it never
-// re-enters a school review queue, and the origin school's magazine archive is
-// only touched when she explicitly hides or deletes the piece.
-async function handleTransferredOutWriting({ article, action, body, student }) {
-  if (action === "MAKE_PRIVATE") {
-    const previousMagazineIssue = article.magazineIssue;
-    article.showOnSchoolWall = false;
-    article.isPublished = false;
-    article.isFeatured = false;
-    article.isMagazinePublished = false;
-    article.isGlobalWallPublished = false;
-    article.publishedAt = null;
-    article.magazinePublishedAt = null;
-    article.magazineIssue = null;
-    article.magazineIssueAssignedAt = null;
-    await article.save();
-
-    if (previousMagazineIssue) {
-      await MagazineIssue.updateOne(
-        { _id: previousMagazineIssue, school: article.school },
-        { $pull: { articles: article._id } }
-      );
-    }
-
-    return NextResponse.json({ message: "Writing hidden from your portfolio", article });
-  }
-
-  // Restore a previously hidden portfolio piece to public visibility.
-  if (action === "RELEASE_SCHOOL_WALL" || action === "SHOW_PORTFOLIO") {
-    article.status = "APPROVED";
-    article.isPublished = true;
-    article.publishedAt = article.publishedAt || new Date();
-    article.showOnSchoolWall = false;
-    await article.save();
-    return NextResponse.json({ message: "Writing shown on your portfolio", article });
-  }
-
-  // Default: edit the content of her own portfolio piece.
-  const nextTitle = String(body.title || "").trim();
-  const nextContent = String(body.content || "").trim();
-  const nextCategory = normalizeWritingCategory(body.category || article.category);
-
-  if (!nextTitle || !nextContent) {
-    return NextResponse.json(
-      { message: "Title and content are required" },
-      { status: 400 }
-    );
-  }
-
-  article.title = nextTitle;
-  article.content = nextContent;
-  article.category = nextCategory;
-  // Stays in her portfolio; never re-attaches to a school wall or review queue.
-  article.showOnSchoolWall = false;
-  article.isGlobalWallPublished = false;
-  await article.save();
-
-  return NextResponse.json({ message: "Writing updated", article });
-}
+import { buildStudentLookupForSession } from "@/lib/studentIdentity";
+import {
+  applyTransferredOutAction,
+  hasVisibleSurface,
+  resetReviewStateIfFullyWithdrawn,
+} from "@/lib/studentWritings";
 
 export async function PATCH(request, props) {
   try {
@@ -107,7 +22,7 @@ export async function PATCH(request, props) {
 
     await connectDB();
 
-    const student = await Student.findOne(buildStudentLookup(session))
+    const student = await Student.findOne(buildStudentLookupForSession(session))
       .select("_id school name")
       .lean();
 
@@ -151,7 +66,14 @@ export async function PATCH(request, props) {
       String(article.school || "") !== String(student.school || "");
 
     if (isTransferredOut) {
-      return handleTransferredOutWriting({ article, action, body, student });
+      const outcome = await applyTransferredOutAction({ article, action, body });
+      if (outcome.error) {
+        return NextResponse.json(
+          { message: outcome.error },
+          { status: outcome.status }
+        );
+      }
+      return NextResponse.json({ message: outcome.message, article: outcome.article });
     }
 
     if (action === "MAKE_PRIVATE") {
@@ -410,7 +332,8 @@ export async function PATCH(request, props) {
 
 export async function DELETE(request, props) {
   try {
-    const session = await getServerSession(authOptions);
+    const { session, error: authError } = await requireApiSession();
+    if (authError) return authError;
 
     if (!session || session.user.role !== "STUDENT") {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
@@ -418,7 +341,7 @@ export async function DELETE(request, props) {
 
     await connectDB();
 
-    const student = await Student.findOne(buildStudentLookup(session))
+    const student = await Student.findOne(buildStudentLookupForSession(session))
       .select("_id school")
       .lean();
 
@@ -486,7 +409,8 @@ export async function DELETE(request, props) {
 
 export async function POST() {
   try {
-    const session = await getServerSession(authOptions);
+    const { session, error: authError } = await requireApiSession();
+    if (authError) return authError;
 
     if (!session || session.user.role !== "STUDENT") {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });

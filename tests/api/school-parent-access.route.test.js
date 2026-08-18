@@ -1,5 +1,5 @@
 jest.mock("next-auth", () => ({ getServerSession: jest.fn() }));
-jest.mock("@/app/api/auth/[...nextauth]/route", () => ({ authOptions: {} }));
+jest.mock("@/lib/authOptions", () => ({ authOptions: {} }));
 jest.mock("@/lib/db", () => jest.fn());
 jest.mock("@/lib/parentCredentials", () => ({
   issueParentAccess: jest.fn(),

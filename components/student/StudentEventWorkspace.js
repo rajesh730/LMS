@@ -4,8 +4,8 @@ import { useCallback, useEffect } from "react";
 import StudentEventsManager from "@/components/events/StudentEventsManager";
 import StudentQuickNav from "@/components/student/StudentQuickNav";
 import StudentNotificationCenter from "@/components/student/StudentNotificationCenter";
-import useWorkIndicators from "@/lib/useWorkIndicators";
-import useRealtimeChannel from "@/lib/useRealtimeChannel";
+import useWorkIndicators from "@/lib/client/useWorkIndicators";
+import useRealtimeChannel from "@/lib/client/useRealtimeChannel";
 
 export default function StudentEventWorkspace() {
   const { loadIndicators } = useWorkIndicators();

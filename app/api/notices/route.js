@@ -1,19 +1,17 @@
-import dbConnect from "@/lib/db";
+import {
+  successResponse,
+  errorResponse,
+  validationError,
+} from "@/lib/apiResponse";
 import Notice from "@/models/Notice";
-import { getServerSession } from "next-auth";
-import { authOptions } from "../auth/[...nextauth]/route";
+import { defineRoute } from "@/lib/routeHandler";
 import { buildPagination, escapeRegex, parsePagination } from "@/lib/pagination";
 import { publishNoticeRealtimeEvent } from "@/lib/noticeRealtime";
+import { publishNoticeToParents } from "@/lib/notifications/service";
 
-export async function GET(request) {
-  try {
-    await dbConnect();
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user?.id) {
-      return Response.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
+export const GET = defineRoute(
+  { roles: [], errorMessage: "Failed to fetch notices" },
+  async ({ request, session }) => {
     const { searchParams } = new URL(request.url);
     const type = searchParams.get("type");
     const priority = searchParams.get("priority");
@@ -32,7 +30,7 @@ export async function GET(request) {
 
     if (scope === "PLATFORM") {
       if (session.user.role !== "SUPER_ADMIN") {
-        return Response.json({ error: "Forbidden" }, { status: 403 });
+        return errorResponse(403, "Forbidden", "FORBIDDEN");
       }
       query.scope = "PLATFORM";
     } else {
@@ -93,28 +91,19 @@ export async function GET(request) {
     ]);
     const pagination = buildPagination({ page, limit, total });
 
-    return Response.json({
+    return successResponse(200, "Notices loaded", {
       notices,
       total,
       page,
       totalPages: pagination.totalPages,
       pagination,
     });
-  } catch (error) {
-    console.error("GET /api/notices error:", error);
-    return Response.json({ error: "Failed to fetch notices" }, { status: 500 });
   }
-}
+);
 
-export async function POST(request) {
-  try {
-    await dbConnect();
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user?.id) {
-      return Response.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
+export const POST = defineRoute(
+  { roles: [], errorMessage: "Failed to create notice" },
+  async ({ request, session }) => {
     const body = await request.json();
     const {
       title,
@@ -131,10 +120,7 @@ export async function POST(request) {
     } = body;
 
     if (!title || !content) {
-      return Response.json(
-        { error: "Title and content are required" },
-        { status: 400 }
-      );
+      return validationError("Title and content are required");
     }
 
     const normalizedScope =
@@ -149,7 +135,7 @@ export async function POST(request) {
       String(status || "").toUpperCase() === "DRAFT" ? "DRAFT" : "PUBLISHED";
 
     if (normalizedScope === "PLATFORM" && session.user.role !== "SUPER_ADMIN") {
-      return Response.json({ error: "Forbidden" }, { status: 403 });
+      return errorResponse(403, "Forbidden", "FORBIDDEN");
     }
 
     if (
@@ -159,10 +145,7 @@ export async function POST(request) {
       !targetAudience?.teachers &&
       !targetAudience?.parents
     ) {
-      return Response.json(
-        { error: "At least one target audience must be selected" },
-        { status: 400 }
-      );
+      return validationError("At least one target audience must be selected");
     }
 
     const newNotice = new Notice({
@@ -200,17 +183,17 @@ export async function POST(request) {
         scope: savedNotice.scope,
         targetAudience: savedNotice.targetAudience,
       });
+
+      // "Students and parents" has to actually reach parents. Fire-and-forget:
+      // the notice is already saved, and a notification-channel failure must
+      // not turn a successful publish into an error the school has to retry.
+      publishNoticeToParents(savedNotice._id).catch((err) =>
+        console.error("[notices] parent delivery failed:", err.message)
+      );
     }
 
-    return Response.json(
-      {
-        message: "Notice published successfully",
-        notice: savedNotice,
-      },
-      { status: 201 }
-    );
-  } catch (error) {
-    console.error("POST /api/notices error:", error);
-    return Response.json({ error: "Failed to create notice" }, { status: 500 });
+    return successResponse(201, "Notice published successfully", {
+      notice: savedNotice,
+    });
   }
-}
+);

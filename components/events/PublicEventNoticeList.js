@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNotification } from "@/components/NotificationSystem";
-import useRealtimeChannel from "@/lib/useRealtimeChannel";
+import useRealtimeChannel from "@/lib/client/useRealtimeChannel";
 import AppDate from "@/components/common/AppDate";
 
 // The NotificationProvider is now supplied globally in app/providers.js, so this

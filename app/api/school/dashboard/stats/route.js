@@ -1,6 +1,5 @@
 import mongoose from "mongoose";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { requireApiSession } from "@/lib/authz";
 import connectDB from "@/lib/db";
 import Student from "@/models/Student";
 import Teacher from "@/models/Teacher";
@@ -15,7 +14,8 @@ import { successResponse, errorResponse } from "@/lib/apiResponse";
  */
 export async function GET(req) {
   try {
-    const session = await getServerSession(authOptions);
+    const { session, error: authError } = await requireApiSession();
+    if (authError) return authError;
 
     if (!session || session.user.role !== "SCHOOL_ADMIN") {
       return errorResponse(

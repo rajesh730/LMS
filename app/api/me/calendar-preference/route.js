@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { requireApiSession } from "@/lib/authz";
 import connectDB from "@/lib/db";
 import User from "@/models/User";
 import Student from "@/models/Student";
@@ -10,7 +9,8 @@ import { normalizeCalendar } from "@/lib/nepaliDate";
 // live in the Student collection; admins in the User collection.
 export async function POST(request) {
   try {
-    const session = await getServerSession(authOptions);
+    const { session, error: authError } = await requireApiSession();
+    if (authError) return authError;
     if (!session?.user?.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }

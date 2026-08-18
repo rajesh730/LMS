@@ -1,5 +1,4 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { requireApiSession } from "@/lib/authz";
 import connectDB from "@/lib/db";
 import ActivityLog from "@/models/ActivityLog";
 import {
@@ -21,7 +20,8 @@ import { getActivityLogs, getActivitySummary } from "@/lib/activityLog";
  */
 export async function GET(req) {
   try {
-    const session = await getServerSession(authOptions);
+    const { session, error: authError } = await requireApiSession();
+    if (authError) return authError;
 
     if (!session || !session.user) {
       return errorResponse(401, "Unauthorized");

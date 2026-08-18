@@ -15,7 +15,7 @@ import {
 import PravyoLogo from "@/components/brand/PravyoLogo";
 import NavItemLink from "@/components/navigation/NavItemLink";
 import { getRoleNavigationLinks } from "@/components/navigation/appNavigation";
-import useWorkIndicators from "@/lib/useWorkIndicators";
+import useWorkIndicators from "@/lib/client/useWorkIndicators";
 
 const HREF_INDICATOR_KEYS = {
   "/admin/dashboard?tab=approvals": "admin.approvals",

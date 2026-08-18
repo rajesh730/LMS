@@ -1,10 +1,8 @@
-// Mock side-effectful imports so loading the route module is cheap; we only
-// exercise the pure capacityViolation export here.
-jest.mock("next-auth", () => ({ getServerSession: jest.fn() }));
-jest.mock("@/app/api/auth/[...nextauth]/route", () => ({ authOptions: {} }));
+// capacityViolation is a domain rule, so it is imported from the domain layer
+// rather than through the route that happens to call it.
 jest.mock("@/lib/db", () => jest.fn());
 
-import { capacityViolation } from "@/app/api/events/[id]/participate/route";
+import { capacityViolation } from "@/lib/eventParticipation";
 
 describe("capacityViolation (event over-enrollment guard)", () => {
   it("allows when under both limits", () => {

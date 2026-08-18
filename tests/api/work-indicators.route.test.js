@@ -2,7 +2,7 @@ jest.mock("next-auth", () => ({
   getServerSession: jest.fn(),
 }));
 
-jest.mock("@/app/api/auth/[...nextauth]/route", () => ({
+jest.mock("@/lib/authOptions", () => ({
   authOptions: {},
 }));
 
@@ -28,8 +28,11 @@ describe("GET /api/me/work-indicators", () => {
     const response = await GET();
 
     expect(response.status).toBe(401);
-    await expect(response.json()).resolves.toEqual({
-      message: "Unauthorized",
+    // Unauthenticated requests return the standard apiResponse envelope from
+    // requireApiSession(), not a bare { message } — see docs/ARCHITECTURE.md §3.
+    await expect(response.json()).resolves.toMatchObject({
+      success: false,
+      code: "UNAUTHORIZED",
     });
     expect(connectDB).not.toHaveBeenCalled();
   });

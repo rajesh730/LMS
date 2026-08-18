@@ -1,13 +1,12 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { requireApiSession } from "@/lib/authz";
 import connectDB from "@/lib/db";
 import Event from "@/models/Event";
 import EventSchoolInvitation from "@/models/EventSchoolInvitation";
 import ParticipationRequest from "@/models/ParticipationRequest";
 import { canManageEventRecord } from "@/lib/authz";
 import { getEventDeletionPolicy } from "@/lib/eventDeletion";
-import { ensureStudentEventNotification } from "@/lib/studentEventNotifications";
+import { ensureEventNotice } from "@/lib/eventNotices";
 import { recordLifecycleAudit } from "@/lib/lifecycle";
 import { publishEventRealtimeUpdate } from "@/lib/eventRealtime";
 import { publishWorkIndicatorsUpdate } from "@/lib/workIndicatorRealtime";
@@ -24,7 +23,8 @@ export const dynamic = "force-dynamic";
  */
 export async function POST(req, props) {
   try {
-    const session = await getServerSession(authOptions);
+    const { session, error: authError } = await requireApiSession();
+    if (authError) return authError;
     if (
       !session ||
       !["SUPER_ADMIN", "SCHOOL_ADMIN", "TEACHER"].includes(session.user.role)
@@ -138,12 +138,15 @@ export async function POST(req, props) {
 
     await Promise.all(
       Array.from(affectedSchoolIds).map((schoolId) =>
-        ensureStudentEventNotification({
+        ensureEventNotice({
           event,
           schoolId,
           authorId: session.user.id,
           title: noticeTitle,
           content: noticeContent,
+          // A cancellation is genuinely new information — families were told
+          // this was happening, so they have to be told it is not.
+          announceAgain: true,
         }).catch((noticeError) => {
           console.error("Cancel Event Notice Error:", noticeError);
           return null;

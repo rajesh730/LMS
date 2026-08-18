@@ -10,6 +10,7 @@ import {
   internalServerError,
 } from "@/lib/apiResponse";
 import { requireApiSession } from "@/lib/authz";
+import { buildStudentLookupForSession } from "@/lib/studentIdentity";
 
 // Tag an item (by its school + date) with the academic year whose enrollment
 // window contains it, so the student can filter their history by year.
@@ -40,14 +41,10 @@ export async function GET() {
 
     await connectDB();
 
-    const student = await Student.findOne({
-      isDeleted: { $ne: true },
-      $or: [
-        { _id: session.user.id },
-        { email: session.user.email },
-        { username: session.user.email },
-      ],
-    })
+    // Was a hand-rolled copy of this query that omitted both status: "ACTIVE"
+    // and the userId branch, so an inactive student could still read their
+    // history and a userId-linked student could not. One canonical lookup now.
+    const student = await Student.findOne(buildStudentLookupForSession(session))
       .select("name grade school status enrollments platformStudentId")
       .lean();
 

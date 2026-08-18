@@ -18,7 +18,7 @@ import AlertBanner from "@/components/ui/AlertBanner";
 import LoadingState from "@/components/ui/LoadingState";
 import WritingContent from "@/components/WritingContent";
 import AppDate from "@/components/common/AppDate";
-import useWorkIndicators from "@/lib/useWorkIndicators";
+import useWorkIndicators from "@/lib/client/useWorkIndicators";
 import { getWritingCategoryLabel } from "@/lib/writingCategories";
 
 function getReadMinutes(content) {

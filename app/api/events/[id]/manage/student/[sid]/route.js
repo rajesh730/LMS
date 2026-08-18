@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { requireApiSession } from "@/lib/authz";
 import dbConnect from "@/lib/db";
 import Event from "@/models/Event";
 import Student from "@/models/Student";
@@ -12,7 +11,8 @@ import ParticipationRequest from "@/models/ParticipationRequest";
  */
 export async function DELETE(req, { params }) {
   try {
-    const session = await getServerSession(authOptions);
+    const { session, error: authError } = await requireApiSession();
+    if (authError) return authError;
 
     if (
       !session ||

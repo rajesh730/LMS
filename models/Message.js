@@ -145,6 +145,25 @@ const MessageSchema = new mongoose.Schema(
       default: null,
     },
 
+    /**
+     * Set when this message is a Notice mirrored into the guardian's inbox.
+     *
+     * Parents live in the conversation thread, not in a separate Notice Centre,
+     * so a notice published to parents is delivered here too — as an
+     * announcement carrying the notice's title as its subject.
+     *
+     * The reference is what makes that delivery idempotent: the inbox channel
+     * refuses to post a notice into a thread that already has it, so a re-run
+     * of delivery cannot fill a family's chat with duplicates. It also keeps
+     * the copy traceable back to the formal record, which still owns read
+     * receipts, acknowledgement and consent.
+     */
+    sourceNotice: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Notice",
+      default: null,
+    },
+
     // Reserved for future voice transcription / message translation (§15).
     transcript: {
       type: String,
@@ -179,5 +198,8 @@ const MessageSchema = new mongoose.Schema(
 
 // Thread pagination — newest first, then reversed for display (§22).
 MessageSchema.index({ conversation: 1, isDeleted: 1, createdAt: -1 });
+// Backs the inbox channel's "has this notice already been delivered here?"
+// check, which runs once per publish across every recipient's thread.
+MessageSchema.index({ sourceNotice: 1, conversation: 1 }, { sparse: true });
 
 export default mongoose.models.Message || mongoose.model("Message", MessageSchema);

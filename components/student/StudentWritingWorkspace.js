@@ -40,8 +40,8 @@ import AlertBanner from "@/components/ui/AlertBanner";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import LoadingState from "@/components/ui/LoadingState";
 import WritingContent from "@/components/WritingContent";
-import useRealtimeChannel from "@/lib/useRealtimeChannel";
-import useWorkIndicators from "@/lib/useWorkIndicators";
+import useRealtimeChannel from "@/lib/client/useRealtimeChannel";
+import useWorkIndicators from "@/lib/client/useWorkIndicators";
 import {
   WRITING_CATEGORIES,
   normalizeWritingCategory,

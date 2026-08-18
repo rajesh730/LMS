@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { requireApiSession } from "@/lib/authz";
 import connectDB from "@/lib/db";
 import { getActiveCertificateFilter } from "@/lib/certificates";
 import Student from "@/models/Student";
@@ -10,23 +9,18 @@ import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
 import SchoolShowcaseProfile from "@/models/SchoolShowcaseProfile";
 import User from "@/models/User";
 import "@/models/Event";
+import { buildStudentLookupForSession } from "@/lib/studentIdentity";
 
 function buildStudentLookup(session) {
   return {
-    isDeleted: { $ne: true },
-    status: "ACTIVE",
-    $or: [
-      { _id: session.user.id },
-      { userId: session.user.id },
-      { email: session.user.email },
-      { username: session.user.email },
-    ],
+    ...buildStudentLookupForSession(session),
   };
 }
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
+    const { session, error: authError } = await requireApiSession();
+    if (authError) return authError;
 
     if (!session || session.user.role !== "STUDENT") {
       return NextResponse.json(

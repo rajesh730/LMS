@@ -13,7 +13,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import LoadingState from "@/components/ui/LoadingState";
 import AlertBanner from "@/components/ui/AlertBanner";
 import SchoolConversation from "@/components/school/SchoolConversation";
-import useRealtimeChannel from "@/lib/useRealtimeChannel";
+import useRealtimeChannel from "@/lib/client/useRealtimeChannel";
 import { schoolMessagesChannel } from "@/lib/messagingChannels";
 import { formatRelativeShort } from "@/lib/parentFormat";
 

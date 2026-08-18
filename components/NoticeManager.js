@@ -19,7 +19,7 @@ import {
   FaUserFriends,
 } from "react-icons/fa";
 import { buildGradeLabels, normalizeGradeValue } from "@/lib/schoolGrades";
-import useCalendarPreference from "@/lib/useCalendarPreference";
+import useCalendarPreference from "@/lib/client/useCalendarPreference";
 import { formatDateTime } from "@/lib/nepaliDate";
 import EmptyState from "@/components/EmptyState";
 import PaginationControls from "@/components/PaginationControls";
@@ -88,16 +88,29 @@ export default function NoticeManager({
     { value: "URGENT", label: "Urgent", color: "text-red-400" },
   ];
   const isPlatformMode = scopeMode === "platform";
-  const isStudentOnlyMode = fixedAudience === "students";
+  // The Student Notices board. Students are always an audience here; what the
+  // school chooses is whether the child's guardians receive it as well, so this
+  // flag means "student board", NOT "students only".
+  const isStudentBoardMode = fixedAudience === "students";
 
   const buildDefaultAudience = useCallback(
     () => ({
-      students: isStudentOnlyMode,
+      students: isStudentBoardMode,
       teachers: false,
+      // Default off: adding parents is an explicit decision, and a notice
+      // written for students ("bring your PE kit") is not automatically
+      // something every guardian needs pushed to them.
       parents: false,
     }),
-    [isStudentOnlyMode]
+    [isStudentBoardMode]
   );
+
+  /** On the student board, students are fixed and only `parents` is a choice. */
+  const setStudentBoardParents = (parents) =>
+    setNoticeForm((prev) => ({
+      ...prev,
+      targetAudience: { students: true, teachers: false, parents },
+    }));
 
   const fetchNotices = useCallback(async (page = 1) => {
     try {
@@ -112,7 +125,7 @@ export default function NoticeManager({
       }
       if (filters.status) params.append("status", filters.status);
       if (!isPlatformMode && filters.grade) params.append("grade", filters.grade);
-      if (!isPlatformMode && isStudentOnlyMode) {
+      if (!isPlatformMode && isStudentBoardMode) {
         params.append("audience", "students");
       } else if (!isPlatformMode && filters.audience) {
         params.append("audience", filters.audience);
@@ -127,9 +140,12 @@ export default function NoticeManager({
       if (!res.ok) {
         throw new Error(data.error || data.message || "Failed to load notices.");
       }
-      setNotices(data.notices || []);
-      if (data.pagination) {
-        setPagination(data.pagination);
+      // /api/notices now returns the standard envelope, so the payload is
+      // under `data` (docs/ARCHITECTURE.md §3).
+      const payload = data.data || {};
+      setNotices(payload.notices || []);
+      if (payload.pagination) {
+        setPagination(payload.pagination);
       }
     } catch (error) {
       console.error("Error fetching notices:", error);
@@ -145,7 +161,7 @@ export default function NoticeManager({
     } finally {
       setLoading(false);
     }
-  }, [filters, isPlatformMode, isStudentOnlyMode]);
+  }, [filters, isPlatformMode, isStudentBoardMode]);
 
   const fetchNoticeSummary = useCallback(async () => {
     try {
@@ -153,19 +169,20 @@ export default function NoticeManager({
       params.append("page", "1");
       params.append("limit", "100");
       params.append("scope", isPlatformMode ? "PLATFORM" : "SCHOOL");
-      if (!isPlatformMode && isStudentOnlyMode) {
+      if (!isPlatformMode && isStudentBoardMode) {
         params.append("audience", "students");
       }
 
       const res = await fetch(`/api/notices?${params}`, { cache: "no-store" });
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        setSummaryNotices(Array.isArray(data.notices) ? data.notices : []);
+        const summary = data.data || {};
+        setSummaryNotices(Array.isArray(summary.notices) ? summary.notices : []);
       }
     } catch (error) {
       console.error("Error fetching notice summary:", error);
     }
-  }, [isPlatformMode, isStudentOnlyMode]);
+  }, [isPlatformMode, isStudentBoardMode]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -222,7 +239,7 @@ export default function NoticeManager({
   const saveNotice = async (e) => {
     e.preventDefault();
 
-    if (!isPlatformMode && !isStudentOnlyMode) {
+    if (!isPlatformMode && !isStudentBoardMode) {
       const { students, teachers, parents } = noticeForm.targetAudience;
       if (!students && !teachers && !parents) {
         setFeedback({
@@ -245,8 +262,14 @@ export default function NoticeManager({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             ...noticeForm,
-            targetAudience: isStudentOnlyMode
-              ? buildDefaultAudience()
+            // Students are fixed on this board; `parents` is the school's
+            // choice and must be carried through rather than reset.
+            targetAudience: isStudentBoardMode
+              ? {
+                  students: true,
+                  teachers: false,
+                  parents: Boolean(noticeForm.targetAudience.parents),
+                }
               : noticeForm.targetAudience,
             scope: isPlatformMode ? "PLATFORM" : "SCHOOL",
           }),
@@ -346,8 +369,14 @@ export default function NoticeManager({
       priority: notice.priority || "NORMAL",
       status: notice.status || "PUBLISHED",
       visibility: notice.visibility || "PRIVATE",
-      targetAudience: isStudentOnlyMode
-        ? buildDefaultAudience()
+      targetAudience: isStudentBoardMode
+        ? {
+            students: true,
+            teachers: false,
+            // Preserve the existing choice — reopening a parents notice to fix
+            // a typo must not quietly drop the guardians off it.
+            parents: Boolean(notice.targetAudience?.parents),
+          }
         : notice.targetAudience || buildDefaultAudience(),
       grades: Array.isArray(notice.grades) ? notice.grades : [],
       expiryDate: notice.expiryDate
@@ -618,8 +647,8 @@ export default function NoticeManager({
           <p>
             {isPlatformMode
               ? "Platform notices appear inside logged-in school dashboards and notification panels."
-              : isStudentOnlyMode
-                ? "These notices are sent only to students of your school. Leave grades empty to send to all students."
+              : isStudentBoardMode
+                ? "Each notice can go to students only, or to students and their parents. Leave grades empty to send to everyone."
                 : "Choose the audience carefully so each notice reaches the right school community members."}
           </p>
         </div>
@@ -679,7 +708,7 @@ export default function NoticeManager({
                 maxLength={200}
               />
 
-              {!isPlatformMode && !isStudentOnlyMode && (
+              {!isPlatformMode && !isStudentBoardMode && (
                 <div className="flex gap-2">
                   <select
                     value={noticeForm.type}
@@ -727,10 +756,64 @@ export default function NoticeManager({
               <div className="rounded-xl border border-[#2f7fdb]/30 bg-[#eaf2ff] p-4 text-sm text-[#0a2f66]">
                 Published platform notices will be shown to schools inside their dashboard notification areas.
               </div>
-            ) : isStudentOnlyMode ? (
-              <div className="rounded-xl border border-[#2f7fdb]/30 bg-[#eaf2ff] p-4 text-sm text-[#0a2f66]">
-                This notice will be delivered only to students of your school. You can limit it to selected grades below.
-              </div>
+            ) : isStudentBoardMode ? (
+              <fieldset>
+                <legend className="mb-2 block font-medium text-[#344f77]">
+                  Who should receive this notice?
+                </legend>
+                <div className="grid gap-3 md:grid-cols-2">
+                  {[
+                    {
+                      parents: false,
+                      icon: FaUserGraduate,
+                      label: "Students only",
+                      note: "Appears on the student notice board.",
+                    },
+                    {
+                      parents: true,
+                      icon: FaUserFriends,
+                      label: "Students and parents",
+                      note: "Also delivered to guardians in the Parent App, with read receipts.",
+                    },
+                  ].map((option) => {
+                    const Icon = option.icon;
+                    const active =
+                      Boolean(noticeForm.targetAudience.parents) ===
+                      option.parents;
+                    return (
+                      <label
+                        key={option.label}
+                        className={`flex cursor-pointer gap-3 rounded-xl border p-4 transition ${
+                          active
+                            ? "border-purple-300 bg-purple-50 ring-1 ring-purple-200"
+                            : "border-[#dbe5f4] bg-[#f8fbff] hover:border-purple-200"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="student-notice-audience"
+                          checked={active}
+                          onChange={() => setStudentBoardParents(option.parents)}
+                          className="mt-1 shrink-0"
+                        />
+                        <span className="min-w-0">
+                          <span className="flex items-center gap-2 font-black text-[#17120a]">
+                            <Icon className="text-purple-700" />
+                            {option.label}
+                          </span>
+                          <span className="mt-1 block text-xs font-semibold text-[#52657d]">
+                            {option.note}
+                          </span>
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+                <p className="mt-2 text-xs font-semibold text-[#75869b]">
+                  Grades below limit which students — and therefore which
+                  guardians — this reaches.
+                </p>
+              </fieldset>
             ) : (
               <div>
                 <label className="block text-[#344f77] mb-2 font-medium">
@@ -827,7 +910,7 @@ export default function NoticeManager({
               </div>
             )}
 
-            {!isPlatformMode && !isStudentOnlyMode && (
+            {!isPlatformMode && !isStudentBoardMode && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="rounded-xl border border-[#2f7fdb]/30 bg-[#eaf2ff] p-4 text-sm text-[#0a2f66]">
                   Notices stay visible until you edit, draft, or delete them.
@@ -889,7 +972,7 @@ export default function NoticeManager({
               value={filters.search}
               onChange={(e) => setFilters({ ...filters, search: e.target.value })}
               placeholder={
-                isStudentOnlyMode
+                isStudentBoardMode
                   ? "Search student notices..."
                   : "Search notice title or content..."
               }
@@ -1007,6 +1090,15 @@ export default function NoticeManager({
                         {!isPlatformMode && notice.grades?.length > 0 && (
                           <span className="rounded-full bg-[#f8fbff] px-2.5 py-1 text-[11px] font-black uppercase text-[#52657d]">
                             {notice.grades.join(", ")}
+                          </span>
+                        )}
+                        {/* Which notices also went home. Without this the two
+                            kinds are indistinguishable in the list, and a
+                            school cannot tell whether parents were told. */}
+                        {!isPlatformMode && notice.targetAudience?.parents && (
+                          <span className="inline-flex items-center gap-1 rounded-full border border-purple-100 bg-purple-50 px-2.5 py-1 text-[11px] font-black uppercase text-purple-700">
+                            <FaUserFriends />
+                            Parents
                           </span>
                         )}
                       </div>

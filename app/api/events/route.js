@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { requireApiSession } from "@/lib/authz";
 import connectDB from "@/lib/db";
 import Event from "@/models/Event";
 import EventNotice from "@/models/EventNotice";
@@ -15,9 +14,19 @@ import { validateEventCapacity } from "@/lib/eventCapacity";
 import { normalizeGradeValue } from "@/lib/schoolGrades";
 import { buildEventPresentationState } from "@/lib/eventPresentation";
 import { buildSchoolParticipationPresentation } from "@/lib/participationPresentation";
-import { isTeamEventLike, resolveParticipationFormat as resolveParticipationFormatFromRecord } from "@/lib/eventParticipationFormat";
+import {
+  isTeamEventLike,
+  resolveParticipationFormat,
+} from "@/lib/eventParticipationFormat";
+// Event-catalog rules live in the domain layer (docs/ARCHITECTURE.md §2).
+import {
+  buildTeamKey,
+  describeEventForFamilies,
+  groupRequestsByEvent,
+  validateTeamRules,
+} from "@/lib/eventCatalog";
 import { publishEventRealtimeUpdate } from "@/lib/eventRealtime";
-import { ensureStudentEventNotification } from "@/lib/studentEventNotifications";
+import { ensureEventNotice } from "@/lib/eventNotices";
 import { ensureActiveAcademicYear } from "@/lib/studentEnrollment";
 import {
   getRegistrationWorkflowStatus,
@@ -26,63 +35,10 @@ import {
 
 export const dynamic = "force-dynamic";
 
-function buildTeamKey(request) {
-  const schoolId = String(request.school?._id || request.school || "");
-  const teamName = String(request.teamName || "").trim().toLowerCase();
-  return `${schoolId}::${teamName || "default-team"}`;
-}
-
-function resolveParticipationFormat(value, minTeamSize, maxTeamSize) {
-  if (
-    value === "TEAM" ||
-    minTeamSize !== undefined && minTeamSize !== null && minTeamSize !== "" ||
-    maxTeamSize !== undefined && maxTeamSize !== null && maxTeamSize !== ""
-  ) {
-    return "TEAM";
-  }
-  return "INDIVIDUAL";
-}
-
-function validateTeamRules({ participationFormat, minTeamSize, maxTeamSize }) {
-  if (participationFormat !== "TEAM") {
-    return null;
-  }
-
-  const min = minTeamSize === "" || minTeamSize === undefined || minTeamSize === null
-    ? null
-    : Number(minTeamSize);
-  const max = maxTeamSize === "" || maxTeamSize === undefined || maxTeamSize === null
-    ? null
-    : Number(maxTeamSize);
-
-  if (min !== null && (!Number.isFinite(min) || min < 1)) {
-    return "Minimum team size must be at least 1.";
-  }
-
-  if (max !== null && (!Number.isFinite(max) || max < 1)) {
-    return "Maximum team size must be at least 1.";
-  }
-
-  if (min !== null && max !== null && min > max) {
-    return "Minimum team size cannot exceed maximum team size.";
-  }
-
-  return null;
-}
-
-function groupRequestsByEvent(requests = []) {
-  const grouped = new Map();
-  requests.forEach((request) => {
-    const eventId = String(request.event || "");
-    if (!eventId) return;
-    grouped.set(eventId, [...(grouped.get(eventId) || []), request]);
-  });
-  return grouped;
-}
-
 export async function POST(req) {
   try {
-    const session = await getServerSession(authOptions);
+    const { session, error: authError } = await requireApiSession();
+    if (authError) return authError;
 
     if (
       !session ||
@@ -254,13 +210,16 @@ export async function POST(req) {
 
     try {
       if (normalizedScope === "SCHOOL") {
-        await ensureStudentEventNotification({
+        await ensureEventNotice({
           event: newEvent,
           schoolId: school,
           authorId: session.user.id,
-          title: `New internal event: ${newEvent.title}`,
-          content:
-            "Your school has published a new internal event. Open Student Events to view the details and follow updates.",
+          // Written for a guardian as much as a student: this same text is the
+          // subject and body of the announcement that lands in the parent's
+          // inbox, so "Open Student Events" — a staff screen name — would have
+          // been meaningless to half its readers.
+          title: `New event: ${newEvent.title}`,
+          content: describeEventForFamilies(newEvent),
         });
       }
     } catch (noticeError) {
@@ -288,7 +247,8 @@ export async function POST(req) {
 
 export async function GET(req) {
   try {
-    const session = await getServerSession(authOptions);
+    const { session, error: authError } = await requireApiSession();
+    if (authError) return authError;
 
     if (!session) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
@@ -536,7 +496,7 @@ export async function GET(req) {
         const allRequests = summaryRequestsByEvent.get(String(event._id)) || [];
 
         const isTeamEvent = isTeamEventLike(event);
-        eventObj.participationFormat = resolveParticipationFormatFromRecord(
+        eventObj.participationFormat = resolveParticipationFormat(
           event.participationFormat,
           event.minTeamSize,
           event.maxTeamSize

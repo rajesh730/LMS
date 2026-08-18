@@ -1,8 +1,15 @@
 import dbConnect from "@/lib/db";
+import {
+  successResponse,
+  errorResponse,
+  internalServerError,
+  notFoundError,
+  validationError,
+} from "@/lib/apiResponse";
 import Notice from "@/models/Notice";
-import { getServerSession } from "next-auth";
-import { authOptions } from "../../auth/[...nextauth]/route";
+import { requireApiSession } from "@/lib/authz";
 import { publishNoticeRealtimeEvent } from "@/lib/noticeRealtime";
+import { publishNoticeToParents } from "@/lib/notifications/service";
 
 function canManageNotice(session, notice) {
   if (!session?.user?.id || !notice) return false;
@@ -22,31 +29,29 @@ function canManageNotice(session, notice) {
 export async function PATCH(request, props) {
   try {
     await dbConnect();
-    const session = await getServerSession(authOptions);
+    const { session, error: authError } = await requireApiSession();
+    if (authError) return authError;
 
     if (!session?.user?.id) {
-      return Response.json({ error: "Unauthorized" }, { status: 401 });
+      return errorResponse(401, "Unauthorized", "UNAUTHORIZED");
     }
 
     const params = await props.params;
     const notice = await Notice.findById(params.id);
 
     if (!notice) {
-      return Response.json({ error: "Notice not found" }, { status: 404 });
+      return notFoundError("Notice");
     }
 
     if (!canManageNotice(session, notice)) {
-      return Response.json({ error: "Forbidden" }, { status: 403 });
+      return errorResponse(403, "Forbidden", "FORBIDDEN");
     }
 
     const body = await request.json();
     const nextTitle = String(body.title || "").trim();
     const nextContent = String(body.content || "").trim();
     if (!nextTitle || !nextContent) {
-      return Response.json(
-        { error: "Title and content are required" },
-        { status: 400 }
-      );
+      return validationError("Title and content are required");
     }
 
     const nextStatus =
@@ -93,6 +98,14 @@ export async function PATCH(request, props) {
         scope: notice.scope,
         targetAudience: notice.targetAudience,
       });
+
+      // Covers the two ways a notice reaches parents by edit rather than by
+      // creation: a draft being published, and an existing notice having
+      // parents added to it. `publishNoticeToParents` is a no-op if guardians
+      // were already told, so editing a typo does not re-notify anyone.
+      publishNoticeToParents(notice._id).catch((err) =>
+        console.error("[notices] parent delivery failed:", err.message)
+      );
     } else {
       publishNoticeRealtimeEvent({
         scope: notice.scope,
@@ -101,31 +114,32 @@ export async function PATCH(request, props) {
       });
     }
 
-    return Response.json({ message: "Notice updated", notice });
+    return successResponse(200, "Notice updated", { notice });
   } catch (error) {
     console.error("PATCH /api/notices/[id] error:", error);
-    return Response.json({ error: "Failed to update notice" }, { status: 500 });
+    return internalServerError("Failed to update notice");
   }
 }
 
 export async function DELETE(request, props) {
   try {
     await dbConnect();
-    const session = await getServerSession(authOptions);
+    const { session, error: authError } = await requireApiSession();
+    if (authError) return authError;
 
     if (!session?.user?.id) {
-      return Response.json({ error: "Unauthorized" }, { status: 401 });
+      return errorResponse(401, "Unauthorized", "UNAUTHORIZED");
     }
 
     const params = await props.params;
     const notice = await Notice.findById(params.id);
 
     if (!notice) {
-      return Response.json({ error: "Notice not found" }, { status: 404 });
+      return notFoundError("Notice");
     }
 
     if (!canManageNotice(session, notice)) {
-      return Response.json({ error: "Forbidden" }, { status: 403 });
+      return errorResponse(403, "Forbidden", "FORBIDDEN");
     }
 
     notice.isActive = false;
@@ -140,9 +154,9 @@ export async function DELETE(request, props) {
       isDeleted: true,
     });
 
-    return Response.json({ message: "Notice archived" });
+    return successResponse(200, "Notice archived");
   } catch (error) {
     console.error("DELETE /api/notices/[id] error:", error);
-    return Response.json({ error: "Failed to delete notice" }, { status: 500 });
+    return internalServerError("Failed to delete notice");
   }
 }

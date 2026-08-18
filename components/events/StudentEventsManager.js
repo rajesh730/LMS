@@ -16,8 +16,8 @@ import EmptyState from "@/components/EmptyState";
 import LoadingState from "@/components/ui/LoadingState";
 import AlertBanner from "@/components/ui/AlertBanner";
 import AppDate from "@/components/common/AppDate";
-import useRealtimeChannel from "@/lib/useRealtimeChannel";
-import useWorkIndicators from "@/lib/useWorkIndicators";
+import useRealtimeChannel from "@/lib/client/useRealtimeChannel";
+import useWorkIndicators from "@/lib/client/useWorkIndicators";
 import { isTeamEventLike } from "@/lib/eventParticipationFormat";
 import {
   formatEventWorkflowStatus,

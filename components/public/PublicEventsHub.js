@@ -18,7 +18,7 @@ import {
   FaTrophy,
   FaUsers,
 } from "react-icons/fa";
-import useRealtimeChannel from "@/lib/useRealtimeChannel";
+import useRealtimeChannel from "@/lib/client/useRealtimeChannel";
 import {
   EVENT_STATUS_FILTERS,
   formatEventDate,

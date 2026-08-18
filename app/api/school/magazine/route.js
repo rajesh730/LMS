@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { requireApiSession } from "@/lib/authz";
 import connectDB from "@/lib/db";
 import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
 import Student from "@/models/Student";
@@ -11,7 +10,8 @@ import { getEquivalentGradeValues } from "@/lib/schoolGrades";
 
 export async function GET(request) {
   try {
-    const session = await getServerSession(authOptions);
+    const { session, error: authError } = await requireApiSession();
+    if (authError) return authError;
 
     if (!session || session.user.role !== "SCHOOL_ADMIN") {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });

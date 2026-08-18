@@ -11,7 +11,7 @@ import AlertBanner from "@/components/ui/AlertBanner";
 import EmptyState from "@/components/EmptyState";
 import LoadingState from "@/components/ui/LoadingState";
 import StudentQuickNav from "@/components/student/StudentQuickNav";
-import useStudentReadingSurface from "@/lib/useStudentReadingSurface";
+import useStudentReadingSurface from "@/lib/client/useStudentReadingSurface";
 
 export default function StudentMagazineLibrary() {
   const { data, loading, error } = useStudentReadingSurface({

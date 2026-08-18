@@ -13,7 +13,7 @@ import LoadingState from "@/components/ui/LoadingState";
 import AlertBanner from "@/components/ui/AlertBanner";
 import EmptyState from "@/components/EmptyState";
 import CalendarToggle from "@/components/common/CalendarToggle";
-import useCalendarPreference from "@/lib/useCalendarPreference";
+import useCalendarPreference from "@/lib/client/useCalendarPreference";
 import { formatMonthYear } from "@/lib/nepaliDate";
 
 const ENROLLMENT_STATUS = {

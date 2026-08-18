@@ -1,7 +1,7 @@
 "use client";
 
 import { FaRegCalendarAlt } from "react-icons/fa";
-import useCalendarPreference from "@/lib/useCalendarPreference";
+import useCalendarPreference from "@/lib/client/useCalendarPreference";
 
 // Compact AD / BS switch. Persists per-user and updates every date on screen.
 export default function CalendarToggle({ withLabel = true, className = "" }) {

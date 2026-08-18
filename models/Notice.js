@@ -94,6 +94,20 @@ const noticeSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    // When guardians were notified about this notice.
+    //
+    // Exists to make automatic delivery fire EXACTLY ONCE. Publishing a notice
+    // to parents dispatches it immediately, but the school can also press
+    // "Deliver" on the delivery page, and `notifyGuardians` writes a fresh
+    // UserNotification every time it runs — without this marker a notice would
+    // arrive twice in the parent's bell and nobody would know why.
+    //
+    // Null on every notice that already exists, so none of them are treated as
+    // already-delivered when the automatic path first runs.
+    parentsNotifiedAt: {
+      type: Date,
+      default: null,
+    },
     // Restrict a notice to named students (§16 — "selected students"). Empty
     // means "everyone matching school + grades", which is the existing
     // behaviour.

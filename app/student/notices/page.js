@@ -1,6 +1,6 @@
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/lib/authOptions";
 import DashboardLayout from "@/components/DashboardLayout";
 import StudentNoticeBoard from "@/components/student/StudentNoticeBoard";
 import StudentNotificationCenter from "@/components/student/StudentNotificationCenter";

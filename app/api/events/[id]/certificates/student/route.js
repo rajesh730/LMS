@@ -1,24 +1,17 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { requireApiSession } from "@/lib/authz";
 import connectDB from "@/lib/db";
 import { getActiveCertificateFilter } from "@/lib/certificates";
 import Achievement from "@/models/Achievement";
 import Event from "@/models/Event";
 import Student from "@/models/Student";
+import { buildStudentLookupForSession } from "@/lib/studentIdentity";
 
 export const dynamic = "force-dynamic";
 
 function buildStudentLookup(session) {
   return {
-    isDeleted: { $ne: true },
-    status: "ACTIVE",
-    $or: [
-      { _id: session.user.id },
-      { userId: session.user.id },
-      { email: session.user.email },
-      { username: session.user.email },
-    ],
+    ...buildStudentLookupForSession(session),
   };
 }
 
@@ -52,7 +45,8 @@ function serializeCertificate(certificate) {
 
 export async function GET(_req, props) {
   try {
-    const session = await getServerSession(authOptions);
+    const { session, error: authError } = await requireApiSession();
+    if (authError) return authError;
 
     if (!session || session.user.role !== "STUDENT") {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });

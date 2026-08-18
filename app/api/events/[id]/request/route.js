@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { requireApiSession } from "@/lib/authz";
 import dbConnect from "@/lib/db";
 import Event from "@/models/Event";
 import Student from "@/models/Student";
 import ParticipationRequest from "@/models/ParticipationRequest";
+import { buildStudentLookupForSession } from "@/lib/studentIdentity";
 
 /**
  * POST /api/events/[id]/request
@@ -17,7 +17,8 @@ import ParticipationRequest from "@/models/ParticipationRequest";
  */
 export async function POST(_req, { params }) {
   try {
-    const session = await getServerSession(authOptions);
+    const { session, error: authError } = await requireApiSession();
+    if (authError) return authError;
 
     if (!session || session.user.role !== "STUDENT") {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
@@ -64,7 +65,8 @@ export async function POST(_req, { params }) {
  */
 export async function GET(req, { params }) {
   try {
-    const session = await getServerSession(authOptions);
+    const { session, error: authError } = await requireApiSession();
+    if (authError) return authError;
 
     if (!session || session.user.role !== "STUDENT") {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
@@ -75,14 +77,7 @@ export async function GET(req, { params }) {
     const { id: eventId } = params;
 
     const student = await Student.findOne({
-      isDeleted: { $ne: true },
-      status: "ACTIVE",
-      $or: [
-        { _id: session.user.id },
-        { userId: session.user.id },
-        { email: session.user.email },
-        { username: session.user.email },
-      ],
+      ...buildStudentLookupForSession(session),
     });
 
     if (!student) {

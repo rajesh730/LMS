@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { requireApiSession } from "@/lib/authz";
 import { subscribeRealtimeEvent } from "@/lib/realtimeBus";
 import {
   isMessagingChannel,
@@ -64,7 +63,8 @@ export async function GET(request) {
 
   // Drop any private/admin channels the caller isn't authorized for; keep public
   // ones. If nothing remains accessible, reject.
-  const session = await getServerSession(authOptions);
+  const { session, error: authError } = await requireApiSession();
+  if (authError) return authError;
   const allowedChannels = filterAllowedChannels(channels, session);
   if (allowedChannels.length === 0) {
     return NextResponse.json(

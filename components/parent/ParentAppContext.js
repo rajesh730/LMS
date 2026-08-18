@@ -165,7 +165,11 @@ export function ParentAppProvider({ children }) {
       const json = await res.json();
       const counts = json?.data?.badges || {};
       setBadges({
+        // The notices badge belongs on the Notices entry point, not on Home —
+        // a count that does not sit on the thing it counts just tells a
+        // guardian something is wrong somewhere.
         "/parent": counts.noticesActionRequired || 0,
+        "/parent/notices": counts.noticesActionRequired || 0,
         notifications: counts.notifications || 0,
       });
     } catch {

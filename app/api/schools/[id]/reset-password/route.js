@@ -1,5 +1,4 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { requireApiSession } from "@/lib/authz";
 import connectDB from "@/lib/db";
 import User from "@/models/User";
 import AuditLog from "@/models/AuditLog";
@@ -15,7 +14,8 @@ const SCHOOL_RESET_TEMP_PASSWORD = "password@123";
 
 export async function POST(req, props) {
   try {
-    const session = await getServerSession(authOptions);
+    const { session, error: authError } = await requireApiSession();
+    if (authError) return authError;
     if (!session || session.user.role !== "SUPER_ADMIN") {
       return unauthorizedError();
     }

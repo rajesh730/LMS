@@ -14,7 +14,7 @@ import {
   getEventNextActionLabel,
   getEventWorkflowStatus,
 } from "@/lib/eventWorkflow";
-import useCalendarPreference from "@/lib/useCalendarPreference";
+import useCalendarPreference from "@/lib/client/useCalendarPreference";
 import { formatDate as formatCalendarDate } from "@/lib/nepaliDate";
 
 export default function EventInfoHeader({ event, capacityInfo }) {

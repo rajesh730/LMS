@@ -17,7 +17,7 @@ import {
 import EmptyState from "@/components/EmptyState";
 import LoadingState from "@/components/ui/LoadingState";
 import AppDate from "@/components/common/AppDate";
-import useNotificationInbox from "@/lib/useNotificationInbox";
+import useNotificationInbox from "@/lib/client/useNotificationInbox";
 
 function isToday(value) {
   if (!value) return false;

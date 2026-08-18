@@ -1,13 +1,13 @@
 import connectDB from "@/lib/db";
 import Student from "@/models/Student";
 import { successResponse, errorResponse } from "@/lib/apiResponse";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { requireApiSession } from "@/lib/authz";
 import { escapeRegex } from "@/lib/pagination";
 
 export async function GET(req, { params }) {
   try {
-    const session = await getServerSession(authOptions);
+    const { session, error: authError } = await requireApiSession();
+    if (authError) return authError;
 
     if (!session || session.user.role !== "SCHOOL_ADMIN") {
       return errorResponse(401, "Unauthorized - School Admin access required");

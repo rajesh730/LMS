@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { requireApiSession } from "@/lib/authz";
 import connectDB from "@/lib/db";
 import Event from "@/models/Event";
 import Student from "@/models/Student";
@@ -16,7 +15,8 @@ import { getEquivalentGradeValues } from "@/lib/schoolGrades";
  */
 export async function GET(req) {
   try {
-    const session = await getServerSession(authOptions);
+    const { session, error: authError } = await requireApiSession();
+    if (authError) return authError;
 
     // Only students can access this endpoint
     if (!session || session.user.role !== "STUDENT") {

@@ -15,7 +15,7 @@ import LoadingState from "@/components/ui/LoadingState";
 import StudentQuickNav from "@/components/student/StudentQuickNav";
 import { WritingPreview } from "@/components/WritingContent";
 import { normalizeWritingCategory } from "@/lib/writingCategories";
-import useStudentReadingSurface from "@/lib/useStudentReadingSurface";
+import useStudentReadingSurface from "@/lib/client/useStudentReadingSurface";
 
 const CATEGORIES = {
   BLOG_ARTICLE: "Blog Article",

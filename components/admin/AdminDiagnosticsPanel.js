@@ -10,8 +10,8 @@ import {
   FaRedoAlt,
   FaSatelliteDish,
 } from "react-icons/fa";
-import useRealtimeChannel from "@/lib/useRealtimeChannel";
-import useCalendarPreference from "@/lib/useCalendarPreference";
+import useRealtimeChannel from "@/lib/client/useRealtimeChannel";
+import useCalendarPreference from "@/lib/client/useCalendarPreference";
 import { formatDateTime as formatCalendarDateTime } from "@/lib/nepaliDate";
 import AppDate from "@/components/common/AppDate";
 

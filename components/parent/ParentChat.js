@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { FaPaperPlane } from "react-icons/fa";
 import { useParentApp } from "./ParentAppContext";
 import VoiceRecorder from "./VoiceRecorder";
-import useRealtimeChannel from "@/lib/useRealtimeChannel";
+import useRealtimeChannel from "@/lib/client/useRealtimeChannel";
 import {
   parentMessagesChannel,
   MESSAGE_EVENTS,

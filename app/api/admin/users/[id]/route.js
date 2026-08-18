@@ -1,6 +1,5 @@
-import { getServerSession } from "next-auth";
 import bcrypt from "bcryptjs";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { requireApiSession } from "@/lib/authz";
 import connectDB from "@/lib/db";
 import User from "@/models/User";
 import { recordSettingsAudit } from "@/lib/settingsAudit";
@@ -26,7 +25,8 @@ function serializeAdmin(user) {
 
 export async function PATCH(req, { params }) {
   try {
-    const session = await getServerSession(authOptions);
+    const { session, error: authError } = await requireApiSession();
+    if (authError) return authError;
     if (!session || session.user.role !== "SUPER_ADMIN") {
       return unauthorizedError();
     }

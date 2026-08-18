@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { requireApiSession } from "@/lib/authz";
 import connectDB from '@/lib/db';
 import User from '@/models/User';
 import { publishWorkIndicatorsUpdate } from '@/lib/workIndicatorRealtime';
@@ -8,7 +7,8 @@ import { sendSchoolApprovalEmail } from '@/lib/emailService';
 
 export async function PUT(req, { params }) {
     try {
-        const session = await getServerSession(authOptions);
+        const { session, error: authError } = await requireApiSession();
+        if (authError) return authError;
 
         if (!session || session.user.role !== 'SUPER_ADMIN') {
             console.error("❌ Unauthorized - User is not SUPER_ADMIN");

@@ -11,7 +11,7 @@ import { FaArrowLeft } from "react-icons/fa";
 import LoadingState from "@/components/ui/LoadingState";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import AlertBanner from "@/components/ui/AlertBanner";
-import useRealtimeChannel from "@/lib/useRealtimeChannel";
+import useRealtimeChannel from "@/lib/client/useRealtimeChannel";
 import AuthenticatedPublicLinkGuard from "@/components/AuthenticatedPublicLinkGuard";
 
 export default function EventDetailDashboard() {

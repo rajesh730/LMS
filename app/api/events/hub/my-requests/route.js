@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { requireApiSession } from "@/lib/authz";
 import dbConnect from "@/lib/db";
 import Student from "@/models/Student";
 import ParticipationRequest from "@/models/ParticipationRequest";
 import "@/models/Event";
 import { buildEventPresentationState } from "@/lib/eventPresentation";
+import { buildStudentLookupForSession } from "@/lib/studentIdentity";
 
 /**
  * GET /api/events/hub/my-requests
@@ -14,7 +14,8 @@ import { buildEventPresentationState } from "@/lib/eventPresentation";
  */
 export async function GET(req) {
   try {
-    const session = await getServerSession(authOptions);
+    const { session, error: authError } = await requireApiSession();
+    if (authError) return authError;
 
     if (!session || session.user.role !== "STUDENT") {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
@@ -24,14 +25,7 @@ export async function GET(req) {
 
     // Student sessions use the Student document id, with fallbacks for legacy data.
     const student = await Student.findOne({
-      isDeleted: { $ne: true },
-      status: "ACTIVE",
-      $or: [
-        { _id: session.user.id },
-        { userId: session.user.id },
-        { email: session.user.email },
-        { username: session.user.email },
-      ],
+      ...buildStudentLookupForSession(session),
     });
 
     if (!student) {

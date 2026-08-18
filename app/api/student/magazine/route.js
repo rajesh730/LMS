@@ -5,17 +5,11 @@ import MagazineIssue from "@/models/MagazineIssue";
 import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
 import { requireApiSession } from "@/lib/authz";
 import { serializeMagazineIssue } from "@/lib/magazineIssues";
+import { buildStudentLookupForSession } from "@/lib/studentIdentity";
 
 function studentLookup(session) {
   return {
-    isDeleted: { $ne: true },
-    status: "ACTIVE",
-    $or: [
-      { _id: session.user.id },
-      { userId: session.user.id },
-      { email: session.user.email },
-      { username: session.user.email },
-    ],
+    ...buildStudentLookupForSession(session),
   };
 }
 

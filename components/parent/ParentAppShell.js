@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { FaCog, FaBell } from "react-icons/fa";
+import { FaCog, FaBell, FaClipboardList } from "react-icons/fa";
 import { useParentApp } from "./ParentAppContext";
 import ChildSwitcher from "./ChildSwitcher";
 import ParentBottomNav, { ParentNavRail } from "./ParentBottomNav";
@@ -84,6 +84,25 @@ export default function ParentAppShell({ children }) {
                 <ChildSwitcher />
               </div>
               <div className="flex items-center gap-1 pr-3">
+                {/* Notices had no route into them at all: the bottom bar is
+                    capped at five destinations by design, so /parent/notices
+                    was only reachable by tapping a notification or a Home card.
+                    A school publishing to parents expects somewhere to look —
+                    this is it. */}
+                <Link
+                  href="/parent/notices"
+                  aria-label={t("notices.title")}
+                  className="relative flex h-11 w-11 items-center justify-center rounded-full text-[var(--brand-muted)] transition-colors hover:bg-slate-100"
+                >
+                  <FaClipboardList aria-hidden="true" className="h-5 w-5" />
+                  {badges["/parent/notices"] > 0 ? (
+                    <span className="absolute right-1.5 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white">
+                      {badges["/parent/notices"] > 9
+                        ? "9+"
+                        : badges["/parent/notices"]}
+                    </span>
+                  ) : null}
+                </Link>
                 <Link
                   href="/parent/notifications"
                   aria-label={t("settings.notifications")}

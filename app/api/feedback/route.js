@@ -1,11 +1,11 @@
-import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { requireApiSession } from "@/lib/authz";
 import connectDB from "@/lib/db";
 import Feedback from "@/models/Feedback";
 import Student from "@/models/Student";
 import User from "@/models/User";
 import { publishWorkIndicatorsUpdate } from "@/lib/workIndicatorRealtime";
+import { buildStudentLookupForSession } from "@/lib/studentIdentity";
 
 function clean(value) {
   return String(value || "").trim();
@@ -30,14 +30,7 @@ function serializeFeedback(feedback) {
 
 async function getStudentProfile(session) {
   return Student.findOne({
-    isDeleted: { $ne: true },
-    status: "ACTIVE",
-    $or: [
-      { _id: session.user.id },
-      { userId: session.user.id },
-      { email: session.user.email },
-      { username: session.user.email },
-    ],
+    ...buildStudentLookupForSession(session),
   })
     .populate("school", "schoolName email")
     .lean();
@@ -45,7 +38,8 @@ async function getStudentProfile(session) {
 
 export async function GET(request) {
   try {
-    const session = await getServerSession(authOptions);
+    const { session, error: authError } = await requireApiSession();
+    if (authError) return authError;
     if (!session) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
@@ -91,7 +85,8 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
-    const session = await getServerSession(authOptions);
+    const { session, error: authError } = await requireApiSession();
+    if (authError) return authError;
     if (!session || !["SCHOOL_ADMIN", "STUDENT"].includes(session.user.role)) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
