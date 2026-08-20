@@ -66,7 +66,7 @@ export default function WritingReader({ writingId, onClose }) {
       role="dialog"
       aria-modal="true"
       aria-label={writing?.title || t("child.writing")}
-      className="fixed inset-0 z-50 flex flex-col bg-white"
+      className="fixed inset-0 z-50 flex min-h-0 flex-col overflow-hidden bg-white"
     >
       <header className="flex items-center gap-2 border-b border-[var(--brand-border)] px-4 py-3">
         <button
@@ -82,7 +82,7 @@ export default function WritingReader({ writingId, onClose }) {
         </p>
       </header>
 
-      <div className="flex-1 overflow-y-auto px-5 py-5">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:px-5">
         {state.loading ? (
           <div className="space-y-3" aria-busy="true">
             <div className="h-7 w-3/4 animate-pulse rounded bg-slate-200" />
@@ -96,7 +96,7 @@ export default function WritingReader({ writingId, onClose }) {
           </p>
         ) : (
           <article className="mx-auto max-w-2xl">
-            <h1 className="text-2xl font-bold leading-snug text-[var(--brand-ink)]">
+            <h1 className="break-words text-2xl font-bold leading-snug text-[var(--brand-ink)]">
               {writing.title}
             </h1>
             <p className="mt-1 text-xs text-[var(--brand-muted)]">
@@ -110,7 +110,7 @@ export default function WritingReader({ writingId, onClose }) {
               <ListenButton text={writing.speechText} fullWidth />
             </div>
 
-            <div className="prose-parent mt-5 whitespace-pre-wrap text-[17px] leading-[1.75] text-[var(--brand-ink)]">
+            <div className="prose-parent mt-5 whitespace-pre-wrap break-words text-[17px] leading-[1.75] text-[var(--brand-ink)]">
               {stripHtml(writing.content)}
             </div>
           </article>

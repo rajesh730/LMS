@@ -81,14 +81,14 @@ export default function ParentChildPage() {
           {child.school?.name}
         </p>
 
-        <div className="mt-4 grid w-full grid-cols-3 gap-2">
+        <div className="mt-4 grid w-full grid-cols-1 gap-2 min-[360px]:grid-cols-3">
           <Stat value={achievements.length} label={t("child.achievements")} />
           <Stat value={writings.length} label={t("child.writing")} />
           <Stat value={certificates.length} label={t("child.certificates")} />
         </div>
       </header>
 
-      <div className="-mx-4 overflow-x-auto px-4 scrollbar-hidden">
+      <div className="-mx-3 overflow-x-auto overscroll-x-contain px-3 scrollbar-hidden sm:-mx-4 sm:px-4">
         <div className="flex w-max gap-2">
           {TABS.map((entry) => (
             <button
@@ -274,7 +274,7 @@ export default function ParentChildPage() {
                   </div>
                 </div>
 
-                <div className="mt-3 grid grid-cols-2 gap-2">
+                <div className="mt-3 grid grid-cols-1 gap-2 min-[380px]:grid-cols-2">
                   {certificate.certificateUrl ? (
                     <a
                       href={certificate.certificateUrl}

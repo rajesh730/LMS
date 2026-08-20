@@ -59,7 +59,7 @@ export default function ParentRegisterPage() {
   };
 
   return (
-    <main className="flex min-h-screen flex-col justify-center bg-[var(--background)] px-5 py-10">
+    <main className="flex min-h-dvh flex-col justify-center bg-[var(--background)] px-4 py-8 pb-[calc(2rem+env(safe-area-inset-bottom))] sm:px-5 sm:py-10">
       <div className="mx-auto w-full max-w-sm">
         <h1 className="text-2xl font-bold text-[var(--brand-ink)]">
           Create your parent account

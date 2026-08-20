@@ -135,7 +135,7 @@ export async function POST(request, { params }) {
 
     // Keep the other guardians informed so two do not both register the child
     // and wonder why one attempt reported "already registered" (§19).
-    notifyGuardians({
+    await notifyGuardians({
       studentId: student._id,
       category: "EVENT",
       priority: "INFO",

@@ -127,7 +127,7 @@ export default function ParentNoticeDetailPage() {
           </span>
         </div>
 
-        <h1 className="mt-2 text-xl font-bold leading-snug text-[var(--brand-ink)]">
+        <h1 className="mt-2 break-words text-xl font-bold leading-snug text-[var(--brand-ink)]">
           {notice.title}
         </h1>
         <p className="mt-1 text-xs text-[var(--brand-muted)]">
@@ -137,7 +137,7 @@ export default function ParentNoticeDetailPage() {
 
       <ListenButton text={speechText} fullWidth />
 
-      <div className="whitespace-pre-wrap text-[15px] leading-relaxed text-[var(--brand-ink)]">
+      <div className="whitespace-pre-wrap break-words text-[15px] leading-relaxed text-[var(--brand-ink)]">
         {notice.content}
       </div>
 
@@ -198,7 +198,7 @@ export default function ParentNoticeDetailPage() {
               })}
             </p>
           ) : canGiveConsent ? (
-            <div className="mt-4 grid grid-cols-2 gap-3">
+            <div className="mt-4 grid grid-cols-1 gap-3 min-[360px]:grid-cols-2">
               <button
                 type="button"
                 disabled={submitting}

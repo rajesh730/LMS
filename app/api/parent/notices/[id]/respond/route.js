@@ -94,7 +94,7 @@ export async function POST(request, { params }) {
     // Tell the OTHER guardians a decision was made, so two guardians do not
     // both answer the same permission slip without knowing (§19, §20).
     // Fire-and-forget: a notification failure must not fail the consent.
-    notifyGuardians({
+    await notifyGuardians({
       studentId: student._id,
       category: "CONSENT",
       priority: "INFO",

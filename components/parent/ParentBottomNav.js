@@ -48,19 +48,19 @@ export default function ParentBottomNav({ badges = {} }) {
       className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--brand-border)] bg-white pb-[env(safe-area-inset-bottom)] md:hidden"
       aria-label={t("nav.home")}
     >
-      <ul className="mx-auto flex max-w-2xl">
+      <ul className="mx-auto flex min-w-0 max-w-2xl">
         {TABS.map((tab) => {
           const active = isActive(tab);
           const Icon = tab.icon;
           const badge = badges[tab.href] || 0;
 
           return (
-            <li key={tab.href} className="flex-1">
+            <li key={tab.href} className="min-w-0 flex-1">
               <Link
                 href={tab.href}
                 aria-current={active ? "page" : undefined}
                 className={[
-                  "relative flex min-h-[56px] flex-col items-center justify-center gap-1 px-1 py-2 transition-colors",
+                  "relative flex min-h-[56px] min-w-0 flex-col items-center justify-center gap-1 px-0.5 py-2 transition-colors sm:px-1",
                   active
                     ? "text-[var(--brand-primary)]"
                     : "text-[var(--brand-muted)]",
@@ -92,7 +92,7 @@ export default function ParentBottomNav({ badges = {} }) {
                 <span
                   className={[
                     simpleMode ? "text-[13px]" : "text-[11px]",
-                    "leading-tight",
+                    "max-w-full truncate leading-tight",
                     active ? "font-bold" : "font-medium",
                   ].join(" ")}
                 >

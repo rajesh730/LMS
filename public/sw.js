@@ -21,7 +21,7 @@
  * `self.addEventListener("install", () => self.registration.unregister())`.
  */
 
-const CACHE_VERSION = "pravyo-v1";
+const CACHE_VERSION = "pravyo-v2";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const SHELL_CACHE = `${CACHE_VERSION}-shell`;
 const OFFLINE_URL = "/offline";
@@ -57,6 +57,44 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("message", (event) => {
   if (event.data === "SKIP_WAITING") self.skipWaiting();
+});
+
+// Push payloads contain only display text and an in-app path. Sensitive data
+// remains behind the authenticated route that opens when the alert is tapped.
+self.addEventListener("push", (event) => {
+  let payload = {};
+  try {
+    payload = event.data ? event.data.json() : {};
+  } catch {
+    payload = { body: event.data ? event.data.text() : "You have a new update." };
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(payload.title || "Pravyo", {
+      body: payload.body || "You have a new update.",
+      icon: "/pravyo-icon.png?v=2",
+      badge: "/apple-icon.png?v=2",
+      tag: payload.tag || "pravyo-update",
+      renotify: true,
+      data: { href: payload.href || "/parent/notifications" },
+    })
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const href = event.notification.data?.href || "/parent/notifications";
+  const targetUrl = new URL(href, self.location.origin).href;
+
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
+      const existing = clients.find((client) => new URL(client.url).origin === self.location.origin);
+      if (existing) {
+        return existing.focus().then(() => existing.navigate(targetUrl));
+      }
+      return self.clients.openWindow(targetUrl);
+    })
+  );
 });
 
 function isStaticAsset(url) {

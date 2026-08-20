@@ -176,7 +176,7 @@ function ParentLogin() {
     // and because the container was exactly one viewport tall there was nothing
     // to scroll to, so the button was unreachable. `dvh` tracks the visible
     // height, so the page fits or scrolls.
-    <main className="flex min-h-[100dvh] flex-col justify-center bg-[var(--background)] px-5 py-10 pb-[calc(2.5rem+env(safe-area-inset-bottom))]">
+    <main className="flex min-h-[100dvh] flex-col justify-center overflow-x-hidden bg-[var(--background)] px-4 py-8 pb-[calc(2rem+env(safe-area-inset-bottom))] sm:px-5 sm:py-10 sm:pb-[calc(2.5rem+env(safe-area-inset-bottom))]">
       <div className="mx-auto w-full max-w-sm">
         {/* Language first and always visible. A guardian who cannot read the
             screen cannot be asked to choose a language further in. */}
@@ -246,7 +246,7 @@ function ParentLogin() {
                   }
                   required
                   placeholder="PRV-P-XXXXXX"
-                  className="mt-2 min-h-[64px] w-full rounded-xl border-2 border-[var(--brand-border)] px-4 text-center font-mono text-xl tracking-[0.15em] focus:border-[var(--brand-primary)] focus:outline-none"
+                  className="mt-2 min-h-[64px] w-full rounded-xl border-2 border-[var(--brand-border)] px-2 text-center font-mono text-lg tracking-[0.08em] focus:border-[var(--brand-primary)] focus:outline-none min-[360px]:px-4 min-[360px]:text-xl min-[360px]:tracking-[0.15em]"
                 />
               </div>
 
@@ -358,7 +358,7 @@ function ErrorNote({ children }) {
 
 function Centred({ text }) {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[var(--background)]">
+    <main className="flex min-h-dvh items-center justify-center bg-[var(--background)]">
       <p className="text-sm text-[var(--brand-muted)]">{text}</p>
     </main>
   );

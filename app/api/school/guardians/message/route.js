@@ -205,7 +205,7 @@ export async function POST(request) {
     const notificationTitle = (
       subject ? `${subject.slice(0, 120)} — ${schoolName}` : `Message from ${schoolName}`
     ).slice(0, 180);
-    Promise.all(
+    await Promise.all(
       studentIdsTouched.map((studentId) =>
         notifyGuardians({
           studentId,

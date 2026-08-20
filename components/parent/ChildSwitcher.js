@@ -53,7 +53,7 @@ export default function ChildSwitcher() {
   const single = childList.length <= 1;
 
   const header = (
-    <div className="flex items-center gap-3 text-left">
+    <div className="flex min-w-0 items-center gap-2 text-left sm:gap-3">
       <ChildAvatar
         name={selectedChild.name}
         photoUrl={selectedChild.photoUrl}
@@ -94,11 +94,11 @@ export default function ChildSwitcher() {
   // Scenario A: one child. No dropdown, no chevron, nothing to tap — a control
   // that does nothing is a control that erodes trust.
   if (single) {
-    return <div className="px-4 py-3">{header}</div>;
+    return <div className="min-w-0 px-2 py-3 sm:px-4">{header}</div>;
   }
 
   return (
-    <div ref={containerRef} className="relative px-4 py-2">
+    <div ref={containerRef} className="relative min-w-0 px-2 py-2 sm:px-4">
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}

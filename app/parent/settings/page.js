@@ -3,6 +3,7 @@
 import { signOut } from "next-auth/react";
 import { useParentApp } from "@/components/parent/ParentAppContext";
 import { LOCALE_LABELS, SUPPORTED_LOCALES } from "@/lib/parentI18n";
+import ParentPushNotifications from "@/components/parent/ParentPushNotifications";
 
 /**
  * Settings — accessibility, language, data (§8, §22, §23).
@@ -26,7 +27,7 @@ export default function ParentSettingsPage() {
         <h2 className="text-sm font-bold text-[var(--brand-ink)]">
           {t("settings.language")}
         </h2>
-        <div className="mt-3 grid grid-cols-2 gap-3">
+        <div className="mt-3 grid grid-cols-1 gap-3 min-[360px]:grid-cols-2">
           {SUPPORTED_LOCALES.map((locale) => {
             const active = preferences.language === locale;
             return (
@@ -72,6 +73,7 @@ export default function ParentSettingsPage() {
           {t("settings.notifications")}
         </h2>
         <div className="space-y-3">
+          <ParentPushNotifications />
           <ToggleRow
             emoji="🔔"
             title="In the app"
@@ -111,7 +113,7 @@ export default function ParentSettingsPage() {
       {/* --- Calendar ------------------------------------------------------ */}
       <section className="rounded-2xl border border-[var(--brand-border)] bg-white p-4">
         <h2 className="text-sm font-bold text-[var(--brand-ink)]">Calendar</h2>
-        <div className="mt-3 grid grid-cols-2 gap-3">
+        <div className="mt-3 grid grid-cols-1 gap-3 min-[360px]:grid-cols-2">
           {["BS", "AD"].map((calendar) => {
             const active = preferences.calendarPreference === calendar;
             return (
@@ -138,8 +140,8 @@ export default function ParentSettingsPage() {
 
       {/* --- Account ------------------------------------------------------- */}
       <section className="rounded-2xl border border-[var(--brand-border)] bg-white p-4">
-        <p className="font-bold text-[var(--brand-ink)]">{parent?.name}</p>
-        <p className="text-sm text-[var(--brand-muted)]">
+        <p className="break-words font-bold text-[var(--brand-ink)]">{parent?.name}</p>
+        <p className="break-all text-sm text-[var(--brand-muted)]">
           {parent?.email || parent?.phone}
         </p>
         <p className="mt-1 text-xs text-[var(--brand-muted)]">

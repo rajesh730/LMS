@@ -40,7 +40,7 @@ export default function StatusCard({
       <Link
         href={href}
         className={[
-          "flex min-h-[48px] items-center justify-center rounded-xl px-5 text-sm font-bold transition-colors",
+          "flex min-h-[48px] max-w-full items-center justify-center break-words rounded-xl px-5 text-center text-sm font-bold transition-colors",
           simpleMode ? "w-full text-base" : "",
           descriptor.classes.button,
         ].join(" ")}
@@ -52,7 +52,7 @@ export default function StatusCard({
         type="button"
         onClick={onAction}
         className={[
-          "flex min-h-[48px] items-center justify-center rounded-xl px-5 text-sm font-bold transition-colors",
+          "flex min-h-[48px] max-w-full items-center justify-center break-words rounded-xl px-5 text-center text-sm font-bold transition-colors",
           simpleMode ? "w-full text-base" : "",
           descriptor.classes.button,
         ].join(" ")}
@@ -71,7 +71,7 @@ export default function StatusCard({
       ].join(" ")}
     >
       {/* Status line: colour + icon + words, always together. */}
-      <div className="mb-2 flex items-center gap-2">
+      <div className="mb-2 flex min-w-0 flex-wrap items-center gap-2">
         <span
           aria-hidden="true"
           className={[
@@ -104,7 +104,7 @@ export default function StatusCard({
         {emoji ? (
           <span
             aria-hidden="true"
-            className={simpleMode ? "text-3xl" : "text-2xl"}
+            className={`shrink-0 ${simpleMode ? "text-3xl" : "text-2xl"}`}
           >
             {emoji}
           </span>
@@ -113,7 +113,7 @@ export default function StatusCard({
         <div className="min-w-0 flex-1">
           <h3
             className={[
-              "font-bold leading-snug text-[var(--brand-ink)]",
+              "break-words font-bold leading-snug text-[var(--brand-ink)]",
               simpleMode ? "text-lg" : "text-base",
             ].join(" ")}
           >
@@ -128,7 +128,7 @@ export default function StatusCard({
           ) : null}
 
           {meta ? (
-            <p className="mt-1.5 text-xs font-medium text-[var(--brand-muted)]">
+            <p className="mt-1.5 break-words text-xs font-medium text-[var(--brand-muted)]">
               {meta}
             </p>
           ) : null}

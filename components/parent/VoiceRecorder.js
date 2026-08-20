@@ -154,7 +154,7 @@ export default function VoiceRecorder({ onRecorded, disabled = false }) {
       ) : null}
 
       {error ? (
-        <div className="absolute bottom-full right-0 mb-2 w-64 rounded-xl bg-red-50 px-3 py-2 text-xs text-red-800 shadow-lg">
+        <div className="absolute bottom-full right-0 mb-2 w-64 max-w-[calc(100vw-2rem)] rounded-xl bg-red-50 px-3 py-2 text-xs text-red-800 shadow-lg">
           {error}
         </div>
       ) : null}

@@ -35,7 +35,7 @@ export default function ParentAppShell({ children }) {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[var(--background)]">
+      <div className="flex min-h-dvh items-center justify-center bg-[var(--background)]">
         <div className="flex flex-col items-center gap-3">
           <span className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--brand-primary)] border-t-transparent" />
           <p className="text-sm text-[var(--brand-muted)]">
@@ -48,7 +48,7 @@ export default function ParentAppShell({ children }) {
 
   if (error) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[var(--background)] px-6">
+      <div className="flex min-h-dvh items-center justify-center bg-[var(--background)] px-4 sm:px-6">
         <div className="w-full max-w-sm rounded-2xl border border-red-200 bg-red-50 p-6 text-center">
           <p className="text-2xl" aria-hidden="true">
             ⚠️
@@ -70,7 +70,7 @@ export default function ParentAppShell({ children }) {
 
   return (
     <div
-      className="min-h-screen bg-[var(--background)]"
+      className="min-h-dvh overflow-x-hidden bg-[var(--background)]"
       // Root-level type scale for Simple Mode (§8).
       style={{ fontSize: simpleMode ? "17px" : undefined }}
     >
@@ -79,11 +79,11 @@ export default function ParentAppShell({ children }) {
 
         <div className="min-w-0 flex-1">
           <header className="sticky top-0 z-30 border-b border-[var(--brand-border)] bg-white/95 backdrop-blur">
-            <div className="flex items-center">
+            <div className="flex min-w-0 items-center">
               <div className="min-w-0 flex-1">
                 <ChildSwitcher />
               </div>
-              <div className="flex items-center gap-1 pr-3">
+              <div className="flex shrink-0 items-center pr-1 sm:gap-1 sm:pr-3">
                 {/* Notices had no route into them at all: the bottom bar is
                     capped at five destinations by design, so /parent/notices
                     was only reachable by tapping a notification or a Home card.
@@ -92,7 +92,7 @@ export default function ParentAppShell({ children }) {
                 <Link
                   href="/parent/notices"
                   aria-label={t("notices.title")}
-                  className="relative flex h-11 w-11 items-center justify-center rounded-full text-[var(--brand-muted)] transition-colors hover:bg-slate-100"
+                  className="relative flex h-11 w-10 items-center justify-center rounded-full text-[var(--brand-muted)] transition-colors hover:bg-slate-100 sm:w-11"
                 >
                   <FaClipboardList aria-hidden="true" className="h-5 w-5" />
                   {badges["/parent/notices"] > 0 ? (
@@ -106,7 +106,7 @@ export default function ParentAppShell({ children }) {
                 <Link
                   href="/parent/notifications"
                   aria-label={t("settings.notifications")}
-                  className="relative flex h-11 w-11 items-center justify-center rounded-full text-[var(--brand-muted)] transition-colors hover:bg-slate-100"
+                  className="relative flex h-11 w-10 items-center justify-center rounded-full text-[var(--brand-muted)] transition-colors hover:bg-slate-100 sm:w-11"
                 >
                   <FaBell aria-hidden="true" className="h-5 w-5" />
                   {badges.notifications > 0 ? (
@@ -118,7 +118,7 @@ export default function ParentAppShell({ children }) {
                 <Link
                   href="/parent/settings"
                   aria-label={t("settings.title")}
-                  className="flex h-11 w-11 items-center justify-center rounded-full text-[var(--brand-muted)] transition-colors hover:bg-slate-100"
+                  className="flex h-11 w-10 items-center justify-center rounded-full text-[var(--brand-muted)] transition-colors hover:bg-slate-100 sm:w-11"
                 >
                   <FaCog aria-hidden="true" className="h-5 w-5" />
                 </Link>
@@ -127,8 +127,8 @@ export default function ParentAppShell({ children }) {
           </header>
 
           {/* Bottom padding clears the fixed nav plus the iOS safe area. */}
-          <main className="px-4 pb-28 pt-4 md:pb-10">
-            <div className="mx-auto max-w-2xl">{children}</div>
+          <main className="px-3 pb-[calc(5.5rem+env(safe-area-inset-bottom))] pt-3 sm:px-4 sm:pt-4 md:pb-10">
+            <div className="mx-auto min-w-0 max-w-2xl">{children}</div>
           </main>
         </div>
       </div>

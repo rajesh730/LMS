@@ -95,7 +95,7 @@ export default function ParentJourneyPage() {
       </header>
 
       {/* Horizontally scrolling filter chips — no dropdowns on a phone. */}
-      <div className="-mx-4 overflow-x-auto px-4 scrollbar-hidden">
+      <div className="-mx-3 overflow-x-auto overscroll-x-contain px-3 scrollbar-hidden sm:-mx-4 sm:px-4">
         <div className="flex w-max gap-2 pb-1">
           {FILTERS.map((entry) => {
             const active = filter === entry.key;
@@ -125,8 +125,8 @@ export default function ParentJourneyPage() {
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
-        <span className="text-xs font-medium text-[var(--brand-muted)]">
+      <div className="-mx-3 flex items-center gap-2 overflow-x-auto overscroll-x-contain px-3 pb-1 scrollbar-hidden sm:mx-0 sm:px-0">
+        <span className="shrink-0 text-xs font-medium text-[var(--brand-muted)]">
           {t("journey.groupByYear")}:
         </span>
         {GROUPS.map((entry) => (
@@ -136,7 +136,7 @@ export default function ParentJourneyPage() {
             onClick={() => setGroupBy(entry.key)}
             aria-pressed={groupBy === entry.key}
             className={[
-              "min-h-[36px] rounded-lg px-3 text-xs font-semibold transition-colors",
+              "min-h-[36px] shrink-0 whitespace-nowrap rounded-lg px-3 text-xs font-semibold transition-colors",
               groupBy === entry.key
                 ? "bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]"
                 : "text-[var(--brand-muted)] hover:bg-slate-100",

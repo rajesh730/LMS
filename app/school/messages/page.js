@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
+import { useSearchParams } from "next/navigation";
 import {
   FaSearch,
   FaInbox,
@@ -42,6 +43,8 @@ const SCOPES = [
 
 export default function SchoolMessagesPage() {
   const { data: session, status } = useSession();
+  const searchParams = useSearchParams();
+  const requestedConversationId = searchParams.get("conversation");
 
   const [rows, setRows] = useState([]);
   const [meta, setMeta] = useState({ messageable: 0, truncated: false });
@@ -130,6 +133,16 @@ export default function SchoolMessagesPage() {
   // reloads with a conversationId and the panel becomes the live chat by
   // itself — no second piece of state to keep in step.
   const activeRow = rows.find((row) => row.key === activeKey) || null;
+
+  // Notifications deep-link to the actual conversation. Wait until the people
+  // list has loaded, then select its row without overriding a later manual tap.
+  useEffect(() => {
+    if (!requestedConversationId || activeKey) return;
+    const match = rows.find(
+      (row) => String(row.conversationId || "") === requestedConversationId
+    );
+    if (match) setActiveKey(match.key);
+  }, [rows, requestedConversationId, activeKey]);
 
   const chooseScope = (next) => {
     setScope(next);

@@ -111,10 +111,10 @@ export default function ParentNotificationsPage() {
                     </p>
                   ) : null}
 
-                  <p className="font-semibold leading-snug text-[var(--brand-ink)]">
+                  <p className="break-words font-semibold leading-snug text-[var(--brand-ink)]">
                     {notification.title}
                   </p>
-                  <p className="mt-0.5 text-sm leading-relaxed text-[var(--brand-muted)]">
+                  <p className="mt-0.5 break-words text-sm leading-relaxed text-[var(--brand-muted)]">
                     {notification.message}
                   </p>
                   <p className="mt-1 text-[11px] text-[var(--brand-muted)]">

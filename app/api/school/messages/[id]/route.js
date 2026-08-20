@@ -202,7 +202,7 @@ export async function POST(request, { params }) {
     });
 
     // Fire-and-forget: a notification failure must not fail the reply.
-    notifyGuardians({
+    await notifyGuardians({
       studentId: conversation.student,
       category: "MESSAGE",
       priority: "INFO",
