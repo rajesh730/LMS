@@ -2455,6 +2455,10 @@ h6,
     margin-right: calc(50% - 50vw) !important;
   }
 
+  .schools-mobile-shell {
+    padding-top: 0 !important;
+  }
+
   .school-directory-row {
     border-left-width: 0 !important;
     border-right-width: 0 !important;
@@ -2484,7 +2488,7 @@ h6,
 
   .school-filter-fields {
     display: flex !important;
-    margin-top: 0.625rem;
+    margin-top: 0 !important;
   }
 
   .school-filter-fields.is-open {
@@ -2512,7 +2516,7 @@ h6,
   }
 
   .schools-hero-panel {
-    padding: 0.625rem !important;
+    display: none !important;
   }
 
   .schools-hero-copy {
