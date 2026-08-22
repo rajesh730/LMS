@@ -73,15 +73,22 @@
 html,
 body {
   max-width: 100%;
-  overflow-x: hidden;
+  /* `hidden` makes each element a scroll container. On mobile Safari and in
+     standalone PWAs that can leave the document with two competing scroll
+     roots, so vertical touch scrolling intermittently stops. `clip` still
+     prevents accidental horizontal spill without taking ownership of scroll. */
+  overflow-x: clip;
 }
 
 html {
   font-size: 16px;
   text-size-adjust: 100%;
+  min-height: 100%;
 }
 
 body {
+  min-height: 100%;
+  overflow-y: visible;
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-body);

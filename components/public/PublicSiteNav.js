@@ -36,12 +36,14 @@ export default function PublicSiteNav({
 
   // Prevent body scroll when menu open
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
-    return () => { document.body.style.overflow = ""; };
+    if (!isOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
   }, [isOpen]);
 
   return (
@@ -127,22 +129,6 @@ export default function PublicSiteNav({
               </span>
             </button>
           </div>
-        </div>
-
-        {/* ── Mobile search bar (always visible on sm) ──── */}
-        <div className="public-mobile-search-wrap border-t border-[var(--brand-border)] px-2 py-2.5 sm:hidden">
-          <form
-            action={searchAction}
-            className="public-mobile-search-form flex h-10 items-center gap-2.5 rounded-xl border border-[var(--brand-border)] bg-[#f8f9fd] px-3.5 text-sm text-[var(--brand-muted)] focus-within:border-[var(--brand-primary)] focus-within:bg-white focus-within:shadow-[0_0_0_3px_rgba(67,38,232,0.1)]"
-          >
-            <FaSearch className="shrink-0" />
-            <input
-              name="q"
-              type="search"
-              placeholder={searchPlaceholder}
-              className="min-w-0 flex-1 border-0 bg-transparent text-sm font-medium text-[var(--brand-ink)] outline-none placeholder:text-[#9aa3b5]"
-            />
-          </form>
         </div>
 
         {/* ── Mobile dropdown menu ────────────────────────── */}
