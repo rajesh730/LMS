@@ -58,7 +58,7 @@ export default function ChildSwitcher() {
   if (single) return null;
 
   const header = (
-    <div className="flex min-w-0 items-center gap-2 text-left sm:gap-3">
+    <div className="parent-child-switcher-summary flex min-w-0 items-center gap-2 text-left sm:gap-3">
       <ChildAvatar
         name={selectedChild.name}
         photoUrl={selectedChild.photoUrl}

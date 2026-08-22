@@ -105,6 +105,16 @@ body {
   background-image: none;
 }
 
+/* The selected-child summary sits on a dark branded surface. The legacy
+   global text normalizer otherwise turns Tailwind's white text back to ink. */
+.parent-child-switcher-summary,
+.parent-child-switcher-summary p,
+.parent-child-switcher-summary span,
+.parent-child-switcher-summary svg {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
 button,
 input,
 optgroup,
@@ -3844,11 +3854,14 @@ nav,
 }
 
 /* The bar sits above the page, so every public screen needs clearance or its
-   last row hides behind it. PublicPageShell already reserves pb-32 on mobile;
-   this covers any page that scrolls its own container instead. */
+   last row hides behind it. Some public routes use PublicPageShell while others
+   render their root <main> directly; :has() covers both without maintaining a
+   fragile route-by-route list. */
 @media (max-width: 1279px) {
-  .pravyo-public-shell {
-    padding-bottom: calc(4.5rem + env(safe-area-inset-bottom));
+  .pravyo-public-shell,
+  main:has(> .pravyo-tabbar) {
+    padding-bottom: calc(7rem + env(safe-area-inset-bottom)) !important;
+    scroll-padding-bottom: calc(7rem + env(safe-area-inset-bottom));
   }
 }
 
