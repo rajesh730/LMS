@@ -9,7 +9,7 @@ import ChildAvatar from "./ChildAvatar";
  * The child switcher that sits at the top of every screen (§2).
  *
  * Handles all three scenarios the spec calls out:
- *   A. one parent, one child   → renders as a plain header, no dropdown affordance
+ *   A. one parent, one child   → hidden because there is nothing to switch
  *   B. several children, one school
  *   C. several children, DIFFERENT schools
  *
@@ -52,6 +52,11 @@ export default function ChildSwitcher() {
 
   const single = childList.length <= 1;
 
+  // A repeated identity card consumes mobile header space without offering an
+  // action. The child's dedicated tab already provides the profile; this
+  // control is useful only when the guardian has a real choice.
+  if (single) return null;
+
   const header = (
     <div className="flex min-w-0 items-center gap-2 text-left sm:gap-3">
       <ChildAvatar
@@ -90,12 +95,6 @@ export default function ChildSwitcher() {
       ) : null}
     </div>
   );
-
-  // Scenario A: one child. No dropdown, no chevron, nothing to tap — a control
-  // that does nothing is a control that erodes trust.
-  if (single) {
-    return <div className="min-w-0 px-2 py-3 sm:px-4">{header}</div>;
-  }
 
   return (
     <div ref={containerRef} className="relative min-w-0 px-2 py-2 sm:px-4">
