@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { FaPaperPlane } from "react-icons/fa";
 import { useParentApp } from "./ParentAppContext";
-import VoiceRecorder from "./VoiceRecorder";
 import useRealtimeChannel from "@/lib/client/useRealtimeChannel";
 import {
   parentMessagesChannel,
@@ -184,7 +183,7 @@ export default function ParentChat({ conversationId = null, onLoaded }) {
 
   return (
     <div className="-mx-3 flex h-[calc(100dvh-11.5rem)] flex-col overflow-hidden sm:-mx-4 md:mx-0 md:h-[calc(100dvh-10rem)]">
-      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain bg-[var(--background)] px-3 py-4 sm:px-4">
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain bg-[var(--background)] px-3 py-4 pb-24 sm:px-4 md:pb-4">
         {state.messages.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center px-6 text-center">
             <span aria-hidden="true" className="text-4xl">
@@ -209,8 +208,8 @@ export default function ParentChat({ conversationId = null, onLoaded }) {
         <p className="bg-red-50 px-4 py-2 text-xs text-red-800">{state.error}</p>
       ) : null}
 
-      <footer className="border-t border-[var(--brand-border)] bg-white p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
-        <div className="flex items-end gap-2">
+      <footer className="fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-30 border-t border-[var(--brand-border)] bg-white md:static md:z-auto">
+        <div className="mx-auto flex max-w-2xl items-end gap-2 p-3">
           <textarea
             rows={1}
             value={draft}
@@ -226,25 +225,15 @@ export default function ParentChat({ conversationId = null, onLoaded }) {
             className="max-h-32 min-h-[48px] flex-1 resize-none rounded-2xl border border-[var(--brand-border)] px-4 py-3 text-base focus:border-[var(--brand-primary)] focus:outline-none"
           />
 
-          {draft.trim() ? (
-            <button
-              type="button"
-              onClick={() => send({ text: draft })}
-              disabled={sending}
-              aria-label={t("messages.send")}
-              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary)] text-white disabled:opacity-50"
-            >
-              <FaPaperPlane aria-hidden="true" className="h-4 w-4" />
-            </button>
-          ) : (
-            // The mic replaces Send when nothing is typed, so the primary
-            // action for a guardian who does not type is always the biggest
-            // target on the screen.
-            <VoiceRecorder
-              disabled={sending}
-              onRecorded={(attachment) => send({ attachments: [attachment] })}
-            />
-          )}
+          <button
+            type="button"
+            onClick={() => send({ text: draft })}
+            disabled={sending || !draft.trim()}
+            aria-label={t("messages.send")}
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary)] text-white disabled:opacity-40"
+          >
+            <FaPaperPlane aria-hidden="true" className="h-4 w-4" />
+          </button>
         </div>
       </footer>
     </div>
