@@ -1,7 +1,7 @@
 # Pravyo: Features and End-to-End Data Flows
 
 Status: living implementation guide  
-Last verified against the repository: 2026-08-22
+Last verified against the repository: 2026-08-23
 
 This document explains what the Pravyo application currently does, who can do
 it, where the implementation lives, which records are read or written, and how
@@ -518,6 +518,13 @@ successful action writes the appropriate participation state for the child and
 returns the updated status. The Parent cannot register an unlinked child by
 changing an ID in the request.
 
+Event communication is automatic at meaningful lifecycle points: publishing or
+cancelling an event creates/updates its parent-targeted notice, registration
+notifies other eligible guardians of the child, and publishing results creates a
+positive guardian notification with a deep link to `/parent/portfolio`. Each
+notification is stored in `UserNotification`; configured parent devices also
+receive Web Push through `lib/webPush.js` and `public/sw.js`.
+
 ### 6.6 Parent-school messaging
 
 Parent messages are child-context conversations with school staff. APIs resolve
@@ -544,12 +551,13 @@ create notification state, and publish a realtime refresh.
 
 ```text
 Super Admin or School creates Event
+  -> approved publication notifies eligible guardians (inbox + phone push)
   -> School discovers/accepts/requests participation
   -> Student or authorized Parent registers the student
   -> School/Teacher/Super Admin manages rounds and submissions
   -> Result creates Achievement
   -> Student sees result and certificate
-  -> Parent sees result in journey/portfolio
+  -> Parent receives a positive alert and sees result in journey/portfolio
   -> public-safe result appears on event/winners/profile pages
 ```
 
@@ -701,6 +709,10 @@ authorized server data after receiving an event.
   the primary transaction.
 - Web push is optional and depends on configuration and a stored
   `PushSubscription`.
+- Parent push is sent by the shared guardian fan-out for messages, notices,
+  consent actions, event publication/cancellation, registration coordination,
+  and published event achievements. The durable inbox remains the source of
+  truth when a device is offline or push delivery fails.
 - Delivery state must distinguish queued, sent, failed and handed-over states.
 
 ---
@@ -771,4 +783,3 @@ For each feature, keep five facts synchronized:
 3. API/domain implementation;
 4. records read or written;
 5. side effects and downstream consumers.
-

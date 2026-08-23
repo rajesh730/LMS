@@ -104,6 +104,12 @@ role dashboard, which keeps the public homepage cacheable.
   emailing from a route. One `Notice` fans out to in-app / email / offline
   channels. The SMS channel is a deliberately inert stub — do not add a paid
   SMS provider.
+- Parent mobile alerts use the durable `UserNotification` inbox plus Web Push
+  (`lib/parentNotifications.js` -> `lib/webPush.js` -> `public/sw.js`). Messages,
+  notices, event publication/cancellation, consent actions, registrations, and
+  published event results all use this shared path. Result publication is wired
+  in `lib/achievementNotifications.js`; guardian delivery failures are contained
+  and never roll back already-published results.
 - Delivery reporting must stay honest: email is `QUEUED` (not `SENT`), and
   recording a paper hand-over must never set `openedAt`.
 - Emails are fire-and-forget: call sites deliberately don't `await` them, and
