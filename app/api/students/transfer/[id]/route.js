@@ -6,6 +6,7 @@ import User from "@/models/User";
 import AcademicYear from "@/models/AcademicYear";
 import StudentTransfer from "@/models/StudentTransfer";
 import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
+import ParentStudentLink from "@/models/ParentStudentLink";
 import {
   successResponse,
   errorResponse,
@@ -139,6 +140,19 @@ async function moveStudent({ transfer, session, toGrade, toRollNumber }) {
           isDeleted: { $ne: true },
         },
         { $set: { showOnSchoolWall: false, isGlobalWallPublished: false } },
+        { session: dbSession }
+      );
+      // Guardian identity belongs to the family, not to a school. Keep the
+      // existing Parent account and credential (Parent ID / legacy password),
+      // but hand ownership of every relationship for this child to the
+      // destination school. This makes the same guardians appear immediately
+      // in the new school's roster and removes the old school's ability to
+      // manage or reprint their access card. Relationship permissions and
+      // status are deliberately preserved; a revoked guardian must not become
+      // active merely because the child changed schools.
+      await ParentStudentLink.updateMany(
+        { student: student._id, school: transfer.fromSchool },
+        { $set: { school: toSchoolId } },
         { session: dbSession }
       );
       if (fromYear?._id) {

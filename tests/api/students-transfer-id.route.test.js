@@ -21,6 +21,10 @@ jest.mock("@/models/SchoolMagazineArticle", () => ({
   __esModule: true,
   default: { updateMany: jest.fn().mockResolvedValue({}) },
 }));
+jest.mock("@/models/ParentStudentLink", () => ({
+  __esModule: true,
+  default: { updateMany: jest.fn().mockResolvedValue({}) },
+}));
 jest.mock("@/lib/transferNotifications", () => ({
   notifyTransferRejected: jest.fn(),
   notifyReleaseApproved: jest.fn(),
@@ -57,6 +61,7 @@ import StudentTransfer from "@/models/StudentTransfer";
 import Student from "@/models/Student";
 import User from "@/models/User";
 import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
+import ParentStudentLink from "@/models/ParentStudentLink";
 import {
   notifyReleaseApproved,
   notifyAdmissionApproved,
@@ -220,6 +225,13 @@ describe("moveStudent (admission approval) — the actual record move", () => {
       { $set: { showOnSchoolWall: false, isGlobalWallPublished: false } },
       expect.anything()
     );
+    // The same guardian accounts and credentials follow the child. Only the
+    // school ownership on their relationship rows changes.
+    expect(ParentStudentLink.updateMany).toHaveBeenCalledWith(
+      { student: "stu1", school: "nepal" },
+      { $set: { school: "orbit" } },
+      expect.objectContaining({ session: expect.anything() })
+    );
     expect(notifyAdmissionApproved).toHaveBeenCalled();
   });
 
@@ -239,6 +251,7 @@ describe("moveStudent (admission approval) — the actual record move", () => {
     expect(student.school).toBe("nepal"); // unchanged
     expect(student.save).not.toHaveBeenCalled();
     expect(SchoolMagazineArticle.updateMany).not.toHaveBeenCalled();
+    expect(ParentStudentLink.updateMany).not.toHaveBeenCalled();
   });
 
   it("409s when the student is no longer at the releasing school (stale)", async () => {

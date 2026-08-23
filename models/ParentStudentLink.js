@@ -55,11 +55,11 @@ const ParentStudentLinkSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
-    // The school that authorised this link. Denormalised from the student so
-    // access checks and school-scoped guardian lists do not need a second read.
-    // On transfer the student's CURRENT school changes; this stays as the
-    // authorising school, and `lib/parentAccess.js` re-resolves the live school
-    // from the Student document.
+    // The school currently responsible for this link. Denormalised from the
+    // student so access checks and school-scoped guardian lists do not need a
+    // second read. Student transfer moves this field to the destination school
+    // in the same transaction as the Student record; the Parent account and
+    // its credential remain unchanged.
     school: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",

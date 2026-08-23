@@ -18,6 +18,7 @@ import {
 import SettingsAuditPanel from "@/components/settings/SettingsAuditPanel";
 import AcademicYearManager from "@/components/school/AcademicYearManager";
 import CalendarToggle from "@/components/common/CalendarToggle";
+import WebsiteApiKeysPanel from "@/components/settings/WebsiteApiKeysPanel";
 
 const defaultConfig = {
   schoolName: "",
@@ -938,6 +939,8 @@ export default function SchoolSettingsManager() {
             entries={history}
             loading={historyLoading}
           />
+
+          <WebsiteApiKeysPanel />
         </section>
       </div>
 
