@@ -3,6 +3,17 @@
 import { useCallback, useEffect, useState } from "react";
 import { FiCopy, FiKey, FiPlus, FiTrash2 } from "react-icons/fi";
 
+const RESOURCES = [
+  ["School profile", "school"],
+  ["Public notices", "notices"],
+  ["Public events", "events"],
+  ["Published writings", "writings"],
+  ["Public achievements", "achievements"],
+  ["Published magazines", "magazines"],
+];
+
+const cleanCurl = (value) => value.replace("\n+  -H", "\n  -H");
+
 export default function WebsiteApiKeysPanel() {
   const [keys, setKeys] = useState([]);
   const [name, setName] = useState("Official school website");
@@ -10,6 +21,7 @@ export default function WebsiteApiKeysPanel() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [origin, setOrigin] = useState("");
 
   const load = useCallback(async () => {
     try {
@@ -27,8 +39,45 @@ export default function WebsiteApiKeysPanel() {
   }, []);
 
   useEffect(() => {
+    setOrigin(window.location.origin);
     void load();
   }, [load]);
+
+  const apiBase = `${origin}/api/v1/website`;
+  const exampleKey = newKey || "YOUR_API_KEY";
+  const envExample = `PRAVYO_API_URL=${apiBase || "https://your-pravyo-domain.com/api/v1/website"}\nPRAVYO_API_KEY=${exampleKey}`;
+  const curlExample = `curl "${apiBase || "https://your-pravyo-domain.com/api/v1/website"}/notices?page=1&limit=10" \\\n+  -H "Authorization: Bearer ${exampleKey}"`;
+  const javascriptExample = `const response = await fetch(
+  \`\${process.env.PRAVYO_API_URL}/notices?page=1&limit=10\`,
+  {
+    headers: {
+      Authorization: \`Bearer \${process.env.PRAVYO_API_KEY}\`,
+    },
+  }
+);
+
+if (!response.ok) throw new Error(\`Pravyo API: \${response.status}\`);
+const { data } = await response.json();
+console.log(data.items);`;
+
+  const fullGuide = `PRAVYO WEBSITE API
+
+Base URL: ${apiBase || "https://your-pravyo-domain.com/api/v1/website"}
+Authentication header: Authorization: Bearer ${exampleKey}
+
+Endpoints:
+${RESOURCES.map(([label, resource]) => `- ${label}: GET /${resource}`).join("\n")}
+
+Pagination: ?page=1&limit=12 (maximum 25)
+
+.env
+${envExample}
+
+cURL
+${curlExample}
+
+Server-side JavaScript
+${javascriptExample}`;
 
   const create = async () => {
     setBusy(true);
@@ -73,12 +122,12 @@ export default function WebsiteApiKeysPanel() {
     }
   };
 
-  const copy = async () => {
+  const copyText = async (text, successMessage = "Copied.") => {
     try {
-      await navigator.clipboard.writeText(newKey);
-      setMessage("API key copied.");
+      await navigator.clipboard.writeText(text);
+      setMessage(successMessage);
     } catch {
-      setMessage("Copy failed. Select the key and copy it manually.");
+      setMessage("Copy failed. Select the text and copy it manually.");
     }
   };
 
@@ -126,7 +175,7 @@ export default function WebsiteApiKeysPanel() {
             />
             <button
               type="button"
-              onClick={copy}
+              onClick={() => copyText(newKey, "API key copied.")}
               className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-300 text-slate-950"
               aria-label="Copy API key"
             >
@@ -174,14 +223,123 @@ export default function WebsiteApiKeysPanel() {
         ))}
       </div>
 
-      <div className="mt-5 rounded-xl bg-slate-950/60 p-4 text-xs leading-6 text-slate-400">
-        <p className="font-semibold text-slate-200">Website endpoint</p>
-        <code className="break-all">GET /api/v1/website/school</code>
-        <p className="mt-1">
-          Also available: notices, events, writings, achievements and magazines.
-          Send the key as <code>Authorization: Bearer YOUR_KEY</code>.
-        </p>
+      <div className="mt-6 border-t border-slate-800 pt-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h3 className="text-base font-semibold text-white">Developer handoff</h3>
+            <p className="mt-1 text-sm text-slate-400">
+              Everything a website developer or coding AI needs to connect.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() =>
+              copyText(cleanCurl(fullGuide), "Complete integration guide copied.")
+            }
+            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-slate-700 px-3 text-sm font-semibold text-slate-200 hover:border-slate-500"
+          >
+            <FiCopy /> Copy complete guide
+          </button>
+        </div>
+
+        <InfoBlock
+          title="API base URL"
+          value={apiBase || "Loading API address..."}
+          onCopy={() => copyText(apiBase, "API base URL copied.")}
+        />
+
+        <div className="mt-4 overflow-hidden rounded-xl border border-slate-800">
+          <div className="border-b border-slate-800 bg-slate-950/70 px-4 py-3">
+            <p className="text-sm font-semibold text-white">Available endpoints</p>
+            <p className="mt-0.5 text-xs text-slate-500">
+              Add <code>?page=1&amp;limit=12</code> to list endpoints. Maximum 25.
+            </p>
+          </div>
+          {RESOURCES.map(([label, resource]) => {
+            const endpoint = `${apiBase}/${resource}`;
+            return (
+              <div
+                key={resource}
+                className="flex items-center gap-3 border-b border-slate-800 px-4 py-3 last:border-0"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs text-slate-500">{label}</p>
+                  <code className="block truncate text-xs text-slate-200">
+                    GET {endpoint}
+                  </code>
+                </div>
+                <CopyButton
+                  label={`Copy ${label} endpoint`}
+                  onClick={() => copyText(endpoint, `${label} endpoint copied.`)}
+                />
+              </div>
+            );
+          })}
+        </div>
+
+        <CodeBlock
+          title="1. Website server environment (.env)"
+          code={envExample}
+          onCopy={() => copyText(envExample, "Environment configuration copied.")}
+        />
+        <CodeBlock
+          title="2. Test with cURL"
+          code={cleanCurl(curlExample)}
+          onCopy={() => copyText(cleanCurl(curlExample), "cURL example copied.")}
+        />
+        <CodeBlock
+          title="3. Server-side JavaScript"
+          code={javascriptExample}
+          onCopy={() => copyText(javascriptExample, "JavaScript example copied.")}
+        />
+
+        <div className="mt-4 rounded-xl border border-blue-400/20 bg-blue-400/10 p-4 text-xs leading-5 text-blue-100">
+          The API key identifies this school automatically. Do not add a school ID
+          to requests. Only approved public content is returned, and the API is
+          read-only.
+        </div>
       </div>
     </section>
+  );
+}
+
+function CopyButton({ label, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white"
+      aria-label={label}
+    >
+      <FiCopy />
+    </button>
+  );
+}
+
+function InfoBlock({ title, value, onCopy }) {
+  return (
+    <div className="mt-4 rounded-xl border border-slate-800 bg-slate-950/60 p-4">
+      <div className="flex items-center gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-semibold text-slate-400">{title}</p>
+          <code className="mt-1 block break-all text-xs text-white">{value}</code>
+        </div>
+        <CopyButton label={`Copy ${title}`} onClick={onCopy} />
+      </div>
+    </div>
+  );
+}
+
+function CodeBlock({ title, code, onCopy }) {
+  return (
+    <div className="mt-4 overflow-hidden rounded-xl border border-slate-800">
+      <div className="flex items-center justify-between bg-slate-950/80 px-4 py-2">
+        <p className="text-xs font-semibold text-slate-300">{title}</p>
+        <CopyButton label={`Copy ${title}`} onClick={onCopy} />
+      </div>
+      <pre className="overflow-x-auto bg-slate-950/50 p-4 text-xs leading-5 text-slate-300">
+        <code>{code}</code>
+      </pre>
+    </div>
   );
 }
