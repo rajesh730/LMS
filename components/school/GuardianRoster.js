@@ -791,7 +791,9 @@ function RosterRow({
         <tr>
           <td colSpan={8} className="p-0">
             <ParentCardDialog
-              card={card}
+              parentIdentifier={card.parentIdentifier}
+              linkId={card.linkId || primary?.linkId}
+              rotated={Boolean(card.rotated)}
               schoolName={card.schoolName || "Your school"}
               studentName={row.studentName}
               guardianName={primary?.name || "Guardian"}

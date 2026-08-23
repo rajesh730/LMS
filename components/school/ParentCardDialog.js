@@ -32,6 +32,9 @@ export default function ParentCardDialog({
 }) {
   const [qrSvg, setQrSvg] = useState("");
   const [copied, setCopied] = useState(false);
+  const usableParentId =
+    typeof parentIdentifier === "string" &&
+    /^PRV-P-[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(parentIdentifier);
 
   // Whether this device has a native share sheet. Read as external state
   // rather than via an effect — it never changes, and a server snapshot of
@@ -48,6 +51,10 @@ export default function ParentCardDialog({
   )}`;
 
   useEffect(() => {
+    if (!usableParentId) {
+      return undefined;
+    }
+
     let active = true;
 
     QRCode.toString(loginUrl, {
@@ -66,7 +73,7 @@ export default function ParentCardDialog({
     return () => {
       active = false;
     };
-  }, [loginUrl]);
+  }, [loginUrl, usableParentId]);
 
   /**
    * Plain text a parent can actually act on, written for a WhatsApp message
@@ -88,6 +95,7 @@ export default function ParentCardDialog({
   ].join("\n");
 
   const copy = async () => {
+    if (!usableParentId) return;
     try {
       await navigator.clipboard.writeText(shareText);
       setCopied(true);
@@ -99,6 +107,7 @@ export default function ParentCardDialog({
   };
 
   const share = async () => {
+    if (!usableParentId) return;
     try {
       await navigator.share({
         title: `Pravyo Parent Access — ${studentName}`,
@@ -140,6 +149,13 @@ export default function ParentCardDialog({
         </header>
 
         <div className="px-5 py-5">
+          {!usableParentId ? (
+            <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-800">
+              This guardian does not have a valid Parent ID. Close this window
+              and try again.
+            </p>
+          ) : null}
+
           {rotated ? (
             <p className="rounded-xl bg-amber-50 px-4 py-3 text-xs font-semibold text-amber-900">
               This is a new Parent ID. {guardianName}&apos;s old card no longer
@@ -164,7 +180,9 @@ export default function ParentCardDialog({
 
             <div
               className="mt-3 flex justify-center [&_svg]:h-44 [&_svg]:w-44"
-              dangerouslySetInnerHTML={{ __html: qrSvg }}
+              dangerouslySetInnerHTML={{
+                __html: usableParentId ? qrSvg : "",
+              }}
             />
 
             <div className="mt-3 rounded-xl border-2 border-[#e1e7f2] px-3 py-2">
@@ -174,7 +192,7 @@ export default function ParentCardDialog({
               {/* Selectable, so it can be copied by hand if the clipboard
                   API is blocked. */}
               <p className="select-all font-mono text-xl font-black tracking-wider text-[#17120a]">
-                {parentIdentifier}
+                {usableParentId ? parentIdentifier : "Unavailable"}
               </p>
             </div>
           </div>
@@ -183,7 +201,8 @@ export default function ParentCardDialog({
             <button
               type="button"
               onClick={copy}
-              className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-purple-700 text-sm font-black text-white"
+              disabled={!usableParentId}
+              className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-purple-700 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-40"
             >
               {copied ? <FaCheck /> : <FaCopy />}
               {copied ? "Copied — paste into WhatsApp" : "Copy for WhatsApp / SMS"}
@@ -196,7 +215,8 @@ export default function ParentCardDialog({
                 <button
                   type="button"
                   onClick={share}
-                  className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-[#dbe5f4] text-sm font-black text-[#0a2f66]"
+                  disabled={!usableParentId}
+                  className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-[#dbe5f4] text-sm font-black text-[#0a2f66] disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <FaShareAlt />
                   Share

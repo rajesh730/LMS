@@ -3887,3 +3887,12 @@ nav,
 .min-h-screen {
   min-height: 100dvh;
 }
+
+/* Parent Home identity banner. Keep this at the end of the cascade because
+   the legacy `[class*="text-white"]` normalizer above also uses !important. */
+main .parent-child-identity-card .parent-child-identity-name,
+main .parent-child-identity-card .parent-child-identity-meta,
+main .parent-child-identity-card > span {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}

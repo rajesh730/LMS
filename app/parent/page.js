@@ -75,7 +75,7 @@ function ChildHeader({ child }) {
   const { simpleMode } = useParentApp();
 
   return (
-    <section className="flex items-center gap-4 rounded-2xl bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-surface-end)] p-4 text-white shadow-sm">
+    <section className="parent-child-identity-card flex items-center gap-4 rounded-2xl bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-surface-end)] p-4 text-white shadow-sm">
       <ChildAvatar
         name={child.name}
         photoUrl={child.photoUrl}
@@ -84,13 +84,13 @@ function ChildHeader({ child }) {
       <div className="min-w-0">
         <h1
           className={[
-            "truncate font-bold",
+            "parent-child-identity-name truncate font-bold",
             simpleMode ? "text-2xl" : "text-xl",
           ].join(" ")}
         >
           {child.name}
         </h1>
-        <p className="truncate text-sm text-white/85">
+        <p className="parent-child-identity-meta truncate text-sm">
           {child.grade}
           {child.grade && child.school?.name ? " · " : ""}
           {child.school?.name}
