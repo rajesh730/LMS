@@ -157,6 +157,34 @@ describe("tenant isolation (§56)", () => {
     expect(issueParentAccess).toHaveBeenCalled();
   });
 
+  it("shows an existing card without silently rotating its Parent ID", async () => {
+    signedInAs(SCHOOL_A);
+    ParentStudentLink.findById.mockResolvedValue(linkAt(SCHOOL_A));
+    Parent.findOne.mockResolvedValue(parentDoc({ accessState: "ACTIVATED" }));
+
+    const res = await POST(request({ linkId: LINK_ID }));
+
+    expect(res.status).toBe(201);
+    expect(issueParentAccess).toHaveBeenCalledWith(
+      expect.objectContaining({ purpose: "INITIAL" })
+    );
+  });
+
+  it("rotates a Parent ID only for an explicit replacement card", async () => {
+    signedInAs(SCHOOL_A);
+    ParentStudentLink.findById.mockResolvedValue(linkAt(SCHOOL_A));
+    Parent.findOne.mockResolvedValue(parentDoc({ accessState: "ACTIVATED" }));
+
+    const res = await POST(
+      request({ linkId: LINK_ID, purpose: "REISSUE" })
+    );
+
+    expect(res.status).toBe(201);
+    expect(issueParentAccess).toHaveBeenCalledWith(
+      expect.objectContaining({ purpose: "REISSUE" })
+    );
+  });
+
   it("SUPER_ADMIN crosses tenants deliberately", async () => {
     signedInAs("super", "SUPER_ADMIN");
     ParentStudentLink.findById.mockResolvedValue(linkAt(SCHOOL_B));

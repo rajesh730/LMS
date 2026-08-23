@@ -533,6 +533,11 @@ returning or creating messages. Voice, image and document attachments pass
 through the constrained upload route. New messages update the conversation,
 create notification state, and publish a realtime refresh.
 
+School staff can target everyone, one class, selected guardian links, or one
+specific guardian. Bulk messages still create separate private threads. The
+same resolved recipient set is passed to the durable notification and Web Push
+fan-out, so choosing one guardian never alerts another guardian of that child.
+
 ### 6.7 Preferences and notifications
 
 - Language preference supports English/Nepali UI behavior where implemented.
@@ -713,6 +718,10 @@ authorized server data after receiving an event.
   consent actions, event publication/cancellation, registration coordination,
   and published event achievements. The durable inbox remains the source of
   truth when a device is offline or push delivery fails.
+- The service worker requests the phone's normal notification sound and an
+  Android vibration pattern. Sound is best-effort rather than an application
+  guarantee: device silent/Focus settings and per-app notification preferences
+  remain authoritative, and Web Push does not provide a portable custom sound.
 - Delivery state must distinguish queued, sent, failed and handed-over states.
 
 ---

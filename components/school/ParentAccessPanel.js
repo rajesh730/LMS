@@ -67,10 +67,9 @@ export default function ParentAccessPanel({
     if (
       purpose === "REISSUE" &&
       !window.confirm(
-        `Give ${guardianName} a new Parent ID?\n\n` +
-          "Their current card will stop working immediately and they will be " +
-          "signed out. Only do this if the card was lost or shared with the " +
-          "wrong person."
+        `Reset ${guardianName}'s Parent ID?\n\n` +
+          "Their current ID and QR code will stop working immediately. " +
+          "You will need to give them the newly generated ID or QR code."
       )
     ) {
       return;
@@ -205,8 +204,8 @@ export default function ParentAccessPanel({
             />
             <Action
               icon={FaRedo}
-              label="New card"
-              hint="Lost card — the old one stops working"
+              label="Reset Parent ID"
+              hint="Manual reset — current ID and QR stop working"
               danger
               busy={busy === "REISSUE"}
               onClick={() => issue("REISSUE")}

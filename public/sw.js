@@ -75,6 +75,15 @@ self.addEventListener("push", (event) => {
       icon: "/pravyo-icon.png?v=2",
       badge: "/apple-icon.png?v=2",
       tag: payload.tag || "pravyo-update",
+      // Ask the platform for its normal app-notification sound. The phone still
+      // has final control through silent mode, Focus/Do Not Disturb and the
+      // user's per-app notification settings; Web Push cannot override those.
+      silent: false,
+      // Supported Android browsers use this pattern; unsupported platforms
+      // (including iOS) safely ignore it and use their system behaviour.
+      vibrate: payload.urgent
+        ? [220, 100, 220, 100, 360]
+        : [180, 100, 180],
       renotify: true,
       data: { href: payload.href || "/parent/notifications" },
     })

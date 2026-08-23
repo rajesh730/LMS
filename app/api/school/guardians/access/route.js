@@ -124,11 +124,11 @@ export async function POST(request) {
 
     const { parent, link } = resolved;
 
-    const purpose = ["INITIAL", "REISSUE"].includes(body.purpose)
-      ? body.purpose
-      : parent.accessState === "NOT_CREATED"
-        ? "INITIAL"
-        : "REISSUE";
+    // Showing or reprinting a card must never invalidate the credential that
+    // is already visible in the roster. Rotation is destructive, so require
+    // callers to opt into REISSUE explicitly (the dedicated "New card" action
+    // does this after warning the administrator).
+    const purpose = body.purpose === "REISSUE" ? "REISSUE" : "INITIAL";
 
     // Reissuing to a revoked guardian would silently restore access the school
     // deliberately removed. Require an explicit un-revoke first.

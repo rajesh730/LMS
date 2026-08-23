@@ -198,17 +198,28 @@ export async function POST(request) {
 
     // A message the parent never learns about is not a message. Fire-and-forget
     // per the notification contract — a failure here must not fail the send.
-    const studentIdsTouched = Array.from(
-      new Set(recipients.map((r) => String(r.student._id)))
-    );
+    // Preserve the exact audience all the way through phone delivery. A child
+    // may have two guardians, and selecting one must not push the message text
+    // to the other guardian just because both links concern the same student.
+    const parentsByStudent = new Map();
+    recipients.forEach(({ parent, student }) => {
+      const studentId = String(student._id);
+      if (!parentsByStudent.has(studentId)) parentsByStudent.set(studentId, new Set());
+      parentsByStudent.get(studentId).add(String(parent._id));
+    });
 
     const notificationTitle = (
       subject ? `${subject.slice(0, 120)} — ${schoolName}` : `Message from ${schoolName}`
     ).slice(0, 180);
     await Promise.all(
-      studentIdsTouched.map((studentId) =>
+      Array.from(parentsByStudent.entries()).map(([studentId, parentIds]) =>
         notifyGuardians({
           studentId,
+          includeParentIds: Array.from(parentIds),
+          // Recipients were already resolved from the authorised links above.
+          // A specifically selected view-only guardian still receives the
+          // school's message; canMessageSchool controls their ability to reply.
+          enforceCategoryPermission: false,
           category: "MESSAGE",
           priority: "INFO",
           // The subject leads when there is one: "Sports day" tells a guardian

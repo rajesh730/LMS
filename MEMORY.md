@@ -110,6 +110,16 @@ role dashboard, which keeps the public homepage cacheable.
   published event results all use this shared path. Result publication is wired
   in `lib/achievementNotifications.js`; guardian delivery failures are contained
   and never roll back already-published results.
+- Exact guardian targeting is preserved across both storage and delivery. School
+  messages group the resolved recipients by child and pass `includeParentIds` to
+  `notifyGuardians`; never fan a selected guardian's message notification out to
+  every guardian linked to that child.
+- Parent Web Push requests normal system notification sound (`silent: false`)
+  and an Android vibration pattern in `public/sw.js`. The OS remains authoritative:
+  silent mode, Focus/Do Not Disturb, per-app settings and browser support can
+  suppress sound, and a PWA cannot guarantee or ship a custom Messenger-style
+  ringtone. iPhone Web Push requires an installed Home Screen app and a
+  user-initiated permission grant.
 - Delivery reporting must stay honest: email is `QUEUED` (not `SENT`), and
   recording a paper hand-over must never set `openedAt`.
 - Emails are fire-and-forget: call sites deliberately don't `await` them, and

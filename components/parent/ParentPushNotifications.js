@@ -108,7 +108,7 @@ export default function ParentPushNotifications() {
           <p className="font-semibold text-[var(--brand-ink)]">Phone push notifications</p>
           <p className="mt-0.5 text-xs leading-relaxed text-[var(--brand-muted)]">
             {state.subscribed
-              ? "Enabled on this device. Alerts can arrive when the app is closed."
+              ? "Enabled. Alerts can appear with your phone's normal notification sound, even when Pravyo is closed."
               : unavailable
                 ? "Not available on this device yet. On iPhone, add Pravyo to the Home Screen first."
                 : "Enable alerts for messages, notices, consent requests and events."}

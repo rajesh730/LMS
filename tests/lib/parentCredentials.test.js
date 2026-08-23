@@ -250,12 +250,15 @@ describe("signing in with a Parent ID", () => {
     expect((await verifyParentId(PARENT_ID)).ok).toBe(false);
   });
 
-  it("rejects a guardian who was never issued a card", async () => {
-    // Parent rows are created by registration auto-linking and by the backfill,
-    // and all of them carry a Parent ID from the model hook. Those must not be
-    // live logins just because the ID exists.
-    foundParent(parentDoc({ accessState: "NOT_CREATED" }));
-    expect((await verifyParentId(PARENT_ID)).ok).toBe(false);
+  it("accepts a guardian as soon as the school has assigned a Parent ID", async () => {
+    // Generating or printing a QR is optional; it carries this same ID.
+    const parent = parentDoc({ accessState: "NOT_CREATED", activatedAt: null });
+    foundParent(parent);
+
+    const result = await verifyParentId(PARENT_ID);
+
+    expect(result.ok).toBe(true);
+    expect(parent.accessState).toBe("ACTIVATED");
   });
 
   it("gives the same answer for every rejection", async () => {

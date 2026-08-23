@@ -619,7 +619,9 @@ function RosterRow({
       const res = await fetch("/api/school/guardians/access", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ linkId }),
+        // Viewing/reprinting is idempotent. A lost-card replacement belongs in
+        // the expanded access panel, where REISSUE is explicit and confirmed.
+        body: JSON.stringify({ linkId, purpose: "INITIAL" }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.message);
@@ -775,11 +777,7 @@ function RosterRow({
                 type="button"
                 onClick={() => showCard(primary.linkId)}
                 disabled={issuing}
-                title={
-                  primary.accessState === "ACTIVATED"
-                    ? "New card — this replaces their current PIN"
-                    : "Show access card (QR, ID and PIN)"
-                }
+                title="Show access card (QR and Parent ID)"
                 className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#dbe5f4] text-[#0a2f66] transition hover:bg-[#f8fbff] disabled:opacity-40"
               >
                 <FaQrcode className="h-3 w-3" />
