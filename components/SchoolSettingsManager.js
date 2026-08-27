@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import {
   FiAlertCircle,
   FiBookOpen,
@@ -122,6 +122,7 @@ function buildSettingsPatch(current, saved) {
 }
 
 export default function SchoolSettingsManager() {
+  const { update: updateSession } = useSession();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [passwordSaving, setPasswordSaving] = useState(false);
@@ -456,6 +457,12 @@ export default function SchoolSettingsManager() {
             ? `${changedSections.join(", ")} saved successfully.`
             : "School settings saved successfully.",
       });
+      if (
+        payload.identity.schoolName !== undefined ||
+        payload.identity.email !== undefined
+      ) {
+        await updateSession();
+      }
       await fetchHistory();
     } catch (error) {
       console.error("Error saving school config:", error);
