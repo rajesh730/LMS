@@ -10,6 +10,7 @@ import PublicExplorePanel from "@/components/public/PublicExplorePanel";
 import PublicShareButton from "@/components/public/PublicShareButton";
 import SchoolLogoMark from "@/components/public/SchoolLogoMark";
 import WritingContent, { stripWritingMarkup } from "@/components/WritingContent";
+import { WritingCover, WritingGallery, WritingTags } from "@/components/WritingMedia";
 import AppDate from "@/components/common/AppDate";
 import {
   getAuthoredSchoolName,
@@ -146,10 +147,33 @@ export default function PublicWritingReader({
               </div>
             </div>
 
+            <WritingCover coverImage={article.coverImage} title={article.title} className="mx-auto mt-8 aspect-[16/9] max-h-[34rem] max-w-4xl" />
+            <WritingTags tags={article.tags} className="mx-auto mt-5 max-w-3xl" />
             <WritingContent
               content={article.content}
               className="public-reader-content mx-auto mt-10 max-w-3xl text-lg leading-7 text-[#27344a]"
             />
+            {false && article.images?.length ? (
+              <div className="mx-auto mt-8 grid max-w-4xl gap-4 sm:grid-cols-2">
+                {article.images.map((image, index) => (
+                  <figure key={image.asset || image.url || index}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={image.url}
+                      alt={image.altText || `Story photo ${index + 1}`}
+                      className="w-full rounded-2xl object-cover"
+                      loading="lazy"
+                    />
+                    {image.caption ? (
+                      <figcaption className="mt-2 text-sm text-[#526071]">
+                        {image.caption}
+                      </figcaption>
+                    ) : null}
+                  </figure>
+                ))}
+              </div>
+            ) : null}
+            <WritingGallery images={article.images} title={article.title} className="mx-auto mt-8 max-w-4xl" />
 
             {/* Provenance footer: where + when this piece was written. Links to
                 the origin school that owns it — kept distinct from the author's

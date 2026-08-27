@@ -63,24 +63,33 @@ export async function GET(request) {
       SchoolMagazineArticle.find({
         authorStudent: student._id,
         isDeleted: { $ne: true },
-        $or: [{ isPublished: true }, { status: "APPROVED" }],
       })
-        .sort({ publishedAt: -1, updatedAt: -1 })
-        .limit(100)
+        .sort({ updatedAt: -1, createdAt: -1 })
         // Preview sliced server-side — the full body is fetched only when the
         // parent opens one (§22).
         .select({
           title: 1,
+          images: 1,
+          coverImage: 1,
+          tags: 1,
           category: 1,
           school: 1,
           publishedAt: 1,
+          createdAt: 1,
           updatedAt: 1,
           status: 1,
+          reviewNote: 1,
           reviewedBy: 1,
           publicationScope: 1,
+          isPublished: 1,
+          isMagazinePublished: 1,
+          magazineIssue: 1,
+          magazineIssueAssignedAt: 1,
+          magazinePublishedAt: 1,
           isGlobalWallPublished: 1,
           preview: { $substrCP: [{ $ifNull: ["$content", ""] }, 0, 200] },
         })
+        .populate("magazineIssue", "title status publishedAt")
         .lean(),
     ]);
 
@@ -148,9 +157,26 @@ export async function GET(request) {
         categoryEmoji: meta.emoji,
         categoryLabelKey: meta.labelKey,
         preview: w.preview || "",
-        date: w.publishedAt || w.updatedAt || null,
+        images: w.images || [],
+        coverImage: w.coverImage || null,
+        tags: w.tags || [],
+        date: w.publishedAt || w.updatedAt || w.createdAt || null,
         schoolName: schoolName(w.school),
+        status: w.status || "DRAFT",
+        reviewNote: w.reviewNote || "",
         teacherReviewed: Boolean(w.reviewedBy) || w.status === "APPROVED",
+        magazineSelected: Boolean(w.magazineIssue),
+        magazinePublished: Boolean(w.isMagazinePublished),
+        magazineIssue: w.magazineIssue
+          ? {
+              id: String(w.magazineIssue._id),
+              title: w.magazineIssue.title || "School magazine",
+              status: w.magazineIssue.status || "DRAFT",
+              publishedAt: w.magazineIssue.publishedAt || null,
+            }
+          : null,
+        magazineDate:
+          w.magazinePublishedAt || w.magazineIssueAssignedAt || null,
         // Sharing is offered only where the school already published the work
         // beyond its own walls (§6 — "share only if permissions allow it").
         shareable: Boolean(w.isGlobalWallPublished),

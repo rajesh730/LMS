@@ -39,12 +39,11 @@ export async function GET(request, { params }) {
       _id: id,
       authorStudent: student._id,
       isDeleted: { $ne: true },
-      // Drafts and rejected submissions stay private to the child.
-      $or: [{ isPublished: true }, { status: "APPROVED" }],
     })
       .select(
-        "title content category school publishedAt updatedAt status reviewedBy isGlobalWallPublished"
+        "title content images coverImage tags category school createdAt publishedAt updatedAt status reviewNote reviewedBy isMagazinePublished magazineIssue magazineIssueAssignedAt magazinePublishedAt isGlobalWallPublished"
       )
+      .populate("magazineIssue", "title status publishedAt")
       .lean();
 
     if (!article) {
@@ -62,12 +61,27 @@ export async function GET(request, { params }) {
         title: article.title,
         category: normalizeWritingCategory(article.category),
         content: article.content || "",
+        images: article.images || [],
+        coverImage: article.coverImage || null,
+        tags: article.tags || [],
         // Markup stripped and entities decoded so speech synthesis does not
         // read tags aloud.
         speechText: toSpeechText(article.title, article.content),
-        date: article.publishedAt || article.updatedAt || null,
+        date: article.publishedAt || article.updatedAt || article.createdAt || null,
+        status: article.status || "DRAFT",
+        reviewNote: article.reviewNote || "",
         teacherReviewed:
           Boolean(article.reviewedBy) || article.status === "APPROVED",
+        magazineSelected: Boolean(article.magazineIssue),
+        magazinePublished: Boolean(article.isMagazinePublished),
+        magazineIssue: article.magazineIssue
+          ? {
+              id: String(article.magazineIssue._id),
+              title: article.magazineIssue.title || "School magazine",
+              status: article.magazineIssue.status || "DRAFT",
+              publishedAt: article.magazineIssue.publishedAt || null,
+            }
+          : null,
         shareable: Boolean(article.isGlobalWallPublished),
       },
     });

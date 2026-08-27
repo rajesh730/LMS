@@ -10,6 +10,7 @@ import SchoolShowcaseProfile from "@/models/SchoolShowcaseProfile";
 import "@/models/Event";
 import { getActiveCertificateFilter } from "@/lib/certificates";
 import { WritingPreview } from "@/components/WritingContent";
+import { WritingCover, WritingTags } from "@/components/WritingMedia";
 import AppDate from "@/components/common/AppDate";
 import EnrollmentRange from "@/components/common/EnrollmentRange";
 import {
@@ -124,7 +125,7 @@ async function getPortfolioData(id) {
       isDeleted: { $ne: true },
     })
       .select(
-        "title content category publishedAt updatedAt authorSchoolNameSnapshot authorGrade authorAcademicYear"
+        "title content category coverImage tags publishedAt updatedAt authorSchoolNameSnapshot authorGrade authorAcademicYear"
       )
       .populate("school", "schoolName")
       .sort({ publishedAt: -1, updatedAt: -1 })
@@ -320,6 +321,7 @@ function WritingCard({ writing }) {
       <h3 className="mt-2 line-clamp-2 text-sm font-black text-[#17120a]">
         {writing.title}
       </h3>
+      <WritingCover coverImage={writing.coverImage} title={writing.title} className="mt-3 aspect-[16/9]" />
       {formatAuthoredEra(writing) && (
         <p className="mt-1.5 inline-flex items-center gap-1.5 text-[11px] font-bold text-[#75869b]">
           <FaGraduationCap className="text-[#1f4f7a]" />
@@ -331,6 +333,7 @@ function WritingCard({ writing }) {
         maxLength={140}
         className="mt-2 line-clamp-3 text-xs leading-5 text-[#52657d]"
       />
+      <WritingTags tags={writing.tags} className="mt-3" />
       <p className="mt-3 inline-flex items-center gap-1.5 text-xs font-black text-purple-700">
         Read writing <FaArrowRight />
       </p>

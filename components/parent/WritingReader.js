@@ -5,6 +5,7 @@ import { FaTimes } from "react-icons/fa";
 import { useParentApp, useParentFetch } from "./ParentAppContext";
 import ListenButton from "./ListenButton";
 import { formatParentDate } from "@/lib/parentFormat";
+import { WritingCover, WritingGallery, WritingTags } from "@/components/WritingMedia";
 
 /**
  * Full-screen reader for one piece of the child's writing (§6, §7).
@@ -106,13 +107,55 @@ export default function WritingReader({ writingId, onClose }) {
               })}
             </p>
 
+            {writing.magazineSelected ? (
+              <p className="mt-3 inline-flex rounded-full bg-violet-50 px-3 py-1 text-xs font-semibold text-violet-700">
+                {writing.magazinePublished
+                  ? t("child.magazinePublished")
+                  : t("child.magazineSelected")}
+                {writing.magazineIssue?.title
+                  ? ` · ${writing.magazineIssue.title}`
+                  : ""}
+              </p>
+            ) : null}
+
+            {writing.reviewNote ? (
+              <div className="mt-3 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                <p className="font-semibold">{t("child.teacherNote")}</p>
+                <p className="mt-1 whitespace-pre-wrap">{writing.reviewNote}</p>
+              </div>
+            ) : null}
+
             <div className="mt-4">
               <ListenButton text={writing.speechText} fullWidth />
             </div>
 
+            <WritingCover coverImage={writing.coverImage} title={writing.title} className="mt-5 aspect-[16/9] max-h-[32rem]" />
+            <WritingTags tags={writing.tags} className="mt-4" />
             <div className="prose-parent mt-5 whitespace-pre-wrap break-words text-[17px] leading-[1.75] text-[var(--brand-ink)]">
               {stripHtml(writing.content)}
             </div>
+
+            {false && writing.images?.length ? (
+              <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                {writing.images.map((image, index) => (
+                  <figure key={image.asset || image.url || index}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={image.url}
+                      alt={image.altText || `Writing photo ${index + 1}`}
+                      className="w-full rounded-2xl object-cover"
+                      loading="lazy"
+                    />
+                    {image.caption ? (
+                      <figcaption className="mt-1 text-sm text-[var(--brand-muted)]">
+                        {image.caption}
+                      </figcaption>
+                    ) : null}
+                  </figure>
+                ))}
+              </div>
+            ) : null}
+            <WritingGallery images={writing.images} title={writing.title} className="mt-6" />
           </article>
         )}
       </div>

@@ -2,6 +2,7 @@
 
 import { FaPenNib } from "react-icons/fa";
 import WritingContent from "@/components/WritingContent";
+import { WritingCover, WritingGallery, WritingTags } from "@/components/WritingMedia";
 import {
   getCategoryMeta,
   MagazineArticleMeta,
@@ -63,10 +64,33 @@ export default function MagazineArticleDetail({ article, student = null }) {
       </div>
 
       <div className="student-magazine-article-body border-t border-[#d7cdbb] bg-[#fffdf8] px-5 py-8 md:px-10">
+        <WritingCover coverImage={article.coverImage} title={article.title} className="mx-auto mb-8 aspect-[16/9] max-h-[34rem] max-w-4xl" />
+        <WritingTags tags={article.tags} className="mx-auto mb-6 max-w-3xl" />
         <WritingContent
           content={article.content}
           className="mx-auto max-w-3xl text-base leading-7 text-[#27344a] md:text-lg"
         />
+        {false && article.images?.length ? (
+          <div className="mx-auto mt-8 grid max-w-4xl gap-4 sm:grid-cols-2">
+            {article.images.map((image, index) => (
+              <figure key={image.asset || image.url || index}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={image.url}
+                  alt={image.altText || `Article photo ${index + 1}`}
+                  className="w-full rounded-2xl object-cover"
+                  loading="lazy"
+                />
+                {image.caption ? (
+                  <figcaption className="mt-2 text-sm text-[#52657d]">
+                    {image.caption}
+                  </figcaption>
+                ) : null}
+              </figure>
+            ))}
+          </div>
+        ) : null}
+        <WritingGallery images={article.images} title={article.title} className="mx-auto mt-8 max-w-4xl" />
       </div>
     </article>
   );

@@ -5,6 +5,7 @@ import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
 import PublicExplorePanel from "@/components/public/PublicExplorePanel";
 import PublicSiteNav from "@/components/public/PublicSiteNav";
 import { WritingPreview } from "@/components/WritingContent";
+import { WritingCover, WritingTags } from "@/components/WritingMedia";
 import AppDate from "@/components/common/AppDate";
 import { diversifyBySchool } from "@/lib/schoolDiversifiedFeed";
 import { getAuthoredSchoolName, formatAuthoredEra } from "@/lib/writingProvenance";
@@ -50,7 +51,7 @@ const getStudentVoices = unstable_cache(async () => {
     isDeleted: { $ne: true },
   })
     .select(
-      "title content category publishedAt updatedAt authorSchoolNameSnapshot authorGrade authorAcademicYear"
+      "title content category coverImage tags publishedAt updatedAt authorSchoolNameSnapshot authorGrade authorAcademicYear"
     )
     .populate("authorStudent", "name grade")
     .populate("school", "schoolName schoolLocation")
@@ -63,6 +64,8 @@ const getStudentVoices = unstable_cache(async () => {
     title: article.title,
     content: article.content,
     category: article.category,
+    coverImage: article.coverImage || null,
+    tags: article.tags || [],
     date: (article.publishedAt || article.updatedAt)?.toISOString() || "",
     author: article.authorStudent?.name || "Student",
     authorId: article.authorStudent?._id ? String(article.authorStudent._id) : "",
@@ -129,11 +132,17 @@ function VoiceCard({ article, featured = false }) {
       <h2 className={`${featured ? "mt-6 text-3xl" : "mt-4 text-xl"} font-black leading-tight text-[#10142f]`}>
         {article.title}
       </h2>
+      <WritingCover
+        coverImage={article.coverImage}
+        title={article.title}
+        className="mt-4 aspect-[16/9]"
+      />
       <WritingPreview
         content={article.content}
         maxLength={featured ? 280 : 150}
         className={`${featured ? "mt-4 text-base" : "mt-2 text-sm"} line-clamp-4 leading-6 text-[#46536b]`}
       />
+      <WritingTags tags={article.tags} className="mt-3" />
 
       <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-[#f0f2f8] pt-4 text-xs font-bold text-[#526071]">
         <span className="inline-flex items-center gap-2">

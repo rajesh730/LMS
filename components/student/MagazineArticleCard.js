@@ -13,6 +13,7 @@ import {
   FaUser,
 } from "react-icons/fa";
 import { WritingPreview } from "@/components/WritingContent";
+import { WritingCover, WritingTags } from "@/components/WritingMedia";
 import AppDate from "@/components/common/AppDate";
 import { normalizeWritingCategory } from "@/lib/writingCategories";
 import { formatAuthoredEra } from "@/lib/writingProvenance";
@@ -115,6 +116,11 @@ export default function MagazineArticleCard({
         compact ? "p-4" : "p-4"
       }`}
     >
+      <WritingCover
+        coverImage={article.coverImage}
+        title={article.title}
+        className="mb-4 aspect-[16/9]"
+      />
       <div className="flex items-start justify-between gap-3">
         <span className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-black ${meta.chip}`}>
           {meta.label}
@@ -133,6 +139,7 @@ export default function MagazineArticleCard({
         maxLength={compact ? 120 : 240}
         className={`${compact ? "line-clamp-3" : "line-clamp-5"} student-issue-article-preview mt-3 text-sm leading-5 text-[#52657d]`}
       />
+      <WritingTags tags={article.tags} className="mt-3" />
       <MagazineArticleMeta article={article} className="mt-3" />
       <span className="mt-5 inline-flex text-sm font-black text-purple-700">
         Read full writing

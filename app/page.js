@@ -17,6 +17,7 @@ import {
   getWritingPreviewText,
   WritingPreview,
 } from "@/components/WritingContent";
+import { WritingCover, WritingTags } from "@/components/WritingMedia";
 import {
   FaArrowRight,
   FaCalendarAlt,
@@ -96,7 +97,7 @@ async function getLatestStudentWritings() {
     // origin school's live content (it stays in the student's portfolio).
     showOnSchoolWall: true,
   })
-    .select("title content category publishedAt updatedAt")
+    .select("title content category coverImage tags publishedAt updatedAt")
     .sort({ publishedAt: -1, updatedAt: -1 })
     .limit(50)
     .populate("authorStudent", "name grade")
@@ -109,6 +110,8 @@ async function getLatestStudentWritings() {
     title: article.title,
     content: article.content,
     category: article.category || "WRITING",
+    coverImage: article.coverImage || null,
+    tags: article.tags || [],
     date: article.publishedAt || article.updatedAt,
     author: article.authorStudent?.name || "Student",
     schoolName: article.school?.schoolName || "School",
@@ -142,7 +145,7 @@ async function getHomeMagazineIssues() {
     isMagazinePublished: true,
     isDeleted: false,
   })
-    .select("title content category magazineIssue magazinePublishedAt updatedAt")
+    .select("title content category coverImage tags magazineIssue magazinePublishedAt updatedAt")
     .sort({ magazinePublishedAt: 1, updatedAt: 1 })
     .lean();
 
@@ -171,6 +174,8 @@ async function getHomeMagazineIssues() {
             ? firstArticle.content
             : `${issueArticles.length} selected student writings published in this school magazine issue.`,
         category: "SCHOOL_MAGAZINE",
+        coverImage: firstArticle.coverImage || null,
+        tags: firstArticle.tags || [],
         date: issue.homeShownAt || issue.publishedAt || issue.weekStart,
         author: "School Magazine",
         schoolName: issue.school?.schoolName || "School",
@@ -210,7 +215,7 @@ async function getHighRotationSpotlightStudentWritings() {
     showOnSchoolWall: true,
     school: { $in: highRotationSchoolIds },
   })
-    .select("title content category publishedAt updatedAt")
+    .select("title content category coverImage tags publishedAt updatedAt")
     .sort({ publishedAt: -1, updatedAt: -1 })
     .limit(40)
     .populate("authorStudent", "name grade")
@@ -223,6 +228,8 @@ async function getHighRotationSpotlightStudentWritings() {
     title: article.title,
     content: article.content,
     category: article.category || "WRITING",
+    coverImage: article.coverImage || null,
+    tags: article.tags || [],
     date: article.publishedAt || article.updatedAt,
     author: article.authorStudent?.name || "Student",
     schoolName: article.school?.schoolName || "School",
@@ -384,11 +391,17 @@ function FeedCard({ item, badge = "Published Writing" }) {
         <h2 className="text-lg font-bold leading-snug text-[#111827]">
           {item.title || "Published student writing"}
         </h2>
+        <WritingCover
+          coverImage={item.coverImage}
+          title={item.title}
+          className="mt-3 aspect-[16/9] max-h-96"
+        />
         <WritingPreview
           content={item.content}
           maxLength={280}
           className="mt-2 line-clamp-4 text-sm leading-5 text-[#4b5565]"
         />
+        <WritingTags tags={item.tags} className="mt-3" />
         <Link
           href={voiceHref}
           className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--brand-primary)] transition hover:gap-2.5"
@@ -560,11 +573,17 @@ function MobileVoiceFeed({ writings }) {
             </div>
             <AuthorLine name={item.author} school={item.schoolName} badge="" />
             <h2 className="mt-2.5 text-base font-bold leading-snug text-[#111827]">{item.title}</h2>
+            <WritingCover
+              coverImage={item.coverImage}
+              title={item.title}
+              className="mt-3 aspect-[16/9]"
+            />
             {item.content && (
               <p className="mt-2 line-clamp-3 text-sm leading-6 text-[#526071]">
                 {getPreview(item.content, 180)}
               </p>
             )}
+            <WritingTags tags={item.tags} className="mt-3" />
             <div className="mt-3.5 flex items-center justify-between">
               <Link
                 href={item.href || "/student-voices"}

@@ -14,6 +14,7 @@ import EmptyState from "@/components/EmptyState";
 import LoadingState from "@/components/ui/LoadingState";
 import StudentQuickNav from "@/components/student/StudentQuickNav";
 import { WritingPreview } from "@/components/WritingContent";
+import { WritingCover, WritingTags } from "@/components/WritingMedia";
 import { normalizeWritingCategory } from "@/lib/writingCategories";
 import useStudentReadingSurface from "@/lib/client/useStudentReadingSurface";
 
@@ -179,11 +180,17 @@ export default function SchoolWallFeed() {
                     <h2 className="mt-4 text-xl font-bold text-[#111827]">
                       {article.title || "Student writing"}
                     </h2>
+                    <WritingCover
+                      coverImage={article.coverImage}
+                      title={article.title}
+                      className="mt-3 aspect-[16/9] max-h-96"
+                    />
                     <WritingPreview
                       content={article.content}
                       maxLength={300}
                       className="mt-2 line-clamp-5 text-sm leading-6 text-[#4b5565]"
                     />
+                    <WritingTags tags={article.tags} className="mt-3" />
                     <Link
                       href={`/student/school-wall/${article.id}`}
                       className="mt-3 inline-flex items-center gap-2 text-sm font-black text-[#1f4e79]"

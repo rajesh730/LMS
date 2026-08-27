@@ -14,6 +14,7 @@ import PublicExplorePanel from "@/components/public/PublicExplorePanel";
 import PublicShareButton from "@/components/public/PublicShareButton";
 import ExpandableStoryText from "@/components/public/ExpandableStoryText";
 import { stripWritingMarkup } from "@/components/WritingContent";
+import { WritingCover, WritingTags } from "@/components/WritingMedia";
 import { normalizeImageUrl } from "@/lib/imageUrls";
 import { formatPlacement } from "@/lib/displayFormat";
 import { getEventPublicStatus } from "@/lib/eventUiStatus";
@@ -241,7 +242,7 @@ async function getSchoolHomeMagazines(schoolId) {
     isMagazinePublished: true,
     isDeleted: { $ne: true },
   })
-    .select("title content magazineIssue")
+    .select("title content coverImage tags magazineIssue")
     .sort({ magazinePublishedAt: 1, updatedAt: 1 })
     .lean();
 
@@ -268,6 +269,8 @@ async function getSchoolHomeMagazines(schoolId) {
           issueArticles.length === 1
             ? firstArticle.content
             : `${firstArticle.title}: ${getPreview(firstArticle.content, 100)}`,
+        coverImage: firstArticle.coverImage || null,
+        tags: firstArticle.tags || [],
         publicDate: issue.homeShownAt || issue.publishedAt || issue.weekStart,
         articleCount: issueArticles.length,
       };
@@ -439,11 +442,15 @@ function WritingCard({ writing }) {
       href={isMagazine ? writing.href || "#writings" : `/writings/${writing._id}`}
       className="block min-w-[190px] rounded-xl border border-[#e6eaf7] bg-white p-3 text-[#17120a] shadow-sm transition hover:-translate-y-0.5 hover:border-white/70 hover:shadow-md"
     >
+      {writing.coverImage?.url ? (
+        <WritingCover coverImage={writing.coverImage} title={writing.title} className="h-28" />
+      ) : (
       <div className="pravyo-writing-art relative h-28 overflow-hidden rounded-lg border">
         <div className="absolute right-8 top-7 h-14 w-24 rounded-2xl border border-white/18 bg-white/10" />
         <FaBookOpen className="absolute right-5 top-5 text-4xl !text-white drop-shadow" />
         <FaPenNib className="absolute bottom-5 left-5 text-2xl !text-white drop-shadow" />
       </div>
+      )}
       <div className="mt-3 flex flex-wrap gap-2">
         <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-black uppercase text-emerald-700">
           Published
@@ -458,6 +465,7 @@ function WritingCard({ writing }) {
       <p className="mt-2 line-clamp-2 text-xs leading-5 text-[#52657d]">
         {getPreview(writing.content)}
       </p>
+      <WritingTags tags={writing.tags} className="mt-3" />
       <p className="mt-3 text-xs font-semibold text-[#52657d]">
         {isMagazine
           ? `${writing.articleCount || 0} selected writings`
@@ -642,6 +650,7 @@ export default async function PublicSchoolPage({ params }) {
   } = data;
   const metrics = profile?.highlightMetrics || {};
   const coverImage = normalizeImageUrl(profile?.coverImageUrl);
+  const bannerImage = normalizeImageUrl(profile?.bannerImageUrl);
   const socialEntries = getSocialEntries(profile?.socialLinks);
   const websiteUrl = profile?.websiteUrl || school.website || "";
   const motto = profile?.motto || "";
@@ -680,7 +689,16 @@ export default async function PublicSchoolPage({ params }) {
           className="scroll-mt-28 relative left-1/2 w-screen -translate-x-1/2 overflow-hidden border border-[#d7cdbb] bg-white shadow-[0_18px_50px_rgba(10,47,102,0.08)] sm:left-auto sm:w-auto sm:translate-x-0 sm:rounded-2xl"
         >
           <div className="relative min-h-[360px]">
-            <HeroFallbackArt />
+            {bannerImage ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={bannerImage}
+                alt=""
+                className="absolute inset-0 h-full w-full object-cover"
+              />
+            ) : (
+              <HeroFallbackArt />
+            )}
             <div className="absolute inset-0 bg-gradient-to-r from-black/38 via-black/10 to-black/26" />
             <div className="relative z-10 grid min-h-[360px] gap-6 p-6 md:p-8 lg:items-end">
               <div className="self-end rounded-2xl border border-white/20 bg-black/28 p-4 shadow-2xl backdrop-blur-sm md:p-5">
