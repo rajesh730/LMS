@@ -175,6 +175,34 @@ export default function ShowcaseProfileManager() {
     }));
   };
 
+  const updateSchoolLogo = async (asset) => {
+    const previousUrl = profile.coverImageUrl || "";
+    const coverImageUrl = asset?.url || "";
+    setProfile((current) => ({ ...current, coverImageUrl }));
+    setError("");
+    setSavedMessage("");
+
+    try {
+      const response = await fetch("/api/school/showcase-profile/logo", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ coverImageUrl }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to update school logo");
+      }
+      setProfile((current) => ({
+        ...current,
+        coverImageUrl: data.data?.coverImageUrl || "",
+      }));
+      setSavedMessage("School logo updated.");
+    } catch (logoError) {
+      setProfile((current) => ({ ...current, coverImageUrl: previousUrl }));
+      setError(logoError.message || "Failed to update school logo");
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
@@ -363,12 +391,7 @@ export default function ShowcaseProfileManager() {
                   <ImageUploadField
                     purpose="SCHOOL_LOGO"
                     value={profile.coverImageUrl ? { url: profile.coverImageUrl } : null}
-                    onChange={(asset) =>
-                      setProfile((prev) => ({
-                        ...prev,
-                        coverImageUrl: asset?.url || "",
-                      }))
-                    }
+                    onChange={updateSchoolLogo}
                     label="Upload school logo"
                     maxEdge={512}
                     quality={0.8}
