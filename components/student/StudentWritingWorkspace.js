@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import {
   FaArrowLeft,
   FaArrowRight,
@@ -36,6 +36,7 @@ import EmptyState from "@/components/EmptyState";
 import AppDate from "@/components/common/AppDate";
 import Modal from "@/components/Modal";
 import StudentQuickNav from "@/components/student/StudentQuickNav";
+import ImageUploadField from "@/components/media/ImageUploadField";
 import AlertBanner from "@/components/ui/AlertBanner";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import LoadingState from "@/components/ui/LoadingState";
@@ -329,6 +330,9 @@ function buildEmptyForm() {
     content: "",
     category: "BLOG_ARTICLE",
     status: "DRAFT",
+    images: [],
+    coverImage: null,
+    tags: [],
   };
 }
 
@@ -711,6 +715,10 @@ function WritingEditor({
   portfolioOnly = false,
   titleRef = null,
 }) {
+  const [showCoverImage, setShowCoverImage] = useState(Boolean(form.coverImage));
+  const [showTags, setShowTags] = useState(Boolean(form.tags?.length));
+  const tagsInputId = useId();
+
   return (
     <section className="student-writing-editor overflow-hidden rounded-xl border border-[#e7dcc8] bg-white shadow-sm">
       <div className="flex flex-col gap-3 border-b border-[#e7dcc8] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
@@ -780,16 +788,68 @@ function WritingEditor({
         </div>
       ) : (
         <article className="min-h-[340px] bg-white px-5 py-5 text-base leading-8 text-[#27344a]">
+          {form.coverImage?.url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={form.coverImage.url}
+              alt={form.coverImage.altText || form.title || "Writing cover"}
+              className="mb-5 max-h-80 w-full rounded-xl object-cover"
+            />
+          ) : null}
           {form.content
             ? renderFormattedContent(form.content)
             : "Your preview will appear here as you write."}
         </article>
       )}
 
+      <div className="border-t border-[#e7dcc8] bg-white px-4 py-4">
+        <p className="text-sm font-black text-[#17120a]">Writing photos</p>
+        <p className="mt-1 text-xs text-[#52657d]">
+          Add up to five photos. They are resized and compressed before upload.
+        </p>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          {(form.images || []).map((image, index) => (
+            <div key={image.asset || index} className="rounded-xl border border-[#e7dcc8] p-2">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={image.url} alt={image.altText || "Writing attachment"} className="h-36 w-full rounded-lg object-cover" />
+              <button
+                type="button"
+                onClick={() =>
+                  setForm((current) => ({
+                    ...current,
+                    images: current.images.filter((_, currentIndex) => currentIndex !== index),
+                  }))
+                }
+                className="mt-2 text-xs font-bold text-red-700"
+              >
+                Remove photo
+              </button>
+            </div>
+          ))}
+        </div>
+        {(form.images || []).length < 5 ? (
+          <ImageUploadField
+            purpose="WRITING_IMAGE"
+            value={null}
+            onChange={(asset) => {
+              if (!asset) return;
+              setForm((current) => ({
+                ...current,
+                images: [...(current.images || []), { asset: asset.id, url: asset.url }],
+              }));
+            }}
+            label="Add a photo"
+            maxEdge={1280}
+            quality={0.72}
+          />
+        ) : null}
+      </div>
+
       <div className="student-writing-actions flex flex-col gap-3 border-t border-[#e7dcc8] bg-[#fffdf8] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="student-writing-extra-actions flex flex-wrap gap-2">
           <button
             type="button"
+            onClick={() => setShowCoverImage((current) => !current)}
             className="inline-flex min-h-10 items-center gap-2 rounded-full bg-purple-50 px-4 py-2 text-xs font-black text-purple-700 transition hover:bg-purple-100"
           >
             <FaImage />
@@ -797,6 +857,7 @@ function WritingEditor({
           </button>
           <button
             type="button"
+            onClick={() => setShowTags((current) => !current)}
             className="inline-flex min-h-10 items-center gap-2 rounded-full bg-purple-50 px-4 py-2 text-xs font-black text-purple-700 transition hover:bg-purple-100"
           >
             <FaTags />
@@ -851,6 +912,66 @@ function WritingEditor({
           )}
         </div>
       </div>
+
+      {showCoverImage ? (
+        <div className="border-t border-[#e7dcc8] bg-white px-4 py-4">
+          <p className="text-sm font-black text-[#17120a]">Cover image</p>
+          <p className="mt-1 text-xs text-[#52657d]">
+            This image appears at the top of your writing.
+          </p>
+          <ImageUploadField
+            purpose="WRITING_IMAGE"
+            value={form.coverImage}
+            onChange={(asset) =>
+              setForm((current) => ({
+                ...current,
+                coverImage: asset
+                  ? { asset: asset.id, url: asset.url, altText: current.title }
+                  : null,
+              }))
+            }
+            label={form.coverImage ? "Replace cover image" : "Upload cover image"}
+            maxEdge={1600}
+            quality={0.76}
+          />
+        </div>
+      ) : null}
+
+      {showTags ? (
+        <div className="border-t border-[#e7dcc8] bg-white px-4 py-4">
+          <label className="text-sm font-black text-[#17120a]" htmlFor={tagsInputId}>
+            Tags
+          </label>
+          <p className="mt-1 text-xs text-[#52657d]">
+            Add up to eight tags, separated by commas.
+          </p>
+          <input
+            id={tagsInputId}
+            type="text"
+            value={(form.tags || []).join(", ")}
+            onChange={(event) =>
+              setForm((current) => ({
+                ...current,
+                tags: event.target.value
+                  .split(",")
+                  .map((tag) => tag.trimStart())
+                  .slice(0, 8),
+              }))
+            }
+            placeholder="science, school life, creativity"
+            className="mt-3 min-h-11 w-full rounded-lg border border-[#e0d4bf] bg-white px-4 text-sm text-[#17120a] outline-none focus:border-purple-400"
+          />
+          {(form.tags || []).filter((tag) => tag.trim()).length ? (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {form.tags.filter((tag) => tag.trim()).map((tag, index) => (
+                <span key={`${tag}-${index}`} className="rounded-full bg-purple-50 px-3 py-1 text-xs font-bold text-purple-700">
+                  #{tag.trim().replace(/^#+/, "")}
+                </span>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -1245,6 +1366,9 @@ export default function StudentWritingWorkspace() {
       content: writing.content || "",
       category: normalizeCategory(writing.category),
       status: writing.status || "DRAFT",
+      images: writing.images || [],
+      coverImage: writing.coverImage || null,
+      tags: writing.tags || [],
     });
   }, []);
 
@@ -1273,6 +1397,9 @@ export default function StudentWritingWorkspace() {
           content: form.content,
           category: form.category,
           status: nextStatus,
+          images: form.images,
+          coverImage: form.coverImage,
+          tags: form.tags,
         }),
       });
 
@@ -1307,6 +1434,9 @@ export default function StudentWritingWorkspace() {
           content: editForm.content,
           category: editForm.category,
           status: nextStatus,
+          images: editForm.images,
+          coverImage: editForm.coverImage,
+          tags: editForm.tags,
         }),
       });
 
@@ -1676,10 +1806,41 @@ export default function StudentWritingWorkspace() {
             </div>
 
             <article className="mx-5 mb-8 mt-5 rounded-xl border border-[#d7cdbb] bg-[#fffdf8] p-5 md:mx-8 md:p-7">
+              {readingWriting.coverImage?.url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={readingWriting.coverImage.url}
+                  alt={readingWriting.coverImage.altText || readingWriting.title || "Writing cover"}
+                  className="mb-6 max-h-[28rem] w-full rounded-xl object-cover"
+                />
+              ) : null}
+              {readingWriting.tags?.length ? (
+                <div className="mb-5 flex flex-wrap gap-2">
+                  {readingWriting.tags.map((tag) => (
+                    <span key={tag} className="rounded-full bg-purple-50 px-3 py-1 text-xs font-bold text-purple-700">
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
               <WritingContent
                 content={readingWriting.content}
                 className="text-base leading-7 text-[#27344a] md:text-lg"
               />
+              {readingWriting.images?.length ? (
+                <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                  {readingWriting.images.map((image, index) => (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      key={image.asset || image.url || index}
+                      src={image.url}
+                      alt={image.altText || `Writing photo ${index + 1}`}
+                      className="w-full rounded-xl object-cover"
+                      loading="lazy"
+                    />
+                  ))}
+                </div>
+              ) : null}
             </article>
 
             <div className="flex flex-wrap gap-3 border-t border-[#d7cdbb] bg-[#f8fbff] px-5 py-4 md:px-8">

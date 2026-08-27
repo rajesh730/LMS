@@ -14,6 +14,8 @@ import {
   hasVisibleSurface,
   resetReviewStateIfFullyWithdrawn,
 } from "@/lib/studentWritings";
+import { resolveWritingCover, resolveWritingImages } from "@/lib/writingMedia";
+import { normalizeWritingTags } from "@/lib/writingTags";
 
 export async function PATCH(request, props) {
   try {
@@ -258,10 +260,30 @@ export async function PATCH(request, props) {
     const nextTitle = String(body.title || "").trim();
     const nextContent = String(body.content || "").trim();
     const nextCategory = normalizeWritingCategory(body.category || article.category);
+    const nextTags = normalizeWritingTags(body.tags);
     const requestedStatus =
       String(body.status || "").toUpperCase() === "SUBMITTED"
         ? "SUBMITTED"
         : "DRAFT";
+
+    let images;
+    let coverImage;
+    try {
+      images = await resolveWritingImages({
+        images: body.images,
+        studentId: student._id,
+        schoolId: article.school,
+        writingId: article._id,
+      });
+      coverImage = await resolveWritingCover({
+        coverImage: body.coverImage,
+        studentId: student._id,
+        schoolId: article.school,
+        writingId: article._id,
+      });
+    } catch (mediaError) {
+      return NextResponse.json({ message: mediaError.message }, { status: 400 });
+    }
 
     if (!nextTitle || !nextContent) {
       return NextResponse.json(
@@ -275,6 +297,9 @@ export async function PATCH(request, props) {
     article.title = nextTitle;
     article.content = nextContent;
     article.category = nextCategory;
+    article.images = images;
+    article.coverImage = coverImage;
+    article.tags = nextTags;
     article.status = requestedStatus;
     article.showOnSchoolWall = requestedStatus === "SUBMITTED";
     article.isMagazinePublished = false;

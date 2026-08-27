@@ -8,6 +8,8 @@ import { notifySchoolMagazineSubmitted } from "@/lib/magazineNotifications";
 import { normalizeWritingCategory } from "@/lib/writingCategories";
 import { buildAuthoredEraSnapshot } from "@/lib/studentEnrollment";
 import { buildStudentLookupForSession } from "@/lib/studentIdentity";
+import { resolveWritingCover, resolveWritingImages } from "@/lib/writingMedia";
+import { normalizeWritingTags } from "@/lib/writingTags";
 
 function buildStudentLookup(session) {
   return {
@@ -56,6 +58,9 @@ export async function GET() {
           sourceType: "SCHOOL_MAGAZINE_ARTICLE",
           title: article.title,
           content: article.content,
+          images: article.images || [],
+          coverImage: article.coverImage?.url ? article.coverImage : null,
+          tags: article.tags || [],
           category: article.category,
           schoolId: article.school?._id ? String(article.school._id) : "",
           schoolName:
@@ -129,6 +134,7 @@ export async function POST(request) {
     const title = String(body.title || "").trim();
     const content = String(body.content || "").trim();
     const category = normalizeWritingCategory(body.category);
+    const tags = normalizeWritingTags(body.tags);
     const resubmissionOf = String(
       body.resubmissionOf || body.articleId || body.id || ""
     ).trim();
@@ -136,6 +142,23 @@ export async function POST(request) {
       String(body.status || "").toUpperCase() === "SUBMITTED"
         ? "SUBMITTED"
         : "DRAFT";
+
+    let images;
+    let coverImage;
+    try {
+      images = await resolveWritingImages({
+        images: body.images,
+        studentId: student._id,
+        schoolId: student.school,
+      });
+      coverImage = await resolveWritingCover({
+        coverImage: body.coverImage,
+        studentId: student._id,
+        schoolId: student.school,
+      });
+    } catch (mediaError) {
+      return NextResponse.json({ message: mediaError.message }, { status: 400 });
+    }
 
     if (!title || !content) {
       return NextResponse.json(
@@ -169,6 +192,9 @@ export async function POST(request) {
         article.title = title;
         article.content = content;
         article.category = category;
+        article.images = images;
+        article.coverImage = coverImage;
+        article.tags = tags;
         article.status = requestedStatus;
         article.showOnSchoolWall = requestedStatus === "SUBMITTED";
         article.isMagazinePublished = false;
@@ -188,6 +214,18 @@ export async function POST(request) {
         }
 
         await article.save();
+        await resolveWritingImages({
+          images,
+          studentId: student._id,
+          schoolId: student.school,
+          writingId: article._id,
+        });
+        await resolveWritingCover({
+          coverImage,
+          studentId: student._id,
+          schoolId: student.school,
+          writingId: article._id,
+        });
 
         publishWorkIndicatorsUpdate("student-writing-updated", {
           schoolId: String(student.school),
@@ -221,6 +259,9 @@ export async function POST(request) {
       ...authoredEra,
       title,
       content,
+      images,
+      coverImage,
+      tags,
       category,
       submissionSource: "FREE_WRITE",
       status: requestedStatus,
@@ -229,6 +270,19 @@ export async function POST(request) {
       isPublished: false,
       submittedAt,
       firstSubmittedAt: submittedAt,
+    });
+
+    await resolveWritingImages({
+      images,
+      studentId: student._id,
+      schoolId: student.school,
+      writingId: article._id,
+    });
+    await resolveWritingCover({
+      coverImage,
+      studentId: student._id,
+      schoolId: student.school,
+      writingId: article._id,
     });
 
     publishWorkIndicatorsUpdate("student-writing-created", {

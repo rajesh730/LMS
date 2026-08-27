@@ -53,6 +53,35 @@ const SchoolMagazineArticleSchema = new mongoose.Schema(
       trim: true,
       maxlength: MAX_WRITING_CONTENT_LENGTH,
     },
+    images: {
+      type: [
+        {
+          asset: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "MediaAsset",
+            required: true,
+          },
+          url: { type: String, required: true },
+          caption: { type: String, default: "", maxlength: 240 },
+          altText: { type: String, default: "", maxlength: 240 },
+          order: { type: Number, default: 0 },
+        },
+      ],
+      default: [],
+    },
+    coverImage: {
+      asset: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "MediaAsset",
+        default: null,
+      },
+      url: { type: String, default: "" },
+      altText: { type: String, default: "", maxlength: 240 },
+    },
+    tags: {
+      type: [{ type: String, trim: true, maxlength: 40 }],
+      default: [],
+    },
     category: {
       type: String,
       enum: ALL_WRITING_CATEGORIES,
