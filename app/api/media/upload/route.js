@@ -41,6 +41,20 @@ function uploadFailureResponse(error) {
       "STORAGE_CREDENTIALS_INVALID"
     );
   }
+  if (error?.message === "R2_ENDPOINT_INVALID") {
+    return errorResponse(
+      503,
+      "R2_ENDPOINT must be the HTTPS S3 endpoint from Cloudflare without a bucket name or extra path.",
+      "STORAGE_ENDPOINT_INVALID"
+    );
+  }
+  if (code === "AbortError" || code === "TimeoutError") {
+    return errorResponse(
+      504,
+      "R2 did not respond in time. Check that R2_ENDPOINT is the S3 endpoint for the same account as the access key.",
+      "STORAGE_TIMEOUT"
+    );
+  }
   if (
     ["ValidationError", "MongoServerError", "MongooseError"].includes(code)
   ) {

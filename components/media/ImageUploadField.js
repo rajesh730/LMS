@@ -37,8 +37,24 @@ export default function ImageUploadField({
         method: "POST",
         body: form,
       });
-      const json = await response.json();
-      if (!response.ok) throw new Error(json.message || "Image upload failed");
+      const responseText = await response.text();
+      let json = null;
+      try {
+        json = responseText ? JSON.parse(responseText) : null;
+      } catch {
+        // Proxies can replace an upstream 5xx response with an HTML error page.
+      }
+      if (!response.ok) {
+        throw new Error(
+          json?.message ||
+            (response.status === 502 || response.status === 504
+              ? "Storage did not respond in time. Check the R2 S3 endpoint and credentials."
+              : `Image upload failed (${response.status}).`)
+        );
+      }
+      if (!json?.data?.asset) {
+        throw new Error("The upload completed without a valid media record.");
+      }
       onChange(json.data.asset);
     } catch (uploadError) {
       setError(uploadError.message || "Image upload failed");
