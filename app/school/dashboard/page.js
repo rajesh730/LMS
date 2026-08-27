@@ -86,6 +86,14 @@ const ShowcaseProfileManager = dynamic(
     ),
   }
 );
+const SchoolSettingsHistory = dynamic(
+  () => import("@/components/school/SchoolSettingsHistory"),
+  {
+    loading: () => (
+      <LoadingState title="Loading history" message="Preparing recent school changes." />
+    ),
+  }
+);
 const StudentNoticeManager = dynamic(
   () => import("@/components/school/StudentNoticeManager"),
   {
@@ -434,6 +442,7 @@ function SchoolDashboardContent() {
               />
             )}
             {activeTab === "settings" && <SchoolSettingsManager />}
+            {activeTab === "history" && <SchoolSettingsHistory />}
 
             {activeTab === "school-events" && <SchoolEventWorkspace />}
             {activeTab === "platform-events" && <PlatformEventsManager />}

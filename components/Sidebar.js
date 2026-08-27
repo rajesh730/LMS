@@ -77,7 +77,7 @@ const SCHOOL_NAV_GROUPS = [
   },
   {
     title: "Platform",
-    names: ["Feedback", "Settings"],
+    names: ["Feedback", "Settings", "History"],
   },
 ];
 

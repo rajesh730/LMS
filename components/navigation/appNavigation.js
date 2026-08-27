@@ -14,6 +14,7 @@ import {
   FaGlobe,
   FaGraduationCap,
   FaHeartbeat,
+  FaHistory,
   FaHome,
   FaSchool,
   FaTrophy,
@@ -59,6 +60,7 @@ export const SCHOOL_NAV_LINKS = [
   { name: "Public Profile", href: "/school/dashboard?tab=showcase", icon: FaSchool },
   { name: "Feedback", href: "/school/dashboard?tab=feedback", icon: FaCommentDots },
   { name: "Settings", href: "/school/dashboard?tab=settings", icon: FaCog },
+  { name: "History", href: "/school/dashboard?tab=history", icon: FaHistory },
 ];
 
 export const TEACHER_NAV_LINKS = [

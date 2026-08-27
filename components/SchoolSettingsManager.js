@@ -15,7 +15,6 @@ import {
   FiTrash2,
   FiUsers,
 } from "react-icons/fi";
-import SettingsAuditPanel from "@/components/settings/SettingsAuditPanel";
 import AcademicYearManager from "@/components/school/AcademicYearManager";
 import CalendarToggle from "@/components/common/CalendarToggle";
 import WebsiteApiKeysPanel from "@/components/settings/WebsiteApiKeysPanel";
@@ -126,13 +125,11 @@ export default function SchoolSettingsManager() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [passwordSaving, setPasswordSaving] = useState(false);
-  const [historyLoading, setHistoryLoading] = useState(true);
   const [message, setMessage] = useState({ type: "", text: "" });
   const [passwordMessage, setPasswordMessage] = useState({ type: "", text: "" });
   const [config, setConfig] = useState(defaultConfig);
   const [savedConfig, setSavedConfig] = useState(defaultConfig);
   const [roleDraft, setRoleDraft] = useState("");
-  const [history, setHistory] = useState([]);
   const [isDirty, setIsDirty] = useState(false);
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: "",
@@ -142,10 +139,6 @@ export default function SchoolSettingsManager() {
 
   useEffect(() => {
     fetchSchoolConfig();
-  }, []);
-
-  useEffect(() => {
-    fetchHistory();
   }, []);
 
   useEffect(() => {
@@ -217,24 +210,6 @@ export default function SchoolSettingsManager() {
       setMessage({ type: "error", text: error.message });
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchHistory = async () => {
-    try {
-      setHistoryLoading(true);
-      const res = await fetch("/api/school/settings/audit", {
-        cache: "no-store",
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.message || "Failed to load settings history");
-      }
-      setHistory(data.data || []);
-    } catch (error) {
-      console.error("Failed to fetch school settings history:", error);
-    } finally {
-      setHistoryLoading(false);
     }
   };
 
@@ -463,7 +438,6 @@ export default function SchoolSettingsManager() {
       ) {
         await updateSession();
       }
-      await fetchHistory();
     } catch (error) {
       console.error("Error saving school config:", error);
       setMessage({ type: "error", text: error.message });
@@ -984,13 +958,6 @@ export default function SchoolSettingsManager() {
               <li>Read-only counts belong here only as a snapshot, not as editable settings.</li>
             </ul>
           </div>
-
-          <SettingsAuditPanel
-            title="Recent Changes"
-            description="Recent school settings updates help you track overrides and profile changes."
-            entries={history}
-            loading={historyLoading}
-          />
 
           <WebsiteApiKeysPanel />
         </section>
