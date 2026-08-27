@@ -11,7 +11,25 @@ import {
   errorResponse,
   successResponse,
   unauthorizedError,
+  validationError,
 } from "@/lib/apiResponse";
+
+function cleanText(value) {
+  return String(value ?? "").trim();
+}
+
+function isValidEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+function isValidWebsite(value) {
+  if (!value) return true;
+  try {
+    return ["http:", "https:"].includes(new URL(value).protocol);
+  } catch {
+    return false;
+  }
+}
 
 export async function GET() {
   try {
@@ -112,45 +130,90 @@ export async function PUT(req) {
       SchoolConfig.findOne({ school: session.user.id }),
     ]);
 
-    const userUpdate = {};
-    if (identity.schoolName !== undefined) userUpdate.schoolName = identity.schoolName;
-    if (identity.principalName !== undefined) {
-      userUpdate.principalName = identity.principalName;
-    }
-    if (identity.principalPhone !== undefined) {
-      userUpdate.principalPhone = identity.principalPhone;
-    }
-    if (identity.email !== undefined) userUpdate.email = identity.email;
-    if (identity.phone !== undefined) userUpdate.schoolPhone = identity.phone;
-    if (identity.address !== undefined) {
-      userUpdate.schoolLocation = identity.address;
-    }
-    if (identity.website !== undefined) userUpdate.website = identity.website;
-    if (identity.establishedYear !== undefined && identity.establishedYear !== "") {
-      userUpdate.establishedYear = Number(identity.establishedYear) || undefined;
+    if (!existingUser) {
+      return errorResponse(404, "School account not found");
     }
 
-    const updatedUser = await User.findByIdAndUpdate(session.user.id, userUpdate, {
-      new: true,
-    });
+    const userUpdate = {};
+    if (identity.schoolName !== undefined) {
+      userUpdate.schoolName = cleanText(identity.schoolName);
+      if (!userUpdate.schoolName) {
+        return validationError("School name is required.");
+      }
+    }
+    if (identity.principalName !== undefined) {
+      userUpdate.principalName = cleanText(identity.principalName);
+    }
+    if (identity.principalPhone !== undefined) {
+      userUpdate.principalPhone = cleanText(identity.principalPhone);
+    }
+    if (identity.email !== undefined) {
+      const email = cleanText(identity.email).toLowerCase();
+      if (!email || !isValidEmail(email)) {
+        return validationError("A valid official email is required.");
+      }
+
+      const emailOwner = await User.findOne({
+        email,
+        _id: { $ne: session.user.id },
+      }).select("_id");
+      if (emailOwner) {
+        return validationError("That email address is already in use.");
+      }
+      userUpdate.email = email;
+    }
+    if (identity.phone !== undefined) userUpdate.schoolPhone = cleanText(identity.phone);
+    if (identity.address !== undefined) {
+      userUpdate.schoolLocation = cleanText(identity.address);
+    }
+    if (identity.website !== undefined) {
+      userUpdate.website = cleanText(identity.website);
+      if (!isValidWebsite(userUpdate.website)) {
+        return validationError("Website must start with http:// or https://.");
+      }
+    }
+    if (identity.establishedYear !== undefined) {
+      const year = cleanText(identity.establishedYear);
+      const numericYear = Number(year);
+      if (
+        year &&
+        (!Number.isInteger(numericYear) ||
+          numericYear < 1800 ||
+          numericYear > new Date().getFullYear())
+      ) {
+        return validationError("Established year must be a valid year.");
+      }
+      userUpdate.establishedYear = year ? numericYear : null;
+    }
+
+    const updatedUser =
+      Object.keys(userUpdate).length > 0
+        ? await User.findByIdAndUpdate(session.user.id, userUpdate, {
+            new: true,
+            runValidators: true,
+          })
+        : existingUser;
 
     const configUpdate = {};
     if (configBody.schoolCode !== undefined) {
-      configUpdate.schoolCode = configBody.schoolCode;
+      configUpdate.schoolCode = cleanText(configBody.schoolCode);
     }
-    if (configBody.city !== undefined) configUpdate.city = configBody.city;
-    if (configBody.state !== undefined) configUpdate.state = configBody.state;
-    if (configBody.pincode !== undefined) configUpdate.pincode = configBody.pincode;
+    if (configBody.city !== undefined) configUpdate.city = cleanText(configBody.city);
+    if (configBody.state !== undefined) configUpdate.state = cleanText(configBody.state);
+    if (configBody.pincode !== undefined) configUpdate.pincode = cleanText(configBody.pincode);
     if (configBody.teacherRoles !== undefined) {
       configUpdate.teacherRoles = normalizeTeacherRoles(configBody.teacherRoles);
       configUpdate.teacherRolesCustomized = true;
     }
 
-    const config = await SchoolConfig.findOneAndUpdate(
-      { school: session.user.id },
-      configUpdate,
-      { new: true, upsert: true }
-    );
+    const config =
+      Object.keys(configUpdate).length > 0
+        ? await SchoolConfig.findOneAndUpdate(
+            { school: session.user.id },
+            configUpdate,
+            { new: true, upsert: true, runValidators: true }
+          )
+        : existingConfig;
 
     await recordSettingsAudit({
       entityType: "SCHOOL_SETTINGS",
@@ -199,11 +262,30 @@ export async function PUT(req) {
     });
 
     return successResponse(200, "School settings updated", {
-      identity,
-      config,
+      identity: {
+        schoolName: updatedUser.schoolName || "",
+        principalName: updatedUser.principalName || "",
+        principalPhone: updatedUser.principalPhone || "",
+        email: updatedUser.email || "",
+        phone: updatedUser.schoolPhone || "",
+        address: updatedUser.schoolLocation || "",
+        website: updatedUser.website || "",
+        establishedYear: updatedUser.establishedYear || "",
+      },
+      config: {
+        schoolCode: config?.schoolCode || "",
+        city: config?.city || "",
+        state: config?.state || "",
+        pincode: config?.pincode || "",
+        teacherRoles: config?.teacherRoles || [],
+        grades: config?.grades || [],
+      },
     });
   } catch (error) {
     console.error("School settings PUT error:", error);
+    if (error?.code === 11000 && error?.keyPattern?.email) {
+      return validationError("That email address is already in use.");
+    }
     return errorResponse(500, "Failed to save school settings");
   }
 }

@@ -70,7 +70,7 @@ function getSanitizedConfig(config) {
     ...config,
     schoolName: String(config.schoolName || "").trim(),
     schoolCode: String(config.schoolCode || "").trim(),
-    email: String(config.email || "").trim(),
+    email: String(config.email || "").trim().toLowerCase(),
     phone: String(config.phone || "").trim(),
     principalPhone: String(config.principalPhone || "").trim(),
     address: String(config.address || "").trim(),
@@ -84,6 +84,41 @@ function getSanitizedConfig(config) {
       .map((item) => String(item || "").trim())
       .filter(Boolean),
   };
+}
+
+function hasChanged(current, saved, field) {
+  return JSON.stringify(current[field]) !== JSON.stringify(saved[field]);
+}
+
+function buildSettingsPatch(current, saved) {
+  const identity = {};
+  const config = {};
+  const identityFields = [
+    "schoolName",
+    "principalName",
+    "principalPhone",
+    "email",
+    "phone",
+    "address",
+    "website",
+    "establishedYear",
+  ];
+  const configFields = [
+    "schoolCode",
+    "city",
+    "state",
+    "pincode",
+    "teacherRoles",
+  ];
+
+  identityFields.forEach((field) => {
+    if (hasChanged(current, saved, field)) identity[field] = current[field];
+  });
+  configFields.forEach((field) => {
+    if (hasChanged(current, saved, field)) config[field] = current[field];
+  });
+
+  return { identity, config };
 }
 
 export default function SchoolSettingsManager() {
@@ -282,13 +317,25 @@ export default function SchoolSettingsManager() {
 
       const sanitizedConfig = getSanitizedConfig(config);
 
-      if (!sanitizedConfig.schoolName) {
+      const sanitizedSavedConfig = getSanitizedConfig(savedConfig);
+      const payload = buildSettingsPatch(
+        sanitizedConfig,
+        sanitizedSavedConfig
+      );
+
+      if (
+        payload.identity.schoolName !== undefined &&
+        !payload.identity.schoolName
+      ) {
         setMessage({ type: "error", text: "School name is required." });
         setSaving(false);
         return;
       }
 
-      if (sanitizedConfig.email && !isValidEmail(sanitizedConfig.email)) {
+      if (
+        payload.identity.email !== undefined &&
+        !isValidEmail(payload.identity.email)
+      ) {
         setMessage({
           type: "error",
           text: "Official email must be a valid email address.",
@@ -297,7 +344,10 @@ export default function SchoolSettingsManager() {
         return;
       }
 
-      if (sanitizedConfig.website && !isValidUrl(sanitizedConfig.website)) {
+      if (
+        payload.identity.website &&
+        !isValidUrl(payload.identity.website)
+      ) {
         setMessage({
           type: "error",
           text: "Website must start with http:// or https://",
@@ -306,8 +356,8 @@ export default function SchoolSettingsManager() {
         return;
       }
 
-      if (sanitizedConfig.establishedYear) {
-        const year = Number(sanitizedConfig.establishedYear);
+      if (payload.identity.establishedYear) {
+        const year = Number(payload.identity.establishedYear);
         const currentYear = new Date().getFullYear();
         if (!Number.isInteger(year) || year < 1800 || year > currentYear) {
           setMessage({
@@ -319,26 +369,6 @@ export default function SchoolSettingsManager() {
         }
       }
 
-      const payload = {
-        identity: {
-          schoolName: sanitizedConfig.schoolName,
-          principalName: sanitizedConfig.principalName,
-          principalPhone: sanitizedConfig.principalPhone,
-          email: sanitizedConfig.email,
-          phone: sanitizedConfig.phone,
-          address: sanitizedConfig.address,
-          website: sanitizedConfig.website,
-          establishedYear: sanitizedConfig.establishedYear,
-        },
-        config: {
-          schoolCode: sanitizedConfig.schoolCode,
-          city: sanitizedConfig.city,
-          state: sanitizedConfig.state,
-          pincode: sanitizedConfig.pincode,
-          teacherRoles: sanitizedConfig.teacherRoles,
-        },
-      };
-
       const res = await fetch("/api/school/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -349,6 +379,21 @@ export default function SchoolSettingsManager() {
       if (!res.ok) {
         throw new Error(data.message || "Failed to save settings");
       }
+
+      const savedIdentity = data.data?.identity || {};
+      const savedSettings = data.data?.config || {};
+      const persistedConfig = {
+        ...sanitizedConfig,
+        email: savedIdentity.email ?? sanitizedConfig.email,
+        establishedYear:
+          savedIdentity.establishedYear ?? sanitizedConfig.establishedYear,
+        schoolCode: savedSettings.schoolCode ?? sanitizedConfig.schoolCode,
+        city: savedSettings.city ?? sanitizedConfig.city,
+        state: savedSettings.state ?? sanitizedConfig.state,
+        pincode: savedSettings.pincode ?? sanitizedConfig.pincode,
+        teacherRoles:
+          savedSettings.teacherRoles ?? sanitizedConfig.teacherRoles,
+      };
 
       const changedSections = [];
       if (
@@ -398,10 +443,10 @@ export default function SchoolSettingsManager() {
         changedSections.push("Staff Defaults");
       }
 
-      setConfig(sanitizedConfig);
+      setConfig(persistedConfig);
       setSavedConfig({
         ...savedConfig,
-        ...sanitizedConfig,
+        ...persistedConfig,
       });
       setIsDirty(false);
       setMessage({
