@@ -11,6 +11,7 @@ export default function ImageUploadField({
   label = "Upload image",
   maxEdge = 1280,
   quality = 0.72,
+  allowRemove = true,
   className = "",
 }) {
   const inputRef = useRef(null);
@@ -69,14 +70,16 @@ export default function ImageUploadField({
         <div className="relative overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={value.url} alt="Upload preview" className="h-40 w-full object-cover" />
-          <button
-            type="button"
-            onClick={() => onChange(null)}
-            className="absolute right-2 top-2 flex h-10 w-10 items-center justify-center rounded-full bg-black/70 text-white"
-            aria-label="Remove image"
-          >
-            <FaTimes />
-          </button>
+          {allowRemove ? (
+            <button
+              type="button"
+              onClick={() => onChange(null)}
+              className="absolute right-2 top-2 flex h-10 w-10 items-center justify-center rounded-full bg-black/70 text-white"
+              aria-label="Remove image"
+            >
+              <FaTimes />
+            </button>
+          ) : null}
         </div>
       ) : null}
 

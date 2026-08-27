@@ -392,9 +392,10 @@ export default function ShowcaseProfileManager() {
                     purpose="SCHOOL_LOGO"
                     value={profile.coverImageUrl ? { url: profile.coverImageUrl } : null}
                     onChange={updateSchoolLogo}
-                    label="Upload school logo"
+                    label={profile.coverImageUrl ? "Replace school logo" : "Upload school logo"}
                     maxEdge={512}
                     quality={0.72}
+                    allowRemove={false}
                   />
                 </div>
               </div>

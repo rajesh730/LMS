@@ -205,6 +205,20 @@ The dominant cost is database latency, not application code — Atlas M0 with
 the cluster region closer, not micro-optimizing handlers. The Mongo connection
 timeout was deliberately raised to survive M0 cold resume (commit `446a3ae`).
 
+## Media upload lifecycle
+
+School logos and student-writing images are compressed in the browser to WebP
+before upload; the original file is never sent to R2. Replacing persisted media
+must save the new reference before deleting the previous R2 object and marking
+its `MediaAsset` record deleted.
+
+Never use an ambiguous close (`×`) icon to delete persisted institutional media.
+A close icon may dismiss temporary UI or remove an unsaved attachment only.
+Deleting a saved logo or other durable media requires a clearly labelled remove
+action, explicit confirmation, and ownership validation on the server. The school
+logo uploader intentionally supports replacement but does not expose instant
+removal through its preview.
+
 ## Commands
 
 ```bash
