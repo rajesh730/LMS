@@ -26,6 +26,7 @@ import {
 import { normalizeImageUrl } from "@/lib/imageUrls";
 import SchoolLogoMark from "@/components/public/SchoolLogoMark";
 import AppDate from "@/components/common/AppDate";
+import ImageUploadField from "@/components/media/ImageUploadField";
 
 const EMPTY_SOCIAL_LINKS = {
   facebook: "",
@@ -359,17 +360,18 @@ export default function ShowcaseProfileManager() {
                   />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-[11px] font-semibold text-[#52657d]">
-                    Recommended: square logo, PNG/JPG or public Google Drive image link
-                  </p>
-                  <input
-                    type="url"
-                    value={profile.coverImageUrl}
-                    onChange={(e) =>
-                      setProfile((prev) => ({ ...prev, coverImageUrl: e.target.value }))
+                  <ImageUploadField
+                    purpose="SCHOOL_LOGO"
+                    value={profile.coverImageUrl ? { url: profile.coverImageUrl } : null}
+                    onChange={(asset) =>
+                      setProfile((prev) => ({
+                        ...prev,
+                        coverImageUrl: asset?.url || "",
+                      }))
                     }
-                    className="mt-3 h-10 w-full rounded-lg border border-[#dbe5f4] px-3 text-xs font-semibold text-[#17120a] outline-none"
-                    placeholder="https://..."
+                    label="Upload school logo"
+                    maxEdge={512}
+                    quality={0.8}
                   />
                 </div>
               </div>
