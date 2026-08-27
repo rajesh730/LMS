@@ -7,6 +7,11 @@ import LoadingState from "@/components/ui/LoadingState";
 import EmptyState from "@/components/EmptyState";
 import PaginationControls from "@/components/PaginationControls";
 import WritingContent from "@/components/WritingContent";
+import {
+  WritingCover,
+  WritingGallery,
+  WritingTags,
+} from "@/components/WritingMedia";
 import { getWritingCategoryLabel } from "@/lib/writingCategories";
 import AppDate from "@/components/common/AppDate";
 
@@ -370,9 +375,24 @@ export default function SchoolMagazineReviewManager({
               </button>
             </div>
 
+            <WritingCover
+              coverImage={selectedSubmission.coverImage}
+              images={selectedSubmission.images}
+              title={selectedSubmission.title}
+              className="mt-5 border border-[#e1e7f2]"
+              imageClassName="h-auto max-h-[26rem] w-full object-contain"
+              showCaption
+            />
+            <WritingTags tags={selectedSubmission.tags} className="mt-4" />
             <WritingContent
               content={selectedSubmission.content}
               className="mt-5 rounded-lg border border-[#e1e7f2] bg-[#f8fbff] p-5 text-sm font-semibold leading-7 text-[#27364a]"
+            />
+            <WritingGallery
+              images={selectedSubmission.images}
+              coverImage={selectedSubmission.coverImage}
+              title={selectedSubmission.title}
+              className="mt-5"
             />
 
             <div className="mt-5 flex flex-wrap justify-end gap-3">

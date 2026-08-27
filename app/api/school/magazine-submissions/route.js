@@ -101,6 +101,10 @@ export async function GET(request) {
         title: article.title,
         content: article.content,
         category: article.category,
+        // The school reviews the photo alongside the words before it goes live.
+        images: article.images || [],
+        coverImage: article.coverImage?.url ? article.coverImage : null,
+        tags: article.tags || [],
         submissionSource: article.submissionSource || "FREE_WRITE",
         status: article.status,
         isNew: isNewArticle(article),

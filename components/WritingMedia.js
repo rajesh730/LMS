@@ -50,7 +50,17 @@ export function getWritingBodyImages(coverImage, images = []) {
   );
 }
 
-export function WritingCover({ coverImage, images = [], title = "Writing", className = "" }) {
+export function WritingCover({
+  coverImage,
+  images = [],
+  title = "Writing",
+  className = "",
+  // Reading surfaces crop to a tidy shape. Moderation surfaces must not: a crop
+  // can hide the very part of a photo the school needs to see, so they pass a
+  // contain fit instead.
+  imageClassName = "h-full w-full object-cover",
+  showCaption = false,
+}) {
   const leadImage = getWritingLeadImage(coverImage, images);
   if (!leadImage?.url) return null;
 
@@ -61,8 +71,13 @@ export function WritingCover({ coverImage, images = [], title = "Writing", class
         src={leadImage.url}
         alt={leadImage.altText || leadImage.alt || `${title} cover`}
         loading="lazy"
-        className="h-full w-full object-cover"
+        className={imageClassName}
       />
+      {showCaption && leadImage.caption && (
+        <figcaption className="px-3 py-2 text-xs text-[#667085]">
+          {leadImage.caption}
+        </figcaption>
+      )}
     </figure>
   );
 }

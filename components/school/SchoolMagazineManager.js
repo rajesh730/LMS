@@ -17,6 +17,11 @@ import SchoolMagazineReviewManager from "@/components/school/SchoolMagazineRevie
 import AlertBanner from "@/components/ui/AlertBanner";
 import LoadingState from "@/components/ui/LoadingState";
 import WritingContent from "@/components/WritingContent";
+import {
+  WritingCover,
+  WritingGallery,
+  WritingTags,
+} from "@/components/WritingMedia";
 import AppDate from "@/components/common/AppDate";
 import useWorkIndicators from "@/lib/client/useWorkIndicators";
 import { getWritingCategoryLabel } from "@/lib/writingCategories";
@@ -851,9 +856,24 @@ export default function SchoolMagazineManager() {
                 <FaTimes />
               </button>
             </div>
+            <WritingCover
+              coverImage={readingArticle.coverImage}
+              images={readingArticle.images}
+              title={readingArticle.title}
+              className="mt-5 border border-[#e1e7f2]"
+              imageClassName="h-auto max-h-[26rem] w-full object-contain"
+              showCaption
+            />
+            <WritingTags tags={readingArticle.tags} className="mt-4" />
             <WritingContent
               content={readingArticle.content}
               className="mt-5 rounded-lg border border-[#e1e7f2] bg-[#f8fbff] p-5 text-sm font-semibold leading-7 text-[#27364a]"
+            />
+            <WritingGallery
+              images={readingArticle.images}
+              coverImage={readingArticle.coverImage}
+              title={readingArticle.title}
+              className="mt-5"
             />
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs font-black text-[#52657d]">
               <span>{wordCount(readingArticle.content)} words</span>
