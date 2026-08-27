@@ -211,6 +211,7 @@ export default function ParentChildPage() {
                         {t("child.teacherReviewed")}
                       </p>
                     ) : null}
+                    <WritingStatus writing={writing} t={t} />
                   </div>
                 </div>
 
@@ -306,6 +307,35 @@ export default function ParentChildPage() {
           writingId={openWritingId}
           onClose={() => setOpenWritingId(null)}
         />
+      ) : null}
+    </div>
+  );
+}
+
+function WritingStatus({ writing, t }) {
+  const statusKey = {
+    DRAFT: "child.writingDraft",
+    SUBMITTED: "child.writingSubmitted",
+    APPROVED: "child.writingApproved",
+    REJECTED: "child.writingNeedsRevision",
+  }[writing.status];
+
+  return (
+    <div className="mt-2 flex flex-wrap gap-1.5">
+      {statusKey ? (
+        <span className="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-700">
+          {t(statusKey)}
+        </span>
+      ) : null}
+      {writing.magazineSelected ? (
+        <span className="rounded-full bg-violet-50 px-2 py-1 text-[11px] font-semibold text-violet-700">
+          {writing.magazinePublished
+            ? t("child.magazinePublished")
+            : t("child.magazineSelected")}
+          {writing.magazineIssue?.title
+            ? ` · ${writing.magazineIssue.title}`
+            : ""}
+        </span>
       ) : null}
     </div>
   );

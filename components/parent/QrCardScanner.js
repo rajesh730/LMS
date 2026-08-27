@@ -53,6 +53,21 @@ export default function QrCardScanner({ onDetected, onClose }) {
 
   const startCamera = async () => {
     setError("");
+
+    if (!window.isSecureContext) {
+      setError(
+        "Camera scanning requires a secure HTTPS connection. You can upload a photo of your card instead."
+      );
+      return;
+    }
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setError(
+        "Camera scanning is not supported by this browser. You can upload a photo of your card instead."
+      );
+      return;
+    }
+
     setMode("CAMERA");
 
     try {
@@ -94,10 +109,21 @@ export default function QrCardScanner({ onDetected, onClose }) {
       };
 
       frameRef.current = requestAnimationFrame(scan);
-    } catch {
-      // Overwhelmingly a denied permission, occasionally no camera at all.
+    } catch (cameraError) {
+      stopCamera();
+      const permissionDenied = ["NotAllowedError", "SecurityError"].includes(
+        cameraError?.name
+      );
+      const noCamera = ["NotFoundError", "DevicesNotFoundError"].includes(
+        cameraError?.name
+      );
+
       setError(
-        "Could not open the camera. You can upload a photo of your card instead."
+        permissionDenied
+          ? "Camera access was blocked. Allow camera access in your browser's site settings, then try again."
+          : noCamera
+            ? "No camera was found on this device. You can upload a photo of your card instead."
+            : "Could not open the camera. Close other apps using it, then try again or upload a photo of your card."
       );
       setMode("IDLE");
     }

@@ -51,6 +51,7 @@ const EMPTY_FORM = {
   tagline: "",
   summary: "",
   coverImageUrl: "",
+  bannerImageUrl: "",
   websiteUrl: "",
   motto: "",
   contactEmail: "",
@@ -123,6 +124,7 @@ export default function ShowcaseProfileManager() {
           tagline: nextProfile.tagline || "",
           summary: nextProfile.summary || "",
           coverImageUrl: nextProfile.coverImageUrl || "",
+          bannerImageUrl: nextProfile.bannerImageUrl || "",
           websiteUrl: nextProfile.websiteUrl || "",
           motto: nextProfile.motto || "",
           contactEmail: nextProfile.contactEmail || "",
@@ -214,6 +216,7 @@ export default function ShowcaseProfileManager() {
         tagline: profile.tagline,
         summary: profile.summary,
         coverImageUrl: profile.coverImageUrl,
+        bannerImageUrl: profile.bannerImageUrl,
         websiteUrl: profile.websiteUrl,
         motto: profile.motto,
         contactEmail: profile.contactEmail,
@@ -401,7 +404,27 @@ export default function ShowcaseProfileManager() {
               </div>
             </div>
 
-            <label className="rounded-lg border border-[#e1e7f2] bg-white p-4 shadow-sm">
+            <div className="rounded-lg border border-[#e1e7f2] bg-white p-4 shadow-sm">
+              <div className="mb-3 flex items-center gap-2 text-xs font-black text-[#27364a]">
+                <FaImage className="text-[#52657d]" />
+                School Cover Image
+              </div>
+              <ImageUploadField
+                purpose="SCHOOL_COVER"
+                value={profile.bannerImageUrl ? { url: profile.bannerImageUrl } : null}
+                onChange={(asset) =>
+                  setProfile((prev) => ({
+                    ...prev,
+                    bannerImageUrl: asset?.url || "",
+                  }))
+                }
+                label="Upload cover image"
+                maxEdge={1600}
+                quality={0.75}
+              />
+            </div>
+
+            <label className="rounded-lg border border-[#e1e7f2] bg-white p-4 shadow-sm md:col-span-2">
               <div className="mb-3 flex items-center gap-2 text-xs font-black text-[#27364a]">
                 <FaLink className="text-[#52657d]" />
                 Website URL

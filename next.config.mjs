@@ -45,7 +45,11 @@ const nextConfig = {
           { key: "X-DNS-Prefetch-Control", value: "on" },
           {
             key: "Permissions-Policy",
-            value: "camera=(), microphone=(), geolocation=()",
+            // Parent card scanning and voice messages use first-party media
+            // capture. `self` lets our pages request access while the browser
+            // still requires an explicit user permission prompt. Third-party
+            // origins and embedded content remain blocked.
+            value: "camera=(self), microphone=(self), geolocation=()",
           },
           {
             key: "Strict-Transport-Security",

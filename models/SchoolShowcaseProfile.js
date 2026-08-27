@@ -27,6 +27,11 @@ const SchoolShowcaseProfileSchema = new mongoose.Schema(
       default: "",
       trim: true,
     },
+    bannerImageUrl: {
+      type: String,
+      default: "",
+      trim: true,
+    },
     websiteUrl: {
       type: String,
       default: "",
