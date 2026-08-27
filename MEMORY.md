@@ -212,6 +212,13 @@ before upload; the original file is never sent to R2. Replacing persisted media
 must save the new reference before deleting the previous R2 object and marking
 its `MediaAsset` record deleted.
 
+MongoDB owns media metadata and references; R2 owns the bytes. Media responses
+must not use immutable year-long caching because these objects are deletable. If
+an R2 object is missing, the read route marks its `MediaAsset` deleted, clears
+the corresponding profile/writing reference, returns 404, and lets the UI show
+its fallback. Do not delete R2 objects manually except for recovery work; normal
+deletion must go through the application so both stores remain consistent.
+
 Never use an ambiguous close (`×`) icon to delete persisted institutional media.
 A close icon may dismiss temporary UI or remove an unsaved attachment only.
 Deleting a saved logo or other durable media requires a clearly labelled remove

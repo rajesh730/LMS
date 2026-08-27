@@ -5,6 +5,46 @@ import { getR2Object } from "@/lib/r2Storage";
 import MediaAsset from "@/models/MediaAsset";
 import ParentStudentLink from "@/models/ParentStudentLink";
 import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
+import SchoolShowcaseProfile from "@/models/SchoolShowcaseProfile";
+
+function isMissingObjectError(error) {
+  return (
+    ["NoSuchKey", "NotFound", "NoSuchObject"].includes(
+      String(error?.name || error?.Code || error?.code || "")
+    ) || Number(error?.$metadata?.httpStatusCode || 0) === 404
+  );
+}
+
+async function reconcileMissingAsset(asset) {
+  const assetUrl = `/api/media/r2/${asset._id}`;
+  await MediaAsset.updateOne(
+    { _id: asset._id, status: "READY" },
+    { $set: { status: "DELETED", deletedAt: new Date() } }
+  );
+
+  if (asset.purpose === "SCHOOL_LOGO") {
+    await SchoolShowcaseProfile.updateOne(
+      { school: asset.school, coverImageUrl: assetUrl },
+      { $set: { coverImageUrl: "" } }
+    );
+  } else if (asset.purpose === "SCHOOL_COVER") {
+    await SchoolShowcaseProfile.updateOne(
+      { school: asset.school, bannerImageUrl: assetUrl },
+      { $set: { bannerImageUrl: "" } }
+    );
+  } else if (asset.purpose === "WRITING_IMAGE") {
+    await Promise.all([
+      SchoolMagazineArticle.updateMany(
+        { "images.asset": asset._id },
+        { $pull: { images: { asset: asset._id } } }
+      ),
+      SchoolMagazineArticle.updateMany(
+        { "coverImage.asset": asset._id },
+        { $unset: { coverImage: 1 } }
+      ),
+    ]);
+  }
+}
 
 async function canReadPrivate(session, asset) {
   if (!session?.user) return false;
@@ -29,13 +69,14 @@ async function canReadPrivate(session, asset) {
 }
 
 export async function GET(_request, { params }) {
+  let asset = null;
   try {
     const { id } = await params;
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return new Response("Not found", { status: 404 });
     }
     await connectDB();
-    const asset = await MediaAsset.findOne({ _id: id, status: "READY" }).lean();
+    asset = await MediaAsset.findOne({ _id: id, status: "READY" }).lean();
     if (!asset) return new Response("Not found", { status: 404 });
 
     const publiclyPublished = Boolean(
@@ -67,13 +108,25 @@ export async function GET(_request, { params }) {
         "Content-Length": String(object.ContentLength || asset.sizeBytes),
         "Cache-Control":
           publicAccess
-            ? "public, max-age=31536000, immutable"
+            ? "public, max-age=0, must-revalidate"
             : "private, no-store",
         "X-Content-Type-Options": "nosniff",
       },
     });
   } catch (readError) {
+    if (asset && isMissingObjectError(readError)) {
+      await reconcileMissingAsset(asset).catch((reconcileError) => {
+        console.error("Failed to reconcile missing R2 media:", reconcileError);
+      });
+      return new Response("Not found", {
+        status: 404,
+        headers: { "Cache-Control": "no-store" },
+      });
+    }
     console.error("R2 media read failed:", readError);
-    return new Response("Media unavailable", { status: 502 });
+    return new Response("Media unavailable", {
+      status: 502,
+      headers: { "Cache-Control": "no-store" },
+    });
   }
 }
