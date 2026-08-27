@@ -147,7 +147,7 @@ export default function PublicWritingReader({
               </div>
             </div>
 
-            <WritingCover coverImage={article.coverImage} title={article.title} className="mx-auto mt-8 aspect-[16/9] max-h-[34rem] max-w-4xl" />
+            <WritingCover coverImage={article.coverImage} images={article.images} title={article.title} className="mx-auto mt-8 aspect-[16/9] max-h-[34rem] max-w-4xl" />
             <WritingTags tags={article.tags} className="mx-auto mt-5 max-w-3xl" />
             <WritingContent
               content={article.content}
@@ -173,7 +173,12 @@ export default function PublicWritingReader({
                 ))}
               </div>
             ) : null}
-            <WritingGallery images={article.images} title={article.title} className="mx-auto mt-8 max-w-4xl" />
+            <WritingGallery
+              images={article.images}
+              coverImage={article.coverImage}
+              title={article.title}
+              className="mx-auto mt-8 max-w-4xl"
+            />
 
             {/* Provenance footer: where + when this piece was written. Links to
                 the origin school that owns it — kept distinct from the author's

@@ -5,7 +5,12 @@ import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
 import PublicExplorePanel from "@/components/public/PublicExplorePanel";
 import PublicSiteNav from "@/components/public/PublicSiteNav";
 import { WritingPreview } from "@/components/WritingContent";
-import { WritingCover, WritingTags } from "@/components/WritingMedia";
+import {
+  serializeWritingImage,
+  serializeWritingImages,
+  WritingCover,
+  WritingTags,
+} from "@/components/WritingMedia";
 import AppDate from "@/components/common/AppDate";
 import { diversifyBySchool } from "@/lib/schoolDiversifiedFeed";
 import { getAuthoredSchoolName, formatAuthoredEra } from "@/lib/writingProvenance";
@@ -51,7 +56,7 @@ const getStudentVoices = unstable_cache(async () => {
     isDeleted: { $ne: true },
   })
     .select(
-      "title content category coverImage tags publishedAt updatedAt authorSchoolNameSnapshot authorGrade authorAcademicYear"
+      "title content category images coverImage tags publishedAt updatedAt authorSchoolNameSnapshot authorGrade authorAcademicYear"
     )
     .populate("authorStudent", "name grade")
     .populate("school", "schoolName schoolLocation")
@@ -64,7 +69,8 @@ const getStudentVoices = unstable_cache(async () => {
     title: article.title,
     content: article.content,
     category: article.category,
-    coverImage: article.coverImage || null,
+    coverImage: serializeWritingImage(article.coverImage),
+    images: serializeWritingImages(article.images),
     tags: article.tags || [],
     date: (article.publishedAt || article.updatedAt)?.toISOString() || "",
     author: article.authorStudent?.name || "Student",
@@ -134,6 +140,7 @@ function VoiceCard({ article, featured = false }) {
       </h2>
       <WritingCover
         coverImage={article.coverImage}
+        images={article.images}
         title={article.title}
         className="mt-4 aspect-[16/9]"
       />

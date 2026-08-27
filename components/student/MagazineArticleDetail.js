@@ -59,9 +59,10 @@ export default function MagazineArticleDetail({ article, student = null }) {
         </div>
 
         <div className="mobile-accessory-info sm:block">
-          {article.coverImage?.url ? (
+          {article.coverImage?.url || article.images?.some((image) => image?.url) ? (
             <WritingCover
               coverImage={article.coverImage}
+              images={article.images}
               title={article.title}
               className="aspect-[16/9] min-h-72"
             />
@@ -97,7 +98,12 @@ export default function MagazineArticleDetail({ article, student = null }) {
             ))}
           </div>
         ) : null}
-        <WritingGallery images={article.images} title={article.title} className="mx-auto mt-8 max-w-4xl" />
+        <WritingGallery
+          images={article.images}
+          coverImage={article.coverImage}
+          title={article.title}
+          className="mx-auto mt-8 max-w-4xl"
+        />
       </div>
     </article>
   );

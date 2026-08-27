@@ -17,7 +17,12 @@ import {
   getWritingPreviewText,
   WritingPreview,
 } from "@/components/WritingContent";
-import { WritingCover, WritingTags } from "@/components/WritingMedia";
+import {
+  serializeWritingImage,
+  serializeWritingImages,
+  WritingCover,
+  WritingTags,
+} from "@/components/WritingMedia";
 import {
   FaArrowRight,
   FaCalendarAlt,
@@ -97,7 +102,7 @@ async function getLatestStudentWritings() {
     // origin school's live content (it stays in the student's portfolio).
     showOnSchoolWall: true,
   })
-    .select("title content category coverImage tags publishedAt updatedAt")
+    .select("title content category images coverImage tags publishedAt updatedAt")
     .sort({ publishedAt: -1, updatedAt: -1 })
     .limit(50)
     .populate("authorStudent", "name grade")
@@ -110,7 +115,8 @@ async function getLatestStudentWritings() {
     title: article.title,
     content: article.content,
     category: article.category || "WRITING",
-    coverImage: article.coverImage || null,
+    coverImage: serializeWritingImage(article.coverImage),
+    images: serializeWritingImages(article.images),
     tags: article.tags || [],
     date: article.publishedAt || article.updatedAt,
     author: article.authorStudent?.name || "Student",
@@ -145,7 +151,7 @@ async function getHomeMagazineIssues() {
     isMagazinePublished: true,
     isDeleted: false,
   })
-    .select("title content category coverImage tags magazineIssue magazinePublishedAt updatedAt")
+    .select("title content category images coverImage tags magazineIssue magazinePublishedAt updatedAt")
     .sort({ magazinePublishedAt: 1, updatedAt: 1 })
     .lean();
 
@@ -174,7 +180,8 @@ async function getHomeMagazineIssues() {
             ? firstArticle.content
             : `${issueArticles.length} selected student writings published in this school magazine issue.`,
         category: "SCHOOL_MAGAZINE",
-        coverImage: firstArticle.coverImage || null,
+        coverImage: serializeWritingImage(firstArticle.coverImage),
+        images: serializeWritingImages(firstArticle.images),
         tags: firstArticle.tags || [],
         date: issue.homeShownAt || issue.publishedAt || issue.weekStart,
         author: "School Magazine",
@@ -215,7 +222,7 @@ async function getHighRotationSpotlightStudentWritings() {
     showOnSchoolWall: true,
     school: { $in: highRotationSchoolIds },
   })
-    .select("title content category coverImage tags publishedAt updatedAt")
+    .select("title content category images coverImage tags publishedAt updatedAt")
     .sort({ publishedAt: -1, updatedAt: -1 })
     .limit(40)
     .populate("authorStudent", "name grade")
@@ -228,7 +235,8 @@ async function getHighRotationSpotlightStudentWritings() {
     title: article.title,
     content: article.content,
     category: article.category || "WRITING",
-    coverImage: article.coverImage || null,
+    coverImage: serializeWritingImage(article.coverImage),
+    images: serializeWritingImages(article.images),
     tags: article.tags || [],
     date: article.publishedAt || article.updatedAt,
     author: article.authorStudent?.name || "Student",
@@ -388,19 +396,24 @@ function FeedCard({ item, badge = "Published Writing" }) {
         </div>
       )}
       <div className="mt-3 min-w-0">
-        <h2 className="text-lg font-bold leading-snug text-[#111827]">
-          {item.title || "Published student writing"}
-        </h2>
-        <WritingCover
-          coverImage={item.coverImage}
-          title={item.title}
-          className="mt-3 aspect-[16/9] max-h-96"
-        />
-        <WritingPreview
-          content={item.content}
-          maxLength={280}
-          className="mt-2 line-clamp-4 text-sm leading-5 text-[#4b5565]"
-        />
+        <div className="flex items-start gap-4">
+          <div className="min-w-0 flex-1">
+            <h2 className="text-lg font-bold leading-snug text-[#111827]">
+              {item.title || "Published student writing"}
+            </h2>
+            <WritingPreview
+              content={item.content}
+              maxLength={280}
+              className="mt-2 line-clamp-4 text-sm leading-5 text-[#4b5565]"
+            />
+          </div>
+          <WritingCover
+            coverImage={item.coverImage}
+            images={item.images}
+            title={item.title}
+            className="h-24 w-28 shrink-0 sm:h-28 sm:w-40"
+          />
+        </div>
         <WritingTags tags={item.tags} className="mt-3" />
         <Link
           href={voiceHref}
@@ -572,17 +585,22 @@ function MobileVoiceFeed({ writings }) {
               <span className="text-[11px] text-[#9aa3b5]"><AppDate value={item.date} /></span>
             </div>
             <AuthorLine name={item.author} school={item.schoolName} badge="" />
-            <h2 className="mt-2.5 text-base font-bold leading-snug text-[#111827]">{item.title}</h2>
-            <WritingCover
-              coverImage={item.coverImage}
-              title={item.title}
-              className="mt-3 aspect-[16/9]"
-            />
-            {item.content && (
-              <p className="mt-2 line-clamp-3 text-sm leading-6 text-[#526071]">
-                {getPreview(item.content, 180)}
-              </p>
-            )}
+            <div className="mt-2.5 flex items-start gap-3">
+              <div className="min-w-0 flex-1">
+                <h2 className="text-base font-bold leading-snug text-[#111827]">{item.title}</h2>
+                {item.content && (
+                  <p className="mt-2 line-clamp-3 text-sm leading-6 text-[#526071]">
+                    {getPreview(item.content, 180)}
+                  </p>
+                )}
+              </div>
+              <WritingCover
+                coverImage={item.coverImage}
+                images={item.images}
+                title={item.title}
+                className="h-20 w-24 shrink-0"
+              />
+            </div>
             <WritingTags tags={item.tags} className="mt-3" />
             <div className="mt-3.5 flex items-center justify-between">
               <Link

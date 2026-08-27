@@ -10,7 +10,12 @@ import SchoolShowcaseProfile from "@/models/SchoolShowcaseProfile";
 import "@/models/Event";
 import { getActiveCertificateFilter } from "@/lib/certificates";
 import { WritingPreview } from "@/components/WritingContent";
-import { WritingCover, WritingTags } from "@/components/WritingMedia";
+import {
+  serializeWritingImage,
+  serializeWritingImages,
+  WritingCover,
+  WritingTags,
+} from "@/components/WritingMedia";
 import AppDate from "@/components/common/AppDate";
 import EnrollmentRange from "@/components/common/EnrollmentRange";
 import {
@@ -125,7 +130,7 @@ async function getPortfolioData(id) {
       isDeleted: { $ne: true },
     })
       .select(
-        "title content category coverImage tags publishedAt updatedAt authorSchoolNameSnapshot authorGrade authorAcademicYear"
+        "title content category images coverImage tags publishedAt updatedAt authorSchoolNameSnapshot authorGrade authorAcademicYear"
       )
       .populate("school", "schoolName")
       .sort({ publishedAt: -1, updatedAt: -1 })
@@ -195,7 +200,11 @@ async function getPortfolioData(id) {
     student,
     schoolProfile: schoolProfile || null,
     achievements,
-    writings: writingsRaw,
+    writings: writingsRaw.map((writing) => ({
+      ...writing,
+      coverImage: serializeWritingImage(writing.coverImage),
+      images: serializeWritingImages(writing.images),
+    })),
     journey,
     stats: {
       achievements: achievements.length,
@@ -321,7 +330,7 @@ function WritingCard({ writing }) {
       <h3 className="mt-2 line-clamp-2 text-sm font-black text-[#17120a]">
         {writing.title}
       </h3>
-      <WritingCover coverImage={writing.coverImage} title={writing.title} className="mt-3 aspect-[16/9]" />
+      <WritingCover coverImage={writing.coverImage} images={writing.images} title={writing.title} className="mt-3 aspect-[16/9]" />
       {formatAuthoredEra(writing) && (
         <p className="mt-1.5 inline-flex items-center gap-1.5 text-[11px] font-bold text-[#75869b]">
           <FaGraduationCap className="text-[#1f4f7a]" />

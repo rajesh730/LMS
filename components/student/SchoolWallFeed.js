@@ -177,19 +177,24 @@ export default function SchoolWallFeed() {
                           "Writing"}
                       </span>
                     </div>
-                    <h2 className="mt-4 text-xl font-bold text-[#111827]">
-                      {article.title || "Student writing"}
-                    </h2>
-                    <WritingCover
-                      coverImage={article.coverImage}
-                      title={article.title}
-                      className="mt-3 aspect-[16/9] max-h-96"
-                    />
-                    <WritingPreview
-                      content={article.content}
-                      maxLength={300}
-                      className="mt-2 line-clamp-5 text-sm leading-6 text-[#4b5565]"
-                    />
+                    <div className="mt-4 flex items-start gap-4">
+                      <div className="min-w-0 flex-1">
+                        <h2 className="text-xl font-bold text-[#111827]">
+                          {article.title || "Student writing"}
+                        </h2>
+                        <WritingPreview
+                          content={article.content}
+                          maxLength={300}
+                          className="mt-2 line-clamp-4 text-sm leading-6 text-[#4b5565]"
+                        />
+                      </div>
+                      <WritingCover
+                        coverImage={article.coverImage}
+                        images={article.images}
+                        title={article.title}
+                        className="h-24 w-28 shrink-0 sm:h-28 sm:w-40"
+                      />
+                    </div>
                     <WritingTags tags={article.tags} className="mt-3" />
                     <Link
                       href={`/student/school-wall/${article.id}`}

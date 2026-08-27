@@ -118,6 +118,7 @@ export default function MagazineArticleCard({
     >
       <WritingCover
         coverImage={article.coverImage}
+        images={article.images}
         title={article.title}
         className="mb-4 aspect-[16/9]"
       />

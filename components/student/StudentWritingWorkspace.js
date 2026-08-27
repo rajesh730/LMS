@@ -41,6 +41,10 @@ import AlertBanner from "@/components/ui/AlertBanner";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import LoadingState from "@/components/ui/LoadingState";
 import WritingContent from "@/components/WritingContent";
+import {
+  getWritingBodyImages,
+  getWritingLeadImage,
+} from "@/components/WritingMedia";
 import useRealtimeChannel from "@/lib/client/useRealtimeChannel";
 import useWorkIndicators from "@/lib/client/useWorkIndicators";
 import {
@@ -402,6 +406,34 @@ function CategoryArt({ category, className = "" }) {
   );
 }
 
+// A photo the student added is the truest thumbnail for her writing; the drawn
+// category art is only the stand-in for a piece with no image yet.
+function WritingArt({ writing, className = "" }) {
+  const leadImage = getWritingLeadImage(writing.coverImage, writing.images);
+  if (!leadImage?.url) {
+    return <CategoryArt category={writing.category} className={className} />;
+  }
+
+  const meta = getCategoryMeta(writing.category);
+
+  return (
+    <figure
+      className={`relative overflow-hidden rounded-lg border border-[#e7dcc8] bg-[#f3f5f9] ${className}`}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={leadImage.url}
+        alt={leadImage.altText || writing.title || "Writing photo"}
+        loading="lazy"
+        className="h-full w-full object-cover"
+      />
+      <span className="absolute bottom-2 right-2 rounded-full bg-white/88 px-2.5 py-0.5 text-[10px] font-bold text-[#17120a] shadow-sm">
+        {meta.label}
+      </span>
+    </figure>
+  );
+}
+
 function WritingStudioHero({
   student,
   libraryCounts,
@@ -718,6 +750,8 @@ function WritingEditor({
   const [showCoverImage, setShowCoverImage] = useState(Boolean(form.coverImage));
   const [showTags, setShowTags] = useState(Boolean(form.tags?.length));
   const tagsInputId = useId();
+  const previewLeadImage = getWritingLeadImage(form.coverImage, form.images);
+  const previewBodyImages = getWritingBodyImages(form.coverImage, form.images);
 
   return (
     <section className="student-writing-editor overflow-hidden rounded-xl border border-[#e7dcc8] bg-white shadow-sm">
@@ -788,24 +822,40 @@ function WritingEditor({
         </div>
       ) : (
         <article className="min-h-[340px] bg-white px-5 py-5 text-base leading-8 text-[#27344a]">
-          {form.coverImage?.url ? (
+          {previewLeadImage?.url ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={form.coverImage.url}
-              alt={form.coverImage.altText || form.title || "Writing cover"}
+              src={previewLeadImage.url}
+              alt={previewLeadImage.altText || form.title || "Writing cover"}
               className="mb-5 max-h-80 w-full rounded-xl object-cover"
             />
           ) : null}
           {form.content
             ? renderFormattedContent(form.content)
             : "Your preview will appear here as you write."}
+          {previewBodyImages.length ? (
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              {previewBodyImages.map((image, index) => (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  key={image.asset || image.url || index}
+                  src={image.url}
+                  alt={image.altText || `Writing photo ${index + 1}`}
+                  className="w-full rounded-xl object-cover"
+                  loading="lazy"
+                />
+              ))}
+            </div>
+          ) : null}
         </article>
       )}
 
       <div className="border-t border-[#e7dcc8] bg-white px-4 py-4">
         <p className="text-sm font-black text-[#17120a]">Writing photos</p>
         <p className="mt-1 text-xs text-[#52657d]">
-          Add up to five photos. They are resized and compressed before upload.
+          Add up to five photos. The first one leads your writing unless you set a
+          cover image; the rest follow the text. They are resized and compressed
+          before upload.
         </p>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           {(form.images || []).map((image, index) => (
@@ -1021,7 +1071,7 @@ function WritingListItem({
 
   return (
     <article className="student-writing-list-item grid gap-4 rounded-xl border border-[#e7dcc8] bg-white p-3 shadow-sm transition hover:border-purple-200 hover:shadow-md md:grid-cols-[128px_1fr]">
-      <CategoryArt category={writing.category} className="h-28" />
+      <WritingArt writing={writing} className="h-28" />
 
       <div className="min-w-0">
         <div className="flex items-start justify-between gap-2">
@@ -1585,6 +1635,23 @@ export default function StudentWritingWorkspace() {
     return "Editing Draft";
   }, [form.id]);
 
+  // The reader leads with a photo — the cover when there is one, otherwise the
+  // first photo the student attached — and the rest follow the text.
+  const readingLeadImage = useMemo(
+    () =>
+      readingWriting
+        ? getWritingLeadImage(readingWriting.coverImage, readingWriting.images)
+        : null,
+    [readingWriting]
+  );
+  const readingBodyImages = useMemo(
+    () =>
+      readingWriting
+        ? getWritingBodyImages(readingWriting.coverImage, readingWriting.images)
+        : [],
+    [readingWriting]
+  );
+
   return (
     <div className="student-writing-mobile-shell space-y-5 text-[#27344a]">
       <StudentQuickNav className="sm:hidden" />
@@ -1801,16 +1868,16 @@ export default function StudentWritingWorkspace() {
               </div>
 
               <div className="student-writing-reader-art flex items-start justify-between gap-3">
-                <CategoryArt category={readingWriting.category} className="h-32 flex-1" />
+                <WritingArt writing={readingWriting} className="h-32 flex-1" />
               </div>
             </div>
 
             <article className="mx-5 mb-8 mt-5 rounded-xl border border-[#d7cdbb] bg-[#fffdf8] p-5 md:mx-8 md:p-7">
-              {readingWriting.coverImage?.url ? (
+              {readingLeadImage?.url ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={readingWriting.coverImage.url}
-                  alt={readingWriting.coverImage.altText || readingWriting.title || "Writing cover"}
+                  src={readingLeadImage.url}
+                  alt={readingLeadImage.altText || readingWriting.title || "Writing cover"}
                   className="mb-6 max-h-[28rem] w-full rounded-xl object-cover"
                 />
               ) : null}
@@ -1827,9 +1894,9 @@ export default function StudentWritingWorkspace() {
                 content={readingWriting.content}
                 className="text-base leading-7 text-[#27344a] md:text-lg"
               />
-              {readingWriting.images?.length ? (
+              {readingBodyImages.length ? (
                 <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                  {readingWriting.images.map((image, index) => (
+                  {readingBodyImages.map((image, index) => (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       key={image.asset || image.url || index}

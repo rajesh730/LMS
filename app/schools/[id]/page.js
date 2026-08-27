@@ -14,7 +14,12 @@ import PublicExplorePanel from "@/components/public/PublicExplorePanel";
 import PublicShareButton from "@/components/public/PublicShareButton";
 import ExpandableStoryText from "@/components/public/ExpandableStoryText";
 import { stripWritingMarkup } from "@/components/WritingContent";
-import { WritingCover, WritingTags } from "@/components/WritingMedia";
+import {
+  serializeWritingImage,
+  serializeWritingImages,
+  WritingCover,
+  WritingTags,
+} from "@/components/WritingMedia";
 import { normalizeImageUrl } from "@/lib/imageUrls";
 import { formatPlacement } from "@/lib/displayFormat";
 import { getEventPublicStatus } from "@/lib/eventUiStatus";
@@ -242,7 +247,7 @@ async function getSchoolHomeMagazines(schoolId) {
     isMagazinePublished: true,
     isDeleted: { $ne: true },
   })
-    .select("title content coverImage tags magazineIssue")
+    .select("title content images coverImage tags magazineIssue")
     .sort({ magazinePublishedAt: 1, updatedAt: 1 })
     .lean();
 
@@ -269,7 +274,8 @@ async function getSchoolHomeMagazines(schoolId) {
           issueArticles.length === 1
             ? firstArticle.content
             : `${firstArticle.title}: ${getPreview(firstArticle.content, 100)}`,
-        coverImage: firstArticle.coverImage || null,
+        coverImage: serializeWritingImage(firstArticle.coverImage),
+        images: serializeWritingImages(firstArticle.images),
         tags: firstArticle.tags || [],
         publicDate: issue.homeShownAt || issue.publishedAt || issue.weekStart,
         articleCount: issueArticles.length,
@@ -442,8 +448,8 @@ function WritingCard({ writing }) {
       href={isMagazine ? writing.href || "#writings" : `/writings/${writing._id}`}
       className="block min-w-[190px] rounded-xl border border-[#e6eaf7] bg-white p-3 text-[#17120a] shadow-sm transition hover:-translate-y-0.5 hover:border-white/70 hover:shadow-md"
     >
-      {writing.coverImage?.url ? (
-        <WritingCover coverImage={writing.coverImage} title={writing.title} className="h-28" />
+      {writing.coverImage?.url || writing.images?.some((image) => image?.url) ? (
+        <WritingCover coverImage={writing.coverImage} images={writing.images} title={writing.title} className="h-28" />
       ) : (
       <div className="pravyo-writing-art relative h-28 overflow-hidden rounded-lg border">
         <div className="absolute right-8 top-7 h-14 w-24 rounded-2xl border border-white/18 bg-white/10" />

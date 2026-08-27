@@ -129,7 +129,7 @@ export default function WritingReader({ writingId, onClose }) {
               <ListenButton text={writing.speechText} fullWidth />
             </div>
 
-            <WritingCover coverImage={writing.coverImage} title={writing.title} className="mt-5 aspect-[16/9] max-h-[32rem]" />
+            <WritingCover coverImage={writing.coverImage} images={writing.images} title={writing.title} className="mt-5 aspect-[16/9] max-h-[32rem]" />
             <WritingTags tags={writing.tags} className="mt-4" />
             <div className="prose-parent mt-5 whitespace-pre-wrap break-words text-[17px] leading-[1.75] text-[var(--brand-ink)]">
               {stripHtml(writing.content)}
@@ -155,7 +155,12 @@ export default function WritingReader({ writingId, onClose }) {
                 ))}
               </div>
             ) : null}
-            <WritingGallery images={writing.images} title={writing.title} className="mt-6" />
+            <WritingGallery
+              images={writing.images}
+              coverImage={writing.coverImage}
+              title={writing.title}
+              className="mt-6"
+            />
           </article>
         )}
       </div>
