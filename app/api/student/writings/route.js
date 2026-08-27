@@ -8,7 +8,11 @@ import { notifySchoolMagazineSubmitted } from "@/lib/magazineNotifications";
 import { normalizeWritingCategory } from "@/lib/writingCategories";
 import { buildAuthoredEraSnapshot } from "@/lib/studentEnrollment";
 import { buildStudentLookupForSession } from "@/lib/studentIdentity";
-import { resolveWritingCover, resolveWritingImages } from "@/lib/writingMedia";
+import {
+  cleanupRemovedWritingMedia,
+  resolveWritingCover,
+  resolveWritingImages,
+} from "@/lib/writingMedia";
 import { normalizeWritingTags } from "@/lib/writingTags";
 
 function buildStudentLookup(session) {
@@ -177,6 +181,8 @@ export async function POST(request) {
       });
 
       if (article) {
+        const previousImages = article.images || [];
+        const previousCover = article.coverImage || null;
         const submittedAt = requestedStatus === "SUBMITTED" ? new Date() : null;
         const previousStatus = article.status;
 
@@ -224,6 +230,14 @@ export async function POST(request) {
           coverImage,
           studentId: student._id,
           schoolId: student.school,
+          writingId: article._id,
+        });
+        await cleanupRemovedWritingMedia({
+          previousImages,
+          previousCover,
+          nextImages: images,
+          nextCover: coverImage,
+          studentId: student._id,
           writingId: article._id,
         });
 

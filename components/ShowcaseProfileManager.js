@@ -394,7 +394,7 @@ export default function ShowcaseProfileManager() {
                     onChange={updateSchoolLogo}
                     label="Upload school logo"
                     maxEdge={512}
-                    quality={0.8}
+                    quality={0.72}
                   />
                 </div>
               </div>

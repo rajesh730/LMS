@@ -4,6 +4,7 @@ import { requireApiSession } from "@/lib/authz";
 import connectDB from "@/lib/db";
 import MediaAsset from "@/models/MediaAsset";
 import SchoolShowcaseProfile from "@/models/SchoolShowcaseProfile";
+import { deleteMediaAssets } from "@/lib/mediaCleanup";
 import { errorResponse, successResponse, validationError } from "@/lib/apiResponse";
 
 function assetIdFromUrl(value) {
@@ -26,6 +27,11 @@ export async function PATCH(request) {
     }
 
     await connectDB();
+    const existingProfile = await SchoolShowcaseProfile.findOne({
+      school: session.user.id,
+    })
+      .select("coverImageUrl")
+      .lean();
     if (assetId) {
       const ownsAsset = await MediaAsset.exists({
         _id: assetId,
@@ -44,6 +50,19 @@ export async function PATCH(request) {
       { $set: { coverImageUrl } },
       { new: true, upsert: true, setDefaultsOnInsert: true }
     ).lean();
+
+    const previousAssetId = assetIdFromUrl(existingProfile?.coverImageUrl);
+    if (
+      previousAssetId &&
+      previousAssetId !== "invalid" &&
+      previousAssetId !== assetId
+    ) {
+      await deleteMediaAssets({
+        _id: previousAssetId,
+        school: session.user.id,
+        purpose: "SCHOOL_LOGO",
+      });
+    }
 
     revalidatePath("/");
     revalidatePath("/schools");

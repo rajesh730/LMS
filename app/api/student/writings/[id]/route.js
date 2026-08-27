@@ -14,7 +14,11 @@ import {
   hasVisibleSurface,
   resetReviewStateIfFullyWithdrawn,
 } from "@/lib/studentWritings";
-import { resolveWritingCover, resolveWritingImages } from "@/lib/writingMedia";
+import {
+  cleanupRemovedWritingMedia,
+  resolveWritingCover,
+  resolveWritingImages,
+} from "@/lib/writingMedia";
 import { normalizeWritingTags } from "@/lib/writingTags";
 
 export async function PATCH(request, props) {
@@ -293,6 +297,8 @@ export async function PATCH(request, props) {
     }
 
     const previousStatus = article.status;
+    const previousImages = article.images || [];
+    const previousCover = article.coverImage || null;
 
     article.title = nextTitle;
     article.content = nextContent;
@@ -323,6 +329,14 @@ export async function PATCH(request, props) {
     }
 
     await article.save();
+    await cleanupRemovedWritingMedia({
+      previousImages,
+      previousCover,
+      nextImages: images,
+      nextCover: coverImage,
+      studentId: student._id,
+      writingId: article._id,
+    });
 
     publishWorkIndicatorsUpdate("student-writing-updated", {
       schoolId: String(student.school),
@@ -409,6 +423,15 @@ export async function DELETE(request, props) {
     article.magazineIssueAssignedAt = null;
     article.homeShownAt = null;
     await article.save();
+
+    await cleanupRemovedWritingMedia({
+      previousImages: article.images || [],
+      previousCover: article.coverImage || null,
+      nextImages: [],
+      nextCover: null,
+      studentId: student._id,
+      writingId: article._id,
+    });
 
     if (previousMagazineIssue) {
       await MagazineIssue.updateOne(

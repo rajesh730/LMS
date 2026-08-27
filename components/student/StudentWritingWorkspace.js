@@ -840,7 +840,7 @@ function WritingEditor({
             }}
             label="Add a photo"
             maxEdge={1280}
-            quality={0.72}
+            quality={0.68}
           />
         ) : null}
       </div>
@@ -932,7 +932,7 @@ function WritingEditor({
             }
             label={form.coverImage ? "Replace cover image" : "Upload cover image"}
             maxEdge={1600}
-            quality={0.76}
+            quality={0.7}
           />
         </div>
       ) : null}
