@@ -13,6 +13,51 @@ const PURPOSES = {
   WRITING_IMAGE: { role: "STUDENT", visibility: "PRIVATE", maxBytes: 1_200_000 },
 };
 
+function uploadFailureResponse(error) {
+  const code = String(error?.name || error?.Code || error?.code || "");
+  const status = Number(error?.$metadata?.httpStatusCode || 0);
+
+  if (code === "NoSuchBucket") {
+    return errorResponse(
+      503,
+      "The configured R2 bucket was not found. Check the bucket name in Vercel.",
+      "STORAGE_BUCKET_NOT_FOUND"
+    );
+  }
+  if (code === "AccessDenied" || status === 403) {
+    return errorResponse(
+      503,
+      "R2 denied the upload. Give the R2 access key Object Read & Write permission for this bucket.",
+      "STORAGE_ACCESS_DENIED"
+    );
+  }
+  if (
+    ["InvalidAccessKeyId", "SignatureDoesNotMatch", "InvalidToken"].includes(code) ||
+    status === 401
+  ) {
+    return errorResponse(
+      503,
+      "R2 credentials or the S3 endpoint do not match. Check the Access Key ID, Secret Access Key, and endpoint in Vercel.",
+      "STORAGE_CREDENTIALS_INVALID"
+    );
+  }
+  if (
+    ["ValidationError", "MongoServerError", "MongooseError"].includes(code)
+  ) {
+    return errorResponse(
+      500,
+      "The image reached storage, but its media record could not be saved.",
+      "MEDIA_RECORD_FAILED"
+    );
+  }
+
+  return errorResponse(
+    502,
+    "The image could not be stored. Check the R2 endpoint, bucket names, and token permissions.",
+    "STORAGE_UPLOAD_FAILED"
+  );
+}
+
 function isWebP(buffer) {
   return (
     buffer.length >= 12 &&
@@ -94,6 +139,6 @@ export async function POST(request) {
     });
   } catch (uploadError) {
     console.error("Media upload failed:", uploadError);
-    return errorResponse(500, "Image upload failed.");
+    return uploadFailureResponse(uploadError);
   }
 }
