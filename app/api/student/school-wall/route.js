@@ -45,6 +45,9 @@ export async function GET() {
         id: String(article._id),
         title: article.title,
         content: article.content,
+        images: article.images || [],
+        coverImage: article.coverImage || null,
+        tags: article.tags || [],
         category: article.category,
         publishedAt:
           article.publishedAt || article.submittedAt || article.updatedAt,

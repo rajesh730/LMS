@@ -6,6 +6,8 @@ import MediaAsset from "@/models/MediaAsset";
 import ParentStudentLink from "@/models/ParentStudentLink";
 import SchoolMagazineArticle from "@/models/SchoolMagazineArticle";
 import SchoolShowcaseProfile from "@/models/SchoolShowcaseProfile";
+import Student from "@/models/Student";
+import { buildStudentLookupForSession } from "@/lib/studentIdentity";
 
 function isMissingObjectError(error) {
   return (
@@ -53,7 +55,14 @@ async function canReadPrivate(session, asset) {
     return String(asset.school) === String(session.user.id);
   }
   if (session.user.role === "STUDENT") {
-    return String(asset.ownerStudent) === String(session.user.id);
+    const student = await Student.findOne(buildStudentLookupForSession(session))
+      .select("_id school")
+      .lean();
+    return Boolean(
+      student &&
+        (String(asset.ownerStudent) === String(student._id) ||
+          String(asset.school) === String(student.school))
+    );
   }
   if (session.user.role === "PARENT" && asset.ownerStudent) {
     return Boolean(

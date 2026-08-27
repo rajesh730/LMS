@@ -45,7 +45,7 @@ export async function GET() {
           isMagazinePublished: true,
           isDeleted: { $ne: true },
         })
-          .select("magazineIssue title category")
+          .select("magazineIssue title category coverImage tags")
           .sort({ magazinePublishedAt: 1, publishedAt: 1 })
           .lean()
       : [];
@@ -69,6 +69,8 @@ export async function GET() {
               ? {
                   title: issueArticles[0].title,
                   category: issueArticles[0].category,
+                  coverImage: issueArticles[0].coverImage || null,
+                  tags: issueArticles[0].tags || [],
                 }
               : null,
           };

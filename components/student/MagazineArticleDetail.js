@@ -59,12 +59,19 @@ export default function MagazineArticleDetail({ article, student = null }) {
         </div>
 
         <div className="mobile-accessory-info sm:block">
-          <MagazineArt category={article.category} />
+          {article.coverImage?.url ? (
+            <WritingCover
+              coverImage={article.coverImage}
+              title={article.title}
+              className="aspect-[16/9] min-h-72"
+            />
+          ) : (
+            <MagazineArt category={article.category} />
+          )}
         </div>
       </div>
 
       <div className="student-magazine-article-body border-t border-[#d7cdbb] bg-[#fffdf8] px-5 py-8 md:px-10">
-        <WritingCover coverImage={article.coverImage} title={article.title} className="mx-auto mb-8 aspect-[16/9] max-h-[34rem] max-w-4xl" />
         <WritingTags tags={article.tags} className="mx-auto mb-6 max-w-3xl" />
         <WritingContent
           content={article.content}
