@@ -1,5 +1,25 @@
 import mongoose from "mongoose";
 
+export const USER_NOTIFICATION_STATUSES = ["UNREAD", "SEEN", "READ"];
+
+// Parent notifications start with MESSAGE and NOTICE. The remaining values
+// keep the central model ready for the next Pravyo workflows.
+export const USER_NOTIFICATION_TYPES = [
+  "MESSAGE",
+  "NOTICE",
+  "EVENT",
+  "ACHIEVEMENT",
+  "ATTENDANCE",
+  "PAYMENT",
+  "HOMEWORK",
+  "RESULT",
+  "CONSENT",
+  "MAGAZINE",
+  "TRANSFER",
+  "WRITING",
+  "GENERAL",
+];
+
 const UserNotificationSchema = new mongoose.Schema(
   {
     targetRole: {
@@ -38,19 +58,16 @@ const UserNotificationSchema = new mongoose.Schema(
     },
     category: {
       type: String,
-      enum: [
-        "MAGAZINE",
-        "ACHIEVEMENT",
-        "TRANSFER",
-        // Parent-facing categories (§17).
-        "NOTICE",
-        "CONSENT",
-        "EVENT",
-        "MESSAGE",
-        "WRITING",
-        "GENERAL",
-      ],
+      enum: USER_NOTIFICATION_TYPES,
       default: "MAGAZINE",
+      index: true,
+    },
+    // Canonical API field. `category` remains during the gradual migration
+    // because existing school and student notification consumers still read it.
+    type: {
+      type: String,
+      enum: USER_NOTIFICATION_TYPES,
+      default: null,
       index: true,
     },
     // Drives the parent notification's colour + icon + sort weight (§17).
@@ -74,9 +91,46 @@ const UserNotificationSchema = new mongoose.Schema(
       trim: true,
       maxlength: 1000,
     },
+    body: {
+      type: String,
+      default: "",
+      trim: true,
+      maxlength: 1000,
+    },
     href: {
       type: String,
       default: "",
+      trim: true,
+      maxlength: 300,
+    },
+    actionUrl: {
+      type: String,
+      default: "",
+      trim: true,
+      maxlength: 300,
+    },
+    // Related records can come from several collections, so this remains an
+    // opaque identifier rather than a ref to one Mongoose model.
+    entityId: {
+      type: String,
+      default: "",
+      trim: true,
+      maxlength: 100,
+      index: true,
+    },
+    status: {
+      type: String,
+      enum: USER_NOTIFICATION_STATUSES,
+      default: "UNREAD",
+      index: true,
+    },
+    seenAt: { type: Date, default: null },
+    readAt: { type: Date, default: null },
+    // One source entity is delivered once to each parent/child pair, including
+    // when a request is retried or two publish attempts race.
+    dedupeKey: {
+      type: String,
+      default: undefined,
       trim: true,
       maxlength: 300,
     },
@@ -138,6 +192,19 @@ UserNotificationSchema.index({
   isDeleted: 1,
   publishedAt: -1,
 });
+UserNotificationSchema.index({
+  recipientParent: 1,
+  status: 1,
+  isDeleted: 1,
+  createdAt: -1,
+});
+UserNotificationSchema.index(
+  { dedupeKey: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { dedupeKey: { $type: "string" } },
+  }
+);
 
 export default mongoose.models.UserNotification ||
   mongoose.model("UserNotification", UserNotificationSchema);

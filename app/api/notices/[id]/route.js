@@ -103,9 +103,7 @@ export async function PATCH(request, props) {
       // creation: a draft being published, and an existing notice having
       // parents added to it. `publishNoticeToParents` is a no-op if guardians
       // were already told, so editing a typo does not re-notify anyone.
-      publishNoticeToParents(notice._id).catch((err) =>
-        console.error("[notices] parent delivery failed:", err.message)
-      );
+      await publishNoticeToParents(notice._id);
     } else {
       publishNoticeRealtimeEvent({
         scope: notice.scope,

@@ -55,7 +55,8 @@ export default function SchoolConversation({
   // kinds matter — a new message adds a bubble, a read event flips ✓✓ on.
   useRealtimeChannel(
     channel || "",
-    (payload) => {
+    (message) => {
+      const payload = message?.payload || message;
       if (payload?.conversationId !== conversationId) return;
       if (
         payload.type === MESSAGE_EVENTS.NEW_MESSAGE ||

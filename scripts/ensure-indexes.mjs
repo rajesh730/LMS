@@ -22,6 +22,8 @@ import Student from "../models/Student.js";
 import Teacher from "../models/Teacher.js";
 import User from "../models/User.js";
 import Feedback from "../models/Feedback.js";
+import PushSubscription from "../models/PushSubscription.js";
+import UserNotification from "../models/UserNotification.js";
 
 dotenv.config({ path: ".env.local" });
 dotenv.config();
@@ -48,6 +50,8 @@ const models = [
   Teacher,
   User,
   Feedback,
+  PushSubscription,
+  UserNotification,
 ];
 
 async function main() {

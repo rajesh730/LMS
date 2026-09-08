@@ -3,10 +3,12 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { Settings, Bell, ClipboardList } from "lucide-react";
+import { Settings, ClipboardList } from "lucide-react";
 import { useParentApp } from "./ParentAppContext";
 import ChildSwitcher from "./ChildSwitcher";
 import ParentBottomNav, { ParentNavRail } from "./ParentBottomNav";
+import ParentNotificationBell from "./ParentNotificationBell";
+import { ParentNotificationProvider } from "./ParentNotificationContext";
 import styles from "./ParentDesign.module.css";
 
 export default function ParentAppShell({ children }) {
@@ -26,7 +28,7 @@ export default function ParentAppShell({ children }) {
     </div></main>
   </div>;
 
-  return <div className={styles.shell} data-simple={simpleMode}>
+  return <ParentNotificationProvider><div className={styles.shell} data-simple={simpleMode}>
     <a href="#parent-content" className={styles.skip}>{t("nav.skipContent")}</a>
     <div className={styles.frame}>
       <ParentNavRail badges={badges} />
@@ -39,13 +41,21 @@ export default function ParentAppShell({ children }) {
             <div className={styles.tools}>
               {[
                 { href: "/parent/notices", label: t("notices.title"), icon: ClipboardList, count: badges["/parent/notices"] },
-                { href: "/parent/notifications", label: t("settings.notifications"), icon: Bell, count: badges.notifications },
-                { href: "/parent/settings", label: t("settings.title"), icon: Settings },
               ].map(({ href, label, icon: Icon, count }) => <Link key={href} href={href} aria-label={label} title={label}
                 aria-current={pathname === href ? "page" : undefined} className={styles.tool}>
                 <Icon aria-hidden="true" strokeWidth={1.8} />
                 {count > 0 && <span className={styles.badge} aria-label={t("nav.newCount", { count })}>{count > 9 ? "9+" : count}</span>}
               </Link>)}
+              <ParentNotificationBell />
+              <Link
+                href="/parent/settings"
+                aria-label={t("settings.title")}
+                title={t("settings.title")}
+                aria-current={pathname === "/parent/settings" ? "page" : undefined}
+                className={styles.tool}
+              >
+                <Settings aria-hidden="true" strokeWidth={1.8} />
+              </Link>
             </div>
           </div>
           <ChildSwitcher />
@@ -61,5 +71,5 @@ export default function ParentAppShell({ children }) {
       </div>
     </div>
     <ParentBottomNav badges={badges} />
-  </div>;
+  </div></ParentNotificationProvider>;
 }

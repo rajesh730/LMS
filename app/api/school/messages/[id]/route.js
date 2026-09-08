@@ -12,7 +12,7 @@ import {
 } from "@/lib/apiResponse";
 import { requireApiSession, getSessionSchoolId, sameId } from "@/lib/authz";
 import { appendMessage, publishThreadRead } from "@/lib/parentMessaging";
-import { notifyGuardians } from "@/lib/parentNotifications";
+import { createParentNotificationsForTargets } from "@/lib/parentNotifications";
 
 export const dynamic = "force-dynamic";
 
@@ -192,7 +192,7 @@ export async function POST(request, { params }) {
     // Replies are attributed to the SCHOOL, not the individual staff member.
     // A parent should not learn which teacher is on the desk today, and staff
     // should not become personally contactable through this channel (§15).
-    await appendMessage({
+    const savedMessage = await appendMessage({
       conversation,
       senderType: "STAFF",
       senderStaff: session.user.id,
@@ -201,15 +201,27 @@ export async function POST(request, { params }) {
       body: text,
     });
 
-    // Fire-and-forget: a notification failure must not fail the reply.
-    await notifyGuardians({
-      studentId: conversation.student,
-      category: "MESSAGE",
+    // Notify only the guardians who participate in this private thread. Using
+    // every guardian linked to the child would leak the preview to someone who
+    // cannot open this conversation.
+    await createParentNotificationsForTargets({
+      targets: (conversation.participants || [])
+        .filter((participant) => participant.participantType === "PARENT")
+        .map((participant) => ({
+          parentId: participant.parent,
+          studentId: conversation.student,
+        })),
+      type: "MESSAGE",
       priority: "INFO",
       title: `Reply from ${conversation.routedToLabel || schoolName}`,
-      message: text.slice(0, 160),
-      href: `/parent/messages/${conversation._id}`,
+      body: text.slice(0, 160),
+      actionUrl: `/parent/messages/${conversation._id}`,
+      entityId: String(savedMessage._id),
+      dedupeKey: `MESSAGE:${savedMessage._id}`,
       metadata: { conversationId: String(conversation._id) },
+      // Participation in the existing thread is the server-authoritative
+      // audience, including guardians who may read but cannot reply.
+      enforceCategoryPermission: false,
     }).catch((err) =>
       console.error("[school reply] notify failed:", err.message)
     );

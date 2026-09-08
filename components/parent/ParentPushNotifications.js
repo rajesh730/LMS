@@ -14,6 +14,7 @@ export default function ParentPushNotifications() {
     loading: true,
     supported: true,
     configured: true,
+    allowedOnDevice: true,
     subscribed: false,
     permission: "default",
     publicKey: "",
@@ -35,16 +36,49 @@ export default function ParentPushNotifications() {
         const response = await fetch("/api/parent/push-subscription", { cache: "no-store" });
         const json = await response.json();
         if (!response.ok) throw new Error(json.message || "Could not load push settings");
-        const registration = await navigator.serviceWorker.ready;
-        const subscription = await registration.pushManager.getSubscription();
+        const config = json.data || {};
+        const registration = await navigator.serviceWorker.getRegistration();
+        let subscription = await registration?.pushManager.getSubscription();
+        let subscribed = false;
+
+        if (
+          subscription &&
+          (!config.allowedOnDevice || Notification.permission === "denied")
+        ) {
+          await subscription.unsubscribe().catch(() => false);
+          subscription = null;
+        }
+
+        // A browser subscription can survive sign-out. Rebinding an existing
+        // endpoint to the current authenticated parent prevents a shared
+        // browser from continuing to receive the previous account's alerts.
+        if (
+          subscription &&
+          Notification.permission === "granted" &&
+          config.enabled &&
+          config.allowedOnDevice
+        ) {
+          const bindResponse = await fetch("/api/parent/push-subscription", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(subscription.toJSON()),
+          });
+          const bindJson = await bindResponse.json().catch(() => ({}));
+          if (!bindResponse.ok) {
+            throw new Error(bindJson.message || "Could not register this device");
+          }
+          subscribed = true;
+        }
+
         if (active) {
           setState((current) => ({
             ...current,
             loading: false,
-            configured: Boolean(json.data.enabled),
-            subscribed: Boolean(subscription),
+            configured: Boolean(config.enabled),
+            allowedOnDevice: config.allowedOnDevice !== false,
+            subscribed,
             permission: Notification.permission,
-            publicKey: json.data.publicKey || "",
+            publicKey: config.publicKey || "",
           }));
         }
       } catch (error) {
@@ -61,7 +95,10 @@ export default function ParentPushNotifications() {
     try {
       const permission = await Notification.requestPermission();
       if (permission !== "granted") throw new Error("Notification permission was not granted");
-      const registration = await navigator.serviceWorker.ready;
+      const registration =
+        (await navigator.serviceWorker.getRegistration()) ||
+        (await navigator.serviceWorker.register("/sw.js"));
+      await navigator.serviceWorker.ready;
       const subscription =
         (await registration.pushManager.getSubscription()) ||
         (await registration.pushManager.subscribe({
@@ -87,11 +124,15 @@ export default function ParentPushNotifications() {
       const registration = await navigator.serviceWorker.ready;
       const subscription = await registration.pushManager.getSubscription();
       if (subscription) {
-        await fetch("/api/parent/push-subscription", {
+        const response = await fetch("/api/parent/push-subscription", {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ endpoint: subscription.endpoint }),
         });
+        const json = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(json.message || "Could not disable notifications");
+        }
         await subscription.unsubscribe();
       }
       setState((current) => ({ ...current, loading: false, subscribed: false }));
@@ -100,7 +141,8 @@ export default function ParentPushNotifications() {
     }
   };
 
-  const unavailable = !state.supported || !state.configured;
+  const unavailable =
+    !state.supported || !state.configured || !state.allowedOnDevice;
   return (
     <div className="rounded-xl bg-slate-50 p-3">
       <div className="flex min-w-0 flex-col gap-3 min-[380px]:flex-row min-[380px]:items-center">
@@ -109,6 +151,8 @@ export default function ParentPushNotifications() {
           <p className="mt-0.5 text-xs leading-relaxed text-[var(--brand-muted)]">
             {state.subscribed
               ? "Enabled. Alerts can appear with your phone's normal notification sound, even when Pravyo is closed."
+              : !state.allowedOnDevice
+                ? "Push alerts are disabled on shared phones to keep family messages private."
               : unavailable
                 ? "Not available on this device yet. On iPhone, add Pravyo to the Home Screen first."
                 : "Enable alerts for messages, notices, consent requests and events."}

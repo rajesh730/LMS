@@ -240,7 +240,52 @@ Honesty rules that are tested, not just documented:
   activated Pravyo access (§36). Lacking contact details is not being
   unreachable.
 
-## 7c. Offline inclusion
+## 7c. Parent notifications, realtime, and push
+
+`UserNotification` is the durable source of truth for the parent bell. Parent
+rows carry `type`, `body`, `entityId`, `actionUrl`, `status`, `seenAt`, and
+`readAt` while the older fields remain available to student and school
+consumers during migration.
+
+The parent state machine is explicit:
+
+- `UNREAD`: newly created; included in the bell count.
+- `SEEN`: the guardian opened the bell or notification centre.
+- `READ`: the guardian opened the linked message or notice.
+
+The parent shell subscribes to the private
+`parent-notifications:<parentId>` SSE channel. New durable rows trigger a silent
+refresh, an in-app toast, and a short sound after the browser has received a
+user gesture. Only the exact signed-in parent can subscribe to that channel.
+
+The parent APIs are:
+
+| Action | Endpoint |
+| --- | --- |
+| List combined notifications | `GET /api/notifications` |
+| Get the bell count | `GET /api/notifications/unread-count` |
+| Mark all new rows seen | `PATCH /api/notifications/mark-seen` |
+| Mark one row read | `PATCH /api/notifications/[id]/read` |
+| Mark every accessible row read | `PATCH /api/notifications/mark-all-read` |
+
+Every query is scoped through the parent account and its current ACTIVE child
+links. Message notifications preserve the exact private-thread participants;
+notice notifications derive their school from the linked Student record.
+Revoked links disappear from the inbox even if an old row remains in MongoDB.
+
+Phone/browser push uses the existing standards-based Web Push stack and
+`public/sw.js`. Each browser endpoint is stored separately, so one guardian can
+use several devices. Subscriptions are tied to `Parent.authVersion`; credential
+rotation invalidates old devices, sign-out removes the current endpoint, and
+shared-device sessions unsubscribe local endpoints. Push deep links are limited
+to same-origin Pravyo paths.
+
+Firebase Cloud Messaging is not an additional dependency here. Chrome and
+Android already route standards-based Web Push through the browser push service,
+and the existing `web-push`/VAPID implementation supports the required installed
+web-app behavior without a Firebase service account.
+
+## 7d. Offline inclusion
 
 | Feature | Route |
 | --- | --- |
@@ -301,25 +346,19 @@ drop in a deliberate migration.
 
 ## 9. Other deferred work
 
-- **SMS/email delivery of notifications** (§21). Preferences are recorded and
-  the SMS toggle is labelled "Coming soon". Only in-app notifications deliver.
-- **Web-push deep links** (§17). Notifications carry correct `href` deep links
-  and render in-app; no service worker / push subscription yet.
-- **School-side reply UI.** Parents can start and reply to threads; staff
-  replies need a school inbox screen. The `Conversation`/`Message` models and
-  `appendMessage` already support `senderType: "STAFF"`.
+- **SMS delivery of notifications** (§21). The adapter is intentionally inert
+  until a provider and budget are approved. Email remains optional for urgent
+  and important notices.
 - **School UI for `parentMessaging.routes`.** The schema and resolver exist;
   routes must currently be seeded directly. Unconfigured schools fail open to
   the admin, so messaging works meanwhile.
-- **Realtime.** Parent screens poll on navigation. `lib/realtimeBus.js` +
-  `/api/realtime/stream` exist and could carry parent channels.
 - **Translation / transcription of messages.** Fields reserved on `Message`.
 
 ## 10. Running it
 
 ```bash
 npm run dev
-npm test          # 45 suites / 398 tests
+npm test
 npm run lint
 npm run build
 ```

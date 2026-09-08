@@ -108,7 +108,8 @@ export default function ParentChat({ conversationId = null, onLoaded }) {
   // school opens the thread.
   useRealtimeChannel(
     parent?.id ? parentMessagesChannel(parent.id) : "",
-    (payload) => {
+    (message) => {
+      const payload = message?.payload || message;
       if (
         payload?.type === MESSAGE_EVENTS.NEW_MESSAGE ||
         payload?.type === MESSAGE_EVENTS.THREAD_READ
@@ -183,7 +184,7 @@ export default function ParentChat({ conversationId = null, onLoaded }) {
 
   return (
     <div className="-mx-3 flex h-[calc(100dvh-11.5rem)] flex-col overflow-hidden sm:-mx-4 md:mx-0 md:h-[calc(100dvh-10rem)]">
-      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain bg-[var(--background)] px-3 py-4 pb-24 sm:px-4 md:pb-4">
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain bg-[var(--background)] px-3 pb-0 pt-4 sm:px-4 md:pb-4">
         {state.messages.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center px-6 text-center">
             <span aria-hidden="true" className="text-4xl">
@@ -201,7 +202,10 @@ export default function ParentChat({ conversationId = null, onLoaded }) {
             <MessageBubble key={message.id} message={message} t={t} />
           ))
         )}
-        <div ref={bottomRef} />
+        {/* A real spacer, rather than only padding, gives scrollIntoView an
+            endpoint above the fixed phone composer. This keeps the newest
+            bubble from sitting half-hidden behind the message box. */}
+        <div ref={bottomRef} className="h-28 shrink-0 md:h-0" aria-hidden="true" />
       </div>
 
       {state.error ? (

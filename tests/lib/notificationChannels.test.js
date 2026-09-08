@@ -1,6 +1,6 @@
 jest.mock("@/lib/db", () => jest.fn());
 jest.mock("@/lib/parentNotifications", () => ({
-  notifyGuardians: jest.fn().mockResolvedValue({ sent: 1 }),
+  createParentNotificationsForTargets: jest.fn().mockResolvedValue({ sent: 1 }),
 }));
 jest.mock("@/lib/emailService", () => ({
   sendNoticeEmail: jest.fn().mockResolvedValue({ success: true }),
@@ -12,7 +12,7 @@ jest.mock("@/models/Parent", () => ({ __esModule: true, default: {} }));
 jest.mock("@/models/Student", () => ({ __esModule: true, default: {} }));
 jest.mock("@/models/User", () => ({ __esModule: true, default: {} }));
 
-import { notifyGuardians } from "@/lib/parentNotifications";
+import { createParentNotificationsForTargets } from "@/lib/parentNotifications";
 import { sendNoticeEmail } from "@/lib/emailService";
 import {
   InAppNotificationChannel,
@@ -106,8 +106,18 @@ describe("in-app channel", () => {
     });
 
     expect(result.status).toBe("SENT");
-    expect(notifyGuardians).toHaveBeenCalledWith(
-      expect.objectContaining({ studentId: "student-1", category: "NOTICE" })
+    expect(createParentNotificationsForTargets).toHaveBeenCalledWith(
+      expect.objectContaining({
+        targets: [
+          expect.objectContaining({
+            parentId: "parent-1",
+            studentId: "student-1",
+          }),
+        ],
+        type: "NOTICE",
+        entityId: "notice-1",
+        actionUrl: "/parent/notices/notice-1",
+      })
     );
   });
 
@@ -117,8 +127,8 @@ describe("in-app channel", () => {
       recipients: [recipient()],
       priority: "IMPORTANT",
     });
-    expect(notifyGuardians).toHaveBeenCalledWith(
-      expect.objectContaining({ category: "CONSENT" })
+    expect(createParentNotificationsForTargets).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "CONSENT" })
     );
   });
 });

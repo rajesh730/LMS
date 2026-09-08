@@ -19,7 +19,7 @@ export const dynamic = "force-dynamic";
  */
 export async function GET() {
   try {
-    const { parent, error } = await requireParentSession();
+    const { session, parent, error } = await requireParentSession();
     if (error) return error;
 
     const children = await getParentChildren(parent._id);
@@ -31,6 +31,7 @@ export async function GET() {
         email: parent.email || "",
         phone: parent.phone || "",
         photoUrl: parent.photoUrl || "",
+        deviceMode: session.user.deviceMode || "PERSONAL",
       },
       preferences: {
         simpleMode: Boolean(parent.preferences?.simpleMode),

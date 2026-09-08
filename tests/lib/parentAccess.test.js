@@ -59,6 +59,7 @@ function activeParent(id = PARENT_A) {
     name: "Sita Sharma",
     email: "sita@example.com",
     status: "ACTIVE",
+    accessState: "ACTIVATED",
     preferences: { simpleMode: false, language: "en" },
   };
 }
@@ -114,6 +115,18 @@ describe("requireParentSession", () => {
     });
     // The query filters on status ACTIVE, so a suspended parent returns null.
     Parent.findOne.mockReturnValue(leanOnce(null));
+
+    const { error } = await requireParentSession();
+    expect(error.status).toBe(401);
+  });
+
+  it("rejects a parent whose app access is no longer activated", async () => {
+    getServerSession.mockResolvedValue({
+      user: { id: PARENT_A, role: "PARENT" },
+    });
+    Parent.findOne.mockReturnValue(
+      leanOnce({ ...activeParent(), accessState: "REVOKED" })
+    );
 
     const { error } = await requireParentSession();
     expect(error.status).toBe(401);

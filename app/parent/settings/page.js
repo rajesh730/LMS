@@ -4,6 +4,7 @@ import { signOut } from "next-auth/react";
 import { useParentApp } from "@/components/parent/ParentAppContext";
 import { LOCALE_LABELS, SUPPORTED_LOCALES } from "@/lib/parentI18n";
 import ParentPushNotifications from "@/components/parent/ParentPushNotifications";
+import { detachCurrentParentPushDevice } from "@/lib/client/parentPushSubscription";
 
 /**
  * Settings — accessibility, language, data (§8, §22, §23).
@@ -15,6 +16,11 @@ import ParentPushNotifications from "@/components/parent/ParentPushNotifications
 export default function ParentSettingsPage() {
   const { t, parent, preferences, updatePreferences, childList } =
     useParentApp();
+
+  const signOutSecurely = async () => {
+    await detachCurrentParentPushDevice().catch(() => {});
+    await signOut({ callbackUrl: "/parent/login" });
+  };
 
   return (
     <div className="space-y-5">
@@ -151,7 +157,7 @@ export default function ParentSettingsPage() {
 
         <button
           type="button"
-          onClick={() => signOut({ callbackUrl: "/parent/login" })}
+          onClick={() => void signOutSecurely()}
           className="mt-4 min-h-[52px] w-full rounded-xl border-2 border-red-300 font-bold text-red-700"
         >
           {t("settings.signOut")}

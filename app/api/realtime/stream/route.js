@@ -5,6 +5,10 @@ import {
   isMessagingChannel,
   canAccessChannel,
 } from "@/lib/messagingChannels";
+import {
+  isNotificationChannel,
+  canAccessNotificationChannel,
+} from "@/lib/notificationChannels";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -31,6 +35,9 @@ function filterAllowedChannels(channels, session) {
     // conversation with the school, so "unknown channel = public" would let a
     // stranger tail it by guessing an id.
     if (isMessagingChannel(channel)) return canAccessChannel(channel, session);
+    if (isNotificationChannel(channel)) {
+      return canAccessNotificationChannel(channel, session);
+    }
     return true;
   });
 }

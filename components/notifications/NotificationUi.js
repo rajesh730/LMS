@@ -4,6 +4,7 @@ import {
   FaBookOpen,
   FaBullhorn,
   FaCalendarAlt,
+  FaCommentDots,
   FaExchangeAlt,
   FaSchool,
   FaTrophy,
@@ -12,6 +13,21 @@ import {
 // Per-type visual identity (icon + colored avatar) so each category is instantly
 // scannable, the way Instagram/Facebook colour-code notification kinds.
 export const NOTIFICATION_TYPES = {
+  MESSAGE: {
+    label: "Message",
+    Icon: FaCommentDots,
+    circle: "bg-emerald-100 text-emerald-700",
+  },
+  NOTICE: {
+    label: "Notice",
+    Icon: FaBullhorn,
+    circle: "bg-amber-100 text-amber-700",
+  },
+  CONSENT: {
+    label: "Consent",
+    Icon: FaBookOpen,
+    circle: "bg-amber-100 text-amber-700",
+  },
   ACHIEVEMENT: {
     label: "Achievement",
     Icon: FaTrophy,

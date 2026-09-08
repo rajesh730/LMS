@@ -181,6 +181,11 @@ export function ParentAppProvider({ children }) {
     refreshBadges(state.selectedChildId);
   }, [state.selectedChildId, refreshBadges]);
 
+  const refreshCurrentBadges = useCallback(
+    () => refreshBadges(state.selectedChildId),
+    [refreshBadges, state.selectedChildId]
+  );
+
   const t = useMemo(
     () => createTranslator(state.preferences.language),
     [state.preferences.language]
@@ -194,7 +199,7 @@ export function ParentAppProvider({ children }) {
       updatePreferences,
       reload: load,
       badges,
-      refreshBadges: () => refreshBadges(state.selectedChildId),
+      refreshBadges: refreshCurrentBadges,
       t,
       simpleMode: state.preferences.simpleMode,
       // True when the guardian has an account but no authorised child (§26).
@@ -207,7 +212,7 @@ export function ParentAppProvider({ children }) {
       updatePreferences,
       load,
       badges,
-      refreshBadges,
+      refreshCurrentBadges,
       t,
     ]
   );

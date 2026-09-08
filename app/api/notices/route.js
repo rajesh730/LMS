@@ -184,12 +184,11 @@ export const POST = defineRoute(
         targetAudience: savedNotice.targetAudience,
       });
 
-      // "Students and parents" has to actually reach parents. Fire-and-forget:
-      // the notice is already saved, and a notification-channel failure must
-      // not turn a successful publish into an error the school has to retry.
-      publishNoticeToParents(savedNotice._id).catch((err) =>
-        console.error("[notices] parent delivery failed:", err.message)
-      );
+      // Persist the durable parent notifications before confirming publish.
+      // The delivery service contains email/push failures and never rolls back
+      // the already-saved notice, but awaiting it prevents a serverless runtime
+      // from freezing the work after the response is sent.
+      await publishNoticeToParents(savedNotice._id);
     }
 
     return successResponse(201, "Notice published successfully", {

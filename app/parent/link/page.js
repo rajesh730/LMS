@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { signOut } from "next-auth/react";
+import { detachCurrentParentPushDevice } from "@/lib/client/parentPushSubscription";
 import { useParentApp } from "@/components/parent/ParentAppContext";
 
 /**
@@ -124,7 +125,10 @@ export default function ParentLinkPage() {
             be able to get out without clearing cookies. */}
         <button
           type="button"
-          onClick={() => signOut({ callbackUrl: "/parent/login" })}
+          onClick={async () => {
+            await detachCurrentParentPushDevice().catch(() => {});
+            await signOut({ callbackUrl: "/parent/login" });
+          }}
           className="mt-6 min-h-[44px] w-full text-sm font-semibold text-[var(--brand-muted)]"
         >
           {t("settings.signOut")}

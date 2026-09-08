@@ -3,7 +3,7 @@
 .shell[data-simple="true"] { font-size: 18px; }
 .frame { display: flex; max-width: 1240px; margin: auto; }
 .workspace { flex: 1; min-width: 0; }
-.header { position: sticky; top: 0; z-index: 30; background: #fff; border-bottom: 1px solid var(--parent-border); padding-top: env(safe-area-inset-top); }
+.header { position: sticky; top: 0; z-index: 50; background: #fff; border-bottom: 1px solid var(--parent-border); padding-top: env(safe-area-inset-top); }
 .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 72px; padding: 12px 20px; }
 .brand { display: flex; flex-direction: column; color: #1f4e79; text-decoration: none; min-width: 0; }
 .brand strong { font-size: 1.35em; letter-spacing: -.04em; line-height: 1.2; }
@@ -13,6 +13,40 @@
 .tool:hover { background: #edf3f8; }
 .tool svg { width: 20px; height: 20px; }
 .badge { position: absolute; right: -3px; top: -4px; background: #b42318; color: white; border: 2px solid white; border-radius: 20px; font-size: 11px; font-weight: 700; min-width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; padding: 0 3px; }
+.notificationBell { position: relative; }
+.notificationPanel { position: absolute; top: calc(100% + 10px); right: 0; z-index: 80; display: flex; width: min(390px,calc(100vw - 32px)); max-height: min(72dvh,560px); flex-direction: column; overflow: hidden; border: 1px solid var(--parent-border); border-radius: 18px; background: #fff; box-shadow: 0 20px 55px #2032472b; outline: none; }
+.notificationPanel:focus-visible { outline: 3px solid #1f4e79; outline-offset: 3px; }
+.notificationPanelHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; border-bottom: 1px solid #e8eef3; padding: 15px 16px 13px; }
+.notificationPanelHeader h2 { margin: 0; color: #203247; font-size: 1em; font-weight: 750; line-height: 1.35; }
+.notificationPanelHeader p { margin: 3px 0 0; color: #607184; font-size: .72em; line-height: 1.45; }
+.notificationMarkAll { display: inline-flex; min-height: 44px; flex-shrink: 0; align-items: center; gap: 6px; border: 0; border-radius: 10px; background: transparent; padding: 7px 8px; color: #1f4e79; font-size: .72em; font-weight: 700; }
+.notificationMarkAll:hover { background: #edf3f8; }
+.notificationMarkAll svg { width: 15px; height: 15px; }
+.notificationList { min-height: 120px; overflow-y: auto; overscroll-behavior: contain; }
+.notificationGroupTitle { position: sticky; top: 0; z-index: 1; margin: 0; border-bottom: 1px solid #edf1f5; background: #f9fbfcf2; padding: 8px 16px; color: #607184; font-size: .66em; font-weight: 750; letter-spacing: .07em; text-transform: uppercase; backdrop-filter: blur(8px); }
+.notificationRows { margin: 0; padding: 0; list-style: none; }
+.notificationRows li + li { border-top: 1px solid #edf1f5; }
+.notificationRow { display: flex; width: 100%; min-height: 76px; align-items: flex-start; gap: 11px; border: 0; background: #fff; padding: 12px 14px; color: #203247; text-align: left; }
+.notificationRow[data-highlighted="true"] { background: #edf4f9; }
+.notificationRow:hover { background: #f3f7fa; }
+.notificationRow:disabled { cursor: wait; opacity: .7; }
+.notificationIcon { display: flex; width: 38px; height: 38px; flex-shrink: 0; align-items: center; justify-content: center; border-radius: 50%; background: #e8f0f7; color: #1f4e79; }
+.notificationIcon[data-type="MESSAGE"] { background: #e8f3ed; color: #226748; }
+.notificationIcon[data-type="NOTICE"], .notificationIcon[data-type="CONSENT"] { background: #fff3da; color: #805619; }
+.notificationIcon[data-type="ACHIEVEMENT"], .notificationIcon[data-type="RESULT"] { background: #fff0d4; color: #8a5a10; }
+.notificationIcon svg { width: 18px; height: 18px; }
+.notificationCopy { min-width: 0; flex: 1; }
+.notificationContext { display: block; overflow: hidden; color: #607184; font-size: .64em; font-weight: 700; letter-spacing: .035em; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
+.notificationTitle { display: block; margin-top: 2px; color: #203247; font-size: .84em; font-weight: 700; line-height: 1.4; overflow-wrap: anywhere; }
+.notificationBody { display: -webkit-box; margin-top: 2px; overflow: hidden; color: #607184; font-size: .74em; line-height: 1.45; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow-wrap: anywhere; }
+.notificationTime { display: block; margin-top: 5px; color: #607184; font-size: .66em; font-weight: 600; }
+.notificationUnreadDot { width: 9px; height: 9px; flex-shrink: 0; margin-top: 8px; border-radius: 50%; background: #1f4e79; }
+.notificationState { display: flex; min-height: 170px; flex-direction: column; align-items: center; justify-content: center; gap: 9px; padding: 24px; color: #607184; text-align: center; font-size: .82em; }
+.notificationState svg { width: 28px; height: 28px; color: #8ba0b3; }
+.notificationState p { margin: 0; }
+.notificationState button { min-height: 44px; border: 0; border-radius: 10px; background: #edf3f8; padding: 8px 14px; color: #1f4e79; font-weight: 700; }
+.notificationViewAll { min-height: 48px; flex-shrink: 0; border: 0; border-top: 1px solid #e8eef3; background: #fff; color: #1f4e79; font-size: .82em; font-weight: 750; }
+.notificationViewAll:hover { background: #edf3f8; }
 .main { padding: 28px 28px 48px; }
 .content { max-width: 760px; margin: auto; min-width: 0; }
 .skip { position: fixed; top: -100px; left: 16px; z-index: 100; background: #fff; color: #1f4e79; padding: 12px 18px; border-radius: 8px; }
@@ -114,6 +148,9 @@
  .bottomNav .navLink { min-height: 60px; padding: 7px 2px; flex-direction: column; justify-content: center; gap: 5px; font-size: .68em; line-height: 1.4; text-align: center; overflow-wrap: anywhere; border-radius: 12px; }
  .bottomNav .navLink[aria-current="page"] { background: #eaf1f7; }
  .bottomNav .navIcon svg { width: 21px; height: 21px; }
+ .notificationPanel { position: fixed; top: calc(env(safe-area-inset-top) + 72px); right: 12px; left: 12px; width: auto; max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 158px); border-radius: 16px; }
+ .notificationPanelHeader { padding-left: 14px; padding-right: 12px; }
+ .notificationRow { padding-left: 12px; padding-right: 12px; }
  .switchTrigger { padding: 10px 16px; }
  .statusRow { margin-bottom: 12px; }
  .action { flex: 1; }

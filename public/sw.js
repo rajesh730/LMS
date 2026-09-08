@@ -21,7 +21,7 @@
  * `self.addEventListener("install", () => self.registration.unregister())`.
  */
 
-const CACHE_VERSION = "pravyo-v2";
+const CACHE_VERSION = "pravyo-v3";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const SHELL_CACHE = `${CACHE_VERSION}-shell`;
 const OFFLINE_URL = "/offline";
@@ -70,30 +70,55 @@ self.addEventListener("push", (event) => {
   }
 
   event.waitUntil(
-    self.registration.showNotification(payload.title || "Pravyo", {
-      body: payload.body || "You have a new update.",
-      icon: "/pravyo-icon.png?v=2",
-      badge: "/apple-icon.png?v=2",
-      tag: payload.tag || "pravyo-update",
-      // Ask the platform for its normal app-notification sound. The phone still
-      // has final control through silent mode, Focus/Do Not Disturb and the
-      // user's per-app notification settings; Web Push cannot override those.
-      silent: false,
-      // Supported Android browsers use this pattern; unsupported platforms
-      // (including iOS) safely ignore it and use their system behaviour.
-      vibrate: payload.urgent
-        ? [220, 100, 220, 100, 360]
-        : [180, 100, 180],
-      renotify: true,
-      data: { href: payload.href || "/parent/notifications" },
-    })
+    self.clients
+      .matchAll({ type: "window", includeUncontrolled: true })
+      .then(async (windowClients) => {
+        const visibleClients = windowClients.filter(
+          (client) => client.visibilityState === "visible"
+        );
+
+        // The in-app provider plays one restrained cue while visible. Keep the
+        // required system notification visible but silent in that case so the
+        // same delivery does not make two sounds.
+        await self.registration.showNotification(payload.title || "Pravyo", {
+          body: payload.body || "You have a new update.",
+          icon: "/pravyo-icon.png?v=2",
+          badge: "/apple-icon.png?v=2",
+          tag: payload.tag || "pravyo-update",
+          silent: visibleClients.length > 0,
+          vibrate:
+            visibleClients.length > 0
+              ? undefined
+              : payload.urgent
+                ? [220, 100, 220, 100, 360]
+                : [180, 100, 180],
+          renotify: true,
+          data: {
+            notificationId: payload.notificationId || "",
+            href: payload.href || "/parent/notifications",
+          },
+        });
+
+        visibleClients.forEach((client) => {
+          client.postMessage({
+            type: "PRAVYO_PUSH_NOTIFICATION",
+            notificationEventType: "notification:new",
+            notificationId: payload.notificationId || "",
+            createdAt: payload.createdAt || new Date().toISOString(),
+          });
+        });
+      })
   );
 });
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const href = event.notification.data?.href || "/parent/notifications";
-  const targetUrl = new URL(href, self.location.origin).href;
+  const candidateUrl = new URL(href, self.location.origin);
+  const targetUrl =
+    candidateUrl.origin === self.location.origin
+      ? candidateUrl.href
+      : new URL("/parent/notifications", self.location.origin).href;
 
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {

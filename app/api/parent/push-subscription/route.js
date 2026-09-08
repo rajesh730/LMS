@@ -7,14 +7,19 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const { parent, error } = await requireParentSession();
+    const { session, parent, error } = await requireParentSession();
     if (error) return error;
 
     const config = getWebPushPublicConfig();
-    const count = await PushSubscription.countDocuments({ parent: parent._id });
+    const count = await PushSubscription.countDocuments({
+      parent: parent._id,
+      authVersion: Number(parent.authVersion || 0),
+    });
     return successResponse(200, "Push status loaded", {
       ...config,
       subscribed: count > 0,
+      subscriptionCount: count,
+      allowedOnDevice: session.user.deviceMode !== "SHARED",
     });
   } catch (error) {
     console.error("GET /api/parent/push-subscription error:", error);
@@ -24,8 +29,14 @@ export async function GET() {
 
 export async function POST(request) {
   try {
-    const { parent, error } = await requireParentSession();
+    const { session, parent, error } = await requireParentSession();
     if (error) return error;
+
+    if (session.user.deviceMode === "SHARED") {
+      return validationError(
+        "Push notifications are disabled on shared phones to protect family privacy"
+      );
+    }
 
     if (!getWebPushPublicConfig().enabled) {
       return validationError("Push notifications are not configured yet");
@@ -35,6 +46,7 @@ export async function POST(request) {
     const endpoint = String(body?.endpoint || "").trim();
     const p256dh = String(body?.keys?.p256dh || "").trim();
     const auth = String(body?.keys?.auth || "").trim();
+    const expirationTime = Number(body?.expirationTime);
 
     let endpointUrl;
     try {
@@ -52,6 +64,11 @@ export async function POST(request) {
         $set: {
           parent: parent._id,
           keys: { p256dh, auth },
+          authVersion: Number(parent.authVersion || 0),
+          expirationTime:
+            Number.isFinite(expirationTime) && expirationTime > Date.now()
+              ? new Date(expirationTime)
+              : null,
           userAgent: String(request.headers.get("user-agent") || "").slice(0, 500),
           lastUsedAt: new Date(),
         },
@@ -72,8 +89,8 @@ export async function DELETE(request) {
     if (error) return error;
     const body = await request.json().catch(() => ({}));
     const endpoint = String(body?.endpoint || "").trim();
-    const query = { parent: parent._id, ...(endpoint ? { endpoint } : {}) };
-    await PushSubscription.deleteMany(query);
+    if (!endpoint) return validationError("A device subscription is required");
+    await PushSubscription.deleteOne({ parent: parent._id, endpoint });
     return successResponse(200, "Push notifications disabled", { subscribed: false });
   } catch (error) {
     console.error("DELETE /api/parent/push-subscription error:", error);

@@ -7,7 +7,9 @@ This document explains how the current realtime and notice-delivery system works
 This guide covers:
 
 - student and school notification delivery
+- parent message and notice notifications
 - persisted read and unread state
+- browser/mobile Web Push delivery
 - public event notice realtime updates
 - admin diagnostics for the realtime stack
 - Redis-backed scaling path for multi-instance deployment
@@ -26,6 +28,11 @@ This guide does not cover:
   Stores platform notices and school notices.
 - `models/EventNotice.js`
   Stores event-specific public notices.
+- `models/UserNotification.js`
+  Stores durable parent, student, and school notification rows. Parent rows use
+  `UNREAD`, `SEEN`, and `READ` states.
+- `models/PushSubscription.js`
+  Stores one standards-based Web Push endpoint per browser device.
 
 ### Shared server utilities
 
@@ -41,6 +48,11 @@ This guide does not cover:
   Builds student notification payloads with `isRead` and `unreadCount`.
 - `lib/schoolNotifications.js`
   Builds school notification payloads with `isRead` and `unreadCount`.
+- `lib/parentNotifications.js`
+  Creates tenant-checked parent rows, manages the parent state machine, and
+  signals realtime and push only after MongoDB has accepted the row.
+- `lib/webPush.js`
+  Fans each notification out to every current device for its parent.
 
 ### Shared client utilities
 
@@ -53,6 +65,9 @@ This guide does not cover:
   - mark read and unread mutations
   - silent realtime refresh
   - optional toast on newly arrived items
+- `components/parent/ParentNotificationContext.js`
+  Owns the combined parent inbox, private realtime subscription, optimistic
+  state transitions, toast, and in-app sound.
 
 ### Diagnostics
 
@@ -77,6 +92,9 @@ Current channels in use:
   Used for public event detail notice refresh.
 - `admin-diagnostics`
   Used only for diagnostics ping and stream health testing.
+- `parent-notifications:<parentId>`
+  Private change signals for one guardian's bell. The route authorizes an exact
+  parent id match before subscribing.
 
 ## Environment Variables
 
@@ -108,6 +126,17 @@ If Redis vars are present:
 - publish events are written to a Redis Stream
 - subscribers poll Redis and replay events across instances
 - local in-memory delivery still occurs on the instance that originated the event
+
+Optional Web Push vars:
+
+- `NEXT_PUBLIC_VAPID_PUBLIC_KEY`
+- `VAPID_PRIVATE_KEY`
+- `VAPID_SUBJECT`
+
+Generate a VAPID pair once with `npm run push:generate-vapid`, keep the private
+key server-only, and use the same pair on every production instance. A Firebase
+project is not required for this stack; Chrome and Android support the standard
+Web Push protocol used here.
 
 ## Flow Summary
 

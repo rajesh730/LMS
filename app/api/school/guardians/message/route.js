@@ -13,7 +13,7 @@ import {
 import { requireApiSession, getSessionSchoolId } from "@/lib/authz";
 import { getEquivalentGradeValues } from "@/lib/schoolGrades";
 import { appendMessage } from "@/lib/parentMessaging";
-import { notifyGuardians } from "@/lib/parentNotifications";
+import { createParentNotificationsForTargets } from "@/lib/parentNotifications";
 
 export const dynamic = "force-dynamic";
 
@@ -135,6 +135,7 @@ export async function POST(request) {
 
     let sent = 0;
     const failures = [];
+    const notificationTargets = [];
 
     for (const { parent, student } of recipients) {
       try {
@@ -180,7 +181,7 @@ export async function POST(request) {
         // to create the thread. A guardian keeps one thread per child for
         // years, so binding the headline to thread creation meant the school
         // typed "Sports day" and the parent saw an unlabelled message.
-        await appendMessage({
+        const savedMessage = await appendMessage({
           conversation,
           senderType: "STAFF",
           senderStaff: session.user.id,
@@ -191,6 +192,17 @@ export async function POST(request) {
         });
 
         sent += 1;
+        notificationTargets.push({
+          parentId: parent._id,
+          studentId: student._id,
+          entityId: String(savedMessage._id),
+          actionUrl: `/parent/messages/${conversation._id}`,
+          dedupeKey: `MESSAGE:${savedMessage._id}`,
+          metadata: {
+            conversationId: String(conversation._id),
+            from: "SCHOOL",
+          },
+        });
       } catch (err) {
         failures.push({ studentName: student.name, reason: err.message });
       }
@@ -201,40 +213,20 @@ export async function POST(request) {
     // Preserve the exact audience all the way through phone delivery. A child
     // may have two guardians, and selecting one must not push the message text
     // to the other guardian just because both links concern the same student.
-    const parentsByStudent = new Map();
-    recipients.forEach(({ parent, student }) => {
-      const studentId = String(student._id);
-      if (!parentsByStudent.has(studentId)) parentsByStudent.set(studentId, new Set());
-      parentsByStudent.get(studentId).add(String(parent._id));
-    });
-
     const notificationTitle = (
       subject ? `${subject.slice(0, 120)} — ${schoolName}` : `Message from ${schoolName}`
     ).slice(0, 180);
-    await Promise.all(
-      Array.from(parentsByStudent.entries()).map(([studentId, parentIds]) =>
-        notifyGuardians({
-          studentId,
-          includeParentIds: Array.from(parentIds),
-          // Recipients were already resolved from the authorised links above.
-          // A specifically selected view-only guardian still receives the
-          // school's message; canMessageSchool controls their ability to reply.
-          enforceCategoryPermission: false,
-          category: "MESSAGE",
-          priority: "INFO",
-          // The subject leads when there is one: "Sports day" tells a guardian
-          // whether to open this now far better than "Message from …" does,
-          // and the school name is already the notification's context.
-          // Kept inside UserNotification.title's 180-character limit — an
-          // over-long title fails validation, and this call is fire-and-forget,
-          // so the failure would be a notification nobody ever receives.
-          title: notificationTitle,
-          message: message.slice(0, 160),
-          href: "/parent/messages",
-          metadata: { from: "SCHOOL" },
-        })
-      )
-    ).catch((err) =>
+    await createParentNotificationsForTargets({
+      targets: notificationTargets,
+      // Recipients were resolved from same-school ParentStudentLink records.
+      // A selected view-only guardian receives the school's message but still
+      // cannot reply, so thread membership is the authority here.
+      enforceCategoryPermission: false,
+      type: "MESSAGE",
+      priority: "INFO",
+      title: notificationTitle,
+      body: message.slice(0, 160),
+    }).catch((err) =>
       console.error("[school message] notify failed:", err.message)
     );
 

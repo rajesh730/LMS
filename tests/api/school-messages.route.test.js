@@ -11,7 +11,7 @@ jest.mock("@/lib/parentMessaging", () => ({
   ],
 }));
 jest.mock("@/lib/parentNotifications", () => ({
-  notifyGuardians: jest.fn().mockResolvedValue({ sent: 1 }),
+  createParentNotificationsForTargets: jest.fn().mockResolvedValue({ sent: 1 }),
 }));
 jest.mock("@/models/Conversation", () => ({
   __esModule: true,
@@ -39,6 +39,7 @@ import Conversation from "@/models/Conversation";
 import Message from "@/models/Message";
 import User from "@/models/User";
 import { appendMessage, publishThreadRead } from "@/lib/parentMessaging";
+import { createParentNotificationsForTargets } from "@/lib/parentNotifications";
 import { GET as INBOX } from "@/app/api/school/messages/route";
 import {
   GET as THREAD,
@@ -289,6 +290,36 @@ describe("replying", () => {
     );
 
     expect(appendMessage.mock.calls[0][0].senderStaffModel).toBe("Teacher");
+  });
+
+  it("notifies only guardians in the private thread and deep-links to it", async () => {
+    signedInAs(SCHOOL_A);
+    Conversation.findOne.mockResolvedValue(
+      conversationDoc({
+        participants: [
+          { participantType: "PARENT", parent: "parent-1" },
+          { participantType: "STAFF", staff: "staff-1" },
+        ],
+      })
+    );
+
+    await REPLY(
+      new Request("http://localhost", {
+        method: "POST",
+        body: JSON.stringify({ message: "Please call the office." }),
+      }),
+      context()
+    );
+
+    expect(createParentNotificationsForTargets).toHaveBeenCalledWith(
+      expect.objectContaining({
+        targets: [{ parentId: "parent-1", studentId: "student-1" }],
+        type: "MESSAGE",
+        actionUrl: `/parent/messages/${CONVO}`,
+        entityId: "m1",
+        enforceCategoryPermission: false,
+      })
+    );
   });
 
   it("rejects an empty reply", async () => {
