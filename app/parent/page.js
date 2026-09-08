@@ -1,164 +1,70 @@
-"use client";
+﻿"use client";
 
-import {
-  useParentApp,
-  useParentResource,
-} from "@/components/parent/ParentAppContext";
+import Link from "next/link";
+import { ArrowRight, CalendarDays, ClipboardList, MessageCircle, Trophy, BookOpen } from "lucide-react";
+import { useParentApp, useParentResource } from "@/components/parent/ParentAppContext";
 import StatusCard from "@/components/parent/StatusCard";
 import ParentEmptyState from "@/components/parent/ParentEmptyState";
 import ChildAvatar from "@/components/parent/ChildAvatar";
 import JourneyPreview from "@/components/parent/JourneyPreview";
 import { formatParentDate } from "@/lib/parentFormat";
+import styles from "@/components/parent/ParentDesign.module.css";
 
-/**
- * Parent Home (§3).
- *
- * Answers one question — "what is happening with my child today?" — as a
- * priority-ordered stack of cards. No charts, no tables, no dashboard widgets.
- *
- * The ordering is decided SERVER-side by lib/parentHome.js so that the rule in
- * §30 lives in one testable place; this screen renders whatever it is given, in
- * order.
- */
 export default function ParentHomePage() {
-  const { selectedChildId, t, refreshBadges } = useParentApp();
+  const { selectedChildId, t, preferences } = useParentApp();
   const { loading, error, data, reload } = useParentResource("/api/parent/home");
-
   if (!selectedChildId) return null;
-
-  if (loading) return <HomeSkeleton />;
-
-  if (error || !data) {
-    return (
-      <ParentEmptyState
-        emoji="⚠️"
-        tone="neutral"
-        title={t("common.somethingWrong")}
-        action={
-          <button
-            type="button"
-            onClick={reload}
-            className="min-h-[48px] rounded-xl bg-[var(--brand-primary)] px-6 font-bold text-white"
-          >
-            {t("common.retry")}
-          </button>
-        }
-      />
-    );
-  }
+  if (loading) return <div className={styles.home} aria-busy="true" aria-label={t("common.loading")}>
+    {[0, 1, 2].map((item) => <div key={item} className={styles.skeleton} />)}
+  </div>;
+  if (error || !data) return <ParentEmptyState emoji="!" tone="neutral" title={t("common.somethingWrong")}
+    action={<button type="button" onClick={reload} className={styles.action}>{t("common.retry")}</button>} />;
 
   const { child, cards } = data;
-
-  return (
-    <div className="space-y-4">
-      <ChildHeader child={child} />
-
-      {cards.length === 0 ? (
-        <ParentEmptyState
-          emoji="✓"
-          title={t("home.allCaughtUp")}
-          message={t("notices.empty")}
-        />
-      ) : (
-        cards.map((card) => <HomeCard key={card.id} card={card} t={t} />)
-      )}
-
-      {/* Journey preview closes Home: after "what needs attention", the last
-          thing a parent should see is their child's progress (§3). */}
-      <JourneyPreview childName={child.name} />
-    </div>
-  );
-}
-
-/** The child header: photo, name, grade, school (§3). */
-function ChildHeader({ child }) {
-  const { simpleMode } = useParentApp();
-
-  return (
-    <section className="parent-child-identity-card flex items-center gap-4 rounded-2xl bg-gradient-to-br from-[var(--brand-primary)] to-[var(--brand-surface-end)] p-4 text-white shadow-sm">
-      <ChildAvatar
-        name={child.name}
-        photoUrl={child.photoUrl}
-        size={simpleMode ? 68 : 60}
-      />
-      <div className="min-w-0">
-        <h1
-          className={[
-            "parent-child-identity-name truncate font-bold",
-            simpleMode ? "text-2xl" : "text-xl",
-          ].join(" ")}
-        >
-          {child.name}
-        </h1>
-        <p className="parent-child-identity-meta truncate text-sm">
-          {child.grade}
-          {child.grade && child.school?.name ? " · " : ""}
-          {child.school?.name}
-        </p>
+  return <div className={styles.home}>
+    <div className={styles.intro}><h1>{t("home.overview")}</h1><p>{t("home.overviewHelp")}</p></div>
+    <section className={styles.identity} aria-label={t("nav.child")}>
+      <ChildAvatar name={child.name} photoUrl={child.photoUrl} size={56} />
+      <div className={styles.identityCopy}>
+        <span className={styles.identityLabel}>{t("home.schoolLife")}</span>
+        <h2>{child.name}</h2>
+        <p>{child.school?.name}</p>
+        {child.grade && <span className={styles.identityGrade}>{child.grade}</span>}
       </div>
+      <Link href="/parent/child" className={styles.identityArrow} aria-label={t("home.viewChild")}><ArrowRight size={20} aria-hidden="true" /></Link>
     </section>
-  );
+    <nav className={styles.quickLinks} aria-label={t("home.quickLinks")}>
+      {[
+        ["/parent/notices", ClipboardList, "notices.title"],
+        ["/parent/events", CalendarDays, "nav.events"],
+        ["/parent/messages", MessageCircle, "nav.messages"],
+      ].map(([href, Icon, label]) => <Link href={href} key={href} className={styles.quickLink}><Icon aria-hidden="true" /><span>{t(label)}</span></Link>)}
+    </nav>
+    <section aria-labelledby="parent-updates">
+      <div className={styles.sectionHeading}><h2 id="parent-updates">{t("home.latestUpdates")}</h2></div>
+      {cards.length === 0 ? <ParentEmptyState emoji="✓" title={t("home.allCaughtUp")} message={t("home.caughtUpHelp")} /> :
+        <div className={styles.cards}>{cards.map((card) => <HomeCard key={card.id} card={card} t={t} calendar={preferences.calendarPreference} />)}</div>}
+    </section>
+    <JourneyPreview childName={child.name} />
+  </div>;
 }
 
-/**
- * Render one priority card. The card's `kind` chooses the eyebrow wording; the
- * status descriptor chooses the colour, icon and shape.
- */
-function HomeCard({ card, t }) {
-  const eyebrowByKind = {
-    ACTION_REQUIRED: t("status.actionRequired"),
-    CONSENT_REQUIRED: t("status.actionRequired"),
-    LIVE_EVENT: t("events.liveNow"),
-    UNREAD_MESSAGE: t("home.newMessage"),
-    UNREAD_NOTICE: t("status.needsAttention"),
-    REGISTRATION_OPEN: t("events.openForRegistration"),
-    ACHIEVEMENT: t("status.newAchievement"),
-    NEW_WRITING: t("home.newWriting"),
+function HomeCard({ card, t, calendar }) {
+  const eyebrow = {
+    ACTION_REQUIRED: "status.actionRequired", CONSENT_REQUIRED: "status.actionRequired",
+    LIVE_EVENT: "events.liveNow", UNREAD_MESSAGE: "home.newMessage", UNREAD_NOTICE: "home.newNotice",
+    REGISTRATION_OPEN: "events.openForRegistration", ACHIEVEMENT: "status.newAchievement", NEW_WRITING: "home.newWriting",
   };
-
-  // A few card kinds carry a translated body built from server-supplied params
-  // (e.g. "{name} is currently participating").
-  const body = card.bodyKey ? t(card.bodyKey, card.bodyParams) : card.body;
-
-  const meta = card.deadline
-    ? t("notices.deadline", { date: formatParentDate(card.deadline) })
-    : card.occurredAt
-      ? formatParentDate(card.occurredAt)
-      : "";
-
-  return (
-    <StatusCard
-      status={card.status}
-      emoji={card.emoji}
-      eyebrow={eyebrowByKind[card.kind]}
-      title={
-        card.titleKey
-          ? `${t(card.titleKey, card.titleParams)} ${card.title}`
-          : card.title
-      }
-      body={body}
-      meta={meta}
-      href={card.href}
-      cta={card.cta ? t(card.cta) : null}
-      live={Boolean(card.live)}
-      // Only writing offers Listen on Home; notices get it on their detail page
-      // where the full text is available (§7).
-      listenText={card.listenable ? card.title : ""}
-    />
-  );
-}
-
-/** Skeleton rather than a spinner: the layout does not jump when data lands. */
-function HomeSkeleton() {
-  return (
-    <div className="space-y-4" aria-busy="true">
-      <div className="h-24 animate-pulse rounded-2xl bg-slate-200" />
-      {[0, 1, 2].map((index) => (
-        <div
-          key={index}
-          className="h-32 animate-pulse rounded-2xl bg-slate-100"
-        />
-      ))}
-    </div>
-  );
+  const icons = { ACTION_REQUIRED: ClipboardList, CONSENT_REQUIRED: ClipboardList, UNREAD_NOTICE: ClipboardList,
+    LIVE_EVENT: CalendarDays, REGISTRATION_OPEN: CalendarDays, UNREAD_MESSAGE: MessageCircle,
+    ACHIEVEMENT: Trophy, NEW_WRITING: BookOpen };
+  const dateOptions = { calendar, relative: false };
+  const meta = card.deadline ? t("notices.deadline", { date: formatParentDate(card.deadline, dateOptions) }) :
+    card.occurredAt ? formatParentDate(card.occurredAt, dateOptions) : "";
+  const cta = card.kind === "UNREAD_NOTICE" && card.cta ? t("home.readNotice") : card.cta ? t(card.cta) : null;
+  return <StatusCard status={card.status} icon={icons[card.kind]} emoji={icons[card.kind] ? undefined : card.emoji}
+    eyebrow={eyebrow[card.kind] ? t(eyebrow[card.kind]) : undefined}
+    title={card.titleKey ? `${t(card.titleKey, card.titleParams)} ${card.title}` : card.title}
+    body={card.bodyKey ? t(card.bodyKey, card.bodyParams) : card.body} meta={meta} href={card.href} cta={cta}
+    live={Boolean(card.live)} listenText={card.listenable ? card.title : ""} />;
 }

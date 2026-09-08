@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { normalizeImageUrl } from "@/lib/imageUrls";
+import styles from "./ParentDesign.module.css";
 
 /**
  * The child's photo, with an initials fallback.
@@ -20,12 +21,12 @@ import { normalizeImageUrl } from "@/lib/imageUrls";
 // should reliably get different, legible colours, and the same child should
 // keep the same colour between sessions.
 const PALETTE = [
-  "bg-sky-600",
-  "bg-emerald-600",
-  "bg-violet-600",
-  "bg-amber-600",
-  "bg-rose-600",
-  "bg-teal-600",
+  "#e3edf7",
+  "#e1eee6",
+  "#ebe7f5",
+  "#f4ebd9",
+  "#f3e5e8",
+  "#dfefee",
 ];
 
 function initialsOf(name) {
@@ -48,9 +49,9 @@ function colourFor(name) {
 }
 
 export default function ChildAvatar({ name, photoUrl, size = 44, className = "" }) {
-  const [failed, setFailed] = useState(false);
+  const [failedUrl, setFailedUrl] = useState(null);
   const resolved = normalizeImageUrl(photoUrl);
-  const showPhoto = resolved && !failed;
+  const showPhoto = resolved && resolved !== failedUrl;
 
   const dimension = { width: size, height: size };
 
@@ -66,19 +67,17 @@ export default function ChildAvatar({ name, photoUrl, size = 44, className = "" 
         style={dimension}
         loading="lazy"
         decoding="async"
-        onError={() => setFailed(true)}
-        className={`shrink-0 rounded-full object-cover ring-2 ring-white ${className}`}
+        onError={() => setFailedUrl(resolved)}
+        className={`${styles.avatar} ${className}`}
       />
     );
   }
 
   return (
     <span
-      style={{ ...dimension, fontSize: Math.round(size * 0.38) }}
+      style={{ ...dimension, fontSize: Math.round(size * 0.34), background: colourFor(name), color: "#29465f" }}
       aria-hidden="true"
-      className={`flex shrink-0 items-center justify-center rounded-full font-bold text-white ring-2 ring-white ${colourFor(
-        name
-      )} ${className}`}
+      className={`${styles.avatar} ${className}`}
     >
       {initialsOf(name)}
     </span>

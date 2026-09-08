@@ -1,156 +1,41 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
+import { ArrowRight, CircleAlert, Clock3, CircleCheck, Info } from "lucide-react";
 import { getStatus } from "@/lib/parentStatus";
 import { useParentApp } from "./ParentAppContext";
 import ListenButton from "./ListenButton";
+import styles from "./ParentDesign.module.css";
 
-/**
- * The Parent App's core card (§4, §32).
- *
- * The status system's rule is enforced structurally here: a card cannot render
- * its colour without also rendering the status ICON and the status TEXT. There
- * is no prop that produces a bare coloured card, so no future screen can
- * accidentally communicate urgency by colour alone.
- *
- * In Simple Parent Mode (§8) the card grows, the body text is dropped, and
- * exactly one primary action remains.
- */
+const STATUS_ICONS = { ACTION_REQUIRED: CircleAlert, NEEDS_ATTENTION: Clock3, COMPLETE: CircleCheck, INFO: Info };
+
 export default function StatusCard({
-  status = "INFO",
-  emoji,
-  eyebrow,
-  title,
-  body,
-  meta,
-  href,
-  cta,
-  onAction,
-  listenText = "",
-  live = false,
-  children,
+  status = "INFO", emoji, icon: ContentIcon, eyebrow, title, body, meta, href, cta,
+  onAction, listenText = "", live = false, children,
 }) {
   const { t, simpleMode } = useParentApp();
   const descriptor = getStatus(status);
-
-  const statusLabel = t(descriptor.labelKey);
-
-  const action = cta ? (
-    href ? (
-      <Link
-        href={href}
-        className={[
-          "flex min-h-[48px] max-w-full items-center justify-center break-words rounded-xl px-5 text-center text-sm font-bold transition-colors",
-          simpleMode ? "w-full text-base" : "",
-          descriptor.classes.button,
-        ].join(" ")}
-      >
-        {cta}
-      </Link>
-    ) : (
-      <button
-        type="button"
-        onClick={onAction}
-        className={[
-          "flex min-h-[48px] max-w-full items-center justify-center break-words rounded-xl px-5 text-center text-sm font-bold transition-colors",
-          simpleMode ? "w-full text-base" : "",
-          descriptor.classes.button,
-        ].join(" ")}
-      >
-        {cta}
-      </button>
-    )
-  ) : null;
-
-  return (
-    <article
-      className={[
-        "rounded-2xl border p-4 shadow-sm",
-        descriptor.classes.card,
-        simpleMode ? "p-5" : "",
-      ].join(" ")}
-    >
-      {/* Status line: colour + icon + words, always together. */}
-      <div className="mb-2 flex min-w-0 flex-wrap items-center gap-2">
-        <span
-          aria-hidden="true"
-          className={[
-            "flex items-center justify-center rounded-full font-bold text-white",
-            descriptor.classes.dot,
-            simpleMode ? "h-7 w-7 text-sm" : "h-6 w-6 text-xs",
-          ].join(" ")}
-        >
-          {descriptor.icon}
-        </span>
-        <span
-          className={[
-            "font-bold uppercase tracking-wide",
-            descriptor.classes.accent,
-            simpleMode ? "text-sm" : "text-xs",
-          ].join(" ")}
-        >
-          {eyebrow || statusLabel}
-        </span>
-        {live ? (
-          // The pulse is decorative; "LIVE" in text is what carries the meaning.
-          <span className="ml-auto flex items-center gap-1.5 rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-bold uppercase text-white">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
-            {t("status.live")}
-          </span>
-        ) : null}
+  const Icon = STATUS_ICONS[descriptor.key] || Info;
+  const actionClass = [styles.action, simpleMode ? styles.fullAction : ""].join(" ");
+  const actionContent = <>{cta}<ArrowRight aria-hidden="true" /></>;
+  return <article className={styles.card} data-status={descriptor.key}>
+    <div className={styles.statusRow}>
+      <span className={styles.statusLabel}><Icon aria-hidden="true" />{eyebrow || t(descriptor.labelKey)}</span>
+      {live && <span className={styles.live}>{t("status.live")}</span>}
+    </div>
+    <div className={styles.cardContent}>
+      {(ContentIcon || emoji) && <span className={styles.cardIcon} aria-hidden="true">{ContentIcon ? <ContentIcon size={20} /> : emoji}</span>}
+      <div className={styles.cardCopy}>
+        <h3>{title}</h3>
+        {body && !simpleMode && <p className={styles.body}>{body}</p>}
+        {meta && <p className={styles.meta}>{meta}</p>}
+        {children}
       </div>
-
-      <div className="flex gap-3">
-        {emoji ? (
-          <span
-            aria-hidden="true"
-            className={`shrink-0 ${simpleMode ? "text-3xl" : "text-2xl"}`}
-          >
-            {emoji}
-          </span>
-        ) : null}
-
-        <div className="min-w-0 flex-1">
-          <h3
-            className={[
-              "break-words font-bold leading-snug text-[var(--brand-ink)]",
-              simpleMode ? "text-lg" : "text-base",
-            ].join(" ")}
-          >
-            {title}
-          </h3>
-
-          {/* Simple Mode drops supporting prose — less to read, same action. */}
-          {body && !simpleMode ? (
-            <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-[var(--brand-muted)]">
-              {body}
-            </p>
-          ) : null}
-
-          {meta ? (
-            <p className="mt-1.5 break-words text-xs font-medium text-[var(--brand-muted)]">
-              {meta}
-            </p>
-          ) : null}
-
-          {children}
-        </div>
-      </div>
-
-      {action || listenText ? (
-        <div
-          className={[
-            "mt-4 flex gap-2",
-            simpleMode ? "flex-col" : "flex-wrap items-center",
-          ].join(" ")}
-        >
-          {action}
-          {/* Listen sits beside the primary action, never replacing it (§7). */}
-          {listenText ? (
-            <ListenButton text={listenText} fullWidth={simpleMode} />
-          ) : null}
-        </div>
-      ) : null}
-    </article>
-  );
+    </div>
+    {(cta || listenText) && <div className={styles.actions}>
+      {cta && (href ? <Link href={href} className={actionClass}>{actionContent}</Link> :
+        <button type="button" onClick={onAction} className={actionClass}>{actionContent}</button>)}
+      {listenText && <ListenButton text={listenText} fullWidth={simpleMode} />}
+    </div>}
+  </article>;
 }

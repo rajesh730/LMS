@@ -64,6 +64,7 @@ const SCHOOL_NAV_GROUPS = [
       "Students",
       "Student Transfer",
       "Parents & Guardians",
+      "Parent Messages",
       "Teachers",
       "School Events",
       "Platform Events",
@@ -73,7 +74,7 @@ const SCHOOL_NAV_GROUPS = [
   },
   {
     title: "Public Showcase",
-    names: ["Publishing Desk", "Public Profile"],
+    names: ["Publishing Desk", "Certificates", "Public Profile"],
   },
   {
     title: "Platform",
